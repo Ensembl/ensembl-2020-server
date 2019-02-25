@@ -2,12 +2,14 @@
 
 from flask import Flask, jsonify
 from flask_cors import CORS
+import yaml
 
 app = Flask(__name__)
 CORS(app)
 
 import pyBigWig
 
+config_path = "/home/dan/ensembl-server/demo/flask/config.yaml"
 contig_path = "/home/dan/e2020_march_datafiles/contigs/contigs-approx.bb"
 
 def get_contig_data(chromosome,start,end):
@@ -22,6 +24,12 @@ def burst_leaf(leaf):
     chrom = "6" # XXX
     return (chrom,int(start),int(end))
 
+@app.route("/browser/config")
+def browser_config():
+    with open(config_path) as f:
+        data = yaml.load(f)
+        return jsonify(data)
+
 @app.route("/browser/data/contig-normal/<leaf>")
 def contig_normal(leaf):
     starts = []
@@ -34,7 +42,7 @@ def contig_normal(leaf):
             extra = extra.split("\t")
             starts.append(start)
             lens.append(end-start)
-            senses.append(True if extra[2]=='+' else False)
+            senses.append(extra[2]=='+')
     except ValueError:
         pass
     data = {'data':[starts,lens,senses]}

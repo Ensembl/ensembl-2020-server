@@ -1,0 +1,25 @@
+endpoints:
+    contig-normal:
+        endpoint: ../data/contig-normal
+        bytecode: |
+            plot #62, #0
+            const #63, [1]
+            get #61, #62, #63
+            const #60, [0.5]
+            mul #61, #61, #60
+            const #63, [0]
+            get #60, #62, #63
+            add #60, #60, #61
+            const #62, [-3]
+            add #4, #60, #62
+            const #5, [6]
+            const #6, [192,192,192,128,128,128]
+            const #7, [3]
+            pick #6, #3, #6, #7
+            const #10, [1,1]
+            shape #10, #1, #2, #4, #5, #6
+
+tracks:
+    "internal:debug:contig":
+        JO:
+            endpoint: contig-normal
