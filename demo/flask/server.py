@@ -13,6 +13,7 @@ config_path = "/home/dan/ensembl-server/demo/flask/config.yaml"
 contig_path = "/home/dan/e2020_march_datafiles/contigs/contigs-approx.bb"
 gene_path = "/home/dan/e2020_march_datafiles/genes_and_transcripts/canonical.bb"
 chrom_sizes= "/home/dan/e2020_march_datafiles/common_files/grch38.chrom.sizes"
+objects_list_path = "/Users/sboddu/e2020/ensembl-server/demo/flask/example_objects.yaml"
 
 def bounds_fix(chrom,start,end):
     with open(chrom_sizes) as f:
@@ -143,6 +144,14 @@ def contig_full(leaf,do_shimmer):
         (starts, lens, senses) = shimmer.shimmer(starts,lens,senses,leaf_start,leaf_end)
     data = {'data':[starts,lens,senses]}
     return jsonify(data)
-  
+
+@app.route("/browser/example_objects")
+def example_objects():
+    with open(objects_list_path) as f:
+        data = yaml.load(f)
+        return jsonify(data)
+
+
+ 
 if __name__ == "__main__":
    app.run(port=4000)
