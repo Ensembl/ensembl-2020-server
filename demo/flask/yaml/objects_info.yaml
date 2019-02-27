@@ -55,3 +55,60 @@ ENSG00000139618:
         label: 'ENST00000380152.7'
         name: 'transcript'
         selectedInfo: 'MANE Select'
+ENSG00000139619:
+    id: ENSG00000139619
+    label: 'BRCA2'
+    name: 'gene'
+    bio_type: 'Protein coding'
+    track_categories:
+
+     - name: 'Genes & transcripts'
+       trackList:
+         - additionalInfo: 'Forward strand'
+           color: TrackItemColour.DARK_GREY
+           id: 1
+           label: 'Protein coding genes'
+           name: 'gene-pc-fwd'
+         - additionalInfo: 'Forward strand'
+           color: TrackItemColour.GREY
+           id: 2
+           label: 'Other genes'
+           name: 'gene-other-fwd'
+         - additionalInfo: 'Reverse strand'
+           color: TrackItemColour.DARK_GREY
+           id: 3
+           label: 'Protein coding genes'
+           name: 'gene-pc-rev'
+         - additionalInfo: 'Reverse strand'
+           color: TrackItemColour.GREY
+           id: 4
+           label: 'Other genes'
+           name: 'gene-other-rev'
+
+     - name: 'Assembly'
+       trackList:
+          - id: 101
+            label: 'Contigs'
+            name: 'contig'
+          - id: 102
+            label: '%GC'
+            name: 'gc'
+
+     - name: 'Comparative genomics'
+       trackList: []
+
+     - name: 'Experiment design'
+       trackList: []
+
+     - name: 'References & evidence'
+       trackList: []
+
+    main:
+     additionalInfo: 'Protein coding'
+     childTrackList:
+        additionalInfo: 'Protein coding'
+        color: TrackItemColour.BLUE
+        id: 0.1
+        label: 'ENST00000380152.7'
+        name: 'transcript'
+        selectedInfo: 'MANE Select'

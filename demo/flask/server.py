@@ -225,8 +225,10 @@ def example_objects():
 def get_object_info(object_id):
     with open(objects_info_path) as f:
         data = yaml.load(f)
-        #return jsonify(data)
-        return jsonify(data[object_id])
+        if object_id not in data:
+          return jsonify({'error':'Object Not Found'})
+        else:
+          return jsonify(data[object_id])
 
 
 var_category = {
