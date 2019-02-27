@@ -18,6 +18,7 @@ config_path = home_dir + "/ensembl-server/demo/flask/config.yaml"
 contig_path = data_repo + "/contigs/contigs-approx.bb"
 gene_path = data_repo + "/genes_and_transcripts/canonical.bb"
 chrom_sizes= data_repo + "/common_files/grch38.chrom.sizes"
+variant_z = home_dir + "/tmp/chr6-z.bb"
 
 def bounds_fix(chrom,start,end):
     with open(chrom_sizes) as f:
@@ -209,6 +210,39 @@ def contig_full(leaf,do_shimmer):
     data += [starts,lens,senses]
     data = {'data': data }
     return jsonify(data)
-  
+
+var_category = {
+    'intergenic_variant': 1,
+    'intron_variant': 2,
+    'non_coding_transcript_exon_variant': 2,
+    'non_coding_transcript_variant': 2,
+    'splice_region_variant': 3,
+    'splice_donor_variant': 5,
+    'NMD_transcript_variant': 2,
+    '5_prime_UTR_variant': 2,
+    '3_prime_UTR_variant': 2,
+    'synonymous_variant': 3,
+    'missense_variant': 4,
+    'start_lost': 5,
+    'coding_sequence_variant': 3,
+    'frameshift_variant': 5,
+    'stop_gained': 5,
+}
+
+@app.route("/browser/data/variant/<leaf>")
+def variant(leaf):
+    starts = []
+    lens = []
+    types = []
+    (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
+    data = get_bigbed_data(variant_z,chrom,leaf_start,leaf_end)
+    for (start,end,extra) in data:
+        starts.append(start)
+        lens.append(end-start)
+        types.append(var_category.get(extra,0))
+        if extra not in var_category:
+            print('missing',extra)
+    return jsonify({'data': [starts,lens,types]})
+
 if __name__ == "__main__":
    app.run(port=4000)

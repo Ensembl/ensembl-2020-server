@@ -208,8 +208,8 @@ bytecodes:
         const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
         shape #16, #7, #12, #13, #14, #15 ; draw boxes
         ; *** sequence ***
-        const #7, "ACGT"   ; #7 = available sequence
-        const #8, [1,1,1,1]; #8 = length of seqeunces
+        const #7, "ACGTN"   ; #7 = available sequence
+        const #8, [1,1,1,1,1]; #8 = length of seqeunces
         const #40, "Lato"
         const #41, [12,1,192,192,192,255,255,255]
         text #9, #40, #41, #7, #8    ; #9 = textures for A,C,G,T
@@ -382,14 +382,6 @@ bytecodes:
         const #12, [-0.5]
         mul #62, #13, #12
         add #12, #60, #62
-        ;
-        ; y-position
-        ;plot #61, #0
-        ;const #62, [0]
-        ;get #60, #61, #62
-        ; see previous two scales for details in comments.
-        ; register usage essentially same except we need to move
-        ; #7 -> #18; #8 -> #19; #9 -> #20 for extra seq data
         ; *** scale (for size) ***
         ;scale #18
         ;const #19, [-16]
@@ -442,8 +434,8 @@ bytecodes:
         const #2, [0.9]
         shape #10, #20, #2, #12, #13, #15
         ; *** exon text ***
-        const #27, "ACGT"
-        const #28, [1,1,1,1]
+        const #27, "ACGTN"
+        const #28, [1,1,1,1,1]
         const #40, "Lato"
         const #41, [12,1,255,255,255,75,168,252]
         text #29, #40, #41, #27, #28
@@ -464,8 +456,8 @@ bytecodes:
         const #64, [0]
         shape #31, #27, #64, #33, #64, #29
         ; *** intron text ***
-        const #27, "ACGT"
-        const #28, [1,1,1,1]
+        const #27, "ACGTN"
+        const #28, [1,1,1,1,1]
         const #40, "Lato"
         const #41, [12,0,75,168,252,255,255,255]
         text #29, #40, #41, #27, #28
@@ -486,7 +478,26 @@ bytecodes:
         const #64, [0]
         shape #31, #27, #64, #33, #64, #29
 
-
+    variant: |
+        plot #62, #0
+        const #63, [1]
+        get #61, #62, #63
+        const #60, [0.5]
+        mul #61, #61, #60
+        const #63, [0]
+        get #60, #62, #63
+        add #60, #60, #61
+        const #62, [-3]
+        add #60, #60, #62
+        const #10, [1,1]
+        const #15, [
+            0,0,0, 57,135,148,  160,214,207,  143,251, 66,  249,200, 74,
+            223, 30, 29]
+        const #17, [3]
+        pick #15, #3, #15, #17
+        const #5, [6]
+        shape #10, #1, #2, #60, #5, #15
+        
 endpoints:
     contig-normal:
         endpoint: data/contig-normal
@@ -568,6 +579,10 @@ endpoints:
         endpoint: data/transcript?type=other&dir=rev&seq=yes
         bytecode: gene-letterbox
 
+    variant:
+        endpoint: data/variant
+        bytecode: variant
+
     framework:
         bytecode: framework
 
@@ -626,3 +641,7 @@ tracks:
             endpoint: geneeb-other-rev
         QZ:
             endpoint: genesb-other-rev
+
+    "internal:debug:variant":
+        NZ:
+            endpoint: variant
