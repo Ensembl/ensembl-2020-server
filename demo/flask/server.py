@@ -11,6 +11,7 @@ app = Flask(__name__)
 CORS(app)
 
 home_dir = "/home/dan"
+#home_dir = "/Users/sboddu/e2020"
 data_repo = home_dir + "/e2020_march_datafiles"
 
 refget_hashes = data_repo + "/common_files/grch38.chrom.hashes"
@@ -19,8 +20,8 @@ contig_path = data_repo + "/contigs/contigs-approx.bb"
 gene_path = data_repo + "/genes_and_transcripts/canonical.bb"
 chrom_sizes= data_repo + "/common_files/grch38.chrom.sizes"
 variant_z = home_dir + "/tmp/chr6-z.bb"
-objects_list_path = "/Users/sboddu/e2020/ensembl-server/demo/flask/example_objects.yaml"
-objects_info_path = "/Users/sboddu/e2020/ensembl-server/demo/flask/objects_info.yaml"
+objects_list_path = home_dir + "/ensembl-server/demo/flask/example_objects.yaml"
+objects_info_path = home_dir + "/ensembl-server/demo/flask/objects_info.yaml"
 
 def bounds_fix(chrom,start,end):
     with open(chrom_sizes) as f:
