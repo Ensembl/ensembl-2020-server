@@ -5,14 +5,20 @@ from flask_cors import CORS
 import yaml
 import pyBigWig
 import shimmer
+import urllib, urllib.parse
 
 app = Flask(__name__)
 CORS(app)
 
-config_path = "/home/dan/ensembl-server/demo/flask/config.yaml"
-contig_path = "/home/dan/e2020_march_datafiles/contigs/contigs-approx.bb"
-gene_path = "/home/dan/e2020_march_datafiles/genes_and_transcripts/canonical.bb"
-chrom_sizes= "/home/dan/e2020_march_datafiles/common_files/grch38.chrom.sizes"
+home_dir = "/home/dan"
+data_repo = home_dir + "/e2020_march_datafiles"
+
+refget_hashes = data_repo + "/common_files/grch38.chrom.hashes"
+config_path = home_dir + "/ensembl-server/demo/flask/config.yaml"
+contig_path = data_repo + "/contigs/contigs-approx.bb"
+gene_path = data_repo + "/genes_and_transcripts/canonical.bb"
+chrom_sizes= data_repo + "/common_files/grch38.chrom.sizes"
+variant_z = home_dir + "/tmp/chr6-z.bb"
 objects_list_path = "/Users/sboddu/e2020/ensembl-server/demo/flask/example_objects.yaml"
 objects_info_path = "/Users/sboddu/e2020/ensembl-server/demo/flask/objects_info.yaml"
 
@@ -55,8 +61,58 @@ def browser_config():
         data = yaml.load(f)
         return jsonify(data)
 
-@app.route("/browser/data/transcript/<leaf>")
+
+@app.route("/browser/data/gene/<leaf>")
 def gene_gene(leaf):
+    (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
+    data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
+    out_starts = []
+    out_lens = []
+    for line in data:
+        gene_start = int(line[0])
+        gene_end = int(line[1])
+        parts = line[2].split("\t")
+        (biotype,gene_name,strand) = (parts[16],parts[15],parts[2])
+        dir_ = request.args.get('dir')
+        type_ = request.args.get('type')
+        if (strand == '+') != (dir_ == 'fwd'):
+            continue
+        if (biotype == 'protein_coding') != (type_ == 'pc'):
+            continue
+        out_starts.append(gene_start)
+        out_lens.append(gene_end-gene_start)
+    data = {'data':[out_starts,out_lens]}
+    return jsonify(data)
+
+def refget(hash_,start,end):
+    url = ("https://www.ebi.ac.uk/ena/cram/sequence/{}?start={}&end={}"
+            .format(hash_,start,end))
+    headers = {'Accept': 'text/vnd.ga4gh.refget.v1.0.0+plain;charset=us-ascii'}
+    req = urllib.request.Request(url, None, headers)    
+    with urllib.request.urlopen(req) as response:
+        html = response.read()
+        return html.decode("ascii")
+
+def get_sequence(chrom,requests):
+    seq_text = ""
+    seq_starts = []
+    seq_lens = []
+    hash_ = None
+    with open(refget_hashes) as f:
+        for line in f.readlines():
+            parts = line.split("\t")
+            if chrom == parts[0]:
+                hash_ = parts[1]
+    if hash_:
+        for (start,end) in requests:
+            seq = refget(hash_,start,end)
+            seq_starts.append(start)
+            seq_lens.append(len(seq))
+            seq_text += seq
+    return (seq_text,seq_starts,seq_lens)
+
+@app.route("/browser/data/transcript/<leaf>")
+def gene_transcript(leaf):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
     out_starts = []
@@ -65,9 +121,11 @@ def gene_gene(leaf):
     out_utrs = []
     out_exons = []
     out_introns = []
+    seq_req = []
     for line in data:
         gene_start = int(line[0])
         gene_end = int(line[1])
+        seq_req.append((max(gene_start,leaf_start),min(gene_end,leaf_end)))
         parts = line[2].split("\t")
         (
             biotype,gene_name,part_starts,part_lens,cds_start,cds_end,
@@ -119,7 +177,11 @@ def gene_gene(leaf):
                 out_exons.append(b[2])
             else:
                 out_utrs.append(b[2])
-    data = {'data':[out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns]}
+    data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns]
+    if request.args.get('seq') == 'yes':
+        (seq_text,seq_starts,seq_lens) = get_sequence(chrom,seq_req)
+        data += [seq_text,seq_starts,seq_lens]
+    data = {'data': data}
     return jsonify(data)
 
 @app.route("/browser/data/contig-shimmer/<leaf>")
@@ -143,7 +205,12 @@ def contig_full(leaf,do_shimmer):
         senses.append(extra[2]=='+')
     if do_shimmer:
         (starts, lens, senses) = shimmer.shimmer(starts,lens,senses,leaf_start,leaf_end)
-    data = {'data':[starts,lens,senses]}
+    data = []
+    if request.args.get('seq') == 'yes':
+        (seq_text,seq_starts,seq_lens) = get_sequence(chrom,[(leaf_start,leaf_end)])
+        data += [seq_text,seq_starts,seq_lens]
+    data += [starts,lens,senses]
+    data = {'data': data }
     return jsonify(data)
 
 @app.route("/browser/example_objects")
@@ -161,6 +228,38 @@ def get_object_info(object_id):
         return jsonify(data[object_id])
 
 
- 
+var_category = {
+    'intergenic_variant': 1,
+    'intron_variant': 2,
+    'non_coding_transcript_exon_variant': 2,
+    'non_coding_transcript_variant': 2,
+    'splice_region_variant': 3,
+    'splice_donor_variant': 5,
+    'NMD_transcript_variant': 2,
+    '5_prime_UTR_variant': 2,
+    '3_prime_UTR_variant': 2,
+    'synonymous_variant': 3,
+    'missense_variant': 4,
+    'start_lost': 5,
+    'coding_sequence_variant': 3,
+    'frameshift_variant': 5,
+    'stop_gained': 5,
+}
+
+@app.route("/browser/data/variant/<leaf>")
+def variant(leaf):
+    starts = []
+    lens = []
+    types = []
+    (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
+    data = get_bigbed_data(variant_z,chrom,leaf_start,leaf_end)
+    for (start,end,extra) in data:
+        starts.append(start)
+        lens.append(end-start)
+        types.append(var_category.get(extra,0))
+        if extra not in var_category:
+            print('missing',extra)
+    return jsonify({'data': [starts,lens,types]})
+
 if __name__ == "__main__":
    app.run(port=4000)

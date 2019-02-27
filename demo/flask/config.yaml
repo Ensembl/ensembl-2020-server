@@ -141,6 +141,107 @@ bytecodes:
         const #10, [1,1]
         shape #10, #1, #2, #4, #5, #6
 
+    contig-empty-box: |
+        ; #1 = start box frag
+        ; #2 = len box frag
+        ; #3 = colour box frag
+        plot #62, #0
+        const #63, [1]
+        get #61, #62, #63
+        const #60, [0.5]
+        mul #61, #61, #60
+        const #63, [0]
+        get #60, #62, #63
+        add #60, #60, #61
+        const #62, [-4]
+        add #13, #60, #62
+        ; *** scales ***
+        const #14, [8] ; #14 = box y-height
+        ; *** boxes ***
+        runs #7, #1, #2    ; #7 = list of box starts
+        const #16, [-0.45] ; #16 = left shift ~0.5bp
+        add #7, #7, #16    ; #7 = starts shifted left 0.5bp
+        const #12, [0.9]   ; #12 = box size
+        runsof #3, #2, #3  ; #3 = colours to positions
+        const #15, [192,192,192,128,128,128] ; #15 = box colour palette
+        const #17, [3]     ; #17 = pallete stride 3
+        pick #15, #3, #15, #17 ; #15 = box colours
+        const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
+        shape #16, #7, #12, #13, #14, #15 ; draw boxes
+
+    contig-letterbox: |
+        ; #1 = sequence
+        ; #2 = start pos of seq frag
+        ; #3 = len of seq frag
+        ; #4 = start box frag
+        ; #5 = len box frag
+        ; #6 = colour box frag
+        ; *** scale (for size) ***
+        const #17, [
+             12, 24, 24, 24, 24, 24, 24, 24, 24, 24
+        ] ; #17 = y-sizes Q, RZ
+        scale #18 ; #18 = scale
+        const #19, [-16] ; #19 = start at Q
+        add #18, #18, #19 ; #18 = scale (Q-based)
+        get #14, #17, #18 ; #14 = box y-height
+        plot #62, #0
+        const #63, [1]
+        get #61, #62, #63
+        const #60, [0.5]
+        mul #61, #61, #60
+        const #63, [0]
+        get #60, #62, #63
+        add #60, #60, #61
+        move #27, #14
+        const #28, [-0.5]
+        mul #27, #27, #28
+        add #13, #60, #27
+        ; *** boxes ***
+        runs #7, #4, #5    ; #7 = list of box starts
+        const #16, [-0.45] ; #16 = left shift ~0.5bp
+        add #7, #7, #16    ; #7 = starts shifted left 0.5bp
+        const #12, [0.9]   ; #12 = box size
+        runsof #6, #5, #6  ; #6 = colours to positions
+        const #15, [192,192,192,128,128,128] ; #15 = box colour palette
+        const #17, [3]     ; #17 = pallete stride 3
+        pick #15, #6, #15, #17 ; #15 = box colours
+        const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
+        shape #16, #7, #12, #13, #14, #15 ; draw boxes
+        ; *** sequence ***
+        const #7, "ACGTN"   ; #7 = available sequence
+        const #8, [1,1,1,1,1]; #8 = length of seqeunces
+        const #40, "Lato"
+        const #41, [12,1,192,192,192,255,255,255]
+        text #9, #40, #41, #7, #8    ; #9 = textures for A,C,G,T
+        index #1, #1, #7   ; #1 = 0=A, 1=C, 2=G, 3=T for seq
+        const #10, [1]     ; #10 = stride 1 for texture ids
+        pick #9, #1, #9, #10 ; #9 = 0123 to tex id for seq
+        const #11, [3,0,0,1,0,1,1,0,1,0,0]
+        runs #7, #2, #3    ; #7 = position of sequence
+        const #19, [0.5]
+        mul #14, #14, #19
+        add #13, #13, #14
+        const #50, [2]
+        add #13, #13, #50
+        const #28, [0]
+        shape #11, #7, #28, #13, #28, #9 ; draw letter        
+
+    gene: |
+        plot #62, #0
+        const #63, [1]
+        get #61, #62, #63
+        const #60, [0.5]
+        mul #61, #61, #60
+        const #63, [0]
+        get #60, #62, #63
+        add #60, #60, #61
+        const #62, [-3]
+        add #60, #60, #62
+        const #10, [1,1]
+        const #15, [75,168,252]
+        const #5, [6]
+        shape #10, #1, #2, #60, #5, #15
+
     transcript: |
         plot #62, #0
         const #63, [1]
@@ -201,10 +302,214 @@ bytecodes:
         elide #8, #16, #17
         shape #10, #7, #8, #12, #13, #15
 
+    gene-empty-box: |
+        plot #62, #0
+        const #63, [1]
+        get #61, #62, #63
+        const #60, [0.5]
+        mul #61, #61, #60
+        const #63, [0]
+        get #60, #62, #63
+        add #60, #60, #61
+        const #62, [-3]
+        add #60, #60, #62
+        ; y-position
+        ;plot #7, #0
+        ;const #8, [0]
+        ;get #60, #7, #8
+        ; see previous scale for details in comments.
+        ; register usage essentially same.
+        ; We also use #9, as tmp and reuse #1,#2 as tmp.
+        runsof #10, #2, #1
+        merge #11, #3, #4, #5, #6
+        accn #12, #11, #2
+        add #13, #10, #12
+        const #14, [-1]
+        mul #14, #11, #14
+        add #14, #13, #14
+        ; *** utrs and introns ***
+        const #15, [205,231,254]
+        const #10, [2,1]
+        move #12, #60
+        const #13, [6]
+        const #16, [0]
+        eq #9, #3, #16
+        const #16, [2]
+        eq #16, #3, #16
+        or #16, #16, #9
+        move #7, #14
+        const #17, [1]
+        elide #7, #16, #17
+        move #8, #11
+        elide #8, #16, #17
+        runs #9, #7, #8
+        const #1, [-0.45]
+        add #9, #9, #1
+        const #2, [0.9]
+        shape #10, #9, #2, #12, #13, #15
+        ; *** exons ***
+        const #15, [75,168,252]
+        const #10, [1,1]
+        const #16, [1]
+        eq #16, #3, #16
+        move #7, #14
+        const #17, [1]
+        elide #7, #16, #17
+        move #8, #11
+        elide #8, #16, #17
+        runs #9, #7, #8
+        const #1, [-0.45]
+        add #9, #9, #1
+        const #2, [0.9]
+        shape #10, #9, #2, #12, #13, #15
+
+    gene-letterbox: |
+        const #17, [
+             12, 24, 24, 24, 24, 24, 24, 24, 24, 24
+        ]
+        scale #18
+        const #19, [-16]
+        add #18, #18, #19
+        get #13, #17, #18
+        plot #62, #0
+        const #63, [1]
+        get #61, #62, #63
+        const #60, [0.5]
+        mul #61, #61, #60
+        const #63, [0]
+        get #60, #62, #63
+        add #60, #60, #61
+        const #12, [-0.5]
+        mul #62, #13, #12
+        add #12, #60, #62
+        ; *** scale (for size) ***
+        ;scale #18
+        ;const #19, [-16]
+        ;add #18, #18, #19
+        ;get #13, #17, #18
+        ;const #12, [-0.5]
+        ;mul #12, #13, #12
+        ;add #12, #12, #60
+        ; decode necklaces
+        runsof #10, #2, #1
+        merge #11, #3, #4, #5, #6
+        accn #14, #11, #2
+        add #20, #10, #14
+        const #14, [-1]
+        mul #14, #11, #14
+        add #14, #20, #14
+        ; *** utrs and introns ***
+        const #15, [205,231,254]
+        const #10, [2,1]
+        const #16, [0]
+        eq #20, #3, #16
+        const #16, [2]
+        eq #16, #3, #16
+        or #16, #16, #20
+        move #18, #14
+        const #17, [1]
+        elide #18, #16, #17
+        move #19, #11
+        elide #19, #16, #17
+        runs #20, #18, #19
+        const #1, [-0.45]
+        add #20, #20, #1
+        move #36, #20
+        const #2, [0.9]
+        shape #10, #20, #2, #12, #13, #15
+        ; *** exons ***
+        const #15, [75,168,252]
+        const #10, [1,1]
+        const #16, [1]
+        eq #16, #3, #16
+        move #18, #14
+        const #17, [1]
+        elide #18, #16, #17
+        move #19, #11
+        elide #19, #16, #17
+        runs #20, #18, #19
+        const #1, [-0.45]
+        add #20, #20, #1
+        move #35, #20
+        const #2, [0.9]
+        shape #10, #20, #2, #12, #13, #15
+        ; *** exon text ***
+        const #27, "ACGTN"
+        const #28, [1,1,1,1,1]
+        const #40, "Lato"
+        const #41, [12,1,255,255,255,75,168,252]
+        text #29, #40, #41, #27, #28
+        index #57, #7, #27
+        const #30, [1]
+        pick #29, #57, #29, #30
+        const #31, [3,0,0,1,0,1,1,0,1,0,0]
+        runs #27, #8, #9
+        member #34, #27, #35
+        elide #27, #34, #30
+        elide #29, #34, #30
+        move #33, #12
+        const #50, [0.5]
+        mul #63, #13, #50
+        const #50, [2]
+        add #63, #63, #50
+        add #33, #33, #63
+        const #64, [0]
+        shape #31, #27, #64, #33, #64, #29
+        ; *** intron text ***
+        const #27, "ACGTN"
+        const #28, [1,1,1,1,1]
+        const #40, "Lato"
+        const #41, [12,0,75,168,252,255,255,255]
+        text #29, #40, #41, #27, #28
+        index #57, #7, #27
+        const #30, [1]
+        pick #29, #57, #29, #30
+        const #31, [3,0,0,1,0,1,1,0,1,0,0]
+        runs #27, #8, #9
+        member #34, #27, #36
+        elide #27, #34, #30
+        elide #29, #34, #30
+        move #33, #12
+        const #50, [0.5]
+        mul #63, #13, #50
+        const #50, [2]
+        add #63, #63, #50
+        add #33, #33, #63
+        const #64, [0]
+        shape #31, #27, #64, #33, #64, #29
+
+    variant: |
+        plot #62, #0
+        const #63, [1]
+        get #61, #62, #63
+        const #60, [0.5]
+        mul #61, #61, #60
+        const #63, [0]
+        get #60, #62, #63
+        add #60, #60, #61
+        const #62, [-3]
+        add #60, #60, #62
+        const #10, [1,1]
+        const #15, [
+            0,0,0, 57,135,148,  160,214,207,  143,251, 66,  249,200, 74,
+            223, 30, 29]
+        const #17, [3]
+        pick #15, #3, #15, #17
+        const #5, [6]
+        shape #10, #1, #2, #60, #5, #15
+        
 endpoints:
     contig-normal:
         endpoint: data/contig-normal
         bytecode: contig
+
+    contig-emptybox:
+        endpoint: data/contig-normal
+        bytecode: contig-empty-box
+
+    contig-letterbox:
+        endpoint: data/contig-normal?seq=yes
+        bytecode: contig-letterbox
 
     contig-shimmer:
         endpoint: data/contig-shimmer
@@ -226,6 +531,58 @@ endpoints:
         endpoint: data/transcript?type=other&dir=rev
         bytecode: transcript
 
+    gene-pc-fwd:
+        endpoint: data/gene?type=pc&dir=fwd
+        bytecode: gene
+
+    gene-pc-rev:
+        endpoint: data/gene?type=pc&dir=rev
+        bytecode: gene
+
+    gene-other-fwd:
+        endpoint: data/gene?type=other&dir=fwd
+        bytecode: gene
+
+    gene-other-rev:
+        endpoint: data/gene?type=other&dir=rev
+        bytecode: gene
+
+    geneeb-pc-fwd:
+        endpoint: data/transcript?type=pc&dir=fwd
+        bytecode: gene-empty-box
+
+    geneeb-pc-rev:
+        endpoint: data/transcript?type=pc&dir=rev
+        bytecode: gene-empty-box
+
+    geneeb-other-fwd:
+        endpoint: data/transcript?type=other&dir=fwd
+        bytecode: gene-empty-box
+
+    geneeb-other-rev:
+        endpoint: data/transcript?type=other&dir=rev
+        bytecode: gene-empty-box
+
+    genesb-pc-fwd:
+        endpoint: data/transcript?type=pc&dir=fwd&seq=yes
+        bytecode: gene-letterbox
+
+    genesb-pc-rev:
+        endpoint: data/transcript?type=pc&dir=rev&seq=yes
+        bytecode: gene-letterbox
+
+    genesb-other-fwd:
+        endpoint: data/transcript?type=other&dir=fwd&seq=yes
+        bytecode: gene-letterbox
+
+    genesb-other-rev:
+        endpoint: data/transcript?type=other&dir=rev&seq=yes
+        bytecode: gene-letterbox
+
+    variant:
+        endpoint: data/variant
+        bytecode: variant
+
     framework:
         bytecode: framework
 
@@ -235,23 +592,56 @@ tracks:
             endpoint: contig-shimmer
         JO:
             endpoint: contig-normal
+        PP:
+            endpoint: contig-emptybox
+        QS:
+            endpoint: contig-letterbox
 
     "internal:debug:zzz-framework":
         AZ:
             endpoint: framework
 
     "internal:debug:gene-pc-fwd":
+        AH:
+            endpoint: gene-pc-fwd
         IO:
             endpoint: trans-pc-fwd
+        PP:
+            endpoint: geneeb-pc-fwd
+        QZ:
+            endpoint: genesb-pc-fwd
 
     "internal:debug:gene-pc-rev":
+        AH:
+            endpoint: gene-pc-rev
         IO:
             endpoint: trans-pc-rev
+        PP:
+            endpoint: geneeb-pc-rev
+        QZ:
+            endpoint: genesb-pc-rev
+
 
     "internal:debug:gene-other-fwd":
+        AH:
+            endpoint: gene-other-fwd
         IO:
             endpoint: trans-other-fwd
+        PP:
+            endpoint: geneeb-other-fwd
+        QZ:
+            endpoint: genesb-other-fwd
 
     "internal:debug:gene-other-rev":
+        AH:
+            endpoint: gene-other-rev
         IO:
             endpoint: trans-other-rev
+        PP:
+            endpoint: geneeb-other-rev
+        QZ:
+            endpoint: genesb-other-rev
+
+    "internal:debug:variant":
+        NZ:
+            endpoint: variant
