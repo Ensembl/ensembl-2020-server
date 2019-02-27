@@ -14,6 +14,7 @@ contig_path = "/home/dan/e2020_march_datafiles/contigs/contigs-approx.bb"
 gene_path = "/home/dan/e2020_march_datafiles/genes_and_transcripts/canonical.bb"
 chrom_sizes= "/home/dan/e2020_march_datafiles/common_files/grch38.chrom.sizes"
 objects_list_path = "/Users/sboddu/e2020/ensembl-server/demo/flask/example_objects.yaml"
+objects_info_path = "/Users/sboddu/e2020/ensembl-server/demo/flask/objects_info.yaml"
 
 def bounds_fix(chrom,start,end):
     with open(chrom_sizes) as f:
@@ -150,6 +151,14 @@ def example_objects():
     with open(objects_list_path) as f:
         data = yaml.load(f)
         return jsonify(data)
+
+
+@app.route("/browser/get_object_info/<object_id>")
+def get_object_info(object_id):
+    with open(objects_info_path) as f:
+        data = yaml.load(f)
+        #return jsonify(data)
+        return jsonify(data[object_id])
 
 
  
