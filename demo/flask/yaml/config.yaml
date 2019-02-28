@@ -579,9 +579,38 @@ endpoints:
         endpoint: data/transcript?type=other&dir=rev&seq=yes
         bytecode: gene-letterbox
 
-    variant:
-        endpoint: data/variant
+    variant-z:
+        endpoint: data/variant?scale=z
         bytecode: variant
+
+    variant-y:
+        endpoint: data/variant?scale=y
+        bytecode: variant
+
+    variant-x:
+        endpoint: data/variant?scale=x
+        bytecode: variant
+
+    variant-w:
+        endpoint: data/variant?scale=w
+        bytecode: variant
+
+    variant-v:
+        endpoint: data/variant?scale=v
+        bytecode: variant
+
+    variant-u:
+        endpoint: data/variant?scale=u
+        bytecode: variant
+
+    variant-t:
+        endpoint: data/variant?scale=t
+        bytecode: variant
+
+    variant-s:
+        endpoint: data/variant?scale=s
+        bytecode: variant
+
 
     framework:
         bytecode: framework
@@ -662,5 +691,21 @@ tracks:
         letter: V
         position: 6
         endpoints:
-            NS:
-                endpoint: variant
+            PS:
+                endpoint: variant-z
+            "NO":
+                endpoint: variant-y
+            MM:
+                endpoint: variant-x
+            LL:
+                endpoint: variant-w
+            KK:
+                endpoint: variant-v
+            IJ:
+                endpoint: variant-u
+            FH:
+                endpoint: variant-t
+            EE:
+                endpoint: variant-s
+            #BD:
+            #    endpoint: variant-v

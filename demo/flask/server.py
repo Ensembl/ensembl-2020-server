@@ -2,6 +2,7 @@
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import os.path
 import yaml
 import pyBigWig
 import shimmer
@@ -19,9 +20,11 @@ config_path = home_dir + "/ensembl-server/demo/flask/yaml/config.yaml"
 contig_path = data_repo + "/contigs/contigs-approx.bb"
 gene_path = data_repo + "/genes_and_transcripts/canonical.bb"
 chrom_sizes= data_repo + "/common_files/grch38.chrom.sizes"
-variant_z = home_dir + "/tmp/chr6-z.bb"
+variant_files = home_dir + "/e2020-vcf/bigbeds"
 objects_list_path = home_dir + "/ensembl-server/demo/flask/yaml/example_objects.yaml"
 objects_info_path = home_dir + "/ensembl-server/demo/flask/yaml/objects_info.yaml"
+
+variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
 
 def get_sticks():
     out = {}
@@ -268,6 +271,7 @@ var_category = {
     'start_retained_variant': 3,
     'stop_retained_variant': 3,
     'stop_gained': 5,
+    'stop_lost': 5,
     'synonymous_variant': 3,
     'TFBS_ablation': 1,
     'TFBS_amplification': 1,
@@ -286,15 +290,20 @@ def variant(leaf):
     starts = []
     lens = []
     types = []
-    if False:
-        (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
-        data = get_bigbed_data(variant_z,chrom,leaf_start,leaf_end)
+    (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
+    scale = request.args.get('scale') or 'z'
+    path = os.path.join(variant_files,variant_pattern.format(chrom,scale))
+    if os.path.exists(path):
+        data = get_bigbed_data(path,chrom,leaf_start,leaf_end)
+        print('gotcha',len(data))
         for (start,end,extra) in data:
             starts.append(start)
             lens.append(end-start)
             types.append(var_category.get(extra,0))
             if extra not in var_category:
                 print('missing',extra)
+    else:
+        print('missing',path)
     return jsonify({'data': [starts,lens,types]})
 
 if __name__ == "__main__":
