@@ -587,61 +587,80 @@ endpoints:
         bytecode: framework
 
 tracks:
-    "internal:debug:contig":
-        AI:
-            endpoint: contig-shimmer
-        JO:
-            endpoint: contig-normal
-        PP:
-            endpoint: contig-emptybox
-        QS:
-            endpoint: contig-letterbox
+    contig:
+        letter: G
+        position: 3
+        endpoints:
+            AI:
+                endpoint: contig-shimmer
+            JO:
+                endpoint: contig-normal
+            PP:
+                endpoint: contig-emptybox
+            QS:
+                endpoint: contig-letterbox
 
-    "internal:debug:zzz-framework":
-        AS:
-            endpoint: framework
+    zzz-framework:
+        position: -1
+        endpoints:
+            AS:
+                endpoint: framework
 
-    "internal:debug:gene-pc-fwd":
-        AH:
-            endpoint: gene-pc-fwd
-        IO:
-            endpoint: trans-pc-fwd
-        PP:
-            endpoint: geneeb-pc-fwd
-        QS:
-            endpoint: genesb-pc-fwd
+    gene-pc-fwd:
+        letter: G
+        position: 1
+        endpoints:
+            AH:
+                endpoint: gene-pc-fwd
+            IO:
+                endpoint: trans-pc-fwd
+            PP:
+                endpoint: geneeb-pc-fwd
+            QS:
+                endpoint: genesb-pc-fwd
 
-    "internal:debug:gene-pc-rev":
-        AH:
-            endpoint: gene-pc-rev
-        IO:
-            endpoint: trans-pc-rev
-        PP:
-            endpoint: geneeb-pc-rev
-        QS:
-            endpoint: genesb-pc-rev
+    gene-pc-rev:
+        letter: G
+        position: 4
+        endpoints:
+            AH:
+                endpoint: gene-pc-rev
+            IO:
+                endpoint: trans-pc-rev
+            PP:
+                endpoint: geneeb-pc-rev
+            QS:
+                endpoint: genesb-pc-rev
 
+    gene-other-fwd:
+        letter: G
+        position: 2
+        endpoints:
+            AH:
+                endpoint: gene-other-fwd
+            IO:
+                endpoint: trans-other-fwd
+            PP:
+                endpoint: geneeb-other-fwd
+            QS:
+                endpoint: genesb-other-fwd
 
-    "internal:debug:gene-other-fwd":
-        AH:
-            endpoint: gene-other-fwd
-        IO:
-            endpoint: trans-other-fwd
-        PP:
-            endpoint: geneeb-other-fwd
-        QS:
-            endpoint: genesb-other-fwd
+    gene-other-rev:
+        letter: G
+        position: 5
+        endpoints:
+            AH:
+                endpoint: gene-other-rev
+            IO:
+                endpoint: trans-other-rev
+            PP:
+                endpoint: geneeb-other-rev
+            QS:
+                endpoint: genesb-other-rev
 
-    "internal:debug:gene-other-rev":
-        AH:
-            endpoint: gene-other-rev
-        IO:
-            endpoint: trans-other-rev
-        PP:
-            endpoint: geneeb-other-rev
-        QS:
-            endpoint: genesb-other-rev
-
-    "internal:debug:variant":
-        NS:
-            endpoint: variant
+    variant:
+        letter: V
+        position: 6
+        endpoints:
+            NS:
+                endpoint: variant
