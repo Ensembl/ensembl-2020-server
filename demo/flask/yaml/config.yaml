@@ -598,7 +598,7 @@ tracks:
             endpoint: contig-letterbox
 
     "internal:debug:zzz-framework":
-        AZ:
+        AS:
             endpoint: framework
 
     "internal:debug:gene-pc-fwd":
@@ -608,7 +608,7 @@ tracks:
             endpoint: trans-pc-fwd
         PP:
             endpoint: geneeb-pc-fwd
-        QZ:
+        QS:
             endpoint: genesb-pc-fwd
 
     "internal:debug:gene-pc-rev":
@@ -618,7 +618,7 @@ tracks:
             endpoint: trans-pc-rev
         PP:
             endpoint: geneeb-pc-rev
-        QZ:
+        QS:
             endpoint: genesb-pc-rev
 
 
@@ -629,7 +629,7 @@ tracks:
             endpoint: trans-other-fwd
         PP:
             endpoint: geneeb-other-fwd
-        QZ:
+        QS:
             endpoint: genesb-other-fwd
 
     "internal:debug:gene-other-rev":
@@ -639,9 +639,9 @@ tracks:
             endpoint: trans-other-rev
         PP:
             endpoint: geneeb-other-rev
-        QZ:
+        QS:
             endpoint: genesb-other-rev
 
     "internal:debug:variant":
-        NZ:
+        NS:
             endpoint: variant

@@ -53,7 +53,6 @@ def get_bigbed_data(path,chromosome,start,end):
 def burst_leaf(leaf):
     (chrom,rest) = leaf.rsplit(':',1)
     (start,end) = rest.split('-',1)
-    chrom = "6" # XXX
     try:
         (start,end) = (int(start),int(end))
     except ValueError:
@@ -287,14 +286,15 @@ def variant(leaf):
     starts = []
     lens = []
     types = []
-    (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
-    data = get_bigbed_data(variant_z,chrom,leaf_start,leaf_end)
-    for (start,end,extra) in data:
-        starts.append(start)
-        lens.append(end-start)
-        types.append(var_category.get(extra,0))
-        if extra not in var_category:
-            print('missing',extra)
+    if False:
+        (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
+        data = get_bigbed_data(variant_z,chrom,leaf_start,leaf_end)
+        for (start,end,extra) in data:
+            starts.append(start)
+            lens.append(end-start)
+            types.append(var_category.get(extra,0))
+            if extra not in var_category:
+                print('missing',extra)
     return jsonify({'data': [starts,lens,types]})
 
 if __name__ == "__main__":
