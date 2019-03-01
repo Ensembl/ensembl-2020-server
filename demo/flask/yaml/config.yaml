@@ -1,3 +1,5 @@
+data-url: ./data
+
 bytecodes:
     framework: |
         ; *** FIXED TEXTS ***
@@ -500,115 +502,115 @@ bytecodes:
         
 endpoints:
     contig-normal:
-        endpoint: data/contig-normal
+        endpoint: contignormal
         bytecode: contig
 
     contig-emptybox:
-        endpoint: data/contig-normal
+        endpoint: contignormal
         bytecode: contig-empty-box
 
     contig-letterbox:
-        endpoint: data/contig-normal?seq=yes
+        endpoint: contignormal-seq
         bytecode: contig-letterbox
 
     contig-shimmer:
-        endpoint: data/contig-shimmer
+        endpoint: contigshimmer
         bytecode: contig
 
     trans-pc-fwd:
-        endpoint: data/transcript?type=pc&dir=fwd
+        endpoint: transcript-pc-fwd
         bytecode: transcript
 
     trans-pc-rev:
-        endpoint: data/transcript?type=pc&dir=rev
+        endpoint: transcript-pc-rev
         bytecode: transcript
 
     trans-other-fwd:
-        endpoint: data/transcript?type=other&dir=fwd
+        endpoint: transcript-other-fwd
         bytecode: transcript
 
     trans-other-rev:
-        endpoint: data/transcript?type=other&dir=rev
+        endpoint: transcript-other-rev
         bytecode: transcript
 
     gene-pc-fwd:
-        endpoint: data/gene?type=pc&dir=fwd
+        endpoint: gene-pc-fwd
         bytecode: gene
 
     gene-pc-rev:
-        endpoint: data/gene?type=pc&dir=rev
+        endpoint: gene-pc-rev
         bytecode: gene
 
     gene-other-fwd:
-        endpoint: data/gene?type=other&dir=fwd
+        endpoint: gene-other-fwd
         bytecode: gene
 
     gene-other-rev:
-        endpoint: data/gene?type=other&dir=rev
+        endpoint: gene-other-rev
         bytecode: gene
 
     geneeb-pc-fwd:
-        endpoint: data/transcript?type=pc&dir=fwd
+        endpoint: transcript-pc-fwd
         bytecode: gene-empty-box
 
     geneeb-pc-rev:
-        endpoint: data/transcript?type=pc&dir=rev
+        endpoint: transcript-pc-rev
         bytecode: gene-empty-box
 
     geneeb-other-fwd:
-        endpoint: data/transcript?type=other&dir=fwd
+        endpoint: transcript-other-fwd
         bytecode: gene-empty-box
 
     geneeb-other-rev:
-        endpoint: data/transcript?type=other&dir=rev
+        endpoint: transcript-other-rev
         bytecode: gene-empty-box
 
     genesb-pc-fwd:
-        endpoint: data/transcript?type=pc&dir=fwd&seq=yes
+        endpoint: transcript-pc-fwd-seq
         bytecode: gene-letterbox
 
     genesb-pc-rev:
-        endpoint: data/transcript?type=pc&dir=rev&seq=yes
+        endpoint: transcript-pc-rev-seq
         bytecode: gene-letterbox
 
     genesb-other-fwd:
-        endpoint: data/transcript?type=other&dir=fwd&seq=yes
+        endpoint: transcript-other-fwd-seq
         bytecode: gene-letterbox
 
     genesb-other-rev:
-        endpoint: data/transcript?type=other&dir=rev&seq=yes
+        endpoint: transcript-other-rev-seq
         bytecode: gene-letterbox
 
     variant-z:
-        endpoint: data/variant?scale=z
+        endpoint: variant-z
         bytecode: variant
 
     variant-y:
-        endpoint: data/variant?scale=y
+        endpoint: variant-y
         bytecode: variant
 
     variant-x:
-        endpoint: data/variant?scale=x
+        endpoint: variant-x
         bytecode: variant
 
     variant-w:
-        endpoint: data/variant?scale=w
+        endpoint: variant-w
         bytecode: variant
 
     variant-v:
-        endpoint: data/variant?scale=v
+        endpoint: variant-v
         bytecode: variant
 
     variant-u:
-        endpoint: data/variant?scale=u
+        endpoint: variant-u
         bytecode: variant
 
     variant-t:
-        endpoint: data/variant?scale=t
+        endpoint: variant-t
         bytecode: variant
 
     variant-s:
-        endpoint: data/variant?scale=s
+        endpoint: variant-s
         bytecode: variant
 
 

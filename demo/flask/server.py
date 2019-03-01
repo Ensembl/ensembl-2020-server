@@ -71,9 +71,7 @@ def browser_config():
         data['sticks'] = get_sticks()
         return jsonify(data)
 
-
-@app.route("/browser/data/gene/<leaf>")
-def gene_gene(leaf):
+def gene_gene(leaf,type_,dir_):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
     out_starts = []
@@ -83,16 +81,13 @@ def gene_gene(leaf):
         gene_end = int(line[1])
         parts = line[2].split("\t")
         (biotype,gene_name,strand) = (parts[16],parts[15],parts[2])
-        dir_ = request.args.get('dir')
-        type_ = request.args.get('type')
         if (strand == '+') != (dir_ == 'fwd'):
             continue
         if (biotype == 'protein_coding') != (type_ == 'pc'):
             continue
         out_starts.append(gene_start)
         out_lens.append(gene_end-gene_start)
-    data = {'data':[out_starts,out_lens]}
-    return jsonify(data)
+    return [out_starts,out_lens]
 
 def refget(hash_,start,end):
     url = ("https://www.ebi.ac.uk/ena/cram/sequence/{}?start={}&end={}"
@@ -121,8 +116,7 @@ def get_sequence(chrom,requests):
             seq_text += seq
     return (seq_text,seq_starts,seq_lens)
 
-@app.route("/browser/data/transcript/<leaf>")
-def gene_transcript(leaf):
+def gene_transcript(leaf,dir_,type_,seq):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
     out_starts = []
@@ -144,8 +138,6 @@ def gene_transcript(leaf):
             parts[16],parts[15],parts[8],parts[7],parts[3],parts[4],
             parts[2]
         )
-        dir_ = request.args.get('dir')
-        type_ = request.args.get('type')
         if (strand == '+') != (dir_ == 'fwd'):
             continue
         if (biotype == 'protein_coding') != (type_ == 'pc'):
@@ -188,21 +180,18 @@ def gene_transcript(leaf):
             else:
                 out_utrs.append(b[2])
     data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns]
-    if request.args.get('seq') == 'yes':
+    if seq:
         (seq_text,seq_starts,seq_lens) = get_sequence(chrom,seq_req)
         data += [seq_text,seq_starts,seq_lens]
-    data = {'data': data}
-    return jsonify(data)
+    return data
 
-@app.route("/browser/data/contig-shimmer/<leaf>")
 def contig_shimmer(leaf):
-    return contig_full(leaf,True)
+    return contig_full(leaf,True,False)
 
-@app.route("/browser/data/contig-normal/<leaf>")
-def contig_normal(leaf):
-    return contig_full(leaf,False)
+def contig_normal(leaf,seq):
+    return contig_full(leaf,False,seq)
 
-def contig_full(leaf,do_shimmer):
+def contig_full(leaf,do_shimmer,seq):
     starts = []
     lens = []
     senses = []
@@ -216,12 +205,11 @@ def contig_full(leaf,do_shimmer):
     if do_shimmer:
         (starts, lens, senses) = shimmer.shimmer(starts,lens,senses,leaf_start,leaf_end)
     data = []
-    if request.args.get('seq') == 'yes':
+    if seq:
         (seq_text,seq_starts,seq_lens) = get_sequence(chrom,[(leaf_start,leaf_end)])
         data += [seq_text,seq_starts,seq_lens]
     data += [starts,lens,senses]
-    data = {'data': data }
-    return jsonify(data)
+    return data
 
 @app.route("/browser/example_objects")
 def example_objects():
@@ -285,13 +273,11 @@ var_category = {
     'upstream_gene_variant': 2,
 }
 
-@app.route("/browser/data/variant/<leaf>")
-def variant(leaf):
+def variant(leaf,scale):
     starts = []
     lens = []
     types = []
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
-    scale = request.args.get('scale') or 'z'
     path = os.path.join(variant_files,variant_pattern.format(chrom,scale))
     if os.path.exists(path):
         data = get_bigbed_data(path,chrom,leaf_start,leaf_end)
@@ -304,7 +290,39 @@ def variant(leaf):
                 print('missing',extra)
     else:
         print('missing',path)
-    return jsonify({'data': [starts,lens,types]})
+    return [starts,lens,types]
+
+def extract_bulk_parts():
+    out = []
+    # allow parts qp for debugging, etc
+    for part in request.args.getlist('parts'):
+        out.append(part.split("/",1))
+    return out
+
+@app.route("/browser/data")
+def bulk_data():
+    out = []
+    for (type_,leaf) in extract_bulk_parts():
+        parts = type_.split("-")
+        while len(parts) < 4:
+            parts.append("")
+        print("parts",parts)
+        data = None
+        if parts[0] == "contignormal":
+            data = contig_normal(leaf,parts[1])
+        elif parts[0] == "contigshimmer":
+            data = contig_shimmer(leaf)
+        elif parts[0] == "variant":
+            data = variant(leaf,parts[1])
+        elif parts[0] == 'transcript':
+            data = gene_transcript(leaf,parts[1],parts[2],parts[3]=='seq')
+        elif parts[0] == 'gene':
+            data = gene_gene(leaf,parts[1],parts[2])
+        out.append([type_,leaf,data])
+        
+        print('bulk',type_,leaf)
+    return jsonify(out)
+    
 
 if __name__ == "__main__":
    app.run(port=4000)
