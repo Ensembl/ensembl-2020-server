@@ -116,7 +116,7 @@ def get_sequence(chrom,requests):
             seq_text += seq
     return (seq_text,seq_starts,seq_lens)
 
-def gene_transcript(leaf,dir_,type_,seq):
+def gene_transcript(leaf,type_,dir_,seq):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
     out_starts = []
@@ -306,7 +306,6 @@ def bulk_data():
         parts = type_.split("-")
         while len(parts) < 4:
             parts.append("")
-        print("parts",parts)
         data = None
         if parts[0] == "contignormal":
             data = contig_normal(leaf,parts[1])
@@ -319,8 +318,6 @@ def bulk_data():
         elif parts[0] == 'gene':
             data = gene_gene(leaf,parts[1],parts[2])
         out.append([type_,leaf,data])
-        
-        print('bulk',type_,leaf)
     return jsonify(out)
     
 
