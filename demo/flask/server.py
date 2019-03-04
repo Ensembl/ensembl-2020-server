@@ -23,6 +23,7 @@ chrom_sizes= data_repo + "/common_files/grch38.chrom.sizes"
 variant_files = home_dir + "/e2020-vcf/bigbeds"
 objects_list_path = home_dir + "/ensembl-server/demo/flask/yaml/example_objects.yaml"
 objects_info_path = home_dir + "/ensembl-server/demo/flask/yaml/objects_info.yaml"
+gc_file = home_dir + "/gc.all.bw"
 
 variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
 
@@ -51,6 +52,13 @@ def get_bigbed_data(path,chromosome,start,end):
     bb = pyBigWig.open(path)
     out = bb.entries(chromosome,start,end) or []
     bb.close()
+    return out
+
+def get_bigwig_data(path,chrom,start,end,points):
+    out = []
+    bw = pyBigWig.open(path)
+    out = bw.stats(chrom,start,end,nBins=points)
+    bw.close()
     return out
 
 def burst_leaf(leaf):
@@ -292,6 +300,12 @@ def variant(leaf,scale):
         print('missing',path)
     return [starts,lens,types]
 
+def gc(leaf):
+    (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
+    steps = 250
+    y = get_bigwig_data(gc_file,chrom,leaf_start,leaf_end,steps)
+    return [[leaf_start,leaf_end],y,[0.461]]
+
 def extract_bulk_parts():
     out = []
     # allow parts qp for debugging, etc
@@ -317,6 +331,8 @@ def bulk_data():
             data = gene_transcript(leaf,parts[1],parts[2],parts[3]=='seq')
         elif parts[0] == 'gene':
             data = gene_gene(leaf,parts[1],parts[2])
+        elif parts[0] == 'gc':
+            data = gc(leaf)
         out.append([type_,leaf,data])
     return jsonify(out)
     
