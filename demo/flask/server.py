@@ -23,7 +23,7 @@ chrom_sizes= data_repo + "/common_files/grch38.chrom.sizes"
 variant_files = home_dir + "/e2020-vcf/bigbeds"
 objects_list_path = home_dir + "/ensembl-server/demo/flask/yaml/example_objects.yaml"
 objects_info_path = home_dir + "/ensembl-server/demo/flask/yaml/objects_info.yaml"
-gc_file = home_dir + "/gc.all.bw"
+gc_file = home_dir + "/e2020-vcf/gc.all.bw"
 
 variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
 
@@ -302,9 +302,9 @@ def variant(leaf,scale):
 
 def gc(leaf):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
-    steps = 250
+    steps = 500
     y = get_bigwig_data(gc_file,chrom,leaf_start,leaf_end,steps)
-    return [[leaf_start,leaf_end],y,[0.461]]
+    return [[leaf_start,leaf_end],y,[0.5]]
 
 def extract_bulk_parts():
     out = []

@@ -229,8 +229,9 @@ bytecodes:
         shape #11, #7, #28, #13, #28, #9 ; draw letter        
 
     gc: |
+        const #57, [2]  ; scale/clip factor
+        const #58, [18] ; wanted graph height (px)
         ; Get track top and height in #60, #61, graph height #59
-        const #58, [18]
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -248,12 +249,29 @@ bytecodes:
         add #60, #60, #62
         ; convert height to multiplier for y-coord.
         ; we want -value*height/100. ie our multiplier is height/-100
-        const #62, [-0.01]
-        move #59, #58
-        mul #59, #59, #62
-        mul #2, #2, #59
+        ; ... remove 100 from %ageness 0..1
+        const #62, [0.01]
+        mul #2, #2, #62
+        ; ... scale data as requested
+        mul #2, #2, #57
+        move #62, #57
+        const #63, [-0.5]
+        mul #62, #62, #63
+        add #2, #2, #62
+        const #63, [0.5]
+        add #2, #2, #63
+        ; ... clip
+        const #62, [1]
+        min #2, #2, #62
+        const #62, [0]
+        max #2, #2, #62
+        ; ... scale to our height
+        mul #2, #2, #58
+        ; ... flip
+        const #62, [-1]
+        mul #2, #2, #62
+        ; add base coord
         add #2, #2, #60
-        ;cprint #2
         ; generate x-coordinates ...
         ; ... length bp
         const #40, [0]
@@ -263,11 +281,9 @@ bytecodes:
         const #40, [-1.0]
         mul #63, #30, #40
         add #63, #63, #4
-        ;cprint #63
         const #4, [0]
         length #5, #2
         runs #1, #4, #5
-        ; cprint #1
         div #4, #63, #5
         mul #1, #1, #4
         add #1, #1, #30
@@ -277,18 +293,17 @@ bytecodes:
         shape #10, #1, #10, #2, #10, #15
         ; draw centre-line
         move #63, #58
-        ;cprint #63
-        const #64, [-1.0]
-        ;cprint #3
+        const #64, [-0.5]
+        mul #64, #64, #57
         mul #3, #3, #64
-        ;cprint #64
         mul #63, #63, #3
         add #63, #63, #60
-        const #10, [0,1,1,2,0,0,0,0,0,0,0]
+        const #10, [0,1,1,2,0,0,0,0,0,0,3]
         const #11, [0]
         const #13, [1]
         const #15, [192,192,192]
         shape #10, #11, #11, #63, #13, #15
+        ;cprint #63
 
     gene: |
         plot #62, #0
