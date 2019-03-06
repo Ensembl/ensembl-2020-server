@@ -8,22 +8,22 @@ ENSG00000139618:
      - name: 'Genes & transcripts'
        trackList:
          - additionalInfo: 'Forward strand'
-           color: TrackItemColour.DARK_GREY
+           color: DARK_GREY
            id: 1
            label: 'Protein coding genes'
            name: 'gene-pc-fwd'
          - additionalInfo: 'Forward strand'
-           color: TrackItemColour.GREY
+           color: GREY
            id: 2
            label: 'Other genes'
            name: 'gene-other-fwd'
          - additionalInfo: 'Reverse strand'
-           color: TrackItemColour.DARK_GREY
+           color: DARK_GREY
            id: 3
            label: 'Protein coding genes'
            name: 'gene-pc-rev'
          - additionalInfo: 'Reverse strand'
-           color: TrackItemColour.GREY
+           color: GREY
            id: 4
            label: 'Other genes'
            name: 'gene-other-rev'
@@ -50,7 +50,7 @@ ENSG00000139618:
      additionalInfo: 'Protein coding' 
      childTrackList: 
         additionalInfo: 'Protein coding'
-        color: TrackItemColour.BLUE
+        color: BLUE
         id: 0.1
         label: 'ENST00000380152.7'
         name: 'transcript'
@@ -65,22 +65,22 @@ ENSG00000139619:
      - name: 'Genes & transcripts'
        trackList:
          - additionalInfo: 'Forward strand'
-           color: TrackItemColour.DARK_GREY
+           color: DARK_GREY
            id: 1
            label: 'Protein coding genes'
            name: 'gene-pc-fwd'
          - additionalInfo: 'Forward strand'
-           color: TrackItemColour.GREY
+           color: GREY
            id: 2
            label: 'Other genes'
            name: 'gene-other-fwd'
          - additionalInfo: 'Reverse strand'
-           color: TrackItemColour.DARK_GREY
+           color: DARK_GREY
            id: 3
            label: 'Protein coding genes'
            name: 'gene-pc-rev'
          - additionalInfo: 'Reverse strand'
-           color: TrackItemColour.GREY
+           color: GREY
            id: 4
            label: 'Other genes'
            name: 'gene-other-rev'
@@ -107,7 +107,7 @@ ENSG00000139619:
      additionalInfo: 'Protein coding'
      childTrackList:
         additionalInfo: 'Protein coding'
-        color: TrackItemColour.BLUE
+        color: BLUE
         id: 0.1
         label: 'ENST00000380152.7'
         name: 'transcript'
