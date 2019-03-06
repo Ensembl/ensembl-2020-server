@@ -2,31 +2,34 @@ ENSG00000139618:
     id: ENSG00000139618
     label: 'BRCA2'
     name: 'gene'
+    assembly: 'GRCh38'
     bio_type: 'Protein coding'
     track_categories:
 
      - name: 'Genes & transcripts'
        trackList:
          - additionalInfo: 'Forward strand'
-           color: DARK_GREY
+           color: 'DARK_GREY'
            id: 1
            label: 'Protein coding genes'
            name: 'gene-pc-fwd'
          - additionalInfo: 'Forward strand'
-           color: GREY
+           color: 'GREY'
            id: 2
            label: 'Other genes'
            name: 'gene-other-fwd'
          - additionalInfo: 'Reverse strand'
-           color: DARK_GREY
+           color: 'DARK_GREY'
            id: 3
            label: 'Protein coding genes'
            name: 'gene-pc-rev'
          - additionalInfo: 'Reverse strand'
-           color: GREY
+           color: 'GREY'
            id: 4
            label: 'Other genes'
            name: 'gene-other-rev'
+       types: 
+         - 'Genomic'
 
      - name: 'Assembly'
        trackList:
@@ -36,21 +39,65 @@ ENSG00000139618:
           - id: 102
             label: '%GC'
             name: 'gc'
-          
+       types: 
+         - 'Genomic'
+
      - name: 'Comparative genomics'
        trackList: []
+       types:
+         - 'Genomic'
+
+     - name: 'Short variants'
+       trackList:
+        - id: 201
+          label: '1000 Genomes all SNPs & indels'
+          name: 'snps-and-indels'
+       types:
+         - 'Variation'
+
+     - name: 'Somatic variants'
+       trackList: []
+       types:
+         - 'Variation'
+      
+     - name: 'Structural variants'
+       trackList: []
+       types:
+         - 'Variation'
 
      - name: 'Experiment design'
-       trackList: []
-         
+       trackList: [] 
+       types: 
+         - 'Genomic'
+         - 'Expression'
+         - 'Variation'
+              
      - name: 'References & evidence'
        trackList: []
+       types:
+         - 'Genomic'
+ 
+     - name: 'Regulatory features'
+       trackList: []
+       types:
+         - 'Expression'
+      
+     - name: 'Gene expression correlations'
+       trackList: []
+       types:
+         - 'Expression'
+      
+     - name: 'Other regulatory regions'
+       trackList: []
+       types:
+         - 'Expression'
 
+ 
     main: 
      additionalInfo: 'Protein coding' 
      childTrackList: 
         additionalInfo: 'Protein coding'
-        color: BLUE
+        color: 'BLUE'
         id: 0.1
         label: 'ENST00000380152.7'
         name: 'transcript'
@@ -59,28 +106,29 @@ ENSG00000139619:
     id: ENSG00000139619
     label: 'BRCA2'
     name: 'gene'
+    assembly: 'GRCh38'
     bio_type: 'Protein coding'
     track_categories:
 
      - name: 'Genes & transcripts'
        trackList:
          - additionalInfo: 'Forward strand'
-           color: DARK_GREY
+           color: 'DARK_GREY'
            id: 1
            label: 'Protein coding genes'
            name: 'gene-pc-fwd'
          - additionalInfo: 'Forward strand'
-           color: GREY
+           color: 'GREY'
            id: 2
            label: 'Other genes'
            name: 'gene-other-fwd'
          - additionalInfo: 'Reverse strand'
-           color: DARK_GREY
+           color: 'DARK_GREY'
            id: 3
            label: 'Protein coding genes'
            name: 'gene-pc-rev'
          - additionalInfo: 'Reverse strand'
-           color: GREY
+           color: 'GREY'
            id: 4
            label: 'Other genes'
            name: 'gene-other-rev'
