@@ -2,7 +2,9 @@ ENSG00000139618:
     id: ENSG00000139618
     label: 'BRCA2'
     name: 'gene'
-    assembly: 'GRCh38'
+    assembly: 
+      name: 'GRCh38'
+      patch: 'p12'
     bio_type: 'Protein coding'
     track_categories:
 
