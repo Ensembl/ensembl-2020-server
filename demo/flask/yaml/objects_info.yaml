@@ -98,7 +98,7 @@ ENSG00000139618:
     main: 
      additionalInfo: 'Protein coding' 
      childTrackList: 
-        additionalInfo: 'Protein coding'
+      - additionalInfo: 'Protein coding'
         color: 'BLUE'
         id: 0.1
         label: 'ENST00000380152.7'
