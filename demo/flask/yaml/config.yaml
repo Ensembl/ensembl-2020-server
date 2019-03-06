@@ -84,7 +84,7 @@ bytecodes:
         shape #5, #6, #12, #13, #14, #11
         ; 3. draw text
         const #12, "Lato"
-        const #13, [12,0,192,192,192,255,255,255]
+        const #13, [10,0,192,192,192,255,255,255]
         text #10, #12, #13, #9, #8
         const #5, [3,0,0,1,1,1,2,0,2,0,0]
         const #14, [0]
@@ -94,6 +94,8 @@ bytecodes:
         const #15, [1]
         shape #5, #6, #14, #15, #14, #10
         ; *** LHS ***
+        const #99, "lhs"
+        setpart #99
         allplots #41,#42,#43,#44
         const #20, "Lato"
         const #21, [12,1,96,96,96,255,255,255]
@@ -142,6 +144,22 @@ bytecodes:
         pick #6, #3, #6, #7
         const #10, [1,1]
         shape #10, #1, #2, #4, #5, #6
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "Contigs"
+        const #43, [7]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
 
     contig-empty-box: |
         ; #1 = start box frag
@@ -170,6 +188,22 @@ bytecodes:
         pick #15, #3, #15, #17 ; #15 = box colours
         const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
         shape #16, #7, #12, #13, #14, #15 ; draw boxes
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "Contigs"
+        const #43, [7]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
 
     contig-letterbox: |
         ; #1 = sequence
@@ -227,6 +261,22 @@ bytecodes:
         add #13, #13, #50
         const #28, [0]
         shape #11, #7, #28, #13, #28, #9 ; draw letter        
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "Contigs"
+        const #43, [7]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
 
     gc: |
         const #57, [2]  ; scale/clip factor
@@ -303,7 +353,23 @@ bytecodes:
         const #13, [1]
         const #15, [192,192,192]
         shape #10, #11, #11, #63, #13, #15
-        ;cprint #63
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "%GC"
+        const #43, [3]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
+        
 
     gene: |
         plot #62, #0
@@ -320,6 +386,22 @@ bytecodes:
         const #15, [75,168,252]
         const #5, [6]
         shape #10, #1, #2, #60, #5, #15
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "Genes"
+        const #43, [5]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
 
     transcript: |
         plot #62, #0
@@ -380,6 +462,23 @@ bytecodes:
         move #8, #11
         elide #8, #16, #17
         shape #10, #7, #8, #12, #13, #15
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "Transcripts"
+        const #43, [11]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
+
 
     gene-empty-box: |
         plot #62, #0
@@ -441,6 +540,23 @@ bytecodes:
         add #9, #9, #1
         const #2, [0.9]
         shape #10, #9, #2, #12, #13, #15
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "Transcripts and Sequence"
+        const #43, [24]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
+
 
     gene-letterbox: |
         const #17, [
@@ -556,6 +672,23 @@ bytecodes:
         add #33, #33, #63
         const #64, [0]
         shape #31, #27, #64, #33, #64, #29
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "Transcripts and Sequence"
+        const #43, [24]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
+
 
     variant: |
         plot #62, #0
@@ -576,6 +709,23 @@ bytecodes:
         pick #15, #3, #15, #17
         const #5, [6]
         shape #10, #1, #2, #60, #5, #15
+        ; draw track label
+        const #99, "label"
+        setpart #99
+        const #20, "Lato"
+        const #44, "Variants"
+        const #43, [8]
+        const #21, [10,0,96,96,96,255,255,255]
+        text #12, #20, #21, #44, #43
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
+
         
 endpoints:
     contig-normal:
@@ -710,12 +860,17 @@ tracks:
                 endpoint: contig-emptybox
             QS:
                 endpoint: contig-letterbox
+        parts:
+            - label
+
 
     zzz-framework:
         position: -1
         endpoints:
             AS:
                 endpoint: framework
+        parts:
+            - lhs
 
     gene-pc-fwd:
         letter: G
@@ -729,6 +884,9 @@ tracks:
                 endpoint: geneeb-pc-fwd
             QS:
                 endpoint: genesb-pc-fwd
+        parts:
+            - label
+
 
     gene-pc-rev:
         letter: G
@@ -742,6 +900,9 @@ tracks:
                 endpoint: geneeb-pc-rev
             QS:
                 endpoint: genesb-pc-rev
+        parts:
+            - label
+
 
     gene-other-fwd:
         letter: G
@@ -755,6 +916,9 @@ tracks:
                 endpoint: geneeb-other-fwd
             QS:
                 endpoint: genesb-other-fwd
+        parts:
+            - label
+
 
     gene-other-rev:
         letter: G
@@ -768,6 +932,9 @@ tracks:
                 endpoint: geneeb-other-rev
             QS:
                 endpoint: genesb-other-rev
+        parts:
+            - label
+
 
     variant:
         letter: V
@@ -791,6 +958,9 @@ tracks:
                 endpoint: variant-s
             BD:
                 endpoint: variant-r
+        parts:
+            - label
+
 
     gc:
         letter: G
@@ -798,3 +968,5 @@ tracks:
         endpoints:
             AS:
                 endpoint: gc
+        parts:
+            - label
