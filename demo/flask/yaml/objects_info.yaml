@@ -1,18 +1,19 @@
 ENSG00000139618:
-    stable_id: ENSG00000139618
-    obj_symbol: 'BRCA2'
-    obj_type: 'gene'
-    spliced_length: 84793
-    strand: 'forward'
-    bio_type: 'Protein coding'
-    assembly: 
-      name: 'GRCh38'
-      patch: 'p12'
-    associated_object: 
-      stable_id: 'ENST00000380152.7'
-      selected_info: 'MANE Select'
-      spliced_length: 84793
-      obj_type: 'transcript'
+    object_info:
+     stable_id: ENSG00000139618
+     obj_symbol: 'BRCA2'
+     obj_type: 'gene'
+     spliced_length: 84793
+     strand: 'forward'
+     bio_type: 'Protein coding'
+     assembly: 
+       name: 'GRCh38'
+       patch: 'p12'
+     associated_object: 
+       stable_id: 'ENST00000380152.7'
+       selected_info: 'MANE Select'
+       spliced_length: 84793
+       obj_type: 'transcript'
 
     track_categories:
 
@@ -103,22 +104,23 @@ ENSG00000139618:
          - 'Expression'
 
 ENST00000589042.5:
-    stable_id: ENST00000589042.5
-    obj_symbol: 'TTN'
-    obj_type: 'transcript'
-    spliced_length: 109224
-    strand: 'reverse'
-    bio_type: 'Protein coding'
-    selected_info: 'Selected'
-    assembly:
-      name: 'GRCh38'
-      patch: 'p12'
-    associated_object:
-      stable_id: 'ENSG000000155657'
-      selected_info: 'MANE Select'
-      spliced_length: 281443
-      obj_type: 'gene'
-      obj_symbol: 'TTN'
+    object_info:
+     stable_id: ENST00000589042.5
+     obj_symbol: 'TTN'
+     obj_type: 'transcript'
+     spliced_length: 109224
+     strand: 'reverse'
+     bio_type: 'Protein coding'
+     selected_info: 'Selected'
+     assembly:
+       name: 'GRCh38'
+       patch: 'p12'
+     associated_object:
+       stable_id: 'ENSG000000155657'
+       selected_info: 'MANE Select'
+       spliced_length: 281443
+       obj_type: 'gene'
+       obj_symbol: 'TTN'
 
     track_categories:
 
