@@ -56,9 +56,10 @@ def get_bigbed_data(path,chromosome,start,end):
 
 def get_bigwig_data(path,chrom,start,end,points):
     out = []
-    bw = pyBigWig.open(path)
-    out = bw.stats(chrom,start,end,nBins=points)
-    bw.close()
+    if os.path.exists(path):
+      bw = pyBigWig.open(path)
+      out = bw.stats(chrom,start,end,nBins=points)
+      bw.close()
     return out
 
 def burst_leaf(leaf):
@@ -79,11 +80,13 @@ def browser_config():
         data['sticks'] = get_sticks()
         return jsonify(data)
 
-def gene_gene(leaf,type_,dir_):
+def gene_gene(leaf,type_,dir_,get_names):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
     out_starts = []
     out_lens = []
+    names = ""
+    name_lens = []
     for line in data:
         gene_start = int(line[0])
         gene_end = int(line[1])
@@ -95,7 +98,10 @@ def gene_gene(leaf,type_,dir_):
             continue
         out_starts.append(gene_start)
         out_lens.append(gene_end-gene_start)
-    return [out_starts,out_lens]
+        if get_names:
+            name_lens.append(len(gene_name))
+            names += gene_name
+    return [out_starts,out_lens,names,name_lens]
 
 def refget(hash_,start,end):
     url = ("https://www.ebi.ac.uk/ena/cram/sequence/{}?start={}&end={}"
@@ -124,7 +130,9 @@ def get_sequence(chrom,requests):
             seq_text += seq
     return (seq_text,seq_starts,seq_lens)
 
-def gene_transcript(leaf,type_,dir_,seq):
+MIN_WIDTH = 5
+
+def gene_transcript(leaf,type_,dir_,seq,names):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
     out_starts = []
@@ -134,6 +142,8 @@ def gene_transcript(leaf,type_,dir_,seq):
     out_exons = []
     out_introns = []
     seq_req = []
+    names = ""
+    name_lens = []
     for line in data:
         gene_start = int(line[0])
         gene_end = int(line[1])
@@ -150,6 +160,8 @@ def gene_transcript(leaf,type_,dir_,seq):
             continue
         if (biotype == 'protein_coding') != (type_ == 'pc'):
             continue
+        name_lens.append(len(gene_name))
+        names += gene_name
         if part_starts.endswith(","): part_starts = part_starts[:-1]
         if part_lens.endswith(","): part_lens = part_lens[:-1]
         part_starts = [int(x) for x in part_starts.split(",")]
@@ -187,7 +199,7 @@ def gene_transcript(leaf,type_,dir_,seq):
                 out_exons.append(b[2])
             else:
                 out_utrs.append(b[2])
-    data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns]
+    data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns,names,name_lens]
     if seq:
         (seq_text,seq_starts,seq_lens) = get_sequence(chrom,seq_req)
         data += [seq_text,seq_starts,seq_lens]
@@ -313,24 +325,35 @@ def extract_bulk_parts():
         out.append(part.split("/",1))
     return out
 
+breakdown = [
+    ["pc","other"],
+    ["fwd","rev"],
+    ["seq"],
+    ["names"]
+]
+
 @app.route("/browser/data")
 def bulk_data():
     out = []
     for (type_,leaf) in extract_bulk_parts():
-        parts = type_.split("-")
-        while len(parts) < 4:
-            parts.append("")
+        parts_in = type_.split("-")
+        parts = [""] * (len(breakdown)+1)
+        for (i,flag) in enumerate(parts_in[1:]):
+            for (j,b) in enumerate(breakdown):
+                if flag in b:
+                    parts[j+1] = flag
+        parts[0] = parts_in[0]
         data = None
         if parts[0] == "contignormal":
-            data = contig_normal(leaf,parts[1])
+            data = contig_normal(leaf,parts[3]=="seq")
         elif parts[0] == "contigshimmer":
             data = contig_shimmer(leaf)
         elif parts[0] == "variant":
             data = variant(leaf,parts[1])
         elif parts[0] == 'transcript':
-            data = gene_transcript(leaf,parts[1],parts[2],parts[3]=='seq')
+            data = gene_transcript(leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
         elif parts[0] == 'gene':
-            data = gene_gene(leaf,parts[1],parts[2])
+            data = gene_gene(leaf,parts[1],parts[2],parts[4]=='names')
         elif parts[0] == 'gc':
             data = gc(leaf)
         out.append([type_,leaf,data])

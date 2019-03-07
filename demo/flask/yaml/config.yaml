@@ -386,6 +386,17 @@ bytecodes:
         const #15, [75,168,252]
         const #5, [6]
         shape #10, #1, #2, #60, #5, #15
+        ; draw gene names
+        const #99, "names"
+        setpart #99
+        const #20, "Lato"
+        const #21, [10,0,96,96,96,255,255,255]
+        text #40, #20, #21, #3, #4
+        const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
+        const #6, [0]
+        const #7, [14]
+        const #8, [0]
+        shape #41, #1, #8, #60, #7, #40
         ; draw track label
         const #99, "label"
         setpart #99
@@ -415,16 +426,16 @@ bytecodes:
         const #62, [0]
         add #60, #60, #62
         ; y-position
-        runsof #10, #2, #1
-        merge #11, #3, #4, #5, #6
-        accn #12, #11, #2
-        add #13, #10, #12
+        runsof #30, #2, #1
+        merge #31, #3, #4, #5, #6
+        accn #12, #31, #2
+        add #13, #30, #12
         const #14, [-1]
-        mul #14, #11, #14
+        mul #14, #31, #14
         add #14, #13, #14
         ; extract + draw
         ; *** utr ***
-        const #10, [2,1]
+        const #30, [2,1]
         move #12, #60
         const #17, [-4]
         add #12, #12, #17
@@ -432,36 +443,46 @@ bytecodes:
         const #15, [75,168,252]
         const #16, [0]
         eq #16, #3, #16
-        move #7, #14
+        move #9, #14
         const #17, [1]
-        elide #7, #16, #17
-        move #8, #11
-        elide #8, #16, #17
-        shape #10, #7, #8, #12, #13, #15
+        elide #9, #16, #17
+        move #10, #31
+        elide #10, #16, #17
+        shape #30, #9, #10, #12, #13, #15
         ; *** exon ***
-        const #10, [1,1]
+        const #30, [1,1]
         const #16, [1]
         eq #16, #3, #16
-        move #7, #14
+        move #9, #14
         const #17, [1]
-        elide #7, #16, #17
-        move #8, #11
-        elide #8, #16, #17
-        shape #10, #7, #8, #12, #13, #15
+        elide #9, #16, #17
+        move #10, #31
+        elide #10, #16, #17
+        shape #30, #9, #10, #12, #13, #15
         ; *** intron ***
-        const #10, [1,1]
+        const #30, [1,1]
         const #16, [2]
         move #12, #60
         const #17, [-1]
         add #12, #12, #17
         const #13, [1]
         eq #16, #3, #16
-        move #7, #14
+        move #9, #14
         const #17, [1]
-        elide #7, #16, #17
-        move #8, #11
-        elide #8, #16, #17
-        shape #10, #7, #8, #12, #13, #15
+        elide #9, #16, #17
+        move #10, #31
+        elide #10, #16, #17
+        shape #30, #9, #10, #12, #13, #15
+        ; transcript label
+        const #99, "names"
+        setpart #99
+        const #20, "Lato"
+        const #21, [10,0,96,96,96,255,255,255]
+        text #40, #20, #21, #7, #8
+        const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
+        const #47, [14]
+        const #48, [0]
+        shape #41, #1, #48, #60, #47, #40
         ; draw track label
         const #99, "label"
         setpart #99
@@ -475,9 +496,9 @@ bytecodes:
         get #60, #62, #63
         const #5, [3,0,1,1,0,1,0,0,1,0,0]
         const #6, [0]
-        const #7, [2]
-        const #8, [30]
-        shape #5, #6, #8, #60, #7, #12
+        const #9, [2]
+        const #10, [30]
+        shape #5, #6, #10, #60, #9, #12
 
 
     gene-empty-box: |
@@ -492,9 +513,6 @@ bytecodes:
         const #62, [-3]
         add #60, #60, #62
         ; y-position
-        ;plot #7, #0
-        ;const #8, [0]
-        ;get #60, #7, #8
         ; see previous scale for details in comments.
         ; register usage essentially same.
         ; We also use #9, as tmp and reuse #1,#2 as tmp.
@@ -586,16 +604,16 @@ bytecodes:
         ;mul #12, #13, #12
         ;add #12, #12, #60
         ; decode necklaces
-        runsof #10, #2, #1
-        merge #11, #3, #4, #5, #6
-        accn #14, #11, #2
-        add #20, #10, #14
+        runsof #30, #2, #1
+        merge #31, #3, #4, #5, #6
+        accn #14, #31, #2
+        add #20, #30, #14
         const #14, [-1]
-        mul #14, #11, #14
+        mul #14, #31, #14
         add #14, #20, #14
         ; *** utrs and introns ***
         const #15, [205,231,254]
-        const #10, [2,1]
+        const #30, [2,1]
         const #16, [0]
         eq #20, #3, #16
         const #16, [2]
@@ -604,41 +622,41 @@ bytecodes:
         move #18, #14
         const #17, [1]
         elide #18, #16, #17
-        move #19, #11
+        move #19, #31
         elide #19, #16, #17
         runs #20, #18, #19
         const #1, [-0.45]
         add #20, #20, #1
         move #36, #20
         const #2, [0.9]
-        shape #10, #20, #2, #12, #13, #15
+        shape #30, #20, #2, #12, #13, #15
         ; *** exons ***
         const #15, [75,168,252]
-        const #10, [1,1]
+        const #30, [1,1]
         const #16, [1]
         eq #16, #3, #16
         move #18, #14
         const #17, [1]
         elide #18, #16, #17
-        move #19, #11
+        move #19, #31
         elide #19, #16, #17
         runs #20, #18, #19
         const #1, [-0.45]
         add #20, #20, #1
         move #35, #20
         const #2, [0.9]
-        shape #10, #20, #2, #12, #13, #15
+        shape #30, #20, #2, #12, #13, #15
         ; *** exon text ***
         const #27, "ACGTN"
         const #28, [1,1,1,1,1]
         const #40, "Lato"
         const #41, [12,1,255,255,255,75,168,252]
         text #29, #40, #41, #27, #28
-        index #57, #7, #27
+        index #57, #9, #27
         const #30, [1]
         pick #29, #57, #29, #30
         const #31, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #27, #8, #9
+        runs #27, #10, #11
         member #34, #27, #35
         elide #27, #34, #30
         elide #29, #34, #30
@@ -656,11 +674,11 @@ bytecodes:
         const #40, "Lato"
         const #41, [12,0,75,168,252,255,255,255]
         text #29, #40, #41, #27, #28
-        index #57, #7, #27
+        index #57, #9, #27
         const #30, [1]
         pick #29, #57, #29, #30
         const #31, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #27, #8, #9
+        runs #27, #10, #11
         member #34, #27, #36
         elide #27, #34, #30
         elide #29, #34, #30
@@ -776,6 +794,22 @@ endpoints:
         endpoint: gene-other-rev
         bytecode: gene
 
+    gene-pc-fwd-names:
+        endpoint: gene-pc-fwd-names
+        bytecode: gene
+
+    gene-pc-rev-names:
+        endpoint: gene-pc-rev-names
+        bytecode: gene
+
+    gene-other-fwd-names:
+        endpoint: gene-other-fwd-names
+        bytecode: gene
+
+    gene-other-rev-names:
+        endpoint: gene-other-rev-names
+        bytecode: gene
+
     geneeb-pc-fwd:
         endpoint: transcript-pc-fwd
         bytecode: gene-empty-box
@@ -876,8 +910,10 @@ tracks:
         letter: G
         position: 1
         endpoints:
-            AH:
+            AG:
                 endpoint: gene-pc-fwd
+            HH:
+                endpoint: gene-pc-fwd-names
             IO:
                 endpoint: trans-pc-fwd
             PP:
@@ -886,14 +922,16 @@ tracks:
                 endpoint: genesb-pc-fwd
         parts:
             - label
-
+            - names
 
     gene-pc-rev:
         letter: G
         position: 4
         endpoints:
-            AH:
+            AG:
                 endpoint: gene-pc-rev
+            HH:
+                endpoint: gene-pc-rev-names
             IO:
                 endpoint: trans-pc-rev
             PP:
@@ -902,14 +940,16 @@ tracks:
                 endpoint: genesb-pc-rev
         parts:
             - label
-
+            - names
 
     gene-other-fwd:
         letter: G
         position: 2
         endpoints:
-            AH:
+            AG:
                 endpoint: gene-other-fwd
+            HH:
+                endpoint: gene-other-fwd-names
             IO:
                 endpoint: trans-other-fwd
             PP:
@@ -918,14 +958,16 @@ tracks:
                 endpoint: genesb-other-fwd
         parts:
             - label
-
+            - names
 
     gene-other-rev:
         letter: G
         position: 5
         endpoints:
-            AH:
+            AG:
                 endpoint: gene-other-rev
+            HH:
+                endpoint: gene-other-rev-names
             IO:
                 endpoint: trans-other-rev
             PP:
@@ -934,7 +976,7 @@ tracks:
                 endpoint: genesb-other-rev
         parts:
             - label
-
+            - names
 
     variant:
         letter: V
