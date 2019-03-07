@@ -1,6 +1,9 @@
 examples:
     brca2:
        species: human
+       assembly:
+         name: 'GRCh38'
+         patch: 'p12'
        location:
          start:  32315474
          end:    32400266
@@ -10,6 +13,9 @@ examples:
        object_type: gene
     ttn:
        species: human
+       assembly:
+         name: 'GRCh38'
+         patch: 'p12'
        location:
          start:  178525989
          end:    178830802
