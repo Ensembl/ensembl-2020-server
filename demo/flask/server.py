@@ -2,7 +2,7 @@
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import os.path
+import os.path, string
 import yaml
 import pyBigWig
 import shimmer
@@ -301,13 +301,14 @@ def variant(leaf,scale):
     path = os.path.join(variant_files,variant_pattern.format(chrom,scale))
     if os.path.exists(path):
         data = get_bigbed_data(path,chrom,leaf_start,leaf_end)
-        print('gotcha',len(data))
         for (start,end,extra) in data:
-            starts.append(start)
-            lens.append(end-start)
-            types.append(var_category.get(extra,0))
-            if extra not in var_category:
-                print('missing',extra)
+            vc = var_category.get(extra,0)
+            if len(starts) and starts[-1] == start:
+                types[-1] = max(vc,types[-1])
+            else:
+                starts.append(start)
+                lens.append(end-start)
+                types.append(vc)
     else:
         print('missing',path)
     return [starts,lens,types]
@@ -331,6 +332,8 @@ breakdown = [
     ["seq"],
     ["names"]
 ]
+
+breakdown[0] += list(string.ascii_lowercase)
 
 @app.route("/browser/data")
 def bulk_data():
