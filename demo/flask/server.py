@@ -6,6 +6,7 @@ import os.path, string
 import yaml
 import pyBigWig
 import shimmer
+from seqcache import SequenceCache
 import urllib, urllib.parse
 
 app = Flask(__name__)
@@ -26,6 +27,8 @@ objects_info_path = home_dir + "/ensembl-server/demo/flask/yaml/objects_info.yam
 gc_file = home_dir + "/e2020-vcf/gc.all.bw"
 
 variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
+
+seqcache = SequenceCache(refget_hashes)
 
 def get_sticks():
     out = {}
@@ -103,33 +106,6 @@ def gene_gene(leaf,type_,dir_,get_names):
             names += gene_name
     return [out_starts,out_lens,names,name_lens]
 
-def refget(hash_,start,end):
-    url = ("https://www.ebi.ac.uk/ena/cram/sequence/{}?start={}&end={}"
-            .format(hash_,start,end))
-    headers = {'Accept': 'text/vnd.ga4gh.refget.v1.0.0+plain;charset=us-ascii'}
-    req = urllib.request.Request(url, None, headers)    
-    with urllib.request.urlopen(req) as response:
-        html = response.read()
-        return html.decode("ascii")
-
-def get_sequence(chrom,requests):
-    seq_text = ""
-    seq_starts = []
-    seq_lens = []
-    hash_ = None
-    with open(refget_hashes) as f:
-        for line in f.readlines():
-            parts = line.split("\t")
-            if chrom == parts[0]:
-                hash_ = parts[1]
-    if hash_:
-        for (start,end) in requests:
-            seq = refget(hash_,start,end)
-            seq_starts.append(start)
-            seq_lens.append(len(seq))
-            seq_text += seq
-    return (seq_text,seq_starts,seq_lens)
-
 MIN_WIDTH = 5
 
 def gene_transcript(leaf,type_,dir_,seq,names):
@@ -201,7 +177,7 @@ def gene_transcript(leaf,type_,dir_,seq,names):
                 out_utrs.append(b[2])
     data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns,names,name_lens]
     if seq:
-        (seq_text,seq_starts,seq_lens) = get_sequence(chrom,seq_req)
+        (seq_text,seq_starts,seq_lens) = seqcache.get(chrom,seq_req)
         data += [seq_text,seq_starts,seq_lens]
     return data
 
@@ -226,7 +202,7 @@ def contig_full(leaf,do_shimmer,seq):
         (starts, lens, senses) = shimmer.shimmer(starts,lens,senses,leaf_start,leaf_end)
     data = []
     if seq:
-        (seq_text,seq_starts,seq_lens) = get_sequence(chrom,[(leaf_start,leaf_end)])
+        (seq_text,seq_starts,seq_lens) = seqcache.get(chrom,[(leaf_start,leaf_end)])
         data += [seq_text,seq_starts,seq_lens]
     data += [starts,lens,senses]
     return data
