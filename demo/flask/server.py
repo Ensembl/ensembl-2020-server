@@ -300,7 +300,7 @@ def extract_bulk_parts():
     out = []
     # allow parts qp for debugging, etc
     for part in request.args.getlist('parts'):
-        out.append(part.split("/",1))
+        out.append(part.split("/",2))
     return out
 
 breakdown = [
@@ -315,7 +315,7 @@ breakdown[0] += list(string.ascii_lowercase)
 @app.route("/browser/data")
 def bulk_data():
     out = []
-    for (type_,leaf) in extract_bulk_parts():
+    for (type_,leaf,compo) in extract_bulk_parts():
         start = time.time()
         parts_in = type_.split("-")
         parts = [""] * (len(breakdown)+1)
@@ -337,7 +337,7 @@ def bulk_data():
             data = gene_gene(leaf,parts[1],parts[2],parts[4]=='names')
         elif parts[0] == 'gc':
             data = gc(leaf)
-        out.append([type_,leaf,data])
+        out.append([type_,leaf,compo,data])
         print("obj took",parts,time.time()-start)
     return jsonify(out)
     

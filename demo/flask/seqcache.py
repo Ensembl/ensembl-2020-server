@@ -23,14 +23,12 @@ class SequenceCache(object):
         k = (hash_,bstart,bend)
         if k in self.cache:
             self.hits += 1
-            print("hit".format(bstart,bend,start,end))
             block = self.cache[k]
         else:
             self.misses += 1
-            print("miss")
             block = self.refget(*k)
             self.cache[k] = block
-        print("hit rate",(self.hits*100)/(self.hits+self.misses))
+        print("seq cache hit rate",(self.hits*100)/(self.hits+self.misses))
         if len(self.cache) > MAX_BLOCKS:
             self.decimate()
         return block[(start-bstart):(end-bstart)]
