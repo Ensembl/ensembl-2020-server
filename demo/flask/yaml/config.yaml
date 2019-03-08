@@ -300,7 +300,7 @@ bytecodes:
         ; convert height to multiplier for y-coord.
         ; we want -value*height/100. ie our multiplier is height/-100
         ; ... remove 100 from %ageness 0..1
-        const #62, [0.01]
+        move #62, #4
         mul #2, #2, #62
         ; ... scale data as requested
         mul #2, #2, #57

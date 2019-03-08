@@ -2,8 +2,7 @@
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import os.path, string
-import yaml
+import os.path, string, time, yaml
 import pyBigWig
 import shimmer
 from seqcache import SequenceCache
@@ -289,11 +288,13 @@ def variant(leaf,scale):
         print('missing',path)
     return [starts,lens,types]
 
+POINTS = 40
 def gc(leaf):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     steps = 500
     y = get_bigwig_data(gc_file,chrom,leaf_start,leaf_end,steps)
-    return [[leaf_start,leaf_end],y,[0.5]]
+    y = [ int((y or 0)*POINTS/100) for y in y ]
+    return [[leaf_start,leaf_end],y,[0.5],[1/POINTS]]
 
 def extract_bulk_parts():
     out = []
@@ -315,6 +316,7 @@ breakdown[0] += list(string.ascii_lowercase)
 def bulk_data():
     out = []
     for (type_,leaf) in extract_bulk_parts():
+        start = time.time()
         parts_in = type_.split("-")
         parts = [""] * (len(breakdown)+1)
         for (i,flag) in enumerate(parts_in[1:]):
@@ -336,6 +338,7 @@ def bulk_data():
         elif parts[0] == 'gc':
             data = gc(leaf)
         out.append([type_,leaf,data])
+        print("obj took",parts,time.time()-start)
     return jsonify(out)
     
 
