@@ -883,6 +883,7 @@ endpoints:
 
 tracks:
     contig:
+        wire: cc
         letter: G
         position: 3
         endpoints:
@@ -907,6 +908,7 @@ tracks:
             - lhs
 
     gene-pc-fwd:
+        wire: pf
         letter: G
         position: 1
         endpoints:
@@ -925,6 +927,7 @@ tracks:
             - names
 
     gene-pc-rev:
+        wire: pr
         letter: G
         position: 4
         endpoints:
@@ -943,6 +946,7 @@ tracks:
             - names
 
     gene-other-fwd:
+        wire: of
         letter: G
         position: 2
         endpoints:
@@ -961,6 +965,7 @@ tracks:
             - names
 
     gene-other-rev:
+        wire: or
         letter: G
         position: 5
         endpoints:
@@ -979,6 +984,7 @@ tracks:
             - names
 
     variant:
+        wire: vv
         letter: V
         position: 6
         endpoints:
@@ -1005,6 +1011,7 @@ tracks:
 
 
     gc:
+        wire: gc
         letter: G
         position: 7
         endpoints:

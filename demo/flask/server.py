@@ -2,11 +2,11 @@
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import os.path, string, time, yaml
+import os.path, string, time, yaml, re
 import pyBigWig
 import shimmer
 from seqcache import SequenceCache
-import urllib, urllib.parse
+import urllib, urllib.parse, math
 
 app = Flask(__name__)
 CORS(app)
@@ -26,6 +26,25 @@ objects_info_path = home_dir + "/ensembl-server/demo/flask/yaml/objects_info.yam
 gc_file = home_dir + "/e2020-vcf/gc.all.bw"
 
 variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
+
+T = "track:"
+ep_map = {}
+
+endpoints = {}
+tracks = {}
+with open(config_path) as f:
+    bc = yaml.load(f)
+    for (ep_name,v) in bc["endpoints"].items():
+        if "endpoint" in v:
+            ep_map[ep_name] = v["endpoint"]
+    for (track_name,v) in bc["tracks"].items():
+        for (code,v) in v["endpoints"].items():
+            for scale in range(ord(code[0]),ord(code[1])+1):
+                if v["endpoint"] in ep_map:
+                    endpoints[(track_name,chr(scale))] = ep_map[v["endpoint"]]
+    for (t_name,v) in bc["tracks"].items():
+        if "wire" in v:
+            tracks[v["wire"]] = t_name
 
 seqcache = SequenceCache(refget_hashes)
 
@@ -303,6 +322,30 @@ def extract_bulk_parts():
         out.append(part.split("/",2))
     return out
 
+def leaf_range(chrom,spec):
+    spec_number = ord(spec[0]) - ord('A') - 13
+    bp_px = 10**(math.floor(abs(spec_number)/2))
+    if abs(spec_number) % 2:
+        bp_px *= 3
+    if spec_number > 0:
+        bp_px = 1.0 / bp_px
+    bp_px *= 5000
+    pos = int(spec[1:])
+    return "{0}:{1}-{2}".format(chrom,
+    math.floor(pos*bp_px),
+    math.ceil((pos+1)*bp_px))
+
+pattern = re.compile(r'(-?[0-9]+)|([A-Za-z]+[A-Za-z-][A-Za-z])')
+def break_up(spec):
+    for stick in spec.split(','):
+        parts = stick.split(':')
+        first = None
+        for part in pattern.finditer(parts[1]):
+            if part.group(2):
+                first = part.group(2)
+            elif first:
+                yield (first[:-1],parts[0],first[-1]+part.group(1))
+
 breakdown = [
     ["pc","other"],
     ["fwd","rev"],
@@ -312,12 +355,15 @@ breakdown = [
 
 breakdown[0] += list(string.ascii_lowercase)
 
-@app.route("/browser/data")
-def bulk_data():
+@app.route("/browser/data/<spec>")
+def bulk_data(spec):
     out = []
-    for (type_,leaf,compo) in extract_bulk_parts():
+    for (compo_in,stick,pane) in break_up(spec):
+        compo = tracks[compo_in]
+        leaf = leaf_range(stick,pane)
+        endpoint = endpoints.get((compo,pane[0]),"")
         start = time.time()
-        parts_in = type_.split("-")
+        parts_in = endpoint.split("-")
         parts = [""] * (len(breakdown)+1)
         for (i,flag) in enumerate(parts_in[1:]):
             for (j,b) in enumerate(breakdown):
@@ -337,10 +383,8 @@ def bulk_data():
             data = gene_gene(leaf,parts[1],parts[2],parts[4]=='names')
         elif parts[0] == 'gc':
             data = gc(leaf)
-        out.append([type_,leaf,compo,data])
-        print("obj took",parts,time.time()-start)
+        out.append([stick,pane,compo_in,data])
     return jsonify(out)
     
-
 if __name__ == "__main__":
    app.run(port=4000)
