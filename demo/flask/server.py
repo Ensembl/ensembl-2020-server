@@ -102,16 +102,18 @@ def make_asset(value):
         data = b""
         for row in data_in:
             data += row
-        return [w,h,str(base64.b64encode(data))]
+        return [[w,h],base64.b64encode(data).decode("ascii")]
 
 @app.route("/browser/config")
 def browser_config():
     with open(config_path) as f:
         data = yaml.load(f)
         data['sticks'] = get_sticks()
+        data['data'] = {}
         for (name,v) in list(data['assets'].items()):
+            data['data'][name] = []
             for (i,v) in enumerate(make_asset(v)):
-                data['assets']["{}-{}".format(name,i)] = v
+                data['data'][name].append(v)
         return jsonify(data)
 
 FEATURED=set(["BRCA2","TTN"])

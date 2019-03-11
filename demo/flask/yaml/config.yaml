@@ -91,6 +91,9 @@ bytecodes:
         const #14, [2]
         const #15, [17]
         shape #5, #6, #14, #15, #14, #10
+        const #5, [3,0,0,1,2,1,2,0,2,0,0]
+        const #15, [1]
+        shape #5, #6, #14, #15, #14, #10
         ; *** LHS ***
         const #99, "lhs"
         setpart #99
@@ -405,6 +408,24 @@ bytecodes:
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #11
+        ; draw chevrons
+        const #97, "chevron-left"
+        const #98, [0]
+        asset #90, #97, #98
+        const #98, [1]
+        asset #91, #97, #98
+        image #90, #90, #91
+        const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
+        const #6, [0]
+        const #7, [14]
+        const #8, [0]
+        const #100, [1]
+        const #101, [0]
+        const #102, [60]
+        runs #100, #101, #102
+        const #101, [50]
+        mul #100, #100, #101
+        shape #41, #100, #8, #60, #7, #90
         ; draw gene names
         const #99, "names"
         setpart #99
