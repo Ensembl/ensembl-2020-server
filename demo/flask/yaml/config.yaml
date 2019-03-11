@@ -33,7 +33,7 @@ bytecodes:
         ; *** left/right blanking ***
         const #5, [0,1,1,1,1,2,2,0,2,0,1]
         const #6, [0]
-        const #7, [36]
+        const #7, [50]
         const #8, [16]
         const #9, [0]
         const #10, [255,255,255]
@@ -72,7 +72,7 @@ bytecodes:
         shape #5, #6, #7, #8, #9, #11
         ; *** RULER ***
         ; 1. call ruler
-        const #5, [20,20,20,10,15,20,30]
+        const #5, [10,10,10,10,15,20,30]
         ruler #6, #7, #8, #9, #5
         ; 2. draw marks
         const #5, [0,1,0,0,1,1,2,0,2,0,0]
@@ -84,14 +84,11 @@ bytecodes:
         shape #5, #6, #12, #13, #14, #11
         ; 3. draw text
         const #12, "Lato"
-        const #13, [10,0,192,192,192,255,255,255]
+        const #13, [9,0,111,129,144,255,255,255]
         text #10, #12, #13, #9, #8
-        const #5, [3,0,0,1,1,1,2,0,2,0,0]
-        const #14, [0]
+        const #5, [3,0, 0,1,1,1, 0,0,2,0, 0]
+        const #14, [2]
         const #15, [17]
-        shape #5, #6, #14, #15, #14, #10
-        const #5, [3,0,0,1,2,1,2,0,2,0,0]
-        const #15, [1]
         shape #5, #6, #14, #15, #14, #10
         ; *** LHS ***
         const #99, "lhs"
@@ -139,7 +136,7 @@ bytecodes:
         const #62, [-3]
         add #4, #60, #62
         const #5, [6]
-        const #6, [192,192,192,128,128,128]
+        const #6, [183,192,200,111,129,144]
         const #7, [3]
         pick #6, #3, #6, #7
         const #10, [1,1]
@@ -150,7 +147,7 @@ bytecodes:
         const #20, "Lato"
         const #44, "Contigs"
         const #43, [7]
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
@@ -183,7 +180,7 @@ bytecodes:
         add #7, #7, #16    ; #7 = starts shifted left 0.5bp
         const #12, [0.9]   ; #12 = box size
         runsof #3, #2, #3  ; #3 = colours to positions
-        const #15, [192,192,192,128,128,128] ; #15 = box colour palette
+        const #15, [183,192,200,111,129,144] ; #15 = box colour palette
         const #17, [3]     ; #17 = pallete stride 3
         pick #15, #3, #15, #17 ; #15 = box colours
         const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
@@ -194,7 +191,7 @@ bytecodes:
         const #20, "Lato"
         const #44, "Contigs"
         const #43, [7]
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
@@ -238,7 +235,7 @@ bytecodes:
         add #7, #7, #16    ; #7 = starts shifted left 0.5bp
         const #12, [0.9]   ; #12 = box size
         runsof #6, #5, #6  ; #6 = colours to positions
-        const #15, [192,192,192,128,128,128] ; #15 = box colour palette
+        const #15, [183,192,200,111,129,144] ; #15 = box colour palette
         const #17, [3]     ; #17 = pallete stride 3
         pick #15, #6, #15, #17 ; #15 = box colours
         const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
@@ -247,7 +244,7 @@ bytecodes:
         const #7, "ACGTN"   ; #7 = available sequence
         const #8, [1,1,1,1,1]; #8 = length of seqeunces
         const #40, "Lato"
-        const #41, [12,1,192,192,192,255,255,255]
+        const #41, [12,1,183,192,200,255,255,255]
         text #9, #40, #41, #7, #8    ; #9 = textures for A,C,G,T
         index #1, #1, #7   ; #1 = 0=A, 1=C, 2=G, 3=T for seq
         const #10, [1]     ; #10 = stride 1 for texture ids
@@ -267,7 +264,7 @@ bytecodes:
         const #20, "Lato"
         const #44, "Contigs"
         const #43, [7]
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
@@ -339,7 +336,7 @@ bytecodes:
         add #1, #1, #30
         ; draw wiggle
         const #10, [4,1]
-        const #15, [75,168,252]
+        const #15, [255,153,0]
         shape #10, #1, #10, #2, #10, #15
         ; draw centre-line
         move #63, #58
@@ -359,7 +356,7 @@ bytecodes:
         const #20, "Lato"
         const #44, "%GC"
         const #43, [3]
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
@@ -380,17 +377,19 @@ bytecodes:
         const #63, [0]
         get #60, #62, #63
         add #60, #60, #61
-        const #62, [-3]
+        const #62, [-2]
         add #60, #60, #62
         const #10, [1,1]
-        const #15, [75,168,252]
-        const #5, [6]
-        shape #10, #1, #2, #60, #5, #15
+        const #15, [183,192,200,   111,129,144,   0,153,255]
+        const #16, [3]
+        pick #15, #5, #15, #16
+        const #25, [4]
+        shape #10, #1, #2, #60, #25, #15
         ; draw gene names
         const #99, "names"
         setpart #99
         const #20, "Lato"
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #40, #20, #21, #3, #4
         const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
         const #6, [0]
@@ -403,16 +402,16 @@ bytecodes:
         const #20, "Lato"
         const #44, "Genes"
         const #43, [5]
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
-        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #25, [3,0,1,1,0,1,0,0,1,0,0]
         const #6, [0]
         const #7, [2]
         const #8, [30]
-        shape #5, #6, #8, #60, #7, #12
+        shape #25, #6, #8, #60, #7, #12
 
     transcript: |
         plot #62, #0
@@ -434,31 +433,34 @@ bytecodes:
         mul #14, #31, #14
         add #14, #13, #14
         ; extract + draw
+        ; (colour)
+        const #15, [183,192,200,   111,129,144,   0,153,255]
+        const #16, [3]
+        pick #15, #9, #15, #16
         ; *** utr ***
         const #30, [2,1]
         move #12, #60
         const #17, [-4]
         add #12, #12, #17
         const #13, [7]
-        const #15, [75,168,252]
         const #16, [0]
         eq #16, #3, #16
-        move #9, #14
+        move #29, #14
         const #17, [1]
-        elide #9, #16, #17
+        elide #29, #16, #17
         move #10, #31
         elide #10, #16, #17
-        shape #30, #9, #10, #12, #13, #15
+        shape #30, #29, #10, #12, #13, #15
         ; *** exon ***
         const #30, [1,1]
         const #16, [1]
         eq #16, #3, #16
-        move #9, #14
+        move #29, #14
         const #17, [1]
-        elide #9, #16, #17
+        elide #29, #16, #17
         move #10, #31
         elide #10, #16, #17
-        shape #30, #9, #10, #12, #13, #15
+        shape #30, #29, #10, #12, #13, #15
         ; *** intron ***
         const #30, [1,1]
         const #16, [2]
@@ -467,12 +469,12 @@ bytecodes:
         add #12, #12, #17
         const #13, [1]
         eq #16, #3, #16
-        move #9, #14
+        move #29, #14
         const #17, [1]
-        elide #9, #16, #17
+        elide #29, #16, #17
         move #10, #31
         elide #10, #16, #17
-        shape #30, #9, #10, #12, #13, #15
+        shape #30, #29, #10, #12, #13, #15
         ; transcript label
         const #99, "names"
         setpart #99
@@ -489,16 +491,16 @@ bytecodes:
         const #20, "Lato"
         const #44, "Transcripts"
         const #43, [11]
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
         const #5, [3,0,1,1,0,1,0,0,1,0,0]
         const #6, [0]
-        const #9, [2]
+        const #29, [2]
         const #10, [30]
-        shape #5, #6, #10, #60, #9, #12
+        shape #5, #6, #10, #60, #29, #12
 
 
     gene-empty-box: |
@@ -524,27 +526,32 @@ bytecodes:
         mul #14, #11, #14
         add #14, #13, #14
         ; *** utrs and introns ***
-        const #15, [205,231,254]
+        const #15, [75,168,252]
+        const #15, [212,217,222,   157,169,180, 0,153,255]
+        const #16, [3]
+        pick #15, #9, #15, #16
         const #10, [2,1]
         move #12, #60
         const #13, [6]
         const #16, [0]
-        eq #9, #3, #16
+        eq #29, #3, #16
         const #16, [2]
         eq #16, #3, #16
-        or #16, #16, #9
+        or #16, #16, #29
         move #7, #14
         const #17, [1]
         elide #7, #16, #17
         move #8, #11
         elide #8, #16, #17
-        runs #9, #7, #8
+        runs #29, #7, #8
         const #1, [-0.45]
-        add #9, #9, #1
+        add #29, #29, #1
         const #2, [0.9]
-        shape #10, #9, #2, #12, #13, #15
+        shape #10, #29, #2, #12, #13, #15
         ; *** exons ***
-        const #15, [75,168,252]
+        const #15, [183,192,200,   111,129,144,  0,153,255]
+        const #16, [3]
+        pick #15, #9, #15, #16
         const #10, [1,1]
         const #16, [1]
         eq #16, #3, #16
@@ -553,18 +560,18 @@ bytecodes:
         elide #7, #16, #17
         move #8, #11
         elide #8, #16, #17
-        runs #9, #7, #8
+        runs #29, #7, #8
         const #1, [-0.45]
-        add #9, #9, #1
+        add #29, #29, #1
         const #2, [0.9]
-        shape #10, #9, #2, #12, #13, #15
+        shape #10, #29, #2, #12, #13, #15
         ; draw track label
         const #99, "label"
         setpart #99
         const #20, "Lato"
         const #44, "Transcripts and Sequence"
         const #43, [24]
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
@@ -592,17 +599,10 @@ bytecodes:
         const #63, [0]
         get #60, #62, #63
         add #60, #60, #61
-        const #12, [-0.5]
-        mul #62, #13, #12
-        add #12, #60, #62
+        const #22, [-0.5]
+        mul #62, #13, #22
+        add #22, #60, #62
         ; *** scale (for size) ***
-        ;scale #18
-        ;const #19, [-16]
-        ;add #18, #18, #19
-        ;get #13, #17, #18
-        ;const #12, [-0.5]
-        ;mul #12, #13, #12
-        ;add #12, #12, #60
         ; decode necklaces
         runsof #30, #2, #1
         merge #31, #3, #4, #5, #6
@@ -611,8 +611,23 @@ bytecodes:
         const #14, [-1]
         mul #14, #31, #14
         add #14, #20, #14
+        ; colours: a. boxes
+        const #15, [183,192,200,   111,129,144,   0,153,255]
+        const #16, [3]
+        pick #15, #9, #15, #16
+        ; b. exon text
+        const #41, [12,1,255,255,255,183,192,200,
+                    12,1,255,255,255,111,129,144,
+                    12,1,255,255,255,0,153,255]
+        const #16, [8]
+        pick #41, #9, #41, #16
+        ; c. intron/utr text
+        const #42, [12,1,183,192,200,255,255,255,
+                    12,1,111,129,144,255,255,255,
+                    12,1,0,153,255,255,255,255]
+        const #16, [8]
+        pick #42, #9, #42, #16
         ; *** utrs and introns ***
-        const #15, [205,231,254]
         const #30, [2,1]
         const #16, [0]
         eq #20, #3, #16
@@ -629,9 +644,8 @@ bytecodes:
         add #20, #20, #1
         move #36, #20
         const #2, [0.9]
-        shape #30, #20, #2, #12, #13, #15
+        shape #30, #20, #2, #22, #13, #15
         ; *** exons ***
-        const #15, [75,168,252]
         const #30, [1,1]
         const #16, [1]
         eq #16, #3, #16
@@ -645,22 +659,21 @@ bytecodes:
         add #20, #20, #1
         move #35, #20
         const #2, [0.9]
-        shape #30, #20, #2, #12, #13, #15
+        shape #30, #20, #2, #22, #13, #15
         ; *** exon text ***
         const #27, "ACGTN"
         const #28, [1,1,1,1,1]
         const #40, "Lato"
-        const #41, [12,1,255,255,255,75,168,252]
         text #29, #40, #41, #27, #28
-        index #57, #9, #27
+        index #57, #10, #27
         const #30, [1]
         pick #29, #57, #29, #30
         const #31, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #27, #10, #11
+        runs #27, #11, #12
         member #34, #27, #35
         elide #27, #34, #30
         elide #29, #34, #30
-        move #33, #12
+        move #33, #22
         const #50, [0.5]
         mul #63, #13, #50
         const #50, [2]
@@ -672,17 +685,16 @@ bytecodes:
         const #27, "ACGTN"
         const #28, [1,1,1,1,1]
         const #40, "Lato"
-        const #41, [12,0,75,168,252,255,255,255]
-        text #29, #40, #41, #27, #28
-        index #57, #9, #27
+        text #29, #40, #42, #27, #28
+        index #57, #10, #27
         const #30, [1]
         pick #29, #57, #29, #30
         const #31, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #27, #10, #11
+        runs #27, #11, #12
         member #34, #27, #36
         elide #27, #34, #30
         elide #29, #34, #30
-        move #33, #12
+        move #33, #22
         const #50, [0.5]
         mul #63, #13, #50
         const #50, [2]
@@ -696,8 +708,8 @@ bytecodes:
         const #20, "Lato"
         const #44, "Transcripts and Sequence"
         const #43, [24]
-        const #21, [10,0,96,96,96,255,255,255]
-        text #12, #20, #21, #44, #43
+        const #21, [10,0,111,129,144,255,255,255]
+        text #22, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -705,7 +717,7 @@ bytecodes:
         const #6, [0]
         const #7, [2]
         const #8, [30]
-        shape #5, #6, #8, #60, #7, #12
+        shape #5, #6, #8, #60, #7, #22
 
 
     variant: |
@@ -733,7 +745,7 @@ bytecodes:
         const #20, "Lato"
         const #44, "Variants"
         const #43, [8]
-        const #21, [10,0,96,96,96,255,255,255]
+        const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
@@ -778,6 +790,10 @@ endpoints:
         endpoint: transcript-other-rev
         bytecode: transcript
 
+    trans-feat:
+        endpoint: transcript-feat
+        bytecode: transcript
+
     gene-pc-fwd:
         endpoint: gene-pc-fwd
         bytecode: gene
@@ -792,6 +808,10 @@ endpoints:
 
     gene-other-rev:
         endpoint: gene-other-rev
+        bytecode: gene
+
+    gene-feat:
+        endpoint: gene-feat
         bytecode: gene
 
     gene-pc-fwd-names:
@@ -810,6 +830,10 @@ endpoints:
         endpoint: gene-other-rev-names
         bytecode: gene
 
+    gene-feat-names:
+        endpoint: gene-feat-names
+        bytecode: gene
+
     geneeb-pc-fwd:
         endpoint: transcript-pc-fwd
         bytecode: gene-empty-box
@@ -826,6 +850,10 @@ endpoints:
         endpoint: transcript-other-rev
         bytecode: gene-empty-box
 
+    geneeb-feat:
+        endpoint: transcript-feat
+        bytecode: gene-empty-box
+
     genesb-pc-fwd:
         endpoint: transcript-pc-fwd-seq
         bytecode: gene-letterbox
@@ -840,6 +868,10 @@ endpoints:
 
     genesb-other-rev:
         endpoint: transcript-other-rev-seq
+        bytecode: gene-letterbox
+
+    genesb-feat:
+        endpoint: transcript-feat-seq
         bytecode: gene-letterbox
 
     variant-z:
@@ -906,6 +938,25 @@ tracks:
                 endpoint: framework
         parts:
             - lhs
+
+    gene-feat:
+        wire: ff
+        letter: G
+        position: 0
+        endpoints:
+            AG:
+                endpoint: gene-feat
+            HH:
+                endpoint: gene-feat-names
+            IO:
+                endpoint: trans-feat
+            PP:
+                endpoint: geneeb-feat
+            QS:
+                endpoint: genesb-feat
+        parts:
+            - label
+            - names
 
     gene-pc-fwd:
         wire: pf

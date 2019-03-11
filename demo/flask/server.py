@@ -101,6 +101,8 @@ def browser_config():
         data['sticks'] = get_sticks()
         return jsonify(data)
 
+FEATURED=set(["BRCA2","TTN"])
+
 def gene_gene(leaf,type_,dir_,get_names):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
@@ -108,25 +110,34 @@ def gene_gene(leaf,type_,dir_,get_names):
     out_lens = []
     names = ""
     name_lens = []
+    colour = 1 if type_ == 'pc' else 0
     for line in data:
         gene_start = int(line[0])
         gene_end = int(line[1])
         parts = line[2].split("\t")
         (biotype,gene_name,strand) = (parts[16],parts[15],parts[2])
-        if (strand == '+') != (dir_ == 'fwd'):
-            continue
-        if (biotype == 'protein_coding') != (type_ == 'pc'):
-            continue
+        if type_ == 'feat':
+            colour = 2
+            if gene_name not in FEATURED:
+                continue
+        else:
+            if gene_name in FEATURED:
+                continue
+            if (strand == '+') != (dir_ == 'fwd'):
+                continue
+            if (biotype == 'protein_coding') != (type_ == 'pc'):
+                continue
         out_starts.append(gene_start)
         out_lens.append(gene_end-gene_start)
         if get_names:
             name_lens.append(len(gene_name))
             names += gene_name
-    return [out_starts,out_lens,names,name_lens]
+    return [out_starts,out_lens,names,name_lens,[colour]]
 
-MIN_WIDTH = 5
+MIN_WIDTH = 1000
 
-def gene_transcript(leaf,type_,dir_,seq,names):
+def gene_transcript(leaf,type_,dir_,seq,names,scale):
+    min_bp = calc_bp_px(scale) / MIN_WIDTH
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
     out_starts = []
@@ -138,6 +149,7 @@ def gene_transcript(leaf,type_,dir_,seq,names):
     seq_req = []
     names = ""
     name_lens = []
+    colour = 1 if type_ == 'pc' else 0
     for line in data:
         gene_start = int(line[0])
         gene_end = int(line[1])
@@ -150,10 +162,17 @@ def gene_transcript(leaf,type_,dir_,seq,names):
             parts[16],parts[15],parts[8],parts[7],parts[3],parts[4],
             parts[2]
         )
-        if (strand == '+') != (dir_ == 'fwd'):
-            continue
-        if (biotype == 'protein_coding') != (type_ == 'pc'):
-            continue
+        if type_ == 'feat':
+            colour = 2
+            if gene_name not in FEATURED:
+                continue
+        else:
+            if gene_name in FEATURED:
+                continue
+            if (strand == '+') != (dir_ == 'fwd'):
+                continue
+            if (biotype == 'protein_coding') != (type_ == 'pc'):
+                continue
         name_lens.append(len(gene_name))
         names += gene_name
         if part_starts.endswith(","): part_starts = part_starts[:-1]
@@ -165,19 +184,32 @@ def gene_transcript(leaf,type_,dir_,seq,names):
         # build basic intron/exon pattern (split, but don't mark UTR)
         blocks = []
         prev_exon_end = 0
+        undershoot = 0
         for (exon_start,exon_len) in zip(part_starts,part_lens):
+            new_undershoot = max(min_bp-exon_len,0)
+            # intron between previous exan and this one
             if exon_start != prev_exon_end:
-                blocks.append([2,prev_exon_end,exon_start-prev_exon_end])
+                intron_start = prev_exon_end
+                intron_len = exon_start - prev_exon_end
+                if undershoot > 0:
+                    stolen = min(undershoot,intron_len)
+                    blocks[-1][2] += stolen
+                    intron_len -= stolen
+                blocks.append([2,intron_start,intron_len])
+            # if 5' is in this exon, split that off now
             if cds_start > exon_start and cds_start < exon_start+exon_len:
                 blocks.append([1,exon_start,cds_start-exon_start])
                 exon_len -= cds_start-exon_start
                 exon_start = cds_start
+            # if 3' is in this exon, split of main body now
             if cds_end > exon_start and cds_end < exon_start+exon_len:
                 blocks.append([1,exon_start,cds_end-exon_start])
                 exon_len -= cds_end-exon_start
                 exon_start = cds_end
+            # whatever remains of this exon (main or 3')
             blocks.append([1,exon_start,exon_len])
             prev_exon_end = exon_start + exon_len
+            undershoot = new_undershoot
         # mark UTRs
         for b in blocks:
             if b[0] == 1 and (b[1] < cds_start or b[1] >= cds_end):
@@ -193,7 +225,7 @@ def gene_transcript(leaf,type_,dir_,seq,names):
                 out_exons.append(b[2])
             else:
                 out_utrs.append(b[2])
-    data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns,names,name_lens]
+    data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns,names,name_lens,[colour]]
     if seq:
         (seq_text,seq_starts,seq_lens) = seqcache.get(chrom,seq_req)
         data += [seq_text,seq_starts,seq_lens]
@@ -322,14 +354,17 @@ def extract_bulk_parts():
         out.append(part.split("/",2))
     return out
 
-def leaf_range(chrom,spec):
-    spec_number = ord(spec[0]) - ord('A') - 13
+def calc_bp_px(spec):
+    spec_number = ord(spec) - ord('A') - 13
     bp_px = 10**(math.floor(abs(spec_number)/2))
     if abs(spec_number) % 2:
         bp_px *= 3
     if spec_number > 0:
         bp_px = 1.0 / bp_px
-    bp_px *= 5000
+    return bp_px * 5000
+
+def leaf_range(chrom,spec):
+    bp_px = calc_bp_px(spec[0])
     pos = int(spec[1:])
     return "{0}:{1}-{2}".format(chrom,
     math.floor(pos*bp_px),
@@ -347,7 +382,7 @@ def break_up(spec):
                 yield (first[:-1],parts[0],first[-1]+part.group(1))
 
 breakdown = [
-    ["pc","other"],
+    ["pc","other","feat"],
     ["fwd","rev"],
     ["seq"],
     ["names"]
@@ -378,7 +413,7 @@ def bulk_data(spec):
         elif parts[0] == "variant":
             data = variant(leaf,parts[1])
         elif parts[0] == 'transcript':
-            data = gene_transcript(leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
+            data = gene_transcript(leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names',pane[0])
         elif parts[0] == 'gene':
             data = gene_gene(leaf,parts[1],parts[2],parts[4]=='names')
         elif parts[0] == 'gc':
