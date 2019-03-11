@@ -1148,3 +1148,12 @@ tracks:
                 endpoint: gc
         parts:
             - label
+
+assets:
+    chevron-left:
+        filter: png
+        filename: chevron-left.png
+
+    chevron-right:
+        filter: png
+        filename: chevron-right.png

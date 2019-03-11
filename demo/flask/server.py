@@ -2,8 +2,8 @@
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import os.path, string, time, yaml, re
-import pyBigWig, bbi
+import os.path, string, time, yaml, re, base64
+import pyBigWig, bbi, png
 import shimmer
 from seqcache import SequenceCache
 import urllib, urllib.parse, math
@@ -24,6 +24,7 @@ variant_files = home_dir + "/e2020-vcf/bigbeds"
 objects_list_path = home_dir + "/ensembl-server/demo/flask/yaml/example_objects.yaml"
 objects_info_path = home_dir + "/ensembl-server/demo/flask/yaml/objects_info.yaml"
 gc_file = home_dir + "/e2020-vcf/gc.all.bw"
+assets_path = home_dir + "/ensembl-server/demo/flask/assets"
 
 variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
 
@@ -79,9 +80,6 @@ def get_bigwig_data(path,chrom,start,end,points):
     out = []
     if os.path.exists(path):
       out = bbi.fetch(path,chrom,start,end,bins=points)
-      #bw = pyBigWig.open(path)
-      #out = bw.stats(chrom,start,end,nBins=points)
-      #bw.close()
     return out
 
 def burst_leaf(leaf):
@@ -95,11 +93,25 @@ def burst_leaf(leaf):
     return (chrom,start,end)
 
 
+def make_asset(value):
+    filter_ = value["filter"]
+    filename = value["filename"]
+    if filter_ == "png":
+        pngfile = png.Reader(filename=os.path.join(assets_path,filename))
+        (w,h,data_in,_) = pngfile.asRGBA8()
+        data = b""
+        for row in data_in:
+            data += row
+        return [w,h,str(base64.b64encode(data))]
+
 @app.route("/browser/config")
 def browser_config():
     with open(config_path) as f:
         data = yaml.load(f)
         data['sticks'] = get_sticks()
+        for (name,v) in list(data['assets'].items()):
+            for (i,v) in enumerate(make_asset(v)):
+                data['assets']["{}-{}".format(name,i)] = v
         return jsonify(data)
 
 FEATURED=set(["BRCA2","TTN"])
