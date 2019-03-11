@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os.path, string, time, yaml, re
-import pyBigWig
+import pyBigWig, bbi
 import shimmer
 from seqcache import SequenceCache
 import urllib, urllib.parse, math
@@ -78,9 +78,10 @@ def get_bigbed_data(path,chromosome,start,end):
 def get_bigwig_data(path,chrom,start,end,points):
     out = []
     if os.path.exists(path):
-      bw = pyBigWig.open(path)
-      out = bw.stats(chrom,start,end,nBins=points)
-      bw.close()
+      out = bbi.fetch(path,chrom,start,end,bins=points)
+      #bw = pyBigWig.open(path)
+      #out = bw.stats(chrom,start,end,nBins=points)
+      #bw.close()
     return out
 
 def burst_leaf(leaf):
@@ -141,6 +142,7 @@ def gene_transcript(leaf,type_,dir_,seq,names,scale):
     (chrom,leaf_start,leaf_end) = burst_leaf(leaf)
     data = get_bigbed_data(gene_path,chrom,leaf_start,leaf_end)
     out_starts = []
+    out_lens = []
     out_nump = []
     out_pattern = []
     out_utrs = []
@@ -216,6 +218,7 @@ def gene_transcript(leaf,type_,dir_,seq,names,scale):
                 b[0] = 0
         # put into output strucutre
         out_starts.append(gene_start)
+        out_lens.append(gene_end-gene_start)
         out_nump.append(len(blocks))
         for b in blocks:
             out_pattern.append(b[0])
@@ -225,7 +228,8 @@ def gene_transcript(leaf,type_,dir_,seq,names,scale):
                 out_exons.append(b[2])
             else:
                 out_utrs.append(b[2])
-    data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,out_introns,names,name_lens,[colour]]
+    data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,
+            out_introns,names,name_lens,[colour],out_lens]
     if seq:
         (seq_text,seq_starts,seq_lens) = seqcache.get(chrom,seq_req)
         data += [seq_text,seq_starts,seq_lens]

@@ -79,6 +79,7 @@ bytecodes:
         const #12, [1]
         const #13, [0]
         const #14, [17]
+        cprint #6
         shape #5, #6, #12, #13, #14, #11
         const #5, [0,1,0,0,2,2,2,0,2,0,0]
         shape #5, #6, #12, #13, #14, #11
@@ -385,6 +386,25 @@ bytecodes:
         pick #15, #5, #15, #16
         const #25, [4]
         shape #10, #1, #2, #60, #25, #15
+        ; draw feature line
+        const #45, [0,1,0,0,1,2,2,0,2,0,0]
+        const #12, [1.0]
+        const #13, [17]
+        const #14, [0]
+        const #11, [44,52,58]
+        move #100, #1
+        const #101, [2]
+        eq #102, #5, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #12, #13, #14, #11
+        move #100, #1
+        add #100, #100, #2
+        const #101, [2]
+        eq #102, #5, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #12, #13, #14, #11
         ; draw gene names
         const #99, "names"
         setpart #99
@@ -424,6 +444,25 @@ bytecodes:
         add #60, #60, #61
         const #62, [0]
         add #60, #60, #62
+        ; draw feature line
+        const #45, [0,1,0,0,1,2,2,0,2,0,0]
+        const #12, [1.0]
+        const #13, [17]
+        const #14, [0]
+        const #110, [44,52,58]
+        move #100, #1
+        const #101, [2]
+        eq #102, #9, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #12, #13, #14, #110
+        move #100, #1
+        add #100, #100, #10
+        const #101, [2]
+        eq #102, #9, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #12, #13, #14, #110
         ; y-position
         runsof #30, #2, #1
         merge #31, #3, #4, #5, #6
@@ -484,7 +523,7 @@ bytecodes:
         const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
         const #47, [14]
         const #48, [0]
-        shape #41, #1, #48, #60, #47, #40
+        shape #41, #1, #48, #60, #47, #40        
         ; draw track label
         const #99, "label"
         setpart #99
@@ -501,6 +540,7 @@ bytecodes:
         const #29, [2]
         const #10, [30]
         shape #5, #6, #10, #60, #29, #12
+        
 
 
     gene-empty-box: |
@@ -517,6 +557,25 @@ bytecodes:
         ; y-position
         ; see previous scale for details in comments.
         ; register usage essentially same.
+        ; draw feature line
+        const #45, [0,1,0,0,1,2,2,0,2,0,0]
+        const #12, [1.0]
+        const #13, [17]
+        const #14, [0]
+        const #110, [44,52,58]
+        move #100, #1
+        const #101, [2]
+        eq #102, #9, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #12, #13, #14, #110
+        move #100, #1
+        add #100, #100, #10
+        const #101, [2]
+        eq #102, #9, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #12, #13, #14, #110
         ; We also use #9, as tmp and reuse #1,#2 as tmp.
         runsof #10, #2, #1
         merge #11, #3, #4, #5, #6
@@ -590,7 +649,7 @@ bytecodes:
         scale #18
         const #19, [-16]
         add #18, #18, #19
-        get #13, #17, #18
+        get #53, #17, #18
         plot #62, #0
         const #63, [1]
         get #61, #62, #63
@@ -600,8 +659,27 @@ bytecodes:
         get #60, #62, #63
         add #60, #60, #61
         const #22, [-0.5]
-        mul #62, #13, #22
+        mul #62, #53, #22
         add #22, #60, #62
+        ; draw feature line
+        const #45, [0,1,0,0,1,2,2,0,2,0,0]
+        const #112, [1.0]
+        const #113, [17]
+        const #114, [0]
+        const #110, [44,52,58]
+        move #100, #1
+        const #101, [2]
+        eq #102, #9, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #112, #113, #114, #110
+        move #100, #1
+        add #100, #100, #10
+        const #101, [2]
+        eq #102, #9, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #112, #113, #114, #110
         ; *** scale (for size) ***
         ; decode necklaces
         runsof #30, #2, #1
@@ -644,7 +722,7 @@ bytecodes:
         add #20, #20, #1
         move #36, #20
         const #2, [0.9]
-        shape #30, #20, #2, #22, #13, #15
+        shape #30, #20, #2, #22, #53, #15
         ; *** exons ***
         const #30, [1,1]
         const #16, [1]
@@ -659,23 +737,23 @@ bytecodes:
         add #20, #20, #1
         move #35, #20
         const #2, [0.9]
-        shape #30, #20, #2, #22, #13, #15
+        shape #30, #20, #2, #22, #53, #15
         ; *** exon text ***
         const #27, "ACGTN"
         const #28, [1,1,1,1,1]
         const #40, "Lato"
         text #29, #40, #41, #27, #28
-        index #57, #10, #27
+        index #57, #11, #27
         const #30, [1]
         pick #29, #57, #29, #30
         const #31, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #27, #11, #12
+        runs #27, #12, #13
         member #34, #27, #35
         elide #27, #34, #30
         elide #29, #34, #30
         move #33, #22
         const #50, [0.5]
-        mul #63, #13, #50
+        mul #63, #53, #50
         const #50, [2]
         add #63, #63, #50
         add #33, #33, #63
@@ -686,17 +764,17 @@ bytecodes:
         const #28, [1,1,1,1,1]
         const #40, "Lato"
         text #29, #40, #42, #27, #28
-        index #57, #10, #27
+        index #57, #11, #27
         const #30, [1]
         pick #29, #57, #29, #30
         const #31, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #27, #11, #12
+        runs #27, #12, #13
         member #34, #27, #36
         elide #27, #34, #30
         elide #29, #34, #30
         move #33, #22
         const #50, [0.5]
-        mul #63, #13, #50
+        mul #63, #53, #50
         const #50, [2]
         add #63, #63, #50
         add #33, #33, #63
@@ -746,7 +824,7 @@ bytecodes:
         const #44, "Variants"
         const #43, [8]
         const #21, [10,0,111,129,144,255,255,255]
-        text #12, #20, #21, #44, #43
+        text #13, #20, #21, #44, #43
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -754,7 +832,7 @@ bytecodes:
         const #6, [0]
         const #7, [2]
         const #8, [30]
-        shape #5, #6, #8, #60, #7, #12
+        shape #5, #6, #8, #60, #7, #13
 
         
 endpoints:
