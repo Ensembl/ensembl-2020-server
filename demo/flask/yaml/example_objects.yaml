@@ -5,8 +5,8 @@ examples:
          name: 'GRCh38'
          patch: 'p12'
        location:
-         start:  32315474
-         end:    32400266
+         start:  32271473
+         end:    32437359
        chromosome: 13
        display_name: BRCA2
        stable_id: ENSG00000139618
@@ -17,8 +17,8 @@ examples:
          name: 'GRCh38'
          patch: 'p12'
        location:
-         start:  178525989
-         end:    178830802
+         start:  178410947
+         end:    178915219
        chromosome: 2
        display_name: TTN-214
        stable_id: ENST00000589042.5
