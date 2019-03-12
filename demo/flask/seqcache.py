@@ -1,7 +1,7 @@
 import urllib, urllib.parse, math, random
 
-BLOCK_SIZE = 1000
-MAX_BLOCKS = 20
+BLOCK_SIZE = 10000
+MAX_BLOCKS = 200
 
 class SequenceCache(object):
     def __init__(self, refget_hashes):
@@ -15,7 +15,8 @@ class SequenceCache(object):
          math.ceil(end/BLOCK_SIZE)*BLOCK_SIZE)
 
     def decimate(self):
-        for key in random.shuffle(list(self.cache.keys() or []))[0:MAX_BLOCKS/10]:
+        print("decimate",list(self.cache.keys() or []))
+        for key in random.shuffle(list(self.cache.keys() or []))[0:(MAX_BLOCKS/10)]:
             del self.cache[key]
 
     def get_one(self,hash_,start,end):
@@ -37,10 +38,14 @@ class SequenceCache(object):
         url = ("https://www.ebi.ac.uk/ena/cram/sequence/{}?start={}&end={}"
                 .format(hash_,start,end))
         headers = {'Accept': 'text/vnd.ga4gh.refget.v1.0.0+plain;charset=us-ascii'}
-        req = urllib.request.Request(url, None, headers)    
-        with urllib.request.urlopen(req) as response:
-            html = response.read()
-            return html.decode("ascii")
+        try:
+            req = urllib.request.Request(url, None, headers)
+            with urllib.request.urlopen(req) as response:
+                html = response.read()
+                return html.decode("ascii")
+        except Exception as e:
+            print("url",url)
+            return ""
         
     def get(self,chrom,requests):
         seq_text = ""
@@ -54,8 +59,11 @@ class SequenceCache(object):
                     hash_ = parts[1]
         if hash_:
             for (start,end) in requests:
-                seq = self.get_one(hash_,start,end)
-                seq_starts.append(start)
-                seq_lens.append(len(seq))
-                seq_text += seq
+                if end > 2:
+                    if start < 1:
+                        start = 1
+                    seq = self.get_one(hash_,start,end)
+                    seq_starts.append(start)
+                    seq_lens.append(len(seq))
+                    seq_text += seq
         return (seq_text,seq_starts,seq_lens)

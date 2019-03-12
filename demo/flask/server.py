@@ -286,6 +286,9 @@ def contig_full(leaf,do_shimmer,seq):
     if seq:
         (seq_text,seq_starts,seq_lens) = seqcache.get(chrom,[(leaf_start,leaf_end)])
         data += [seq_text,seq_starts,seq_lens]
+    elif leaf_end - leaf_start < 40000:
+        # prime cache
+        seqcache.get(chrom,[(leaf_start,leaf_end)])
     data += [starts,lens,senses]
     return data
 
