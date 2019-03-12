@@ -135,6 +135,7 @@ def gene_gene(leaf,type_,dir_,get_names):
             colour = 2
             if gene_name not in FEATURED:
                 continue
+            dir_ = ("fwd" if strand == '+' else "rev")
         else:
             if gene_name in FEATURED:
                 continue
@@ -147,7 +148,13 @@ def gene_gene(leaf,type_,dir_,get_names):
         if get_names:
             name_lens.append(len(gene_name))
             names += gene_name
-    return [out_starts,out_lens,names,name_lens,[colour]]
+    if dir_ == 'fwd':
+        dir_ = 1
+    elif dir_ == 'rev':
+        dir_ = 0
+    else:
+        dir_ = 2
+    return [out_starts,out_lens,names,name_lens,[colour,dir_]]
 
 MIN_WIDTH = 1000
 
@@ -182,6 +189,7 @@ def gene_transcript(leaf,type_,dir_,seq,names,scale):
             colour = 2
             if gene_name not in FEATURED:
                 continue
+            dir_ = ("fwd" if strand == '+' else "rev")
         else:
             if gene_name in FEATURED:
                 continue
@@ -242,8 +250,14 @@ def gene_transcript(leaf,type_,dir_,seq,names,scale):
                 out_exons.append(b[2])
             else:
                 out_utrs.append(b[2])
+    if dir_ == 'fwd':
+        dir_ = 1
+    elif dir_ == 'rev':
+        dir_ = 0
+    else:
+        dir_ = 2
     data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,
-            out_introns,names,name_lens,[colour],out_lens]
+            out_introns,names,name_lens,[colour,dir_],out_lens]
     if seq:
         (seq_text,seq_starts,seq_lens) = seqcache.get(chrom,seq_req)
         data += [seq_text,seq_starts,seq_lens]
