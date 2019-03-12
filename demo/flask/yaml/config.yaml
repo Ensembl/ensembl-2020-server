@@ -1,4 +1,4 @@
-data-url: ./data
+data-url: ./data/0
 
 bytecodes:
     framework: |
@@ -415,13 +415,13 @@ bytecodes:
         asset #90, #97, #98
         const #98, [1]
         asset #91, #97, #98
-        image #90, #90, #91
+        image #90, #90, #91, #97
         const #97, "chevron-right"
         const #98, [0]
         asset #92, #97, #98
         const #98, [1]
         asset #91, #97, #98
-        image #98, #92, #91
+        image #98, #92, #91, #97
         const #6, [0]
         const #7, [14]
         const #8, [0]
@@ -513,13 +513,13 @@ bytecodes:
         asset #90, #97, #98
         const #98, [1]
         asset #91, #97, #98
-        image #90, #90, #91
+        image #90, #90, #91, #97
         const #97, "chevron-right"
         const #98, [0]
         asset #92, #97, #98
         const #98, [1]
         asset #91, #97, #98
-        image #98, #92, #91
+        image #98, #92, #91, #97
         const #116, [0]
         const #117, [14]
         const #118, [0]

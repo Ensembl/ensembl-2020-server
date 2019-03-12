@@ -422,8 +422,8 @@ breakdown = [
 
 breakdown[0] += list(string.ascii_lowercase)
 
-@app.route("/browser/data/<spec>")
-def bulk_data(spec):
+@app.route("/browser/data/<version>/<spec>")
+def bulk_data(version,spec):
     out = []
     for (compo_in,stick,pane) in break_up(spec):
         compo = tracks[compo_in]
@@ -451,7 +451,12 @@ def bulk_data(spec):
         elif parts[0] == 'gc':
             data = gc(leaf)
         out.append([stick,pane,compo_in,data])
-    return jsonify(out)
+    resp = jsonify(out)
+    resp.cache_control.max_age = 86400
+    resp.cache_control.public = True
+    return resp
+
+    return resp
     
 if __name__ == "__main__":
    app.run(port=4000)
