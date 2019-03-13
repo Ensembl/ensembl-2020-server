@@ -18,6 +18,7 @@ def shimmer(starts,lens,senses,leaf_start,leaf_end):
             buckets_end[j] = senses[i]
             buckets_num[j] += 1
     # turn into shimmer track
+    blocks = []
     for i in range(0,steps):
         # calculate blocks
         if buckets_num[i] > 1:
@@ -28,7 +29,24 @@ def shimmer(starts,lens,senses,leaf_start,leaf_end):
             ops = []
         # set down blocks
         for (start_p,end_p,sense) in ops:
-            out_starts.append(leaf_start + (i+start_p)*step_bp)
-            out_lens.append((end_p-start_p) * step_bp)
-            out_senses.append(sense)
+            blocks.append([leaf_start + (i+start_p)*step_bp,
+                           (end_p-start_p) * step_bp,
+                           sense])
+    # merge
+    blocks_new = []
+    for (start,len_,sense) in blocks:
+        if (len(blocks_new) and
+                blocks_new[-1][2] == sense and
+                blocks_new[-1][0] + blocks_new[-1][1] == start):
+            blocks_new[-1][1] += len_
+        else:
+            blocks_new.append([start,len_,sense])
+    # format
+    for (start,len_,sense) in blocks_new:
+        out_starts.append(start)
+        out_lens.append(len_)
+        out_senses.append(sense)
+    # merge adjacent blocks
+    
+    
     return (out_starts,out_lens,out_senses)
