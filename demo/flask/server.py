@@ -176,7 +176,6 @@ def gene_transcript(leaf,type_,dir_,seq,names,scale):
     for line in data:
         gene_start = int(line[0])
         gene_end = int(line[1])
-        seq_req.append((max(gene_start,leaf_start),min(gene_end,leaf_end)))
         parts = line[2].split("\t")
         (
             biotype,gene_name,part_starts,part_lens,cds_start,cds_end,
@@ -197,6 +196,7 @@ def gene_transcript(leaf,type_,dir_,seq,names,scale):
                 continue
             if (biotype == 'protein_coding') != (type_ == 'pc'):
                 continue
+        seq_req.append((max(gene_start,leaf_start),min(gene_end,leaf_end)))
         name_lens.append(len(gene_name))
         names += gene_name
         if part_starts.endswith(","): part_starts = part_starts[:-1]
