@@ -1,4 +1,4 @@
-data-url: ./data/0
+data-url: ./data/1
 
 bytecodes:
     framework: |
@@ -1104,6 +1104,7 @@ tracks:
 
 
     zzz-framework:
+        wire: zz
         position: -1
         endpoints:
             AS:

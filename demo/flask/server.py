@@ -30,19 +30,25 @@ variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
 
 T = "track:"
 ep_map = {}
+bc_map = {}
 
 endpoints = {}
+bytecodes = {}
 tracks = {}
 with open(config_path) as f:
     bc = yaml.load(f)
     for (ep_name,v) in bc["endpoints"].items():
         if "endpoint" in v:
             ep_map[ep_name] = v["endpoint"]
+        if "bytecode" in v:
+            bc_map[ep_name] = v["bytecode"]
     for (track_name,v) in bc["tracks"].items():
         for (code,v) in v["endpoints"].items():
             for scale in range(ord(code[0]),ord(code[1])+1):
                 if v["endpoint"] in ep_map:
                     endpoints[(track_name,chr(scale))] = ep_map[v["endpoint"]]
+                if v["endpoint"] in bc_map:
+                    bytecodes[(track_name,chr(scale))] = bc_map[v["endpoint"]]
     for (t_name,v) in bc["tracks"].items():
         if "wire" in v:
             tracks[v["wire"]] = t_name
@@ -55,6 +61,7 @@ def get_sticks():
         for line in f.readlines():
             (f_chr,f_len) = line.strip().split("\t")
             out[f_chr] = f_len
+    out["text2"] = "1000000"
     return out
 
 def bounds_fix(chrom,start,end):
@@ -416,6 +423,9 @@ def break_up(spec):
             elif first:
                 yield (first[:-1],parts[0],first[-1]+part.group(1))
 
+def test_data(stick,compo):
+    return []
+
 breakdown = [
     ["pc","other","feat"],
     ["fwd","rev"],
@@ -425,35 +435,42 @@ breakdown = [
 
 breakdown[0] += list(string.ascii_lowercase)
 
-@app.route("/browser/data/<version>/<spec>")
-def bulk_data(version,spec):
+test_sticks = set(["text2"])
+
+@app.route("/browser/data/1/<spec>")
+def bulk_data(spec):
     out = []
     for (compo_in,stick,pane) in break_up(spec):
-        compo = tracks[compo_in]
-        leaf = leaf_range(stick,pane)
-        endpoint = endpoints.get((compo,pane[0]),"")
-        start = time.time()
-        parts_in = endpoint.split("-")
-        parts = [""] * (len(breakdown)+1)
-        for (i,flag) in enumerate(parts_in[1:]):
-            for (j,b) in enumerate(breakdown):
-                if flag in b:
-                    parts[j+1] = flag
-        parts[0] = parts_in[0]
-        data = None
-        if parts[0] == "contignormal":
-            data = contig_normal(leaf,parts[3]=="seq")
-        elif parts[0] == "contigshimmer":
-            data = contig_shimmer(leaf)
-        elif parts[0] == "variant":
-            data = variant(leaf,parts[1])
-        elif parts[0] == 'transcript':
-            data = gene_transcript(leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names',pane[0])
-        elif parts[0] == 'gene':
-            data = gene_gene(leaf,parts[1],parts[2],parts[4]=='names')
-        elif parts[0] == 'gc':
-            data = gc(leaf)
-        out.append([stick,pane,compo_in,data])
+        if stick in test_sticks:
+            out.append([stick,pane,compo_in,test_data(stick,compo_in)])
+        else:
+            compo = tracks[compo_in]
+            leaf = leaf_range(stick,pane)
+            endpoint = endpoints.get((compo,pane[0]),"")
+            bytecode = bytecodes.get((compo,pane[0]),"")
+            print("{0} -> {1}".format(endpoint,bytecode))
+            start = time.time()
+            parts_in = endpoint.split("-")
+            parts = [""] * (len(breakdown)+1)
+            for (i,flag) in enumerate(parts_in[1:]):
+                for (j,b) in enumerate(breakdown):
+                    if flag in b:
+                        parts[j+1] = flag
+            parts[0] = parts_in[0]
+            data = []
+            if parts[0] == "contignormal":
+                data = contig_normal(leaf,parts[3]=="seq")
+            elif parts[0] == "contigshimmer":
+                data = contig_shimmer(leaf)
+            elif parts[0] == "variant":
+                data = variant(leaf,parts[1])
+            elif parts[0] == 'transcript':
+                data = gene_transcript(leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names',pane[0])
+            elif parts[0] == 'gene':
+                data = gene_gene(leaf,parts[1],parts[2],parts[4]=='names')
+            elif parts[0] == 'gc':
+                data = gc(leaf)
+            out.append([stick,pane,compo_in,bytecode,data])
     resp = jsonify(out)
     resp.cache_control.max_age = 86400
     resp.cache_control.public = True
