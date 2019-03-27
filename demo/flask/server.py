@@ -79,15 +79,20 @@ def bounds_fix(chrom,start,end):
 
 def get_bigbed_data(path,chromosome,start,end):
     bb = pyBigWig.open(path)
-    out = bb.entries(chromosome,start,end) or []
+    try:
+        out = bb.entries(chromosome,start,end) or []
+    except (RuntimeError,OverflowError):
+        out = []
     bb.close()
     return out
 
 def get_bigwig_data(path,chrom,start,end,points):
-    out = []
     if os.path.exists(path):
-      out = bbi.fetch(path,chrom,start,end,bins=points)
-    return out
+        try:
+            return bbi.fetch(path,chrom,start,end,bins=points)
+        except (KeyError,OverflowError):
+            pass
+    return []
 
 def burst_leaf(leaf):
     (chrom,rest) = leaf.rsplit(':',1)
