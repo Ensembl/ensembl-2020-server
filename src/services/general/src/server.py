@@ -11,20 +11,35 @@ import urllib, urllib.parse, math
 app = Flask(__name__)
 CORS(app)
 
-home_dir = "/home/dan"
-#home_dir = "/Users/sboddu/e2020"
-data_repo = home_dir + "/e2020_march_datafiles"
+data_path = None
+yaml_path = None
 
-refget_hashes = data_repo + "/common_files/grch38.chrom.hashes"
-config_path = home_dir + "/ensembl-2020-server/src/services/general/src/yaml/config.yaml"
-contig_path = data_repo + "/contigs/contigs-approx.bb"
-gene_path = data_repo + "/genes_and_transcripts/canonical.bb"
-chrom_sizes= data_repo + "/common_files/grch38.chrom.sizes"
-variant_files = home_dir + "/e2020-vcf/bigbeds"
-objects_list_path = home_dir + "/ensembl-2020-server/src/services/general/src/yaml/example_objects.yaml"
-objects_info_path = home_dir + "/ensembl-2020-server/src/services/general/src/yaml/objects_info.yaml"
-gc_file = home_dir + "/e2020-vcf/gc.all.bw"
-assets_path = home_dir + "/ensembl-2020-server/src/services/general/src/assets"
+app_home_dir = os.path.dirname(os.path.realpath(__file__))
+yaml_path = os.path.join(app_home_dir, "yaml")
+
+if 'ett_data_path' in os.environ:
+    data_path = os.environ['ett_data_path']
+else:
+    print ("Data path is not set. Some of the endpoint may not work as expected.")
+
+if 'ett_yaml_path' in os.environ:
+    yaml_path = os.environ['ett_yaml_path']
+else:
+    print ("Using default yaml path")
+
+refget_hashes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.hashes")
+chrom_sizes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.sizes")
+contig_path = os.path.join(data_path,"e2020_march_datafiles/contigs/contigs-approx.bb")
+gene_path = os.path.join(data_path,"e2020_march_datafiles/genes_and_transcripts/canonical.bb")
+
+variant_files = os.path.join(data_path,"e2020-vcf/bigbeds")
+gc_file = os.path.join(data_path,"e2020-vcf/gc.all.bw")
+
+assets_path = os.path.join(app_home_dir,"assets")
+
+config_path = os.path.join(yaml_path,"config.yaml")
+objects_list_path = os.path.join(yaml_path,"example_objects.yaml")
+objects_info_path = os.path.join(yaml_path,"objects_info.yaml")
 
 variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
 
