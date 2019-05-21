@@ -1,0 +1,65 @@
+stages:
+  - build_flask
+  - deploy
+
+variables:
+  CONTAINER_IMAGE: $REGISTRY_URL/$REGISTRY_NAMESPACE/ett-server-cicd-test:${CI_COMMIT_SHORT_SHA}
+  KUBECONFIG: /etc/deploy/config
+
+Build e!-Server:
+  stage: build_flask
+
+  image: docker
+
+  services:
+    - docker:dind
+
+  script:
+  - docker build -t ${CONTAINER_IMAGE} --no-cache .
+  - docker images
+  - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin https://"$REGISTRY_URL"
+  - docker push ${CONTAINER_IMAGE}
+  - docker rmi ${CONTAINER_IMAGE}
+  - docker logout hh-dee-dtr01.caas.ebi.ac.uk
+
+  only:
+  - cicd-test
+
+Staging:
+  stage: deploy
+  image: alpine
+  only:
+  - cicd-test
+  before_script:
+  - mkdir -p /etc/deploy
+  - echo ${KUBE_CONFIG_STAGE} | base64 -d > ${KUBECONFIG}
+  script:
+  - apk update && apk add --no-cache curl git
+  - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+  - chmod +x ./kubectl
+  - mv ./kubectl /usr/local/bin/kubectl
+  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
+  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
+  - kubectl config use-context ett-stage
+  - kubectl apply -f ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
+  - kubectl apply -f ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
+
+Live:
+  stage: deploy
+  image: alpine
+  only:
+  - cicd-test
+  before_script:
+  - mkdir -p /etc/deploy
+  - echo ${KUBE_CONFIG} | base64 -d > ${KUBECONFIG}
+  script:
+  - apk update && apk add --no-cache curl git
+  - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+  - chmod +x ./kubectl
+  - mv ./kubectl /usr/local/bin/kubectl
+  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
+  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
+  - kubectl config use-context ucp_hh-ucp.caas.ebi.ac.uk:6443_kamal
+  - kubectl apply -f ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
+  - kubectl apply -f ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
+  when: manual
