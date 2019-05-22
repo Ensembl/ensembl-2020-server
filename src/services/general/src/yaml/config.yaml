@@ -1,4 +1,5 @@
 data-url: ./data/1
+debug-url: ./debug
 
 bytecodes:
     framework: |

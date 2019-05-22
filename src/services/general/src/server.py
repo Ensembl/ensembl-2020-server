@@ -6,7 +6,7 @@ import os.path, string, time, yaml, re, base64
 import pyBigWig, bbi, png
 import shimmer
 from seqcache import SequenceCache
-import urllib, urllib.parse, math
+import datetime, urllib, urllib.parse, math, collections
 
 app = Flask(__name__)
 CORS(app)
@@ -16,6 +16,7 @@ yaml_path = None
 
 app_home_dir = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(app_home_dir, "yaml")
+log_path = os.path.join(app_home_dir,"log")
 
 if 'ett_data_path' in os.environ:
     data_path = os.environ['ett_data_path']
@@ -40,6 +41,7 @@ assets_path = os.path.join(app_home_dir,"assets")
 config_path = os.path.join(yaml_path,"config.yaml")
 objects_list_path = os.path.join(yaml_path,"example_objects.yaml")
 objects_info_path = os.path.join(yaml_path,"objects_info.yaml")
+debug_mode_path = os.path.join(yaml_path,"debug_mode.yaml")
 
 variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
 
@@ -335,6 +337,28 @@ def get_object_info(object_id):
         else:
           return jsonify(data[object_id])
 
+def format_debug(stream,time,text):
+    time = datetime.datetime.utcfromtimestamp(time/1000.)
+    ms = time.microsecond/1000.
+    time -= datetime.timedelta(microseconds=time.microsecond)
+    time_str = "{0}.{1:03}".format(time.strftime("%Y:%m:%d %H:%M:%S"),int(ms))
+    return "[{0}] [{1}] {2}".format(stream,time_str,text)
+
+@app.route("/browser/debug", methods=["POST"])
+def post_debug():
+    with open(debug_mode_path) as f:
+        debug_config = yaml.load(f)
+        dests = debug_config['destinations']
+        streams = collections.defaultdict(list)
+        for (stream,data) in request.get_json().items():
+            target = dests.get(stream,dests["DEFAULT"])
+            for r in data['reports']:
+                streams[target].append(format_debug(stream,r['time'],r['text']))
+        for (filename,lines) in streams.items():
+            with open(os.path.join(log_path,filename),"ab") as g:
+                lines.append("")
+                g.write("\n".join(lines).encode("utf-8"))
+        return jsonify(debug_config)
 
 var_category = {
     '3_prime_UTR_variant': 2,

@@ -1,0 +1,6 @@
+enabled:
+    - test
+
+destinations:
+    DEFAULT: default.log
+    test: test.log
