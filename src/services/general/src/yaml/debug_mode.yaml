@@ -1,5 +1,6 @@
 enabled:
     - test
+    - main
 
 destinations:
     DEFAULT: default.log

@@ -337,12 +337,14 @@ def get_object_info(object_id):
         else:
           return jsonify(data[object_id])
 
-def format_debug(stream,time,text):
+def format_debug(inst,stream,time,text,stack):
     time = datetime.datetime.utcfromtimestamp(time/1000.)
     ms = time.microsecond/1000.
     time -= datetime.timedelta(microseconds=time.microsecond)
     time_str = "{0}.{1:03}".format(time.strftime("%Y:%m:%d %H:%M:%S"),int(ms))
-    return "[{0}] [{1}] {2}".format(stream,time_str,text)
+    return "[{0}/{1}] [{2}] ({3}) {4}".format(
+        inst,stream,time_str,stack,text
+    )
 
 @app.route("/browser/debug", methods=["POST"])
 def post_debug():
@@ -350,10 +352,14 @@ def post_debug():
         debug_config = yaml.load(f)
         dests = debug_config['destinations']
         streams = collections.defaultdict(list)
-        for (stream,data) in request.get_json().items():
+        received = request.get_json()
+        print(received)
+        inst = received['instance_id']
+        for (stream,data) in received['streams'].items():
             target = dests.get(stream,dests["DEFAULT"])
             for r in data['reports']:
-                streams[target].append(format_debug(stream,r['time'],r['text']))
+                streams[target].append(format_debug(
+                    inst,stream,r['time'],r['text'],r['stack']))
         for (filename,lines) in streams.items():
             with open(os.path.join(log_path,filename),"ab") as g:
                 lines.append("")
