@@ -1,6 +1,10 @@
 enabled:
     - test
     - main
+    - blackbox-send
+
+dataset:
+    - blackbox-send
 
 destinations:
     DEFAULT: default.log

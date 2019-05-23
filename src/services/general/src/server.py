@@ -346,12 +346,16 @@ def format_debug(inst,stream,time,text,stack):
         inst,stream,time_str,stack,text
     )
 
+def safe_filename(fn):
+    return "".join([x for x in fn if re.match(r'[\w.-]',x)])
+
 @app.route("/browser/debug", methods=["POST"])
 def post_debug():
     with open(debug_mode_path) as f:
         debug_config = yaml.load(f)
         dests = debug_config['destinations']
         streams = collections.defaultdict(list)
+        datasets = collections.defaultdict(list)
         received = request.get_json()
         print(received)
         inst = received['instance_id']
@@ -360,10 +364,18 @@ def post_debug():
             for r in data['reports']:
                 streams[target].append(format_debug(
                     inst,stream,r['time'],r['text'],r['stack']))
+                if 'dataset' in r:
+                    datasets[stream] += r['dataset']
         for (filename,lines) in streams.items():
+            filename = safe_filename(filename)
             with open(os.path.join(log_path,filename),"ab") as g:
                 lines.append("")
                 g.write("\n".join(lines).encode("utf-8"))
+        for (filename,data) in datasets.items():
+            filename = safe_filename(filename) + ".data"
+            print("fn",filename)
+            with open(os.path.join(log_path,filename),"ab") as g:
+                g.write("".join(["{} {}\n".format(inst,x) for x in data]).encode("utf-8"))
         return jsonify(debug_config)
 
 var_category = {
