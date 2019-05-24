@@ -25,6 +25,7 @@ Build e!-Server:
   only:
   - cicd-test
 
+# Deploy Stage 
 Staging:
   stage: deploy
   image: alpine
