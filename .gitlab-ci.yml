@@ -40,8 +40,8 @@ Staging:
   - mv ./kubectl /usr/local/bin/kubectl
   - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
   - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
-  - sed -i "s/<DEPLOYMNET_ENV>/STAGING/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
-  - sed -i "s/<DEPLOYMNET_ENV>/STAGING/g" ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
+  - sed -i "s/<DEPLOYMNET_ENV>/staging/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
+  - sed -i "s/<DEPLOYMNET_ENV>/staging/g" ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
   - kubectl config use-context ett-stage
   - kubectl apply -f ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
   - kubectl apply -f ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
@@ -61,8 +61,8 @@ Live:
   - mv ./kubectl /usr/local/bin/kubectl
   - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
   - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
-  - sed -i "s/<DEPLOYMNET_ENV>/PROD/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
-  - sed -i "s/<DEPLOYMNET_ENV>/PROD/g" ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
+  - sed -i "s/<DEPLOYMNET_ENV>/prod/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
+  - sed -i "s/<DEPLOYMNET_ENV>/prod/g" ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
   - kubectl config use-context ucp_hh-ucp.caas.ebi.ac.uk:6443_kamal
   - kubectl apply -f ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
   - kubectl apply -f ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
