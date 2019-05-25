@@ -341,7 +341,7 @@ def format_debug(inst,stream,time,text,stack):
     time = datetime.datetime.utcfromtimestamp(time/1000.)
     ms = time.microsecond/1000.
     time -= datetime.timedelta(microseconds=time.microsecond)
-    time_str = "{0}.{1:03}".format(time.strftime("%Y:%m:%d %H:%M:%S"),int(ms))
+    time_str = "{0}.{1:03}".format(time.strftime("%Y-%m-%d %H:%M:%S"),int(ms))
     return "[{0}/{1}] [{2}] ({3}) {4}".format(
         inst,stream,time_str,stack,text
     )
@@ -359,23 +359,30 @@ def post_debug():
         received = request.get_json()
         print(received)
         inst = received['instance_id']
+        
+        # arrange reports into files they will end up in
         for (stream,data) in received['streams'].items():
             target = dests.get(stream,dests["DEFAULT"])
             for r in data['reports']:
-                streams[target].append(format_debug(
-                    inst,stream,r['time'],r['text'],r['stack']))
+                streams[target].append((r['time'],format_debug(
+                    inst,stream,r['time'],r['text'],r['stack'])))
                 if 'dataset' in r:
                     datasets[stream] += r['dataset']
+        
+        # write report lines
         for (filename,lines) in streams.items():
             filename = safe_filename(filename)
             with open(os.path.join(log_path,filename),"ab") as g:
-                lines.append("")
-                g.write("\n".join(lines).encode("utf-8"))
+                lines.sort()
+                g.write("".join([x[1]+"\n" for x in lines]).encode("utf-8"))
+                
+        # write datasets
         for (filename,data) in datasets.items():
             filename = safe_filename(filename) + ".data"
             print("fn",filename)
             with open(os.path.join(log_path,filename),"ab") as g:
                 g.write("".join(["{} {}\n".format(inst,x) for x in data]).encode("utf-8"))
+                
         return jsonify(debug_config)
 
 var_category = {

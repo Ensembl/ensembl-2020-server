@@ -1,11 +1,15 @@
 enabled:
     - test
     - main
-    - blackbox-send
+    #- blackbox-send
+    - timers
 
 dataset:
-    - blackbox-send
+#    - timers
+#    - blackbox-send
 
 destinations:
     DEFAULT: default.log
     test: test.log
+
+interval: 10
