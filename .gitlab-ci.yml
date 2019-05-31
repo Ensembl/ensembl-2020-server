@@ -42,7 +42,7 @@ Staging:
   - mv ./kubectl /usr/local/bin/kubectl
   - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
   - cd ensembl-client-caas-deploy
-  - git checkout 
+  - git checkout embassy_migration
   - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
   - sed -i "s/<DEPLOYMNET_ENV>/staging/g" ensembl-client-caas-deploy/ett_server_cicd_test_deployment.yaml
   - sed -i "s/<DEPLOYMNET_ENV>/staging/g" ensembl-client-caas-deploy/ett_server_cicd_test_node.yaml
