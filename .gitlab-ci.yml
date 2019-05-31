@@ -4,7 +4,7 @@ stages:
   - deploy
 
 variables:
-  CONTAINER_IMAGE: $REGISTRY_URL/$REGISTRY_NAMESPACE/ett-server-cicd-test:${CI_COMMIT_SHORT_SHA}
+  CONTAINER_IMAGE: $GITLAB_REGISTRY_URL/$GITLAB_REGISTRY_NAMESPACE/ensembl-2020-server:${CI_COMMIT_SHORT_SHA}
   KUBECONFIG: /etc/deploy/config
 
 Build e!-Server:
@@ -18,10 +18,10 @@ Build e!-Server:
   script:
   - docker build -t ${CONTAINER_IMAGE} --no-cache .
   - docker images
-  - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin https://"$REGISTRY_URL"
+  - echo "$GITLAB_REGISTRY_TOKEN" | docker login -u "$GITLAB_REGISTRY_USER" --password-stdin https://"$GITLAB_REGISTRY_URL"
   - docker push ${CONTAINER_IMAGE}
   - docker rmi ${CONTAINER_IMAGE}
-  - docker logout hh-dee-dtr01.caas.ebi.ac.uk
+  - docker logout $GITLAB_REGISTRY_URL
 
   only:
   - cicd-test
@@ -34,7 +34,7 @@ Staging:
   - cicd-test
   before_script:
   - mkdir -p /etc/deploy
-  - echo ${KUBE_CONFIG_STAGE} | base64 -d > ${KUBECONFIG}
+  - echo ${EMBASSY_KUBECONFIG} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
   - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
