@@ -6,7 +6,8 @@ import os.path, string, time, yaml, re, base64
 import pyBigWig, bbi, png
 import shimmer
 from seqcache import SequenceCache
-import datetime, urllib, urllib.parse, math, collections
+import datetime, urllib, urllib.parse, math, collections, logging
+import logging.config
 
 app = Flask(__name__)
 CORS(app)
@@ -27,6 +28,30 @@ if 'ett_yaml_path' in os.environ:
     yaml_path = os.environ['ett_yaml_path']
 else:
     print ("Using default yaml path")
+
+if 'ett_log_path' in os.environ:
+    log_path = os.environ['err_log_path']
+else:
+    print ("Using default log path")
+
+def configure_logging():
+    logging_conf_file = os.path.join(log_path,'logging.conf')
+    if os.path.exists(logging_conf_file):
+        # temporary chdir ensures config-file paths relative to log_path
+        old_cwd = os.getcwd()
+        os.chdir(log_path)
+        logging.config.fileConfig(logging_conf_file)
+        os.chdir(old_cwd)
+        general_logger = logging.getLogger("general")
+        general_logger.info("logging configured from {0}".format(logging_conf_file))
+    else:
+        default_logfile = os.path.join(log_path,"server.log")
+        logging.basicConfig(filename=default_logfile,level=logging.DEBUG)
+        general_logger = logging.getLogger("general")
+        general_logger.info("no logging config found. Using basic config")
+
+configure_logging()
+general_logger = logging.getLogger("general")
 
 refget_hashes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.hashes")
 chrom_sizes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.sizes")
@@ -337,15 +362,19 @@ def get_object_info(object_id):
         else:
           return jsonify(data[object_id])
 
-def format_debug(inst,stream,time,text,stack):
-    time = datetime.datetime.utcfromtimestamp(time/1000.)
-    ms = time.microsecond/1000.
-    time -= datetime.timedelta(microseconds=time.microsecond)
-    time_str = "{0}.{1:03}".format(time.strftime("%Y-%m-%d %H:%M:%S"),int(ms))
-    return "[{0}/{1}] [{2}] ({3}) {4}".format(
-        inst,stream,time_str,stack,text
+def format_debug(inst,stream,text,stack):
+    return "[{0}/{1}] ({2}) {3}".format(
+        inst,stream,stack,text
     )
 
+# need to format it ourselves as python logging doesn't support
+# anachronistic log messages
+def format_client_time(t):
+    t = datetime.datetime.utcfromtimestamp(t/1000.)
+    ms = t.microsecond/1000.
+    t -= datetime.timedelta(microseconds=t.microsecond)
+    return "{0}.{1:03}".format(t.strftime("%Y-%m-%d %H:%M:%S"),int(ms))
+        
 def safe_filename(fn):
     return "".join([x for x in fn if re.match(r'[\w.-]',x)])
 
@@ -360,21 +389,27 @@ def post_debug():
         print(received)
         inst = received['instance_id']
         
+        blackbox_logger = logging.getLogger("blackbox")
+        
         # arrange reports into files they will end up in
         for (stream,data) in received['streams'].items():
             target = dests.get(stream,dests["DEFAULT"])
             for r in data['reports']:
-                streams[target].append((r['time'],format_debug(
-                    inst,stream,r['time'],r['text'],r['stack'])))
+                stream_code = "{0}/{1}".format(inst,stream)
+                streams[target].append((r['time'],stream_code,r['stack'],
+                    r['text']))
                 if 'dataset' in r:
                     datasets[stream] += r['dataset']
         
-        # write report lines
+        # write logging report lines
         for (filename,lines) in streams.items():
-            filename = safe_filename(filename)
-            with open(os.path.join(log_path,filename),"ab") as g:
-                lines.sort()
-                g.write("".join([x[1]+"\n" for x in lines]).encode("utf-8"))
+            lines.sort()
+            for line in lines:
+                blackbox_logger.info(line[3],extra={
+                    "clienttime": format_client_time(line[0]),
+                    "streamcode": line[1],
+                    "stack": line[2]
+                })
                 
         # write datasets
         for (filename,data) in datasets.items():
