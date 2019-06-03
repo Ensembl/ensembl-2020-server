@@ -30,7 +30,7 @@ else:
     print ("Using default yaml path")
 
 if 'ett_log_path' in os.environ:
-    log_path = os.environ['err_log_path']
+    log_path = os.environ['ett_log_path']
 else:
     print ("Using default log path")
 
