@@ -365,11 +365,6 @@ def get_object_info(object_id):
         else:
           return jsonify(data[object_id])
 
-def format_debug(inst,stream,text,stack):
-    return "[{0}/{1}] ({2}) {3}".format(
-        inst,stream,stack,text
-    )
-
 # need to format it ourselves as python logging doesn't support
 # anachronistic log messages
 def format_client_time(t):
@@ -386,35 +381,34 @@ def safe_filename(fn):
 def post_debug():
     with open(debug_mode_path) as f:
         debug_config = yaml.load(f)
-        dests = debug_config['destinations']
-        streams = collections.defaultdict(list)
+        streams = []
         datasets = collections.defaultdict(list)
         received = request.get_json()
-        print(received)
         inst = received['instance_id']
         
         blackbox_logger = logging.getLogger("blackbox")
         
-        # arrange reports into files they will end up in
+        # retrieve logs and put into list for sorting, then sort
         for (stream,data) in received['streams'].items():
-            target = dests.get(stream,dests["DEFAULT"])
             for r in data['reports']:
-                stream_code = "{0}/{1}".format(inst,stream)
-                streams[target].append((r['time'],stream_code,r['stack'],
-                    r['text']))
+                streams.append((r['time'],stream,inst,r))
                 if 'dataset' in r:
                     datasets[stream] += r['dataset']
+        streams.sort()
         
-        # write logging report lines
-        for (filename,lines) in streams.items():
-            lines.sort()
-            for line in lines:
-                blackbox_logger.info(line[3],extra={
-                    "clienttime": format_client_time(line[0]),
-                    "streamcode": line[1],
-                    "stack": line[2]
-                })
-                
+        # write report lines to logger
+        loggers = {}
+        for (_,stream,inst,r) in streams:
+            logger_name = "blackbox.{0}".format(stream)
+            if logger_name not in loggers:
+                loggers[logger_name] = logging.getLogger(logger_name)
+            logger = loggers[logger_name]
+            logger.info(r['text'],extra={
+                "clienttime": format_client_time(r['time']),
+                "streamcode": "{0}/{1}".format(inst,stream),
+                "stack": r['stack']
+            })
+                        
         # write datasets
         for (filename,data) in datasets.items():
             filename = safe_filename(filename) + ".data"
