@@ -1,4 +1,4 @@
-# CaaS Working CI/CD
+# EMBASSY Working CI/CD 
 stages:
   - build_flask
   - deploy
