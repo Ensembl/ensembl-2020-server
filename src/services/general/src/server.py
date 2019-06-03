@@ -6,7 +6,8 @@ import os.path, string, time, yaml, re, base64
 import pyBigWig, bbi, png
 import shimmer
 from seqcache import SequenceCache
-import datetime, urllib, urllib.parse, math, collections, logging
+import datetime, urllib, urllib.parse, math, collections, logging, pytz
+import tzlocal
 import logging.config
 
 app = Flask(__name__)
@@ -33,6 +34,8 @@ if 'ett_log_path' in os.environ:
     log_path = os.environ['ett_log_path']
 else:
     print ("Using default log path")
+
+local_timezone = tzlocal.get_localzone()
 
 def configure_logging():
     logging_conf_file = os.path.join(log_path,'logging.conf')
@@ -373,6 +376,7 @@ def format_client_time(t):
     t = datetime.datetime.utcfromtimestamp(t/1000.)
     ms = t.microsecond/1000.
     t -= datetime.timedelta(microseconds=t.microsecond)
+    t = t.replace(tzinfo=pytz.utc).astimezone(local_timezone)
     return "{0}.{1:03}".format(t.strftime("%Y-%m-%d %H:%M:%S"),int(ms))
         
 def safe_filename(fn):
