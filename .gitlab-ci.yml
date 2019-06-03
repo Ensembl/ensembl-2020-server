@@ -1,4 +1,4 @@
-# EMBASSY Working CI/CD 
+# EMBASSY Working CI/CD with gitlab registry
 stages:
   - build_flask
   - deploy
