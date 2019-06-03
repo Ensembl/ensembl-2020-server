@@ -19,6 +19,7 @@ Build e!-Server:
   - docker build -t ${CONTAINER_IMAGE} --no-cache .
   - docker images
   - echo "$GITLAB_REGISTRY_TOKEN" | docker login -u "$GITLAB_REGISTRY_USER" --password-stdin https://"$GITLAB_REGISTRY_URL"
+  - cat ~/.docker/config.json
   - docker push ${CONTAINER_IMAGE}
   - docker rmi ${CONTAINER_IMAGE}
   - docker logout $GITLAB_REGISTRY_URL
