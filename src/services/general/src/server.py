@@ -6,7 +6,9 @@ import os.path, string, time, yaml, re, base64
 import pyBigWig, bbi, png
 import shimmer
 from seqcache import SequenceCache
-import urllib, urllib.parse, math
+import datetime, urllib, urllib.parse, math, collections, logging, pytz
+import tzlocal
+import logging.config
 
 app = Flask(__name__)
 CORS(app)
@@ -16,6 +18,7 @@ yaml_path = None
 
 app_home_dir = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(app_home_dir, "yaml")
+log_path = os.path.join(app_home_dir,"log")
 
 if 'ett_data_path' in os.environ:
     data_path = os.environ['ett_data_path']
@@ -26,6 +29,32 @@ if 'ett_yaml_path' in os.environ:
     yaml_path = os.environ['ett_yaml_path']
 else:
     print ("Using default yaml path")
+
+if 'ett_log_path' in os.environ:
+    log_path = os.environ['ett_log_path']
+else:
+    print ("Using default log path")
+
+local_timezone = tzlocal.get_localzone()
+
+def configure_logging():
+    logging_conf_file = os.path.join(log_path,'logging.conf')
+    if os.path.exists(logging_conf_file):
+        # temporary chdir ensures config-file paths relative to log_path
+        old_cwd = os.getcwd()
+        os.chdir(log_path)
+        logging.config.fileConfig(logging_conf_file)
+        os.chdir(old_cwd)
+        general_logger = logging.getLogger("general")
+        general_logger.info("logging configured from {0}".format(logging_conf_file))
+    else:
+        default_logfile = os.path.join(log_path,"server.log")
+        logging.basicConfig(filename=default_logfile,level=logging.DEBUG)
+        general_logger = logging.getLogger("general")
+        general_logger.info("no logging config found. Using basic config")
+
+configure_logging()
+general_logger = logging.getLogger("general")
 
 refget_hashes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.hashes")
 chrom_sizes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.sizes")
@@ -40,6 +69,7 @@ assets_path = os.path.join(app_home_dir,"assets")
 config_path = os.path.join(yaml_path,"config.yaml")
 objects_list_path = os.path.join(yaml_path,"example_objects.yaml")
 objects_info_path = os.path.join(yaml_path,"objects_info.yaml")
+debug_mode_path = os.path.join(yaml_path,"debug_mode.yaml")
 
 variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
 
@@ -335,6 +365,58 @@ def get_object_info(object_id):
         else:
           return jsonify(data[object_id])
 
+# need to format it ourselves as python logging doesn't support
+# anachronistic log messages
+def format_client_time(t):
+    t = datetime.datetime.utcfromtimestamp(t/1000.)
+    ms = t.microsecond/1000.
+    t -= datetime.timedelta(microseconds=t.microsecond)
+    t = t.replace(tzinfo=pytz.utc).astimezone(local_timezone)
+    return "{0}.{1:03}".format(t.strftime("%Y-%m-%d %H:%M:%S"),int(ms))
+        
+def safe_filename(fn):
+    return "".join([x for x in fn if re.match(r'[\w.-]',x)])
+
+@app.route("/browser/debug", methods=["POST"])
+def post_debug():
+    with open(debug_mode_path) as f:
+        debug_config = yaml.load(f)
+        streams = []
+        datasets = collections.defaultdict(list)
+        received = request.get_json()
+        inst = received['instance_id']
+        
+        blackbox_logger = logging.getLogger("blackbox")
+        
+        # retrieve logs and put into list for sorting, then sort
+        for (stream,data) in received['streams'].items():
+            for r in data['reports']:
+                streams.append((r['time'],stream,inst,r))
+                if 'dataset' in r:
+                    datasets[stream] += r['dataset']
+        streams.sort()
+        
+        # write report lines to logger
+        loggers = {}
+        for (_,stream,inst,r) in streams:
+            logger_name = "blackbox.{0}".format(stream)
+            if logger_name not in loggers:
+                loggers[logger_name] = logging.getLogger(logger_name)
+            logger = loggers[logger_name]
+            logger.info(r['text'],extra={
+                "clienttime": format_client_time(r['time']),
+                "streamcode": "{0}/{1}".format(inst,stream),
+                "stack": r['stack']
+            })
+                        
+        # write datasets
+        for (filename,data) in datasets.items():
+            filename = safe_filename(filename) + ".data"
+            print("fn",filename)
+            with open(os.path.join(log_path,filename),"ab") as g:
+                g.write("".join(["{} {}\n".format(inst,x) for x in data]).encode("utf-8"))
+                
+        return jsonify(debug_config)
 
 var_category = {
     '3_prime_UTR_variant': 2,
