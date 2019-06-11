@@ -1,6 +1,7 @@
-from flask import jsonify, Blueprint
-import yaml, re, time, os.path, string, base64, math
-import pyBigWig, bbi, png
+from flask import jsonify, Blueprint, request
+import yaml, re, time, os.path, string, base64, math, tzlocal, logging
+import collections, datetime
+import pyBigWig, bbi, png, pytz
 
 import shimmer
 from seqcache import SequenceCache
@@ -27,6 +28,9 @@ gc_file = ""
 refget_hashes = ""
 config_path = ""
 assets_path = ""
+debug_mode_path = ""
+
+local_timezone = tzlocal.get_localzone()
 
 bp = Blueprint('browser_image',__name__)
 
@@ -41,11 +45,15 @@ def make_asset(value):
             data += row
         return [[w,h],base64.b64encode(data).decode("ascii")]
 
-def browser_setup(config_path_in,data_path,assets_path_in):
+def browser_setup(log_path_in,debug_mode_path_in,config_path_in,data_path,assets_path_in):
+    global log_path
+    global debug_mode_path
     global config_path
     global assets_path
     config_path = config_path_in
     assets_path = assets_path_in
+    debug_mode_path = debug_mode_path_in
+    log_path = log_path_in
     
     global endpoints
     global bytecodes
@@ -467,3 +475,56 @@ def browser_config():
             for (i,v) in enumerate(make_asset(v)):
                 data['data'][name].append(v)
         return jsonify(data)
+
+# need to format it ourselves as python logging doesn't support
+# anachronistic log messages
+def format_client_time(t):
+    t = datetime.datetime.utcfromtimestamp(t/1000.)
+    ms = t.microsecond/1000.
+    t -= datetime.timedelta(microseconds=t.microsecond)
+    t = t.replace(tzinfo=pytz.utc).astimezone(local_timezone)
+    return "{0}.{1:03}".format(t.strftime("%Y-%m-%d %H:%M:%S"),int(ms))
+        
+def safe_filename(fn):
+    return "".join([x for x in fn if re.match(r'[\w.-]',x)])
+
+@bp.route("/browser/debug", methods=["POST"])
+def post_debug():
+    with open(debug_mode_path) as f:
+        debug_config = yaml.load(f)
+        streams = []
+        datasets = collections.defaultdict(list)
+        received = request.get_json()
+        inst = received['instance_id']
+        
+        blackbox_logger = logging.getLogger("blackbox")
+        
+        # retrieve logs and put into list for sorting, then sort
+        for (stream,data) in received['streams'].items():
+            for r in data['reports']:
+                streams.append((r['time'],stream,inst,r))
+                if 'dataset' in r:
+                    datasets[stream] += r['dataset']
+        streams.sort()
+        
+        # write report lines to logger
+        loggers = {}
+        for (_,stream,inst,r) in streams:
+            logger_name = "blackbox.{0}".format(stream)
+            if logger_name not in loggers:
+                loggers[logger_name] = logging.getLogger(logger_name)
+            logger = loggers[logger_name]
+            logger.info(r['text'],extra={
+                "clienttime": format_client_time(r['time']),
+                "streamcode": "{0}/{1}".format(inst,stream),
+                "stack": r['stack']
+            })
+                        
+        # write datasets
+        for (filename,data) in datasets.items():
+            filename = safe_filename(filename) + ".data"
+            print("fn",filename)
+            with open(os.path.join(log_path,filename),"ab") as g:
+                g.write("".join(["{} {}\n".format(inst,x) for x in data]).encode("utf-8"))
+                
+        return jsonify(debug_config)
