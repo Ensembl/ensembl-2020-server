@@ -54,9 +54,8 @@ assets_path = os.path.join(app_home_dir,"assets")
 config_path = os.path.join(yaml_path,"config.yaml")
 objects_list_path = os.path.join(yaml_path,"example_objects.yaml")
 objects_info_path = os.path.join(yaml_path,"objects_info.yaml")
-debug_mode_path = os.path.join(yaml_path,"debug_mode.yaml")
 
-browser_image_bp = browser.browser.browser_setup(log_path,debug_mode_path,config_path,data_path,assets_path)
+browser_image_bp = browser.browser.browser_setup(yaml_path,log_path,data_path,assets_path)
 app.register_blueprint(browser_image_bp)
 
 @app.route("/browser/example_objects")

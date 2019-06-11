@@ -45,14 +45,14 @@ def make_asset(value):
             data += row
         return [[w,h],base64.b64encode(data).decode("ascii")]
 
-def browser_setup(log_path_in,debug_mode_path_in,config_path_in,data_path,assets_path_in):
+def browser_setup(yaml_path,log_path_in,data_path,assets_path_in):
     global log_path
     global debug_mode_path
     global config_path
     global assets_path
-    config_path = config_path_in
+    config_path = os.path.join(yaml_path,"config.yaml")
     assets_path = assets_path_in
-    debug_mode_path = debug_mode_path_in
+    debug_mode_path = debug_mode_path = os.path.join(yaml_path,"debug_mode.yaml")
     log_path = log_path_in
     
     global endpoints
