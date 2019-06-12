@@ -4,9 +4,9 @@ debug-url: ./debug
 bytecodes:
     framework: |
         ; *** FIXED TEXTS ***
-        const #20, "Lato"
+        const #20, {"Lato"}
         const #21, [12,0,199,208,213,255,255,255]
-        const #10, "bp"
+        const #10, {"bp"}
         const #11, [2]
         text #12, #20, #21, #10, #11
         ; *** bp top ***
@@ -84,7 +84,7 @@ bytecodes:
         const #5, [0,1,0,0,2,2,2,0,2,0,0]
         shape #5, #6, #12, #13, #14, #11
         ; 3. draw text
-        const #12, "Lato"
+        const #12, {"Lato"}
         const #13, [9,0,111,129,144,255,255,255]
         text #10, #12, #13, #9, #8
         const #5, [3,0, 0,1,1,1, 0,0,2,0, 0]
@@ -95,10 +95,10 @@ bytecodes:
         const #15, [1]
         shape #5, #6, #14, #15, #14, #10
         ; *** LHS ***
-        const #99, "lhs"
+        const #99, {"lhs"}
         setpart #99
         allplots #41,#42,#43,#44
-        const #20, "Lato"
+        const #20, {"Lato"}
         const #21, [12,1,96,96,96,255,255,255]
         text #12, #20, #21, #44, #43
         const #45, [0.5]
@@ -146,10 +146,10 @@ bytecodes:
         const #10, [1,1]
         shape #10, #1, #2, #4, #5, #6
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "Contigs"
+        const #20, {"Lato"}
+        const #44, {"Contigs"}
         const #43, [7]
         const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
@@ -190,10 +190,10 @@ bytecodes:
         const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
         shape #16, #7, #12, #13, #14, #15 ; draw boxes
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "Contigs"
+        const #20, {"Lato"}
+        const #44, {"Contigs"}
         const #43, [7]
         const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
@@ -245,9 +245,9 @@ bytecodes:
         const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
         shape #16, #7, #12, #13, #14, #15 ; draw boxes
         ; *** sequence ***
-        const #7, "ACGTN"   ; #7 = available sequence
+        const #7, {"ACGTN"} ; #7 = available sequence
         const #8, [1,1,1,1,1]; #8 = length of seqeunces
-        const #40, "Lato"
+        const #40, {"Lato"}
         const #41, [12,1,183,192,200,255,255,255]
         text #9, #40, #41, #7, #8    ; #9 = textures for A,C,G,T
         index #1, #1, #7   ; #1 = 0=A, 1=C, 2=G, 3=T for seq
@@ -263,10 +263,10 @@ bytecodes:
         const #28, [0]
         shape #11, #7, #28, #13, #28, #9 ; draw letter        
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "Contigs"
+        const #20, {"Lato"}
+        const #44, {"Contigs"}
         const #43, [7]
         const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
@@ -355,10 +355,10 @@ bytecodes:
         const #15, [192,192,192]
         shape #10, #11, #11, #63, #13, #15
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "%GC"
+        const #20, {"Lato"}
+        const #44, {"%GC"}
         const #43, [3]
         const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
@@ -411,13 +411,13 @@ bytecodes:
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #11
         ; draw chevrons
-        const #97, "chevron-left"
+        const #97, {"chevron-left"}
         const #98, [0]
         asset #90, #97, #98
         const #98, [1]
         asset #91, #97, #98
         image #90, #90, #91, #97
-        const #97, "chevron-right"
+        const #97, {"chevron-right"}
         const #98, [0]
         asset #92, #97, #98
         const #98, [1]
@@ -451,9 +451,9 @@ bytecodes:
         mul #100, #100, #101
         shape #41, #100, #8, #60, #7, #90
         ; draw gene names
-        const #99, "names"
+        const #99, {"names"}
         setpart #99
-        const #20, "Lato"
+        const #20, {"Lato"}
         const #21, [10,0,111,129,144,255,255,255]
         text #40, #20, #21, #3, #4
         const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
@@ -462,10 +462,10 @@ bytecodes:
         const #8, [0]
         shape #41, #1, #8, #60, #7, #40
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "Genes"
+        const #20, {"Lato"}
+        const #44, {"Genes"}
         const #43, [5]
         const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
@@ -509,13 +509,13 @@ bytecodes:
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #110
         ; draw chevrons
-        const #97, "chevron-left"
+        const #97, {"chevron-left"}
         const #98, [0]
         asset #90, #97, #98
         const #98, [1]
         asset #91, #97, #98
         image #90, #90, #91, #97
-        const #97, "chevron-right"
+        const #97, {"chevron-right"}
         const #98, [0]
         asset #92, #97, #98
         const #98, [1]
@@ -602,9 +602,9 @@ bytecodes:
         elide #10, #16, #17
         shape #30, #29, #10, #12, #13, #15
         ; transcript label
-        const #99, "names"
+        const #99, {"names"}
         setpart #99
-        const #20, "Lato"
+        const #20, {"Lato"}
         const #21, [10,0,96,96,96,255,255,255]
         text #40, #20, #21, #7, #8
         const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
@@ -612,10 +612,10 @@ bytecodes:
         const #48, [0]
         shape #41, #1, #48, #60, #47, #40        
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "Transcripts"
+        const #20, {"Lato"}
+        const #44, {"Transcripts"}
         const #43, [11]
         const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
@@ -716,10 +716,10 @@ bytecodes:
         const #2, [0.9]
         shape #10, #29, #2, #12, #13, #15
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "Transcripts and Sequence"
+        const #20, {"Lato"}
+        const #44, {"Transcripts and Sequence"}
         const #43, [24]
         const #21, [10,0,111,129,144,255,255,255]
         text #12, #20, #21, #44, #43
@@ -834,9 +834,9 @@ bytecodes:
         const #2, [0.9]
         shape #30, #20, #2, #22, #53, #15
         ; *** exon text ***
-        const #27, "ACGTN"
+        const #27, {"ACGTN"}
         const #28, [1,1,1,1,1]
-        const #40, "Lato"
+        const #40, {"Lato"}
         text #29, #40, #41, #27, #28
         index #57, #11, #27
         const #30, [1]
@@ -855,9 +855,9 @@ bytecodes:
         const #64, [0]
         shape #31, #27, #64, #33, #64, #29
         ; *** intron text ***
-        const #27, "ACGTN"
+        const #27, {"ACGTN"}
         const #28, [1,1,1,1,1]
-        const #40, "Lato"
+        const #40, {"Lato"}
         text #29, #40, #42, #27, #28
         index #57, #11, #27
         const #30, [1]
@@ -876,10 +876,10 @@ bytecodes:
         const #64, [0]
         shape #31, #27, #64, #33, #64, #29
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "Transcripts and Sequence"
+        const #20, {"Lato"}
+        const #44, {"Transcripts and Sequence"}
         const #43, [24]
         const #21, [10,0,111,129,144,255,255,255]
         text #22, #20, #21, #44, #43
@@ -913,10 +913,10 @@ bytecodes:
         const #5, [6]
         shape #10, #1, #2, #60, #5, #15
         ; draw track label
-        const #99, "label"
+        const #99, {"label"}
         setpart #99
-        const #20, "Lato"
-        const #44, "Variants"
+        const #20, {"Lato"}
+        const #44, {"Variants"}
         const #43, [8]
         const #21, [10,0,111,129,144,255,255,255]
         text #13, #20, #21, #44, #43

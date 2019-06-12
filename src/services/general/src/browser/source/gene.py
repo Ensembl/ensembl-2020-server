@@ -43,7 +43,7 @@ class BAISGeneTranscript(object):
             dir_ = 0
         else:
             dir_ = 2
-        return [out_starts,out_lens,names,name_lens,[colour,dir_]]
+        return [out_starts,out_lens,{ "string": [names] },name_lens,[colour,dir_]]
 
     def transcript(self,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
@@ -143,8 +143,8 @@ class BAISGeneTranscript(object):
         else:
             dir_ = 2
         data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,
-                out_introns,names,name_lens,[colour,dir_],out_lens]
+                out_introns,{ "string": [names] },name_lens,[colour,dir_],out_lens]
         if seq:
             (seq_text,seq_starts,seq_lens) = self.seqcache.get(leaf.chrom,seq_req)
-            data += [seq_text,seq_starts,seq_lens]
+            data += [{ "string": [seq_text] },seq_starts,seq_lens]
         return data
