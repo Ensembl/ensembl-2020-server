@@ -64,5 +64,4 @@ class SequenceCache(object):
                     seq = self.get_one(hash_,start,end)
                     seq_starts.append(start)
                     seq_text.append(seq)
-        print(seq_text,seq_starts)
         return (seq_text,seq_starts)

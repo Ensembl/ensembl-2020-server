@@ -207,11 +207,10 @@ bytecodes:
         ; #1 = sequence
         ; #2 = start pos of seq frag
         ; #3 = len of seq frag
-        ; #4 = start box frag
-        ; #5 = len box frag
-        ; #6 = colour box frag
+        ; #4->#3 = start box frag
+        ; #5->#4 = len box frag
+        ; #6->#5 = colour box frag
         ; *** scale (for size) ***
-        cprint #1
         const #17, [
              12, 24, 24, 24, 24, 24, 24, 24, 24, 24
         ] ; #17 = y-sizes Q, RZ
@@ -232,11 +231,11 @@ bytecodes:
         mul #27, #27, #28
         add #13, #60, #27
         ; *** boxes ***
-        runs #7, #4, #5    ; #7 = list of box starts
+        runs #7, #3, #4    ; #7 = list of box starts
         const #16, [-0.45] ; #16 = left shift ~0.5bp
         add #7, #7, #16    ; #7 = starts shifted left 0.5bp
         const #12, [0.9]   ; #12 = box size
-        runsof #6, #5, #6  ; #6 = colours to positions
+        runsof #6, #4, #5  ; #6 = colours to positions
         const #15, [183,192,200,111,129,144] ; #15 = box colour palette
         const #17, [3]     ; #17 = pallete stride 3
         pick #15, #6, #15, #17 ; #15 = box colours
@@ -247,12 +246,13 @@ bytecodes:
         const #40, {"Lato"}
         const #41, [12,1,183,192,200,255,255,255]
         text2 #9, #40, #41, #7    ; #9 = textures for A,C,G,T
+        lengths #33,#1
+        burst #1,#1
         index #1, #1, #7   ; #1 = 0=A, 1=C, 2=G, 3=T for seq
-        cprint #1
         const #10, [1]     ; #10 = stride 1 for texture ids
         pick #9, #1, #9, #10 ; #9 = 0123 to tex id for seq
         const #11, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #7, #2, #3    ; #7 = position of sequence
+        runs #7, #2, #33    ; #7 = position of sequence
         const #19, [0.5]
         mul #14, #14, #19
         add #13, #13, #14
@@ -723,7 +723,6 @@ bytecodes:
         const #8, [30]
         shape #5, #6, #8, #60, #7, #12
 
-
     gene-letterbox: |
         const #17, [
              12, 24, 24, 24, 24, 24, 24, 24, 24, 24
@@ -828,6 +827,8 @@ bytecodes:
         const #27, {"A","C","G","T","N"}
         const #40, {"Lato"}
         text2 #29, #40, #41, #27
+        lengths #12,#10
+        burst #10,#10
         index #57, #10, #27
         const #30, [1]
         pick #29, #57, #29, #30

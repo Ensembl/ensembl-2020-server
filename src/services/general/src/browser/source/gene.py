@@ -142,7 +142,5 @@ class BAISGeneTranscript(object):
                 out_introns,{ "string": names },[colour,dir_],out_lens]
         if seq:
             (seq_text,seq_starts) = self.seqcache.get(leaf.chrom,seq_req)
-            seq_lens = [ len(x) for x in seq_text ]
-            seq_text = "".join(seq_text)
-            data += [{ "string": [seq_text] },seq_starts,seq_lens]
+            data += [{ "string": seq_text },seq_starts]
         return data

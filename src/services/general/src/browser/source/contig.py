@@ -27,10 +27,7 @@ class BAISContig(object):
         data = []
         if seq:
             (seq_text,seq_starts) = self.seqcache.get(leaf.chrom,[(leaf.start,leaf.end)])
-            seq_lens = [ len(x) for x in seq_text ]
-            seq_text = "".join(seq_text)
-            print(seq_text,seq_starts,seq_lens)
-            data += [{ "string": [seq_text] },seq_starts,seq_lens]
+            data += [{ "string": seq_text },seq_starts]
         elif leaf.end - leaf.start < 40000:
             # prime cache
             self.seqcache.get(leaf.chrom,[(leaf.start,leaf.end)])
