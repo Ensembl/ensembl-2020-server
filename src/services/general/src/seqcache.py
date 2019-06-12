@@ -48,9 +48,8 @@ class SequenceCache(object):
             return ""
         
     def get(self,chrom,requests):
-        seq_text = ""
+        seq_text = []
         seq_starts = []
-        seq_lens = []
         hash_ = None
         with open(self.refget_hashes) as f:
             for line in f.readlines():
@@ -64,6 +63,6 @@ class SequenceCache(object):
                         start = 1
                     seq = self.get_one(hash_,start,end)
                     seq_starts.append(start)
-                    seq_lens.append(len(seq))
-                    seq_text += seq
-        return (seq_text,seq_starts,seq_lens)
+                    seq_text.append(seq)
+        print(seq_text,seq_starts)
+        return (seq_text,seq_starts)

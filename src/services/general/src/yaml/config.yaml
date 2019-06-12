@@ -211,6 +211,7 @@ bytecodes:
         ; #5 = len box frag
         ; #6 = colour box frag
         ; *** scale (for size) ***
+        cprint #1
         const #17, [
              12, 24, 24, 24, 24, 24, 24, 24, 24, 24
         ] ; #17 = y-sizes Q, RZ
@@ -247,6 +248,7 @@ bytecodes:
         const #41, [12,1,183,192,200,255,255,255]
         text2 #9, #40, #41, #7    ; #9 = textures for A,C,G,T
         index #1, #1, #7   ; #1 = 0=A, 1=C, 2=G, 3=T for seq
+        cprint #1
         const #10, [1]     ; #10 = stride 1 for texture ids
         pick #9, #1, #9, #10 ; #9 = 0123 to tex id for seq
         const #11, [3,0,0,1,0,1,1,0,1,0,0]

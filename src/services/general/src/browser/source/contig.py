@@ -26,7 +26,10 @@ class BAISContig(object):
             (starts, lens, senses) = shimmer(starts,lens,senses,leaf.start,leaf.end)
         data = []
         if seq:
-            (seq_text,seq_starts,seq_lens) = self.seqcache.get(leaf.chrom,[(leaf.start,leaf.end)])
+            (seq_text,seq_starts) = self.seqcache.get(leaf.chrom,[(leaf.start,leaf.end)])
+            seq_lens = [ len(x) for x in seq_text ]
+            seq_text = "".join(seq_text)
+            print(seq_text,seq_starts,seq_lens)
             data += [{ "string": [seq_text] },seq_starts,seq_lens]
         elif leaf.end - leaf.start < 40000:
             # prime cache
