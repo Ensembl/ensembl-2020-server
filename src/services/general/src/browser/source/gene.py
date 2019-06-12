@@ -12,8 +12,7 @@ class BAISGeneTranscript(object):
         data = get_bigbed_data(self.gene_path,leaf.chrom,leaf.start,leaf.end)
         out_starts = []
         out_lens = []
-        names = ""
-        name_lens = []
+        names = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
@@ -35,15 +34,14 @@ class BAISGeneTranscript(object):
             out_starts.append(gene_start)
             out_lens.append(gene_end-gene_start)
             if get_names:
-                name_lens.append(len(gene_name))
-                names += gene_name
+                names.append(gene_name)
         if dir_ == 'fwd':
             dir_ = 1
         elif dir_ == 'rev':
             dir_ = 0
         else:
             dir_ = 2
-        return [out_starts,out_lens,{ "string": [names] },name_lens,[colour,dir_]]
+        return [out_starts,out_lens,{ "string": names },[colour,dir_]]
 
     def transcript(self,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
@@ -56,8 +54,7 @@ class BAISGeneTranscript(object):
         out_exons = []
         out_introns = []
         seq_req = []
-        names = ""
-        name_lens = []
+        names = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
@@ -83,8 +80,7 @@ class BAISGeneTranscript(object):
                 if (biotype == 'protein_coding') != (type_ == 'pc'):
                     continue
             seq_req.append((max(gene_start,leaf.start),min(gene_end,leaf.end)))
-            name_lens.append(len(gene_name))
-            names += gene_name
+            names.append(gene_name)
             if part_starts.endswith(","): part_starts = part_starts[:-1]
             if part_lens.endswith(","): part_lens = part_lens[:-1]
             part_starts = [int(x) for x in part_starts.split(",")]
@@ -143,7 +139,7 @@ class BAISGeneTranscript(object):
         else:
             dir_ = 2
         data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,
-                out_introns,{ "string": [names] },name_lens,[colour,dir_],out_lens]
+                out_introns,{ "string": names },[colour,dir_],out_lens]
         if seq:
             (seq_text,seq_starts,seq_lens) = self.seqcache.get(leaf.chrom,seq_req)
             data += [{ "string": [seq_text] },seq_starts,seq_lens]

@@ -7,8 +7,7 @@ bytecodes:
         const #20, {"Lato"}
         const #21, [12,0,199,208,213,255,255,255]
         const #10, {"bp"}
-        const #11, [2]
-        text #12, #20, #21, #10, #11
+        text2 #12, #20, #21, #10
         ; *** bp top ***
         const #5, [3,0,1,1,1,1,2,0,1,0,0]
         const #6, [34]
@@ -114,7 +113,7 @@ bytecodes:
         ; *** swatch *** XXX always first track ATM
         const #5, [0,1,1,1,0,0,2,0,2,0,0]
         const #7, [6]
-        allplots #41, #42, #43, #44
+        allplots #41, #42, #0, #0
         const #6, [2]
         get #41, #41, #6
         get #42, #42, #6
@@ -150,9 +149,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"Contigs"}
-        const #43, [7]
         const #21, [10,0,111,129,144,255,255,255]
-        text #12, #20, #21, #44, #43
+        text2 #12, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -194,9 +192,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"Contigs"}
-        const #43, [7]
         const #21, [10,0,111,129,144,255,255,255]
-        text #12, #20, #21, #44, #43
+        text2 #12, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -245,11 +242,10 @@ bytecodes:
         const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
         shape #16, #7, #12, #13, #14, #15 ; draw boxes
         ; *** sequence ***
-        const #7, {"ACGTN"} ; #7 = available sequence
-        const #8, [1,1,1,1,1]; #8 = length of seqeunces
+        const #7, {"A","C","G","T","N"} ; #7 = available sequence
         const #40, {"Lato"}
         const #41, [12,1,183,192,200,255,255,255]
-        text #9, #40, #41, #7, #8    ; #9 = textures for A,C,G,T
+        text2 #9, #40, #41, #7    ; #9 = textures for A,C,G,T
         index #1, #1, #7   ; #1 = 0=A, 1=C, 2=G, 3=T for seq
         const #10, [1]     ; #10 = stride 1 for texture ids
         pick #9, #1, #9, #10 ; #9 = 0123 to tex id for seq
@@ -267,9 +263,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"Contigs"}
-        const #43, [7]
         const #21, [10,0,111,129,144,255,255,255]
-        text #12, #20, #21, #44, #43
+        text2 #12, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -359,9 +354,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"%GC"}
-        const #43, [3]
         const #21, [10,0,111,129,144,255,255,255]
-        text #12, #20, #21, #44, #43
+        text2 #12, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -387,7 +381,7 @@ bytecodes:
         const #15, [183,192,200,   111,129,144,   0,153,255]
         const #16, [3]
         const #97, [0]
-        get #97, #5, #97
+        get #97, #4, #97
         pick #15, #97, #15, #16
         const #25, [4]
         shape #10, #1, #2, #60, #25, #15
@@ -399,14 +393,14 @@ bytecodes:
         const #11, [44,52,58]
         move #100, #1
         const #101, [2]
-        eq #102, #5, #101
+        eq #102, #4, #101
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #11
         move #100, #1
         add #100, #100, #2
         const #101, [2]
-        eq #102, #5, #101
+        eq #102, #4, #101
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #11
@@ -430,7 +424,7 @@ bytecodes:
         const #101, [0]
         const #102, [60]
         const #107, [1]
-        get #107, #5, #107
+        get #107, #4, #107
         const #100, [1]
         eq #107, #107, #100
         const #100, [1]
@@ -441,7 +435,7 @@ bytecodes:
         const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
         shape #41, #100, #8, #60, #7, #98
         const #107, [1]
-        get #107, #5, #107
+        get #107, #4, #107
         const #100, [0]
         eq #107, #107, #100
         const #101, [1]
@@ -455,7 +449,7 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #21, [10,0,111,129,144,255,255,255]
-        text #40, #20, #21, #3, #4
+        text2 #40, #20, #21, #3
         const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
         const #6, [0]
         const #7, [14]
@@ -466,9 +460,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"Genes"}
-        const #43, [5]
         const #21, [10,0,111,129,144,255,255,255]
-        text #12, #20, #21, #44, #43
+        text2 #12, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -497,14 +490,14 @@ bytecodes:
         const #110, [44,52,58]
         move #100, #1
         const #101, [2]
-        eq #102, #9, #101
+        eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #110
         move #100, #1
-        add #100, #100, #10
+        add #100, #100, #9
         const #101, [2]
-        eq #102, #9, #101
+        eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #110
@@ -528,7 +521,7 @@ bytecodes:
         const #101, [0]
         const #102, [60]
         const #107, [1]
-        get #107, #9, #107
+        get #107, #8, #107
         const #100, [1]
         eq #107, #107, #100
         const #100, [1]
@@ -539,7 +532,7 @@ bytecodes:
         const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
         shape #41, #100, #118, #60, #117, #98
         const #107, [1]
-        get #107, #9, #107
+        get #107, #8, #107
         const #100, [0]
         eq #107, #107, #100
         const #101, [1]
@@ -561,7 +554,7 @@ bytecodes:
         const #15, [183,192,200,   111,129,144,   0,153,255]
         const #16, [3]
         const #100, [0]
-        get #100, #9, #100
+        get #100, #8, #100
         pick #15, #100, #15, #16
         ; *** utr ***
         const #30, [2,1]
@@ -606,7 +599,7 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #21, [10,0,96,96,96,255,255,255]
-        text #40, #20, #21, #7, #8
+        text2 #40, #20, #21, #7
         const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
         const #47, [14]
         const #48, [0]
@@ -616,9 +609,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"Transcripts"}
-        const #43, [11]
         const #21, [10,0,111,129,144,255,255,255]
-        text #12, #20, #21, #44, #43
+        text2 #12, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -627,8 +619,6 @@ bytecodes:
         const #29, [2]
         const #10, [30]
         shape #5, #6, #10, #60, #29, #12
-        
-
 
     gene-empty-box: |
         plot #62, #0
@@ -652,14 +642,14 @@ bytecodes:
         const #110, [44,52,58]
         move #100, #1
         const #101, [2]
-        eq #102, #9, #101
+        eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #110
         move #100, #1
-        add #100, #100, #10
+        add #100, #100, #9
         const #101, [2]
-        eq #102, #9, #101
+        eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #12, #13, #14, #110
@@ -676,7 +666,7 @@ bytecodes:
         const #15, [212,217,222,   157,169,180, 112,198,255]
         const #16, [3]
         const #100, [0]
-        get #100, #9, #100        
+        get #100, #8, #100        
         pick #15, #100, #15, #16
         const #10, [2,1]
         move #12, #60
@@ -689,9 +679,9 @@ bytecodes:
         move #7, #14
         const #17, [1]
         elide #7, #16, #17
-        move #8, #11
-        elide #8, #16, #17
-        runs #29, #7, #8
+        move #88, #11
+        elide #88, #16, #17
+        runs #29, #7, #88
         const #1, [-0.45]
         add #29, #29, #1
         const #2, [0.9]
@@ -700,7 +690,7 @@ bytecodes:
         const #15, [183,192,200,   111,129,144,  0,153,255]
         const #16, [3]
         const #100, [0]
-        get #100, #9, #100
+        get #100, #8, #100
         pick #15, #100, #15, #16
         const #10, [1,1]
         const #16, [1]
@@ -720,9 +710,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"Transcripts and Sequence"}
-        const #43, [24]
         const #21, [10,0,111,129,144,255,255,255]
-        text #12, #20, #21, #44, #43
+        text2 #12, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -760,14 +749,14 @@ bytecodes:
         const #110, [44,52,58]
         move #100, #1
         const #101, [2]
-        eq #102, #9, #101
+        eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #112, #113, #114, #110
         move #100, #1
-        add #100, #100, #10
+        add #100, #100, #8
         const #101, [2]
-        eq #102, #9, #101
+        eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
         shape #45, #100, #112, #113, #114, #110
@@ -784,21 +773,21 @@ bytecodes:
         const #15, [183,192,200,   111,129,144,   0,153,255]
         const #16, [3]
         const #100, [0]
-        get #100, #9, #100        
+        get #100, #8, #100        
         pick #15, #100, #15, #16
         ; b. exon text
         const #41, [12,1,255,255,255,183,192,200,
                     12,1,255,255,255,111,129,144,
                     12,1,255,255,255,0,153,255]
         const #16, [8]
-        pick #41, #9, #41, #16
+        pick #41, #8, #41, #16
         ; c. intron/utr text
         const #42, [12,1,183,192,200,255,255,255,
                     12,1,111,129,144,255,255,255,
                     12,1,0,153,255,255,255,255]
         const #16, [8]
         const #100, [0]
-        get #100, #9, #100        
+        get #100, #8, #100        
         pick #42, #100, #42, #16
         ; *** utrs and introns ***
         const #30, [2,1]
@@ -834,15 +823,14 @@ bytecodes:
         const #2, [0.9]
         shape #30, #20, #2, #22, #53, #15
         ; *** exon text ***
-        const #27, {"ACGTN"}
-        const #28, [1,1,1,1,1]
+        const #27, {"A","C","G","T","N"}
         const #40, {"Lato"}
-        text #29, #40, #41, #27, #28
-        index #57, #11, #27
+        text2 #29, #40, #41, #27
+        index #57, #10, #27
         const #30, [1]
         pick #29, #57, #29, #30
         const #31, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #27, #12, #13
+        runs #27, #11, #12
         member #34, #27, #35
         elide #27, #34, #30
         elide #29, #34, #30
@@ -855,15 +843,14 @@ bytecodes:
         const #64, [0]
         shape #31, #27, #64, #33, #64, #29
         ; *** intron text ***
-        const #27, {"ACGTN"}
-        const #28, [1,1,1,1,1]
+        const #27, {"A","C","G","T","N"}
         const #40, {"Lato"}
-        text #29, #40, #42, #27, #28
-        index #57, #11, #27
+        text2 #29, #40, #42, #27
+        index #57, #10, #27
         const #30, [1]
         pick #29, #57, #29, #30
         const #31, [3,0,0,1,0,1,1,0,1,0,0]
-        runs #27, #12, #13
+        runs #27, #11, #12
         member #34, #27, #36
         elide #27, #34, #30
         elide #29, #34, #30
@@ -880,9 +867,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"Transcripts and Sequence"}
-        const #43, [24]
         const #21, [10,0,111,129,144,255,255,255]
-        text #22, #20, #21, #44, #43
+        text2 #22, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -917,9 +903,8 @@ bytecodes:
         setpart #99
         const #20, {"Lato"}
         const #44, {"Variants"}
-        const #43, [8]
         const #21, [10,0,111,129,144,255,255,255]
-        text #13, #20, #21, #44, #43
+        text2 #13, #20, #21, #44
         plot #62, #0
         const #63, [0]
         get #60, #62, #63
@@ -1253,3 +1238,4 @@ assets:
     chevron-right:
         filter: png
         filename: chevron-right.png
+ 
