@@ -35,7 +35,7 @@ class BAIDebugEndpoint(object):
                     streams.append((r['time'],stream,inst,r))
                     if 'dataset' in r:
                         datasets[stream] += r['dataset']
-            streams.sort()
+            streams.sort(key=lambda x: x[0])
             
             # write report lines to logger
             loggers = {}
