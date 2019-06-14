@@ -351,6 +351,12 @@ bytecodes:
         const #13, [1]
         const #15, [192,192,192]
         shape #10, #11, #11, #63, #13, #15
+        ; draw zmenu
+        const #10, [0,2,1,2,0,0,0,0,0,0,3]
+        const #11, [0]
+        const #13, [1]
+        const #15, [1,2,3]
+        shape #10, #11, #11, #63, #13, #15        
         ; draw track label
         const #99, {"label"}
         setpart #99
@@ -366,7 +372,6 @@ bytecodes:
         const #7, [2]
         const #8, [30]
         shape #5, #6, #8, #60, #7, #12
-        
 
     gene: |
         plot #62, #0

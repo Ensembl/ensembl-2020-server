@@ -1,5 +1,7 @@
 enabled:
     - main
+    - debug
+    - zmenu
 
 # temporary comments denote work done so far. needs moving to docs when
 # they exist.
