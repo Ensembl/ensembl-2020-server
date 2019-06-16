@@ -241,6 +241,10 @@ bytecodes:
         pick #15, #6, #15, #17 ; #15 = box colours
         const #16, [2,1]   ; #16 = [hollow-box,spot-colour]
         shape #16, #7, #12, #13, #14, #15 ; draw boxes
+        ; draw zmenus
+        const #16, [2,2]   ; #16 = [hollow-box,zmenu]
+        const #15, {"contigid"}
+        shape #16, #7, #12, #13, #14, #15 ; draw boxes
         ; *** sequence ***
         const #7, {"A","C","G","T","N"} ; #7 = available sequence
         const #40, {"Lato"}
@@ -355,7 +359,7 @@ bytecodes:
         const #10, [0,2,1,2,0,0,0,0,0,0,3]
         const #11, [0]
         const #13, [1]
-        const #15, [1,2,3]
+        const #15, {"GCid"}
         shape #10, #11, #11, #63, #13, #15        
         ; draw track label
         const #99, {"label"}
