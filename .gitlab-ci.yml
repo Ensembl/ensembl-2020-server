@@ -26,14 +26,14 @@ Build e!-Server:
   - docker logout $GITLAB_REGISTRY_URL
 
   only:
-  - feature/june-cicd
+  - feature/zmenu-integration
 
 # Deploy Stage 
 Staging:
   stage: deploy
   image: alpine
   only:
-  - feature/june-cicd
+  - feature/zmenu-integration
   before_script:
   - mkdir -p /etc/deploy
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
