@@ -281,12 +281,16 @@ bytecodes:
         shape #5, #6, #8, #60, #7, #12
 
     gc: |
-        const #98, {"[%GC]/[<strong>percentage</strong> GC]"}
+        const #98, {"[%GC]/[<strong>{key}</strong> GC]"}
         const #99, {"gc"}
         ztmplspec #99, #98
         const #98, {"gc"}
         const #99, {"gcid"}
         ztmpl #99, #98
+        const #97, {"key"}
+        const #98, {"percentage"}
+        const #99, {"gcid"}
+        zmenu #99, #97, #98
         const #57, [2]  ; scale/clip factor
         const #58, [18] ; wanted graph height (px)
         ; Get track top and height in #60, #61, graph height #59
