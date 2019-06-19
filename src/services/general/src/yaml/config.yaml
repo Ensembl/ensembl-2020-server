@@ -441,24 +441,32 @@ bytecodes:
         const #25, [4]
         shape #10, #1, #2, #60, #25, #15
         ; draw feature line
-        const #45, [0,1,0,0,1,2,2,0,2,0,0]
+        const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
         const #12, [1.0]
         const #13, [17]
         const #14, [0]
-        const #11, [44,52,58]
+        const #11, [173,37,0]
+        const #201, {"dotted-line"}
+        const #202, [0]
+        asset #203, #201, #202
+        const #202, [1]
+        asset #204, #201, #202
+        image #200, #203, #204, #201
         move #100, #1
         const #101, [2]
         eq #102, #4, #101
         const #101, [1]
         elide #100, #102, #101
-        shape #45, #100, #12, #13, #14, #11
+        const #12, [2]
+        const #14, [0]
+        shape #45, #100, #12, #13, #14, #200
         move #100, #1
         add #100, #100, #2
         const #101, [2]
         eq #102, #4, #101
         const #101, [1]
         elide #100, #102, #101
-        shape #45, #100, #12, #13, #14, #11
+        shape #45, #100, #12, #13, #14, #200
         ; track zmenu
         const #98, {"[Genes]"}
         const #99, {"genes"}
@@ -549,24 +557,32 @@ bytecodes:
         const #62, [0]
         add #60, #60, #62
         ; draw feature line
-        const #45, [0,1,0,0,1,2,2,0,2,0,0]
+        const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
         const #12, [1.0]
         const #13, [17]
         const #14, [0]
-        const #110, [44,52,58]
+        const #11, [173,37,0]
+        const #201, {"dotted-line"}
+        const #202, [0]
+        asset #203, #201, #202
+        const #202, [1]
+        asset #204, #201, #202
+        image #200, #203, #204, #201
         move #100, #1
         const #101, [2]
         eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
-        shape #45, #100, #12, #13, #14, #110
+        const #12, [2]
+        const #14, [0]
+        shape #45, #100, #12, #13, #14, #200
         move #100, #1
         add #100, #100, #9
         const #101, [2]
         eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
-        shape #45, #100, #12, #13, #14, #110
+        shape #45, #100, #12, #13, #14, #200
         ; track zmenu
         const #98, {"[Genes]"}
         const #99, {"genes"}
@@ -712,24 +728,32 @@ bytecodes:
         ; see previous scale for details in comments.
         ; register usage essentially same.
         ; draw feature line
-        const #45, [0,1,0,0,1,2,2,0,2,0,0]
+        const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
         const #12, [1.0]
         const #13, [17]
         const #14, [0]
-        const #110, [44,52,58]
+        const #11, [173,37,0]
+        const #201, {"dotted-line"}
+        const #202, [0]
+        asset #203, #201, #202
+        const #202, [1]
+        asset #204, #201, #202
+        image #200, #203, #204, #201
         move #100, #1
         const #101, [2]
         eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
-        shape #45, #100, #12, #13, #14, #110
+        const #12, [2]
+        const #14, [0]
+        shape #45, #100, #12, #13, #14, #200
         move #100, #1
         add #100, #100, #9
         const #101, [2]
         eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
-        shape #45, #100, #12, #13, #14, #110
+        shape #45, #100, #12, #13, #14, #200
         ; We also use #9, as tmp and reuse #1,#2 as tmp.
         runsof #10, #2, #1
         merge #11, #3, #4, #5, #6
@@ -748,7 +772,6 @@ bytecodes:
         const #200, [0,2,1,2,0,0,0,0,2,2,3]
         const #211, [0]
         const #215, {"internal:track:genes"}
-        cprint #60
         const #201, [17]
         shape #200, #211, #211, #60, #201, #215
         ; *** utrs and introns ***
@@ -831,24 +854,31 @@ bytecodes:
         mul #62, #53, #22
         add #22, #60, #62
         ; draw feature line
-        const #45, [0,1,0,0,1,2,2,0,2,0,0]
+        const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
         const #112, [1.0]
         const #113, [17]
         const #114, [0]
-        const #110, [44,52,58]
+        const #201, {"dotted-line"}
+        const #202, [0]
+        asset #203, #201, #202
+        const #202, [1]
+        asset #204, #201, #202
+        image #200, #203, #204, #201
         move #100, #1
         const #101, [2]
         eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
-        shape #45, #100, #112, #113, #114, #110
+        const #12, [2]
+        const #14, [0]
+        shape #45, #100, #112, #113, #114, #200
         move #100, #1
-        add #100, #100, #8
+        add #100, #100, #9
         const #101, [2]
         eq #102, #8, #101
         const #101, [1]
         elide #100, #102, #101
-        shape #45, #100, #112, #113, #114, #110
+        shape #45, #100, #112, #113, #114, #200
         ; *** scale (for size) ***
         ; decode necklaces
         runsof #30, #2, #1
@@ -888,7 +918,6 @@ bytecodes:
         const #200, [0,2,1,2,0,0,0,0,2,2,3]
         const #211, [0]
         const #215, {"internal:track:genes"}
-        cprint #60
         const #201, [17]
         shape #200, #211, #211, #60, #201, #215
         ; *** utrs and introns ***
@@ -1354,3 +1383,6 @@ assets:
         filter: png
         filename: chevron-right.png
  
+    dotted-line:
+        filter: png
+        filename: dotted-line.png
