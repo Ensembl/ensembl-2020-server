@@ -956,6 +956,17 @@ bytecodes:
         pick #15, #3, #15, #17
         const #5, [6]
         shape #10, #1, #2, #60, #5, #15
+        ; track zmenu
+        const #98, {"[Variants]"}
+        const #99, {"variant"}
+        ztmplspec #99, #98
+        const #98, {"variant"}
+        const #99, {"internal:track:variant"}
+        ztmpl #99, #98
+        const #10, [0,2,1,2,0,0,0,0,2,2,3]
+        const #11, [0]
+        const #15, {"internal:track:variant"}
+        shape #10, #11, #11, #60, #5, #15
         ; draw track label
         const #99, {"label"}
         setpart #99
