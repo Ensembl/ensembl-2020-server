@@ -1,6 +1,6 @@
 from ..data import get_bigbed_data
 
-FEATURED=set(["BRCA2","TTN"])
+FEATURED=set(["BRCA2"])
 MIN_WIDTH = 1000
 
 class BAISGeneTranscript(object):
@@ -13,12 +13,15 @@ class BAISGeneTranscript(object):
         out_starts = []
         out_lens = []
         names = []
+        ids = []
+        strands = []
+        biotypes = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
             gene_end = int(line[1])
             parts = line[2].split("\t")
-            (biotype,gene_name,strand) = (parts[16],parts[15],parts[2])
+            (biotype,gene_name,strand,gene_id) = (parts[16],parts[15],parts[2],parts[14])
             if type_ == 'feat':
                 colour = 2
                 if gene_name not in FEATURED:
@@ -35,13 +38,17 @@ class BAISGeneTranscript(object):
             out_lens.append(gene_end-gene_start)
             if get_names:
                 names.append(gene_name)
+                ids.append(gene_id)
+                strands.append(strand)
+                biotypes.append(biotype)
         if dir_ == 'fwd':
             dir_ = 1
         elif dir_ == 'rev':
             dir_ = 0
         else:
             dir_ = 2
-        return [out_starts,out_lens,{ "string": names },[colour,dir_]]
+        return [out_starts,out_lens,{ "string": names },[colour,dir_], 
+            { "string": ids },{ "string": strands },{ "string": biotypes }]
 
     def transcript(self,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
