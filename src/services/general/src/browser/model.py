@@ -1,4 +1,4 @@
-import math, yaml, re, os.path
+import math, yaml, re, os.path, logging
 
 class Leaf(object):
     def __init__(self,universe,stick,pane):
@@ -46,6 +46,7 @@ class Leaf(object):
 
 class Chromosome(object):
     def __init__(self,universe,species,parts,hash_):
+        self.logging = universe.logging
         self.config_path = universe.config_path
         self.name = parts[0]
         self.size = int(parts[1])
@@ -57,10 +58,14 @@ class Chromosome(object):
         universe._add_chrom(self)
 
     def file_path(self,section,filename):
-        return os.path.join(self.config_path,section,self.genome_path,filename)
+        path = os.path.join(self.config_path,section,self.genome_path,filename)
+        if not os.path.exists(path):
+            logging.warn("Missing file {0}".format(path))
+        return path
 
 class Species(object):
     def __init__(self,universe,name,config):
+        self.logging = universe.logging
         self.production_name = name
         self.genome_id = config['genome_id']
         self.gca = config['gca']
@@ -87,14 +92,17 @@ class Species(object):
                 self.chroms[chrom.name] = chrom
 
     def file_path(self,filename):
-        return os.path.join(self.config_path,"common_files",self.genome_path,filename)
-
+        path = os.path.join(self.config_path,"common_files",self.genome_path,filename)
+        if not os.path.exists(path):
+            logging.warn("Missing file {0}".format(path))
+        return path
 
 class Universe(object):
     def __init__(self,config_path):
         self.config_path = config_path
         self.species = {}
         self.sticks = {}
+        self.logging = logging.getLogger("general")
         self._load()
         
     def _load(self):

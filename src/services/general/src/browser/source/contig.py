@@ -16,12 +16,15 @@ class BAISContig(object):
         lens = []
         senses = []
         path = chrom.file_path("contigs","contigs.bb")
-        data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
-        for (start,end,extra) in data:
-            extra = extra.split("\t")
-            starts.append(start)
-            lens.append(end-start)
-            senses.append(extra[2]=='+')
+        try:
+            data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
+            for (start,end,extra) in data:
+                extra = extra.split("\t")
+                starts.append(start)
+                lens.append(end-start)
+                senses.append(extra[2]=='+')
+        except RuntimeError:
+            pass
         if do_shimmer:
             (starts, lens, senses) = shimmer(starts,lens,senses,leaf.start,leaf.end)
         data = []

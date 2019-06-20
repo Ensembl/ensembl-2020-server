@@ -421,6 +421,92 @@ bytecodes:
         const #8, [30]
         shape #5, #6, #8, #60, #7, #12
 
+    gene-shimmer: |
+        plot #62, #0
+        const #63, [1]
+        get #61, #62, #63
+        const #60, [0.5]
+        mul #61, #61, #60
+        const #63, [0]
+        get #60, #62, #63
+        add #60, #60, #61
+        const #62, [-3]
+        add #44, #60, #62
+        const #15, [183,192,200,   111,129,144,   0,153,255]
+        const #16, [3]
+        const #97, [0]
+        get #97, #4, #97
+        pick #15, #97, #15, #16
+        const #5, [6]
+        const #10, [1,1]
+        shape #10, #1, #2, #44, #5, #15
+        ; draw chevrons
+        const #97, {"chevron-left"}
+        const #98, [0]
+        asset #90, #97, #98
+        const #98, [1]
+        asset #91, #97, #98
+        image #90, #90, #91, #97
+        const #97, {"chevron-right"}
+        const #98, [0]
+        asset #92, #97, #98
+        const #98, [1]
+        asset #91, #97, #98
+        image #98, #92, #91, #97
+        const #6, [0]
+        const #7, [14]
+        const #8, [0]
+        const #100, [1]
+        const #101, [0]
+        const #102, [60]
+        const #107, [1]
+        get #107, #4, #107
+        const #100, [1]
+        eq #107, #107, #100
+        const #100, [1]
+        elide #101, #107, #100
+        runs #100, #101, #102
+        const #101, [50]
+        mul #100, #100, #101
+        const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
+        shape #41, #100, #8, #60, #7, #98
+        const #107, [1]
+        get #107, #4, #107
+        const #100, [0]
+        eq #107, #107, #100
+        const #101, [1]
+        elide #101, #107, #101
+        runs #100, #101, #102
+        const #101, [50]
+        mul #100, #100, #101
+        shape #41, #100, #8, #60, #7, #90
+        ; track zmenu
+        const #98, {"[Genes]"}
+        const #99, {"genes"}
+        ztmplspec #99, #98
+        const #98, {"genes"}
+        const #99, {"internal:track:gene"}
+        ztmpl #99, #98
+        const #100, [0,2, 1,2,0,0, 0,0,2,2, 3]
+        const #101, [0]
+        const #105, {"internal:track:gene"}
+        shape #100, #101, #101, #4, #5, #105        
+        ; draw track label
+        const #99, {"label"}
+        setpart #99
+        const #20, {"Lato"}
+        const #44, {"Contigs"}
+        const #21, [10,0,111,129,144,255,255,255]
+        text2 #12, #20, #21, #44
+        plot #62, #0
+        const #63, [0]
+        get #60, #62, #63
+        const #5, [3,0,1,1,0,1,0,0,1,0,0]
+        const #6, [0]
+        const #7, [2]
+        const #8, [30]
+        shape #5, #6, #8, #60, #7, #12
+
     gene: |
         plot #62, #0
         const #63, [1]
@@ -1102,23 +1188,23 @@ endpoints:
 
     gene-pc-fwd:
         endpoint: gene-pc-fwd
-        bytecode: gene
+        bytecode: gene-shimmer
 
     gene-pc-rev:
         endpoint: gene-pc-rev
-        bytecode: gene
+        bytecode: gene-shimmer
 
     gene-other-fwd:
         endpoint: gene-other-fwd
-        bytecode: gene
+        bytecode: gene-shimmer
 
     gene-other-rev:
         endpoint: gene-other-rev
-        bytecode: gene
+        bytecode: gene-shimmer
 
     gene-feat:
         endpoint: gene-feat
-        bytecode: gene
+        bytecode: gene-shimmer
 
     gene-pc-fwd-names:
         endpoint: gene-pc-fwd-names

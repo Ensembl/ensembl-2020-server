@@ -1,4 +1,5 @@
 from ..data import get_bigbed_data
+from ..shimmer import shimmer
 
 FEATURED=set(["BRCA2"])
 MIN_WIDTH = 1000
@@ -7,7 +8,40 @@ class BAISGeneTranscript(object):
     def __init__(self,seqcache):
         self.seqcache = seqcache
 
-    def gene(self,chrom,leaf,type_,dir_,get_names):
+    def gene_shimmer(self,chrom,leaf,type_,dir_):
+        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
+        starts = []
+        lens = []
+        colour = 1 if type_ == 'pc' else 0
+        for line in data:
+            gene_start = int(line[0])
+            gene_end = int(line[1])
+            parts = line[2].split("\t")
+            (biotype,gene_name,strand,gene_id) = (parts[16],parts[15],parts[2],parts[14])
+            if type_ == 'feat':
+                if gene_name not in FEATURED:
+                    continue
+                dir_ = ("fwd" if strand == '+' else "rev")
+            else:
+                if gene_name in FEATURED:
+                    continue
+                if (strand == '+') != (dir_ == 'fwd'):
+                    continue
+                if (biotype == 'protein_coding') != (type_ == 'pc'):
+                    continue
+            starts.append(gene_start)
+            lens.append(gene_end-gene_start)
+        (starts, lens, senses) = shimmer(starts,lens,True,leaf.start,leaf.end)
+        if dir_ == 'fwd':
+            dir_ = 1
+        elif dir_ == 'rev':
+            dir_ = 0
+        else:
+            dir_ = 2
+        return [starts,lens,senses,[colour,dir_]]
+
+    def gene(self,chrom,leaf,type_,dir_,get_names):        
         path = chrom.file_path("genes_and_transcripts","canonical.bb")
         data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         out_starts = []
