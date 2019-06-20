@@ -480,6 +480,38 @@ bytecodes:
         const #101, [50]
         mul #100, #100, #101
         shape #41, #100, #8, #60, #7, #90
+        
+        ; draw feature line
+        const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
+        const #12, [1.0]
+        const #13, [17]
+        const #14, [0]
+        const #11, [173,37,0]
+        const #201, {"dotted-line"}
+        const #202, [0]
+        asset #203, #201, #202
+        const #202, [1]
+        asset #204, #201, #202
+        image #200, #203, #204, #201
+        move #100, #1
+        const #101, [2]
+        eq #102, #4, #101
+        const #101, [1]
+        elide #100, #102, #101
+        cprint #100
+        const #12, [2]
+        const #14, [0]
+        shape #45, #100, #12, #13, #14, #200
+        move #100, #1
+        add #100, #100, #2
+        const #101, [2]
+        eq #102, #4, #101
+        const #101, [1]
+        elide #100, #102, #101
+        shape #45, #100, #12, #13, #14, #200
+
+        
+        
         ; track zmenu
         const #98, {"[Genes]"}
         const #99, {"genes"}
@@ -1204,7 +1236,7 @@ endpoints:
 
     gene-feat:
         endpoint: gene-feat
-        bytecode: gene-shimmer
+        bytecode: gene
 
     gene-pc-fwd-names:
         endpoint: gene-pc-fwd-names

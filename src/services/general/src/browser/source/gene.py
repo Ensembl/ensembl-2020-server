@@ -1,7 +1,7 @@
 from ..data import get_bigbed_data
 from ..shimmer import shimmer
 
-FEATURED=set(["BRCA2"])
+FEATURED=set(["BRCA2","TraesCS3D02G273600","PF3D7_1143500","grpE","SFA1","sms-2"])
 MIN_WIDTH = 1000
 
 class BAISGeneTranscript(object):
@@ -19,6 +19,8 @@ class BAISGeneTranscript(object):
             gene_end = int(line[1])
             parts = line[2].split("\t")
             (biotype,gene_name,strand,gene_id) = (parts[16],parts[15],parts[2],parts[14])
+            if gene_name == "none":
+                gene_name = parts[14]
             if type_ == 'feat':
                 if gene_name not in FEATURED:
                     continue
@@ -83,6 +85,10 @@ class BAISGeneTranscript(object):
             dir_ = 0
         else:
             dir_ = 2
+            print([out_starts,out_lens,{ "string": names },[colour,dir_], 
+                { "string": ids },{ "string": strands },{ "string": biotypes }])
+
+
         return [out_starts,out_lens,{ "string": names },[colour,dir_], 
             { "string": ids },{ "string": strands },{ "string": biotypes }]
 

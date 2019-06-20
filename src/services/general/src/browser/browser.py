@@ -90,8 +90,8 @@ def bulk_data(spec):
             elif parts[0] == 'transcript':
                 data = sources.gene.transcript(chrom,leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
             elif parts[0] == 'gene':
-                if parts[4] == 'names':
-                    data = sources.gene.gene(chrom,leaf,parts[1],parts[2],True)
+                if parts[4] == 'names' or parts[1] == 'feat':
+                    data = sources.gene.gene(chrom,leaf,parts[1],parts[2],parts[4] == 'names')
                 else:
                     data = sources.gene.gene_shimmer(chrom,leaf,parts[1],parts[2])
             elif parts[0] == 'gc':
