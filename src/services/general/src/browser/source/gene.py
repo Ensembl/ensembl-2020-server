@@ -4,12 +4,12 @@ FEATURED=set(["BRCA2"])
 MIN_WIDTH = 1000
 
 class BAISGeneTranscript(object):
-    def __init__(self,gene_path,seqcache):
-        self.gene_path = gene_path
+    def __init__(self,seqcache):
         self.seqcache = seqcache
 
-    def gene(self,leaf,type_,dir_,get_names):
-        data = get_bigbed_data(self.gene_path,leaf.chrom,leaf.start,leaf.end)
+    def gene(self,chrom,leaf,type_,dir_,get_names):
+        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         out_starts = []
         out_lens = []
         names = []
@@ -50,9 +50,10 @@ class BAISGeneTranscript(object):
         return [out_starts,out_lens,{ "string": names },[colour,dir_], 
             { "string": ids },{ "string": strands },{ "string": biotypes }]
 
-    def transcript(self,leaf,type_,dir_,seq,names):
+    def transcript(self,chrom,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
-        data = get_bigbed_data(self.gene_path,leaf.chrom,leaf.start,leaf.end)
+        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         out_starts = []
         out_lens = []
         out_nump = []
@@ -148,6 +149,6 @@ class BAISGeneTranscript(object):
         data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,
                 out_introns,{ "string": names },[colour,dir_],out_lens]
         if seq:
-            (seq_text,seq_starts) = self.seqcache.get(leaf.chrom,seq_req)
+            (seq_text,seq_starts) = self.seqcache.get(chrom,seq_req)
             data += [{ "string": seq_text },seq_starts]
         return data

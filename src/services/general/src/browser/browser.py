@@ -9,7 +9,7 @@ from .source.source import BAISources
 
 from .debug import debug_endpoint
 from .data import get_bigbed_data, get_bigwig_data
-from .model import Leaf, Sticks, BAIConfig
+from .model import Leaf, BAIConfig, Universe
 
 breakdown = [
     ["pc","other","feat"],
@@ -22,34 +22,32 @@ breakdown[0] += list(string.ascii_lowercase)
 
 sources = None
 config = None
-sticks = None
+universe = None
 
 bp = Blueprint('browser_image',__name__)
 
 def browser_setup(yaml_path,data_path,assets_path):
     global sources
     global config
-    global sticks
+    global universe
+    
+    universe = Universe(data_path)
     
     config_path = os.path.join(yaml_path,"config.yaml")
     variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
-    chrom_sizes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.sizes")
-    contig_path = os.path.join(data_path,"e2020_march_datafiles/contigs/contigs-approx.bb")
-    gene_path = os.path.join(data_path,"e2020_march_datafiles/genes_and_transcripts/canonical.bb")
     gc_file = os.path.join(data_path,"e2020-vcf/gc.all.bw")
     refget_hashes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.hashes")
     variant_files = os.path.join(data_path,"e2020-vcf/bigbeds")
     config = BAIConfig(config_path,assets_path)    
     seqcache = SequenceCache(refget_hashes)
-    sources = BAISources(gene_path,contig_path,variant_files,variant_pattern,gc_file,seqcache)
-    sticks = Sticks(chrom_sizes)
+    sources = BAISources(variant_files,variant_pattern,gc_file,seqcache)
     debug_endpoint(bp,os.path.join(yaml_path,"debug_mode.yaml"))
     return bp
 
 pattern = re.compile(r'(-?[0-9]+)|([A-Za-z]+[A-Za-z-][A-Za-z])')
 def break_up(spec):
     for stick in spec.split(','):
-        parts = stick.split(':')
+        parts = stick.rsplit(':',1)
         first = None
         for part in pattern.finditer(parts[1]):
             if part.group(2):
@@ -70,7 +68,8 @@ def bulk_data(spec):
             out.append([stick,pane,compo_in,test_data(stick,compo_in)])
         else:
             compo = config.tracks[compo_in]
-            leaf = Leaf(sticks,stick,pane)
+            chrom = universe.get_from_stick(stick)
+            leaf = Leaf(universe,stick,pane)
             endpoint = config.endpoints.get((compo,pane[0]),"")
             bytecode = config.bytecodes.get((compo,pane[0]),"")
             start = time.time()
@@ -83,17 +82,17 @@ def bulk_data(spec):
             parts[0] = parts_in[0]
             data = []
             if parts[0] == "contignormal":
-                data = sources.contig.contig_normal(leaf,parts[3]=="seq")
+                data = sources.contig.contig_normal(chrom,leaf,parts[3]=="seq")
             elif parts[0] == "contigshimmer":
-                data = sources.contig.contig_shimmer(leaf)
+                data = sources.contig.contig_shimmer(chrom,leaf)
             elif parts[0] == "variant":
-                data = sources.variant.variant(leaf,parts[1])
+                data = sources.variant.variant(chrom,leaf,parts[1])
             elif parts[0] == 'transcript':
-                data = sources.gene.transcript(leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
+                data = sources.gene.transcript(chrom,leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
             elif parts[0] == 'gene':
-                data = sources.gene.gene(leaf,parts[1],parts[2],parts[4]=='names')
+                data = sources.gene.gene(chrom,leaf,parts[1],parts[2],parts[4]=='names')
             elif parts[0] == 'gc':
-                data = sources.percgc.gc(leaf)
+                data = sources.percgc.gc(chrom,leaf)
             out.append([stick,pane,compo_in,bytecode,data])
     resp = jsonify(out)
     resp.cache_control.max_age = 86400
@@ -115,7 +114,7 @@ def make_asset(value):
 def browser_config():
     with open(config.config_path) as f:
         data = yaml.load(f)
-        data['sticks'] = sticks.get_sticks()
+        data['sticks'] = universe.get_sticks()
         data['data'] = {}
         for (name,v) in list(data['assets'].items()):
             data['data'][name] = []

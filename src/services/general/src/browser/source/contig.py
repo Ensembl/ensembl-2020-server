@@ -2,21 +2,21 @@ from ..shimmer import shimmer
 from ..data import get_bigbed_data
 
 class BAISContig(object):
-    def __init__(self,contig_path,seqcache):
-        self.contig_path = contig_path
+    def __init__(self,seqcache):
         self.seqcache = seqcache
 
-    def contig_shimmer(self,leaf):
-        return self._contig_full(leaf,True,False)
+    def contig_shimmer(self,chrom,leaf):
+        return self._contig_full(chrom,leaf,True,False)
 
-    def contig_normal(self,leaf,seq):
-        return self._contig_full(leaf,False,seq)
+    def contig_normal(self,chrom,leaf,seq):
+        return self._contig_full(chrom,leaf,False,seq)
 
-    def _contig_full(self,leaf,do_shimmer,seq):
+    def _contig_full(self,chrom,leaf,do_shimmer,seq):
         starts = []
         lens = []
         senses = []
-        data = get_bigbed_data(self.contig_path,leaf.chrom,leaf.start,leaf.end)
+        path = chrom.file_path("contigs","contigs.bb")
+        data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         for (start,end,extra) in data:
             extra = extra.split("\t")
             starts.append(start)
@@ -26,11 +26,11 @@ class BAISContig(object):
             (starts, lens, senses) = shimmer(starts,lens,senses,leaf.start,leaf.end)
         data = []
         if seq:
-            (seq_text,seq_starts) = self.seqcache.get(leaf.chrom,[(leaf.start,leaf.end)])
+            (seq_text,seq_starts) = self.seqcache.get(chrom,[(leaf.start,leaf.end)])
             data += [{ "string": seq_text },seq_starts]
         elif leaf.end - leaf.start < 40000:
             # prime cache
-            self.seqcache.get(leaf.chrom,[(leaf.start,leaf.end)])
+            self.seqcache.get(chrom,[(leaf.start,leaf.end)])
         data += [starts,lens,senses]
         return data
 
