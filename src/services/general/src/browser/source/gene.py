@@ -56,6 +56,8 @@ class BAISGeneTranscript(object):
             gene_end = int(line[1])
             parts = line[2].split("\t")
             (biotype,gene_name,strand,gene_id) = (parts[16],parts[15],parts[2],parts[14])
+            if gene_name == "none":
+                gene_name = parts[14]
             if type_ == 'feat':
                 colour = 2
                 if gene_name not in FEATURED:
@@ -109,6 +111,8 @@ class BAISGeneTranscript(object):
                 parts[16],parts[15],parts[8],parts[7],parts[3],parts[4],
                 parts[2]
             )
+            if gene_name == "none":
+                gene_name = parts[14]
             if type_ == 'feat':
                 colour = 2
                 if gene_name not in FEATURED:

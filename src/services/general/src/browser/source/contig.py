@@ -24,7 +24,9 @@ class BAISContig(object):
                 lens.append(end-start)
                 senses.append(extra[2]=='+')
         except RuntimeError:
-            pass
+            starts.append(leaf.start)
+            lens.append(leaf.end-leaf.start+1)
+            senses.append(True)
         if do_shimmer:
             (starts, lens, senses) = shimmer(starts,lens,senses,leaf.start,leaf.end)
         data = []
