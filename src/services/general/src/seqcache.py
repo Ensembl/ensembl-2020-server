@@ -15,7 +15,6 @@ class SequenceCache(object):
          math.ceil(end/BLOCK_SIZE)*BLOCK_SIZE)
 
     def decimate(self):
-        print("decimate",list(self.cache.keys() or []))
         for key in random.shuffle(list(self.cache.keys() or []))[0:(MAX_BLOCKS/10)]:
             del self.cache[key]
 
@@ -48,20 +47,14 @@ class SequenceCache(object):
             return ""
         
     def get(self,chrom,requests):
+        print("get",chrom.seq_hash)
         seq_text = []
         seq_starts = []
-        hash_ = None
-        with open(self.refget_hashes) as f:
-            for line in f.readlines():
-                parts = line.split("\t")
-                if chrom == parts[0]:
-                    hash_ = parts[1]
-        if hash_:
-            for (start,end) in requests:
-                if end > 2:
-                    if start < 1:
-                        start = 1
-                    seq = self.get_one(hash_,start,end)
-                    seq_starts.append(start)
-                    seq_text.append(seq)
+        for (start,end) in requests:
+            if end > 2:
+                if start < 1:
+                    start = 1
+                seq = self.get_one(chrom.seq_hash,start,end)
+                seq_starts.append(start)
+                seq_text.append(seq)
         return (seq_text,seq_starts)

@@ -51,13 +51,14 @@ class BAISVariant(object):
         self.variant_files = variant_files
         self.variant_pattern = variant_pattern
     
-    def variant(self,leaf,scale):
+    def variant(self,chrom,leaf,scale):
         starts = []
         lens = []
         types = []
-        path = os.path.join(self.variant_files,self.variant_pattern.format(leaf.chrom,scale))
+        filename = self.variant_pattern.format(chrom.name,scale)
+        path = chrom.file_path("variants",filename)
         if os.path.exists(path):
-            data = get_bigbed_data(path,leaf.chrom,leaf.start,leaf.end)
+            data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
             for (start,end,extra) in data:
                 vc = var_category.get(extra,0)
                 if len(starts) and starts[-1] == start:

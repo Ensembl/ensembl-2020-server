@@ -1,6 +1,6 @@
 import math
 
-steps = 1000
+steps = 2000
 
 def prop(pos,leaf_start,leaf_end):
     return float(pos-leaf_start)/float(leaf_end-leaf_start)
@@ -15,7 +15,7 @@ def shimmer(starts,lens,senses,leaf_start,leaf_end):
         start = math.floor(prop(starts[i],leaf_start,leaf_end)*steps)
         end = math.ceil(prop(starts[i]+lens[i],leaf_start,leaf_end)*steps)
         for j in range(max(start,0),min(end,steps-1)):
-            buckets_end[j] = senses[i]
+            buckets_end[j] = senses[i] if isinstance(senses,list) else senses
             buckets_num[j] += 1
     # turn into shimmer track
     blocks = []

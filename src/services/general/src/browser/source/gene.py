@@ -1,24 +1,65 @@
 from ..data import get_bigbed_data
+from ..shimmer import shimmer
 
-FEATURED=set(["BRCA2","TTN"])
+FEATURED=set(["BRCA2","TraesCS3D02G273600","PF3D7_1143500","grpE","SFA1","sms-2"])
 MIN_WIDTH = 1000
 
 class BAISGeneTranscript(object):
-    def __init__(self,gene_path,seqcache):
-        self.gene_path = gene_path
+    def __init__(self,seqcache):
         self.seqcache = seqcache
 
-    def gene(self,leaf,type_,dir_,get_names):
-        data = get_bigbed_data(self.gene_path,leaf.chrom,leaf.start,leaf.end)
-        out_starts = []
-        out_lens = []
-        names = []
+    def gene_shimmer(self,chrom,leaf,type_,dir_):
+        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
+        starts = []
+        lens = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
             gene_end = int(line[1])
             parts = line[2].split("\t")
-            (biotype,gene_name,strand) = (parts[16],parts[15],parts[2])
+            (biotype,gene_name,strand,gene_id) = (parts[16],parts[15],parts[2],parts[14])
+            if gene_name == "none":
+                gene_name = parts[14]
+            if type_ == 'feat':
+                if gene_name not in FEATURED:
+                    continue
+                dir_ = ("fwd" if strand == '+' else "rev")
+            else:
+                if gene_name in FEATURED:
+                    continue
+                if (strand == '+') != (dir_ == 'fwd'):
+                    continue
+                if (biotype == 'protein_coding') != (type_ == 'pc'):
+                    continue
+            starts.append(gene_start)
+            lens.append(gene_end-gene_start)
+        (starts, lens, senses) = shimmer(starts,lens,True,leaf.start,leaf.end)
+        if dir_ == 'fwd':
+            dir_ = 1
+        elif dir_ == 'rev':
+            dir_ = 0
+        else:
+            dir_ = 2
+        return [starts,lens,senses,[colour,dir_]]
+
+    def gene(self,chrom,leaf,type_,dir_,get_names):        
+        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
+        out_starts = []
+        out_lens = []
+        names = []
+        ids = []
+        strands = []
+        biotypes = []
+        colour = 1 if type_ == 'pc' else 0
+        for line in data:
+            gene_start = int(line[0])
+            gene_end = int(line[1])
+            parts = line[2].split("\t")
+            (biotype,gene_name,strand,gene_id) = (parts[16],parts[15],parts[2],parts[14])
+            if gene_name == "none":
+                gene_name = parts[14]
             if type_ == 'feat':
                 colour = 2
                 if gene_name not in FEATURED:
@@ -35,17 +76,26 @@ class BAISGeneTranscript(object):
             out_lens.append(gene_end-gene_start)
             if get_names:
                 names.append(gene_name)
+                ids.append(gene_id)
+                strands.append(strand)
+                biotypes.append(biotype)
         if dir_ == 'fwd':
             dir_ = 1
         elif dir_ == 'rev':
             dir_ = 0
         else:
             dir_ = 2
-        return [out_starts,out_lens,{ "string": names },[colour,dir_]]
+            print([out_starts,out_lens,{ "string": names },[colour,dir_], 
+                { "string": ids },{ "string": strands },{ "string": biotypes }])
 
-    def transcript(self,leaf,type_,dir_,seq,names):
+
+        return [out_starts,out_lens,{ "string": names },[colour,dir_], 
+            { "string": ids },{ "string": strands },{ "string": biotypes }]
+
+    def transcript(self,chrom,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
-        data = get_bigbed_data(self.gene_path,leaf.chrom,leaf.start,leaf.end)
+        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         out_starts = []
         out_lens = []
         out_nump = []
@@ -67,6 +117,8 @@ class BAISGeneTranscript(object):
                 parts[16],parts[15],parts[8],parts[7],parts[3],parts[4],
                 parts[2]
             )
+            if gene_name == "none":
+                gene_name = parts[14]
             if type_ == 'feat':
                 colour = 2
                 if gene_name not in FEATURED:
@@ -141,6 +193,6 @@ class BAISGeneTranscript(object):
         data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,
                 out_introns,{ "string": names },[colour,dir_],out_lens]
         if seq:
-            (seq_text,seq_starts) = self.seqcache.get(leaf.chrom,seq_req)
+            (seq_text,seq_starts) = self.seqcache.get(chrom,seq_req)
             data += [{ "string": seq_text },seq_starts]
         return data

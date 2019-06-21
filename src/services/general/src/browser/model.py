@@ -1,8 +1,8 @@
-import math, yaml
+import math, yaml, re, os.path, logging
 
 class Leaf(object):
-    def __init__(self,sticks,stick,pane):
-        self.sticks = sticks
+    def __init__(self,universe,stick,pane):
+        self.sticks = universe.get_sticks()
         self._calc_bp_px(pane[0])
         self.leaf_range = self._calc_leaf_range(stick,pane)
         self._burst_leaf()
@@ -14,7 +14,7 @@ class Leaf(object):
             math.ceil((pos+1)*self.bp_px))
 
     def _bounds_fix(self,chrom,start,end):
-        sticks = self.sticks.get_sticks()
+        sticks = self.sticks
         if chrom in sticks:
             f_len = sticks[chrom]
             f_len = int(f_len)
@@ -44,19 +44,82 @@ class Leaf(object):
             bp_px = 1.0 / bp_px
         self.bp_px = bp_px * 5000
 
+class Chromosome(object):
+    def __init__(self,universe,species,parts,hash_):
+        self.logging = universe.logging
+        self.config_path = universe.config_path
+        self.name = parts[0]
+        self.size = int(parts[1])
+        self.seq_hash = hash_
+        self.stick_name = "{0}:{1}".format(
+            species.wire_genome_id,self.name
+        )
+        self.genome_path = species.genome_id
+        universe._add_chrom(self)
 
-class Sticks(object):
-    def __init__(self,chrom_sizes):
-        self.chrom_sizes = chrom_sizes
-    
-    def get_sticks(self):
-        out = {}
-        with open(self.chrom_sizes) as f:
+    def file_path(self,section,filename):
+        path = os.path.join(self.config_path,section,self.genome_path,filename)
+        if not os.path.exists(path):
+            logging.warn("Missing file {0}".format(path))
+        return path
+
+class Species(object):
+    def __init__(self,universe,name,config):
+        self.logging = universe.logging
+        self.production_name = name
+        self.genome_id = config['genome_id']
+        self.gca = config['gca']
+        self.species = config['species']
+        self.dbname = config['dbname']
+        self.version = config['version']
+        self.wire_genome_id = re.sub(r'\W','_',self.genome_id)
+        self.genome_path = self.genome_id
+        self.config_path = universe.config_path
+        self.chroms = {}
+        self._load(universe)
+        
+    def _load(self,universe):
+        hashes = {}
+        with open(self.file_path("chrom.hashes")) as f:
             for line in f.readlines():
-                (f_chr,f_len) = line.strip().split("\t")
-                out[f_chr] = f_len
-        out["text2"] = "1000000"
-        return out
+                parts = line.strip().split("\t")
+                hashes[parts[0]] = parts[1]        
+        with open(self.file_path("chrom.sizes")) as f:
+            for line in f.readlines():
+                parts = line.strip().split("\t")
+                hash_ = hashes[parts[0]]
+                chrom = Chromosome(universe,self,parts,hash_)
+                self.chroms[chrom.name] = chrom
+
+    def file_path(self,filename):
+        path = os.path.join(self.config_path,"common_files",self.genome_path,filename)
+        if not os.path.exists(path):
+            logging.warn("Missing file {0}".format(path))
+        return path
+
+class Universe(object):
+    def __init__(self,config_path):
+        self.config_path = config_path
+        self.species = {}
+        self.sticks = {}
+        self.logging = logging.getLogger("general")
+        self._load()
+        
+    def _load(self):
+        with open(os.path.join(self.config_path,"common_files","genome_id_info.yml")) as f:
+            config = yaml.load(f)
+            for (k,v) in config.items():
+                s = Species(self,k,v)
+                self.species[s.wire_genome_id] = s
+                
+    def _add_chrom(self,chrom):
+        self.sticks[chrom.stick_name] = chrom
+
+    def get_sticks(self):
+        return { k: str(v.size) for (k,v) in self.sticks.items() }
+        
+    def get_from_stick(self,stick):
+        return self.sticks[stick]
 
 class BAIConfig(object):
     def __init__(self,config_path,assets_path):
