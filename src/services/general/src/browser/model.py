@@ -135,11 +135,15 @@ class BAIConfig(object):
         bc_map = {}
         with open(self.config_path) as f:
             bc = yaml.load(f)
-            for (ep_name,v) in bc["endpoints"].items():
-                if "endpoint" in v:
-                    ep_map[ep_name] = v["endpoint"]
-                if "bytecode" in v:
-                    bc_map[ep_name] = v["bytecode"]
+            ep_cfg_path = bc['endpoints']
+            ep_cfg_path = os.path.join(os.path.dirname(self.config_path),ep_cfg_path)
+            with open(ep_cfg_path) as f_ep:
+                ep = yaml.load(f_ep)
+                for (ep_name,v) in ep.items():
+                    if "endpoint" in v:
+                        ep_map[ep_name] = v["endpoint"]
+                    if "bytecode" in v:
+                        bc_map[ep_name] = v["bytecode"]
             for (track_name,v) in bc["tracks"].items():
                 for (code,v) in v["endpoints"].items():
                     for scale in range(ord(code[0]),ord(code[1])+1):
