@@ -126,17 +126,26 @@ class BAIConfig(object):
         self.config_path = config_path
         self.assets_path = assets_path
         self.endpoints = {}
+        self.bytecode_key = {}
         self.bytecodes = {}
         self.tracks = {}
         self._load()
         
     def _load(self):
-        ep_map = {}
-        bc_map = {}
+        dir_ = os.path.dirname(self.config_path)
+        bytecode = {}        
         with open(self.config_path) as f:
+            ep_map = {}
+            bc_map = {}
             bc = yaml.load(f)
+            for bc_cfg_path in bc['bytecode']:
+                bc_cfg_path = os.path.join(dir_,bc_cfg_path)
+                with open(bc_cfg_path) as f_bc:
+                    codes = yaml.load(f_bc)
+                    for (k,v) in codes.items():
+                        self.bytecodes[k] = v
             ep_cfg_path = bc['endpoints']
-            ep_cfg_path = os.path.join(os.path.dirname(self.config_path),ep_cfg_path)
+            ep_cfg_path = os.path.join(dir_,ep_cfg_path)
             with open(ep_cfg_path) as f_ep:
                 ep = yaml.load(f_ep)
                 for (ep_name,v) in ep.items():
@@ -150,7 +159,7 @@ class BAIConfig(object):
                         if v["endpoint"] in ep_map:
                             self.endpoints[(track_name,chr(scale))] = ep_map[v["endpoint"]]
                         if v["endpoint"] in bc_map:
-                            self.bytecodes[(track_name,chr(scale))] = bc_map[v["endpoint"]]
+                            self.bytecode_key[(track_name,chr(scale))] = bc_map[v["endpoint"]]
             for (t_name,v) in bc["tracks"].items():
                 if "wire" in v:
                     self.tracks[v["wire"]] = t_name

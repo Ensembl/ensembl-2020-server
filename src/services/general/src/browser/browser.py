@@ -71,7 +71,7 @@ def bulk_data(spec):
             chrom = universe.get_from_stick(stick)
             leaf = Leaf(universe,stick,pane)
             endpoint = config.endpoints.get((compo,pane[0]),"")
-            bytecode = config.bytecodes.get((compo,pane[0]),"")
+            bytecode = config.bytecode_key.get((compo,pane[0]),"")
             start = time.time()
             parts_in = endpoint.split("-")
             parts = [""] * (len(breakdown)+1)
@@ -118,6 +118,7 @@ def browser_config():
     with open(config.config_path) as f:
         data = yaml.load(f)
         data['sticks'] = universe.get_sticks()
+        data['bytecodes'] = config.bytecodes
         data['data'] = {}
         for (name,v) in list(data['assets'].items()):
             data['data'][name] = []
