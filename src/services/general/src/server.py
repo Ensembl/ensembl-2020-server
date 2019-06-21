@@ -75,4 +75,4 @@ def get_object_info(object_id):
           return jsonify(data[object_id])
     
 if __name__ == "__main__":
-   app.run(port=4000)
+   app.run(port=4000,host='0.0.0.0')
