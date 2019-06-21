@@ -55,7 +55,14 @@ class Chromosome(object):
             species.wire_genome_id,self.name
         )
         self.genome_path = species.genome_id
+        self.aliases = []
+        # HACK for June
+        if self.name.startswith("chr"):
+            self.aliases.append("{0}:{1}".format(
+                species.wire_genome_id,self.name[3:]
+            ))
         universe._add_chrom(self)
+
 
     def file_path(self,section,filename):
         path = os.path.join(self.config_path,section,self.genome_path,filename)
@@ -114,6 +121,8 @@ class Universe(object):
                 
     def _add_chrom(self,chrom):
         self.sticks[chrom.stick_name] = chrom
+        for alias in chrom.aliases:
+            self.sticks[alias] = chrom
 
     def get_sticks(self):
         return { k: str(v.size) for (k,v) in self.sticks.items() }
