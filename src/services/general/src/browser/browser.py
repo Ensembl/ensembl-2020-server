@@ -9,7 +9,9 @@ from .source.source import BAISources
 
 from .debug import debug_endpoint
 from .data import get_bigbed_data, get_bigwig_data
-from .model import Leaf, BAIConfig, Universe
+from .model.universe import Universe
+from .model.config import BAIConfig
+from .model.leaf import Leaf
 
 breakdown = [
     ["pc","other","feat"],
