@@ -88,5 +88,4 @@ assets:
  
     dotted-line:
         filter: png
-        filename: chevron-right.png
-        #filename: dotted-line.png
+        filename: dotted-line.png
