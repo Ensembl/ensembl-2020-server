@@ -32,6 +32,13 @@ choice:
             PP: geneeb-feat
             QZ: genesb-feat
 
+        escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            AK: gene-feat
+            LL: gene-feat-names
+            MO: trans-feat
+            PP: geneeb-feat
+            QZ: genesb-feat
+
     gene-pc-fwd:
         _default:
             AG: gene-pc-fwd
@@ -48,6 +55,13 @@ choice:
             QZ: genesb-pc-fwd
 
         saccharomyces_cerevisiae_GCA_000146045.2:
+            AK: gene-pc-fwd
+            LL: gene-pc-fwd-names
+            MO: trans-pc-fwd
+            PP: geneeb-pc-fwd
+            QZ: genesb-pc-fwd
+
+        escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
             AK: gene-pc-fwd
             LL: gene-pc-fwd-names
             MO: trans-pc-fwd
@@ -76,6 +90,12 @@ choice:
             PP: geneeb-pc-rev
             QZ: genesb-pc-rev
 
+        escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            AK: gene-pc-rev
+            LL: gene-pc-rev-names
+            MO: trans-pc-rev
+            PP: geneeb-pc-rev
+            QZ: genesb-pc-rev
 
     gene-other-fwd:
         _default:
@@ -99,6 +119,13 @@ choice:
             PP: geneeb-other-fwd
             QZ: genesb-other-fwd
 
+        escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            AK: gene-other-fwd
+            LL: gene-other-fwd-names
+            MO: trans-other-fwd
+            PP: geneeb-other-fwd
+            QZ: genesb-other-fwd
+
     gene-other-rev:
         _default:
             AG: gene-other-rev
@@ -115,6 +142,13 @@ choice:
             QZ: genesb-other-rev
 
         saccharomyces_cerevisiae_GCA_000146045.2:
+            AK: gene-other-rev
+            LL: gene-other-rev-names
+            MO: trans-other-rev
+            PP: geneeb-other-rev
+            QZ: genesb-other-rev
+
+        escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
             AK: gene-other-rev
             LL: gene-other-rev-names
             MO: trans-other-rev
