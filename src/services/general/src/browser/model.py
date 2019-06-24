@@ -64,7 +64,6 @@ class Chromosome(object):
             ))
         universe._add_chrom(self)
 
-
     def file_path(self,section,filename):
         path = os.path.join(self.config_path,section,self.genome_path,filename)
         if not os.path.exists(path):
