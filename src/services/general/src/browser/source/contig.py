@@ -40,5 +40,5 @@ class BAISContig(object):
             # prime cache
             self.seqcache.get(chrom,[(leaf.start,leaf.end)])
         data += [starts,lens,senses]
-        return data
+        return (data,leaf)
 

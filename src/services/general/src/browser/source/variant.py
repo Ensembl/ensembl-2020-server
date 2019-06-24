@@ -69,4 +69,4 @@ class BAISVariant(object):
                     types.append(vc)
         else:
             print('missing',path)
-        return [starts,lens,types]
+        return ([starts,lens,types],leaf)

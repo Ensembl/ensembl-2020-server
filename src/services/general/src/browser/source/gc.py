@@ -16,4 +16,4 @@ class BAISPercGC(object):
         elif os.path.exists(chrom_path):
             y = get_bigwig_data(chrom_path,chrom.name,leaf.start,leaf.end,steps)
         y = [ int((y or 0)*POINTS/100) for y in y ]
-        return [[leaf.start,leaf.end],y,[0.5],[1/POINTS]]
+        return ([[leaf.start,leaf.end],y,[0.5],[1/POINTS]],leaf)

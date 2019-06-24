@@ -81,23 +81,23 @@ def bulk_data(spec):
                     if flag in b:
                         parts[j+1] = flag
             parts[0] = parts_in[0]
-            data = []
+            (data,got_leaf) = ([],leaf)
             if parts[0] == "contignormal":
-                data = sources.contig.contig_normal(chrom,leaf,parts[3]=="seq")
+                (data,got_leaf) = sources.contig.contig_normal(chrom,leaf,parts[3]=="seq")
             elif parts[0] == "contigshimmer":
-                data = sources.contig.contig_shimmer(chrom,leaf)
+                (data,got_leaf) = sources.contig.contig_shimmer(chrom,leaf)
             elif parts[0] == "variant":
-                data = sources.variant.variant(chrom,leaf,parts[1])
+                (data,got_leaf) = sources.variant.variant(chrom,leaf,parts[1])
             elif parts[0] == 'transcript':
-                data = sources.gene.transcript(chrom,leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
+                (data,got_leaf) = sources.gene.transcript(chrom,leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
             elif parts[0] == 'gene':
                 if parts[4] == 'names' or parts[1] == 'feat':
-                    data = sources.gene.gene(chrom,leaf,parts[1],parts[2],parts[4] == 'names')
+                    (data,got_leaf) = sources.gene.gene(chrom,leaf,parts[1],parts[2],parts[4] == 'names')
                 else:
-                    data = sources.gene.gene_shimmer(chrom,leaf,parts[1],parts[2])
+                    (data,got_leaf) = sources.gene.gene_shimmer(chrom,leaf,parts[1],parts[2])
             elif parts[0] == 'gc':
-                data = sources.percgc.gc(chrom,leaf)
-            out.append([stick,pane,compo_in,bytecode,data])
+                (data,got_leaf) = sources.percgc.gc(chrom,leaf)
+            out.append([stick,pane,compo_in,bytecode,data,str(got_leaf)])
     resp = jsonify(out)
     resp.cache_control.max_age = 86400
     resp.cache_control.public = True

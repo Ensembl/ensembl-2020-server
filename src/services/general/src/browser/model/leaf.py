@@ -6,6 +6,10 @@ class Leaf(object):
         self._calc_bp_px(pane[0])
         self.leaf_range = self._calc_leaf_range(stick,pane)
         self._burst_leaf()
+        self.str = pane[0]+pane[1]
+
+    def __str__(self):
+        return self.str
 
     def _calc_leaf_range(self,chrom,spec):
         pos = int(spec[1:])

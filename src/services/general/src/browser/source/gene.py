@@ -87,10 +87,8 @@ class BAISGeneTranscript(object):
             dir_ = 2
             print([out_starts,out_lens,{ "string": names },[colour,dir_], 
                 { "string": ids },{ "string": strands },{ "string": biotypes }])
-
-
-        return [out_starts,out_lens,{ "string": names },[colour,dir_], 
-            { "string": ids },{ "string": strands },{ "string": biotypes }]
+        return ([out_starts,out_lens,{ "string": names },[colour,dir_], 
+            { "string": ids },{ "string": strands },{ "string": biotypes }],leaf)
 
     def transcript(self,chrom,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
@@ -195,4 +193,4 @@ class BAISGeneTranscript(object):
         if seq:
             (seq_text,seq_starts) = self.seqcache.get(chrom,seq_req)
             data += [{ "string": seq_text },seq_starts]
-        return data
+        return (data,leaf)
