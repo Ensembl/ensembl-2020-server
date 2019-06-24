@@ -74,7 +74,6 @@ gene-shimmer: |
     eq #102, #4, #101
     const #101, [1]
     elide #100, #102, #101
-    cprint #100
     const #12, [2]
     const #14, [0]
     shape #45, #100, #12, #13, #14, #200

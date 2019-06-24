@@ -70,8 +70,7 @@ def bulk_data(spec):
             compo = config.tracks[compo_in]
             chrom = universe.get_from_stick(stick)
             leaf = Leaf(universe,stick,pane)
-            endpoint = config.endpoints.get((compo,pane[0]),"")
-            bytecode = config.bytecode_key.get((compo,pane[0]),"")
+            (endpoint,bytecode) = config.get_endpoint(chrom,compo,pane[0])
             start = time.time()
             parts_in = endpoint.split("-")
             parts = [""] * (len(breakdown)+1)

@@ -14,25 +14,12 @@ tracks:
         wire: cc
         letter: G
         position: 3
-        endpoints:
-            AI:
-                endpoint: contig-shimmer
-            JO:
-                endpoint: contig-normal
-            PP:
-                endpoint: contig-emptybox
-            QS:
-                endpoint: contig-letterbox
         parts:
             - label
-
 
     zzz-framework:
         wire: zz
         position: -1
-        endpoints:
-            AS:
-                endpoint: framework
         parts:
             - lhs
 
@@ -40,17 +27,6 @@ tracks:
         wire: ff
         letter: G
         position: 0
-        endpoints:
-            AG:
-                endpoint: gene-feat
-            HH:
-                endpoint: gene-feat-names
-            IO:
-                endpoint: trans-feat
-            PP:
-                endpoint: geneeb-feat
-            QS:
-                endpoint: genesb-feat
         parts:
             - label
             - names
@@ -59,17 +35,6 @@ tracks:
         wire: pf
         letter: G
         position: 1
-        endpoints:
-            AG:
-                endpoint: gene-pc-fwd
-            HH:
-                endpoint: gene-pc-fwd-names
-            IO:
-                endpoint: trans-pc-fwd
-            PP:
-                endpoint: geneeb-pc-fwd
-            QS:
-                endpoint: genesb-pc-fwd
         parts:
             - label
             - names
@@ -78,17 +43,6 @@ tracks:
         wire: pr
         letter: G
         position: 4
-        endpoints:
-            AG:
-                endpoint: gene-pc-rev
-            HH:
-                endpoint: gene-pc-rev-names
-            IO:
-                endpoint: trans-pc-rev
-            PP:
-                endpoint: geneeb-pc-rev
-            QS:
-                endpoint: genesb-pc-rev
         parts:
             - label
             - names
@@ -97,17 +51,6 @@ tracks:
         wire: of
         letter: G
         position: 2
-        endpoints:
-            AG:
-                endpoint: gene-other-fwd
-            HH:
-                endpoint: gene-other-fwd-names
-            IO:
-                endpoint: trans-other-fwd
-            PP:
-                endpoint: geneeb-other-fwd
-            QS:
-                endpoint: genesb-other-fwd
         parts:
             - label
             - names
@@ -116,17 +59,6 @@ tracks:
         wire: or
         letter: G
         position: 5
-        endpoints:
-            AG:
-                endpoint: gene-other-rev
-            HH:
-                endpoint: gene-other-rev-names
-            IO:
-                endpoint: trans-other-rev
-            PP:
-                endpoint: geneeb-other-rev
-            QS:
-                endpoint: genesb-other-rev
         parts:
             - label
             - names
@@ -135,36 +67,13 @@ tracks:
         wire: vv
         letter: V
         position: 6
-        endpoints:
-            PS:
-                endpoint: variant-z
-            "NO":
-                endpoint: variant-y
-            MM:
-                endpoint: variant-x
-            LL:
-                endpoint: variant-w
-            KK:
-                endpoint: variant-v
-            IJ:
-                endpoint: variant-u
-            FH:
-                endpoint: variant-t
-            EE:
-                endpoint: variant-s
-            BD:
-                endpoint: variant-r
         parts:
             - label
-
 
     gc:
         wire: gc
         letter: G
         position: 7
-        endpoints:
-            AS:
-                endpoint: gc
         parts:
             - label
 
@@ -179,4 +88,5 @@ assets:
  
     dotted-line:
         filter: png
-        filename: dotted-line.png
+        filename: chevron-right.png
+        #filename: dotted-line.png
