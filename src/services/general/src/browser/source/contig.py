@@ -20,9 +20,12 @@ class BAISContig(object):
             data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
             for (start,end,extra) in data:
                 extra = extra.split("\t")
-                starts.append(start)
-                lens.append(end-start)
-                senses.append(extra[2]=='+')
+                start = max(start,leaf.start)
+                end = min(end,leaf.end)
+                if end > start:
+                    starts.append(start)
+                    lens.append(end-start)
+                    senses.append(extra[2]=='+')
         except RuntimeError:
             starts.append(leaf.start)
             lens.append(leaf.end-leaf.start+1)
