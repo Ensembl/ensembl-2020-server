@@ -39,6 +39,13 @@ choice:
             PP: geneeb-feat
             QZ: genesb-feat
 
+        plasmodium_falciparum_GCA_000002765.2:
+            AK: gene-feat
+            LL: gene-feat-names
+            MO: trans-feat
+            PP: geneeb-feat
+            QZ: genesb-feat
+
     gene-pc-fwd:
         _default:
             AG: gene-pc-fwd
@@ -62,6 +69,13 @@ choice:
             QZ: genesb-pc-fwd
 
         escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            AK: gene-pc-fwd
+            LL: gene-pc-fwd-names
+            MO: trans-pc-fwd
+            PP: geneeb-pc-fwd
+            QZ: genesb-pc-fwd
+
+        plasmodium_falciparum_GCA_000002765.2:
             AK: gene-pc-fwd
             LL: gene-pc-fwd-names
             MO: trans-pc-fwd
@@ -97,6 +111,13 @@ choice:
             PP: geneeb-pc-rev
             QZ: genesb-pc-rev
 
+        plasmodium_falciparum_GCA_000002765.2:
+            AK: gene-pc-rev
+            LL: gene-pc-rev-names
+            MO: trans-pc-rev
+            PP: geneeb-pc-rev
+            QZ: genesb-pc-rev
+
     gene-other-fwd:
         _default:
             AG: gene-other-fwd
@@ -126,6 +147,13 @@ choice:
             PP: geneeb-other-fwd
             QZ: genesb-other-fwd
 
+        plasmodium_falciparum_GCA_000002765.2:
+            AK: gene-other-fwd
+            LL: gene-other-fwd-names
+            MO: trans-other-fwd
+            PP: geneeb-other-fwd
+            QZ: genesb-other-fwd
+
     gene-other-rev:
         _default:
             AG: gene-other-rev
@@ -149,6 +177,13 @@ choice:
             QZ: genesb-other-rev
 
         escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            AK: gene-other-rev
+            LL: gene-other-rev-names
+            MO: trans-other-rev
+            PP: geneeb-other-rev
+            QZ: genesb-other-rev
+
+        plasmodium_falciparum_GCA_000002765.2:
             AK: gene-other-rev
             LL: gene-other-rev-names
             MO: trans-other-rev
