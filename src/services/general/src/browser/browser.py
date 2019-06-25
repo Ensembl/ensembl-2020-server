@@ -46,16 +46,17 @@ def browser_setup(yaml_path,data_path,assets_path):
     debug_endpoint(bp,os.path.join(yaml_path,"debug_mode.yaml"))
     return bp
 
-pattern = re.compile(r'(-?[0-9]+)|([A-Za-z]+[A-Za-z-][A-Za-z])')
+pattern = re.compile(r'[A-Z]-?[0-9]+')
 def break_up(spec):
-    for stick in spec.split(','):
+    for stick in spec.split('+'):
         parts = stick.rsplit(':',1)
-        first = None
-        for part in pattern.finditer(parts[1]):
-            if part.group(2):
-                first = part.group(2)
-            elif first:
-                yield (first[:-1],parts[0],first[-1]+part.group(1))
+        for section in parts[1].split(';'):
+            (tracks,leafs) = section.split('=')
+            tracks = tracks.split(',')
+            leafs = [x.group(0) for x in pattern.finditer(leafs)]
+            for track in tracks:
+                for leaf in leafs:
+                    yield (track,parts[0],leaf)
 
 test_sticks = set(["text2"])
 
