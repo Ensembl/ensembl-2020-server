@@ -41,7 +41,7 @@ class BAISGeneTranscript(object):
             dir_ = 0
         else:
             dir_ = 2
-        return [starts,lens,senses,[colour,dir_]]
+        return ([starts,lens,senses,[colour,dir_]],leaf)
 
     def gene(self,chrom,leaf,type_,dir_,get_names):        
         path = chrom.file_path("genes_and_transcripts","canonical.bb")
