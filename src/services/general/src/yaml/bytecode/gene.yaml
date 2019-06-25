@@ -132,7 +132,7 @@ gene: |
     const #25, [4]
     shape #10, #1, #2, #60, #25, #15
     ; draw gene zmenus
-    const #98, {"[{symbol}] [{id}] / [{strand}] [{biotype}]"}
+    const #98, {"[{symbol}] [{id}] / [{strand}] [{biotype}] [{prestige}]"}
     const #99, {"gene"}
     ztmplspec #99, #98
     const #98, {"gene"}
@@ -148,6 +148,8 @@ gene: |
     zmenu #5, #98, #99
     const #98, {"biotype"}
     zmenu #5, #98, #7
+    const #98, {"prestige"}
+    zmenu #5, #98, #8
     const #10, [1,2]
     shape #10, #1, #2, #60, #25, #5
     ; draw feature line

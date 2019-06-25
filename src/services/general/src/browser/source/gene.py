@@ -1,8 +1,16 @@
+import re
+
 from ..data import get_bigbed_data
 from ..shimmer import shimmer
 
 FEATURED=set(["BRCA2","TraesCS3D02G273600","PF3D7_1143500","grpE","SFA1","sms-2"])
 MIN_WIDTH = 1000
+
+def munge_code(s):
+    s = re.sub(r'_',' ',s)
+    if s == 'mane select':
+        s = "MANE Select"
+    return s
 
 class BAISGeneTranscript(object):
     def __init__(self,seqcache):
@@ -52,12 +60,13 @@ class BAISGeneTranscript(object):
         ids = []
         strands = []
         biotypes = []
+        prestiges = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
             gene_end = int(line[1])
             parts = line[2].split("\t")
-            (biotype,gene_name,strand,gene_id) = (parts[16],parts[15],parts[2],parts[14])
+            (biotype,gene_name,strand,gene_id,prestige) = (parts[16],parts[15],parts[2],parts[14],parts[18])
             if gene_name == "none":
                 gene_name = parts[14]
             if type_ == 'feat':
@@ -78,7 +87,8 @@ class BAISGeneTranscript(object):
                 names.append(gene_name)
                 ids.append(gene_id)
                 strands.append(strand == '+')
-                biotypes.append(biotype)
+                biotypes.append(munge_code(biotype))
+                prestiges.append(munge_code(prestige))
         if dir_ == 'fwd':
             dir_ = 1
         elif dir_ == 'rev':
@@ -86,7 +96,7 @@ class BAISGeneTranscript(object):
         else:
             dir_ = 2
         return ([out_starts,out_lens,{ "string": names },[colour,dir_], 
-            { "string": ids },strands,{ "string": biotypes }],leaf)
+            { "string": ids },strands,{ "string": biotypes },{ "string": prestiges}],leaf)
 
     def transcript(self,chrom,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
