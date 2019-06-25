@@ -91,7 +91,6 @@ class BAISGeneTranscript(object):
                     continue
             out_starts.append(gene_start)
             out_lens.append(gene_end-gene_start)
-            print(trans_ids)
             if get_names:
                 names.append(gene_name)
                 ids.append(gene_id)
@@ -121,6 +120,11 @@ class BAISGeneTranscript(object):
         out_introns = []
         seq_req = []
         names = []
+        ids = []
+        strands = []
+        biotypes = []
+        prestiges = []
+        trans_ids = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
@@ -128,10 +132,10 @@ class BAISGeneTranscript(object):
             parts = line[2].split("\t")
             (
                 biotype,gene_name,part_starts,part_lens,cds_start,cds_end,
-                strand
+                strand,gene_id,prestige,trans_id
             ) = (
                 parts[16],parts[15],parts[8],parts[7],parts[3],parts[4],
-                parts[2]
+                parts[2],parts[14],parts[18],parts[0]
             )
             if gene_name == "none":
                 gene_name = parts[14]
@@ -149,6 +153,11 @@ class BAISGeneTranscript(object):
                     continue
             seq_req.append((max(gene_start,leaf.start),min(gene_end,leaf.end)))
             names.append(gene_name)
+            ids.append(gene_id)
+            strands.append(strand == '+')
+            biotypes.append(munge_code(biotype))
+            prestiges.append(munge_code(prestige))
+            trans_ids.append(trans_id)
             if part_starts.endswith(","): part_starts = part_starts[:-1]
             if part_lens.endswith(","): part_lens = part_lens[:-1]
             part_starts = [int(x) for x in part_starts.split(",")]
@@ -207,7 +216,8 @@ class BAISGeneTranscript(object):
         else:
             dir_ = 2
         data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,
-                out_introns,{ "string": names },[colour,dir_],out_lens]
+                out_introns,{ "string": names },[colour,dir_],out_lens,
+                { "string": ids },strands,{ "string": biotypes },{ "string": prestiges},{ "string": trans_ids }] # #10-14
         if seq:
             (seq_text,seq_starts) = self.seqcache.get(chrom,seq_req)
             data += [{ "string": seq_text },seq_starts]
