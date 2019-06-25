@@ -249,6 +249,22 @@ gene: |
     shape #25, #6, #8, #60, #7, #12
 
 transcript: |
+    ; *** FROM SERVER ***
+    ;  #1 starts
+    ;  #2 number of parts
+    ;  #3 part pattern
+    ;  #4 UTR lengths
+    ;  #5 exon lengths
+    ;  #6 intron lengths
+    ;  #7 gene names
+    ;  #8 [colour, direction]
+    ;  #9 transcript length
+    ;
+    ; *** ESTABLISH Y-POSITION ***
+    ; USES: none
+    ; OUT: #60
+    ; TMP: #61, #62, #63
+    ;
     plot #62, #0
     const #63, [1]
     get #61, #62, #63
@@ -259,63 +275,69 @@ transcript: |
     add #60, #60, #61
     const #62, [0]
     add #60, #60, #62
-    ; draw feature line
-    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
-    const #12, [1.0]
-    const #13, [17]
-    const #14, [0]
-    const #11, [173,37,0]
+    ;
+    ; *** RED DOTTED LINES ***
+    ; Draws red dotted line as textured shape for now (HACK)
+    ; USES: #1 #8 #9
+    ; TMP: #12 #13 #14 #45 #100 #101 #200 #201 #202 #203 #204
+    ;
+    ; (load dotted line asset)
     const #201, {"dotted-line"}
     const #202, [0]
     asset #203, #201, #202
     const #202, [1]
     asset #204, #201, #202
     image #200, #203, #204, #201
+    ; (#100 is #1 if feature track [#8==2] otherwise empty)
     move #100, #1
     const #101, [2]
     eq #102, #8, #101
     const #101, [1]
     elide #100, #102, #101
+    ; (draw lhs)
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
     const #12, [2]
+    const #13, [17]
     const #14, [0]
     shape #45, #100, #12, #13, #14, #200
-    move #100, #1
+    ; (draw rhs)
     add #100, #100, #9
-    const #101, [2]
-    eq #102, #8, #101
-    const #101, [1]
-    elide #100, #102, #101
     shape #45, #100, #12, #13, #14, #200
-    ; draw chevrons
+    ;
+    ; *** CHEVRONS ***
+    ; USES: #8 #60
+    ; TMP: #41 #90 #91 #92 #97 #98 #100 #101 #102 #107 #117 #118
+    ;
+    ; (load left chevron asset)
     const #97, {"chevron-left"}
     const #98, [0]
     asset #90, #97, #98
     const #98, [1]
     asset #91, #97, #98
     image #90, #90, #91, #97
+    ; (load right chevron asset)
     const #97, {"chevron-right"}
     const #98, [0]
     asset #92, #97, #98
     const #98, [1]
     asset #91, #97, #98
     image #98, #92, #91, #97
-    const #116, [0]
-    const #117, [14]
-    const #118, [0]
-    const #100, [1]
+    ; (if right [#8==1], draw right chevrons)
     const #101, [0]
     const #102, [60]
     const #107, [1]
     get #107, #8, #107
     const #100, [1]
     eq #107, #107, #100
-    const #100, [1]
     elide #101, #107, #100
     runs #100, #101, #102
     const #101, [50]
     mul #100, #100, #101
     const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
+    const #117, [14]
+    const #118, [0]
     shape #41, #100, #118, #60, #117, #98
+    ; (if left [#8==0], draw left chevrons)
     const #107, [1]
     get #107, #8, #107
     const #100, [0]
@@ -326,15 +348,11 @@ transcript: |
     const #101, [50]
     mul #100, #100, #101
     shape #41, #100, #118, #60, #117, #90
-    ; y-position
-    runsof #30, #2, #1
-    merge #31, #3, #4, #5, #6
-    accn #12, #31, #2
-    add #13, #30, #12
-    const #14, [-1]
-    mul #14, #31, #14
-    add #14, #13, #14
-    ; draw gene zmenus
+    ;
+    ; *** DRAW ZMENUS ***
+    ; USES: #1 #7 #9 #60
+    ; TMP: #10 #97 #98 #99
+    ;
     const #98, {"[{symbol}]"}
     const #99, {"gene"}
     ztmplspec #99, #98
@@ -345,14 +363,43 @@ transcript: |
     const #10, [1,2]
     const #97, [7]
     shape #10, #1, #9, #60, #97, #7
-    ; extract + draw
-    ; (colour)
+    ;
+    ; *** BURST X START POSITIONS ***
+    ; Use input data to generate list of start positions. Accumulate lengths
+    ; so that 1st = len(1st), 2nd = len(1st)+len(2nd), 3rd=len(1st)+len(2nd)+len(3rd),.... 
+    ; Then subtract from self so that 1st = 0, 2nd = len(1st), 3rd=len(1st)+len(2nd),....
+    ; Then add in global start
+    ; 
+    ; USES: #1 #2 #3 #4 #5 #6
+    ; TMP: #12 #13 #30
+    ; OUT: #14 #31
+    ;
+    runsof #30, #2, #1
+    merge #31, #3, #4, #5, #6
+    accn #12, #31, #2
+    add #13, #30, #12
+    const #14, [-1]
+    mul #14, #31, #14
+    add #14, #13, #14
+    ;
+    ; *** CALCULATE COLOUR ***
+    ; based on track (#8)
+    ;
+    ; USES: #8
+    ; TMP: #16 #100
+    ; OUT: #15
+    ;
     const #15, [183,192,200,   111,129,144,   0,153,255]
     const #16, [3]
     const #100, [0]
     get #100, #8, #100
     pick #15, #100, #15, #16
-    ; *** utr ***
+    ;
+    ; *** DRAW UTR ***
+    ; 
+    ; USES: #3 #14 #15 #31 #60
+    ; TMP: #10 #12 #13 #16 #17 #29 #30
+    ;
     const #30, [2,1]
     move #12, #60
     const #17, [-4]
@@ -366,7 +413,12 @@ transcript: |
     move #10, #31
     elide #10, #16, #17
     shape #30, #29, #10, #12, #13, #15
-    ; *** exon ***
+    ;
+    ; *** DRAW EXON ***
+    ; 
+    ; USES: #3 #14 #15 #31 #60
+    ; TMP: #10 #12 #13 #16 #17 #29 #30
+    ;
     const #30, [1,1]
     const #16, [1]
     eq #16, #3, #16
@@ -376,7 +428,12 @@ transcript: |
     move #10, #31
     elide #10, #16, #17
     shape #30, #29, #10, #12, #13, #15
-    ; *** intron ***
+    ;
+    ; *** DRAW INTRON ***
+    ; 
+    ; USES: #3 #14 #15 #31 #60
+    ; TMP: #10 #12 #13 #16 #17 #29 #30
+    ;
     const #30, [1,1]
     const #16, [2]
     move #12, #60
@@ -390,7 +447,12 @@ transcript: |
     move #10, #31
     elide #10, #16, #17
     shape #30, #29, #10, #12, #13, #15
-    ; transcript label
+    ;
+    ; *** DRAW LABEL ***
+    ;
+    ; USES: #1 #7 #60
+    ; TMP: #20 #21 #40 #41 #47 #48 #99
+    ;
     const #99, {"names"}
     setpart #99
     const #20, {"Lato"}
@@ -400,7 +462,12 @@ transcript: |
     const #47, [14]
     const #48, [0]
     shape #41, #1, #48, #60, #47, #40        
-    ; draw track label
+    ;
+    ; *** DRAW TRACK LABEL ***
+    ;
+    ; USES: none
+    ; TMP: #5 #6 #10 #12 #20 #21 #29 #44 #60 #62 #63 #99
+    ;
     const #99, {"label"}
     setpart #99
     const #20, {"Lato"}
@@ -417,6 +484,22 @@ transcript: |
     shape #5, #6, #10, #60, #29, #12
 
 gene-empty-box: |
+    ; *** FROM SERVER ***
+    ;  #1 starts
+    ;  #2 number of parts
+    ;  #3 part pattern
+    ;  #4 UTR lengths
+    ;  #5 exon lengths
+    ;  #6 intron lengths
+    ;  #7 gene names
+    ;  #8 [colour, direction]
+    ;  #9 transcript length
+    ;
+    ; *** ESTABLISH Y-POSITION ***
+    ; USES: none
+    ; OUT: #60 y-position
+    ; TMP: #61, #62, #63
+    ;
     plot #62, #0
     const #63, [1]
     get #61, #62, #63
@@ -427,37 +510,45 @@ gene-empty-box: |
     add #60, #60, #61
     const #62, [-3]
     add #60, #60, #62
-    ; y-position
-    ; see previous scale for details in comments.
-    ; register usage essentially same.
-    ; draw feature line
-    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
-    const #12, [1.0]
-    const #13, [17]
-    const #14, [0]
-    const #11, [173,37,0]
+    ;
+    ; *** RED DOTTED LINES ***
+    ; Draws red dotted line as textured shape for now (HACK)
+    ; USES: #1 #8 #9
+    ; TMP: #12 #13 #14 #45 #100 #101 #200 #201 #202 #203 #204
+    ;
+    ; (load dotted line asset)
     const #201, {"dotted-line"}
     const #202, [0]
     asset #203, #201, #202
     const #202, [1]
     asset #204, #201, #202
     image #200, #203, #204, #201
+    ; (#100 is #1 if feature track [#8==2] otherwise empty)
     move #100, #1
     const #101, [2]
     eq #102, #8, #101
     const #101, [1]
     elide #100, #102, #101
+    ; (draw lhs)
     const #12, [2]
+    const #13, [17]
     const #14, [0]
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
     shape #45, #100, #12, #13, #14, #200
-    move #100, #1
+    ; (draw rhs)
     add #100, #100, #9
-    const #101, [2]
-    eq #102, #8, #101
-    const #101, [1]
-    elide #100, #102, #101
     shape #45, #100, #12, #13, #14, #200
-    ; We also use #9, as tmp and reuse #1,#2 as tmp.
+    ;
+    ; *** BURST X START POSITIONS ***
+    ; Use input data to generate list of start positions. Accumulate lengths
+    ; so that 1st = len(1st), 2nd = len(1st)+len(2nd), 3rd=len(1st)+len(2nd)+len(3rd),.... 
+    ; Then subtract from self so that 1st = 0, 2nd = len(1st), 3rd=len(1st)+len(2nd),....
+    ; Then add in global start
+    ; 
+    ; USES: #1 #2 #3 #4 #5 #6
+    ; TMP: #12 #13 #10
+    ; OUT: #14 #11
+    ;
     runsof #10, #2, #1
     merge #11, #3, #4, #5, #6
     accn #12, #11, #2
@@ -465,7 +556,11 @@ gene-empty-box: |
     const #14, [-1]
     mul #14, #11, #14
     add #14, #13, #14
-    ; draw gene zmenus
+    ;
+    ; *** DRAW ZMENUS ***
+    ; USES: #1 #7 #9 #60
+    ; TMP: #10 #97 #98 #99
+    ;   
     const #98, {"[{symbol}]"}
     const #99, {"gene"}
     ztmplspec #99, #98
@@ -476,16 +571,26 @@ gene-empty-box: |
     const #10, [1,2]
     const #97, [7]
     shape #10, #1, #9, #60, #97, #7
-    ; *** utrs and introns ***
-    const #15, [75,168,252]
+    ;
+    ; *** CALCULATE COLOUR ***
+    ; based on track (#8)
+    ;
+    ; USES: #8
+    ; TMP: #16 #100
+    ; OUT: #15
+    ;
     const #15, [212,217,222,   157,169,180, 112,198,255]
     const #16, [3]
     const #100, [0]
     get #100, #8, #100        
     pick #15, #100, #15, #16
-    const #10, [2,1]
-    move #12, #60
-    const #13, [6]
+    ;
+    ; *** DRAW INTRONS/UTRS ***
+    ; 
+    ; USES: #3 #14 #15 #31 #60 #11
+    ; TMP: #1 #2 #7 #10 #12 #13 #16 #17 #29 #30 #88
+    ;
+    ; #16 := (#3 == 0|2) ie intron/utr
     const #16, [0]
     eq #29, #3, #16
     const #16, [2]
@@ -500,14 +605,24 @@ gene-empty-box: |
     const #1, [-0.45]
     add #29, #29, #1
     const #2, [0.9]
+    const #10, [2,1]
+    move #12, #60
+    const #13, [6]
     shape #10, #29, #2, #12, #13, #15
-    ; *** exons ***
+    ;
+    ; *** DRAW EXONS ***
+    ; 
+    ; USES: #3 #8 #14 #15 #31 #60 #11
+    ; TMP: #1 #2 #7 #10 #12 #13 #16 #17 #29 #30 #88 #100
+    ; DESTROYS: #2 #8 #15
+    ;
+    ; colours based on track type
     const #15, [183,192,200,   111,129,144,  0,153,255]
     const #16, [3]
     const #100, [0]
     get #100, #8, #100
     pick #15, #100, #15, #16
-    const #10, [1,1]
+    ; #16 := (#3 == 1) ie exon
     const #16, [1]
     eq #16, #3, #16
     move #7, #14
@@ -519,8 +634,14 @@ gene-empty-box: |
     const #1, [-0.45]
     add #29, #29, #1
     const #2, [0.9]
+    const #10, [1,1]
     shape #10, #29, #2, #12, #13, #15
-    ; draw track label
+    ;
+    ; *** DRAW TRACK LABEL ***
+    ;
+    ; USES: none
+    ; TMP: #5 #6 #7 #8 #12 #20 #21 #44 #60 #62 #63 #99
+    ;
     const #99, {"label"}
     setpart #99
     const #20, {"Lato"}
@@ -537,6 +658,25 @@ gene-empty-box: |
     shape #5, #6, #8, #60, #7, #12
 
 gene-letterbox: |
+    ; *** FROM SERVER ***
+    ;  #1 starts
+    ;  #2 number of parts
+    ;  #3 part pattern
+    ;  #4 UTR lengths
+    ;  #5 exon lengths
+    ;  #6 intron lengths
+    ;  #7 gene names
+    ;  #8 [colour, direction]
+    ;  #9 transcript length
+    ; #10 sequence text
+    ; #11 sequence starts
+    ;
+    ; *** ESTABLISH Y-SCALE ***
+    ; so boxes grow
+    ;
+    ; USES:
+    ; TMP: #17 #18 #19
+    ; OUT: #53
     const #17, [
          12, 24, 24, 24, 24, 24, 24, 24, 24, 24
     ]
@@ -544,6 +684,11 @@ gene-letterbox: |
     const #19, [-16]
     add #18, #18, #19
     get #53, #17, #18
+    ; *** ESTABLISH Y-POSITION ***
+    ; USES: #53
+    ; OUT: #22 #60
+    ; TMP: #61 #62 #63
+    ;
     plot #62, #0
     const #63, [1]
     get #61, #62, #63
@@ -555,34 +700,45 @@ gene-letterbox: |
     const #22, [-0.5]
     mul #62, #53, #22
     add #22, #60, #62
-    ; draw feature line
-    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
-    const #112, [1.0]
-    const #113, [17]
-    const #114, [0]
+    ;
+    ; *** RED DOTTED LINES ***
+    ; Draws red dotted line as textured shape for now (HACK)
+    ; USES: #1 #8 9#
+    ; TMP: #45 #100 #101 #112 #113 #114 #200 #201 #202 #203 #204
+    ;
+    ; (load dotted line asset)
     const #201, {"dotted-line"}
     const #202, [0]
     asset #203, #201, #202
     const #202, [1]
     asset #204, #201, #202
     image #200, #203, #204, #201
+    ; (#100 is #1 if feature track [#8==2] otherwise empty)
     move #100, #1
     const #101, [2]
     eq #102, #8, #101
     const #101, [1]
     elide #100, #102, #101
-    const #12, [2]
-    const #14, [0]
+    ; (draw lhs)
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
+    const #112, [1.0]
+    const #113, [17]
+    const #114, [0]
     shape #45, #100, #112, #113, #114, #200
-    move #100, #1
+    ; (draw rhs)
     add #100, #100, #9
-    const #101, [2]
-    eq #102, #8, #101
-    const #101, [1]
-    elide #100, #102, #101
     shape #45, #100, #112, #113, #114, #200
-    ; *** scale (for size) ***
-    ; decode necklaces
+    ;
+    ; *** BURST X START POSITIONS ***
+    ; Use input data to generate list of start positions. Accumulate lengths
+    ; so that 1st = len(1st), 2nd = len(1st)+len(2nd), 3rd=len(1st)+len(2nd)+len(3rd),.... 
+    ; Then subtract from self so that 1st = 0, 2nd = len(1st), 3rd=len(1st)+len(2nd),....
+    ; Then add in global start
+    ; 
+    ; USES: #1 #2 #3 #4 #5 #6
+    ; TMP: #20 #30
+    ; OUT: #14 #31
+    ;
     runsof #30, #2, #1
     merge #31, #3, #4, #5, #6
     accn #14, #31, #2
@@ -590,19 +746,29 @@ gene-letterbox: |
     const #14, [-1]
     mul #14, #31, #14
     add #14, #20, #14
-    ; colours: a. boxes
+    ;
+    ; *** CALCULATE COLOUR ***
+    ; 1. of boxes based on track (#8)
+    ; 2. of exon text
+    ; 3. of intron/utr text
+    ;
+    ; USES: #8
+    ; TMP: #16 #100
+    ; OUT: #15 #41 #42
+    ;
+    ; (1. of boxes based on track)
     const #15, [183,192,200,   111,129,144,   0,153,255]
     const #16, [3]
     const #100, [0]
     get #100, #8, #100        
     pick #15, #100, #15, #16
-    ; b. exon text
+    ; (2. of exon text)
     const #41, [12,1,255,255,255,183,192,200,
                 12,1,255,255,255,111,129,144,
                 12,1,255,255,255,0,153,255]
     const #16, [8]
     pick #41, #8, #41, #16
-    ; c. intron/utr text
+    ; (3. of intron/utr text)
     const #42, [12,1,183,192,200,255,255,255,
                 12,1,111,129,144,255,255,255,
                 12,1,0,153,255,255,255,255]
@@ -610,7 +776,11 @@ gene-letterbox: |
     const #100, [0]
     get #100, #8, #100        
     pick #42, #100, #42, #16        
-    ; draw gene zmenus
+    ;
+    ; *** DRAW ZMENUS ***
+    ; USES: #1 #7 #9 #60
+    ; TMP: #97 #98 #99
+    ;   
     const #98, {"[{symbol}]"}
     const #99, {"gene"}
     ztmplspec #99, #98
@@ -621,7 +791,13 @@ gene-letterbox: |
     const #200, [1,2]
     const #97, [7]
     shape #200, #1, #9, #60, #97, #7
-    ; *** utrs and introns ***
+    ;
+    ; *** DRAW INTRONS/UTRS ***
+    ; 
+    ; USES: #3 #14 #15 #31 #53 #60 #11 #22
+    ; TMP: #1 #2 #18 #12 #13 #16 #17 #19 #20 #30
+    ;
+    ; #16 := (#3 == 0|2) ie intron/utr
     const #30, [2,1]
     const #16, [0]
     eq #20, #3, #16
@@ -639,8 +815,14 @@ gene-letterbox: |
     move #36, #20
     const #2, [0.9]
     shape #30, #20, #2, #22, #53, #15
-    ; *** exons ***
-    const #30, [1,1]
+    ;
+    ; *** DRAW EXON BOXES ***
+    ; 
+    ; USES: #3 #14 #22 #31 #53
+    ; TMP: #1 #2 #16 #17 #18 #19 #20 #30
+    ; OUT: #35
+    ; DESTROYS: #1 #2
+    ;
     const #16, [1]
     eq #16, #3, #16
     move #18, #14
@@ -653,13 +835,32 @@ gene-letterbox: |
     add #20, #20, #1
     move #35, #20
     const #2, [0.9]
+    const #30, [1,1]
     shape #30, #20, #2, #22, #53, #15
-    ; *** exon text ***
+    ;
+    ; *** EXON TEXTURES ***
+    ; USES: #41
+    ; TMP: #27 #40
+    ; OUT: #29
+    ;
     const #27, {"A","C","G","T","N"}
     const #40, {"Lato"}
     text2 #29, #40, #41, #27
-    lengths #12,#10
-    burst #10,#10
+    ;
+    ; *** SEPARATE STRINGS INTO CHARS ***
+    ; USES: #10
+    ; TMP: #12
+    ; OUT: #10
+    ; DESTROYS: #10
+    ;
+    lengths #12, #10
+    burst #10, #10
+    ;
+    ; *** EXON TEXT ***
+    ; USES: #10 #11 #12 #22 #27 #29 #35 #53
+    ; TMP: #27 #29 #30 #31 #33 #34 #50 #57 #63 #64
+    ; DESTROYS: #27
+    ;
     index #57, #10, #27
     const #30, [1]
     pick #29, #57, #29, #30
@@ -676,10 +877,21 @@ gene-letterbox: |
     add #33, #33, #63
     const #64, [0]
     shape #31, #27, #64, #33, #64, #29
-    ; *** intron text ***
+    ;
+    ; *** INTRON TEXTURES ***
+    ; USES: #42
+    ; TMP: #27 #40
+    ; OUT: #27 #29
+    ;
     const #27, {"A","C","G","T","N"}
     const #40, {"Lato"}
     text2 #29, #40, #42, #27
+    ;
+    ; *** INTRON TEXT ***
+    ; USES: #10 #22 #27 #29 #53
+    ; TMP: #29 #30 #31 #33 #34 #50 #57 #63 #64
+    ; DESTROYS: #27
+    ;
     index #57, #10, #27
     const #30, [1]
     pick #29, #57, #29, #30
@@ -696,7 +908,12 @@ gene-letterbox: |
     add #33, #33, #63
     const #64, [0]
     shape #31, #27, #64, #33, #64, #29
-    ; draw track label
+     ;
+    ; *** DRAW TRACK LABEL ***
+    ;
+    ; USES: none
+    ; TMP: #5 #6 #7 #8 #12 #20 #21 #44 #60 #62 #63 #99
+    ;   
     const #99, {"label"}
     setpart #99
     const #20, {"Lato"}
