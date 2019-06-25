@@ -132,7 +132,7 @@ gene: |
     const #25, [4]
     shape #10, #1, #2, #60, #25, #15
     ; draw gene zmenus
-    const #98, {"[{symbol}] [{id}] / [{strand}] [{biotype}] [{prestige}]"}
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light>{id}</light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
     const #98, {"gene"}
@@ -141,6 +141,8 @@ gene: |
     zmenu #5, #98, #3
     const #98, {"id"}
     zmenu #5, #98, #5
+    const #98, {"tr_id"}
+    zmenu #5, #98, #9
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]

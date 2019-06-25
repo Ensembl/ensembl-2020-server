@@ -61,12 +61,17 @@ class BAISGeneTranscript(object):
         strands = []
         biotypes = []
         prestiges = []
+        trans_ids = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
             gene_end = int(line[1])
             parts = line[2].split("\t")
-            (biotype,gene_name,strand,gene_id,prestige) = (parts[16],parts[15],parts[2],parts[14],parts[18])
+            (
+                biotype,gene_name,strand,gene_id,prestige,trans_id
+            ) = (
+                parts[16],parts[15],parts[2],parts[14],parts[18],parts[0]
+            )
             if gene_name == "none":
                 gene_name = parts[14]
             if type_ == 'feat':
@@ -83,12 +88,14 @@ class BAISGeneTranscript(object):
                     continue
             out_starts.append(gene_start)
             out_lens.append(gene_end-gene_start)
+            print(trans_ids)
             if get_names:
                 names.append(gene_name)
                 ids.append(gene_id)
                 strands.append(strand == '+')
                 biotypes.append(munge_code(biotype))
                 prestiges.append(munge_code(prestige))
+                trans_ids.append(trans_id)
         if dir_ == 'fwd':
             dir_ = 1
         elif dir_ == 'rev':
@@ -96,7 +103,7 @@ class BAISGeneTranscript(object):
         else:
             dir_ = 2
         return ([out_starts,out_lens,{ "string": names },[colour,dir_], 
-            { "string": ids },strands,{ "string": biotypes },{ "string": prestiges}],leaf)
+            { "string": ids },strands,{ "string": biotypes },{ "string": prestiges},{ "string": trans_ids }],leaf)
 
     def transcript(self,chrom,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
