@@ -6,10 +6,13 @@ from ..shimmer import shimmer
 FEATURED=set(["BRCA2","TraesCS3D02G273600","PF3D7_1143500","grpE","SFA1","sms-2"])
 MIN_WIDTH = 1000
 
+# HACK should use correct codes in the first place
 def munge_code(s):
     s = re.sub(r'_',' ',s)
     if s == 'mane select':
         s = "MANE Select"
+    elif s == 'canonical':
+        s = "Selected"
     return s
 
 class BAISGeneTranscript(object):
