@@ -77,7 +77,7 @@ class BAISGeneTranscript(object):
             if get_names:
                 names.append(gene_name)
                 ids.append(gene_id)
-                strands.append(strand)
+                strands.append(strand == '+')
                 biotypes.append(biotype)
         if dir_ == 'fwd':
             dir_ = 1
@@ -85,10 +85,8 @@ class BAISGeneTranscript(object):
             dir_ = 0
         else:
             dir_ = 2
-            print([out_starts,out_lens,{ "string": names },[colour,dir_], 
-                { "string": ids },{ "string": strands },{ "string": biotypes }])
         return ([out_starts,out_lens,{ "string": names },[colour,dir_], 
-            { "string": ids },{ "string": strands },{ "string": biotypes }],leaf)
+            { "string": ids },strands,{ "string": biotypes }],leaf)
 
     def transcript(self,chrom,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH

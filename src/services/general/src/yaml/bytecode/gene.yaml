@@ -142,7 +142,10 @@ gene: |
     const #98, {"id"}
     zmenu #5, #98, #5
     const #98, {"strand"}
-    zmenu #5, #98, #6
+    const #99, {"reverse strand", "forward strand"}
+    const #97, [1]
+    picks #99, #6, #99, #97
+    zmenu #5, #98, #99
     const #98, {"biotype"}
     zmenu #5, #98, #7
     const #10, [1,2]
