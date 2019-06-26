@@ -131,29 +131,37 @@ gene: |
     pick #15, #97, #15, #16
     const #25, [4]
     shape #10, #1, #2, #60, #25, #15
-    ; draw gene zmenus
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light>{id}</light>]"}
-    const #99, {"gene"}
+    ; gene zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
     ztmplspec #99, #98
-    const #98, {"gene"}
-    ztmpl #5, #98
-    const #98, {"symbol"}
-    zmenu #5, #98, #3
+    ztmpl #9, #99
     const #98, {"id"}
-    zmenu #5, #98, #5
+    zmenu #9, #98, #5
     const #98, {"tr_id"}
-    zmenu #5, #98, #9
+    zmenu #9, #98, #9
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]
     picks #99, #6, #99, #97
-    zmenu #5, #98, #99
+    zmenu #9, #98, #99
     const #98, {"biotype"}
-    zmenu #5, #98, #7
+    zmenu #9, #98, #7
     const #98, {"prestige"}
-    zmenu #5, #98, #8
+    zmenu #9, #98, #8
+    zassoc #5, #9
+    ; gene zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #5, #99
+    const #98, {"symbol"}
+    zmenu #5, #98, #3
+    const #98, {"id"}
+    zmenu #5, #98, #5
+    ; gene zmenus: draw
     const #10, [1,2]
-    shape #10, #1, #2, #60, #25, #5
+    shape #10, #1, #2, #60, #25, #9
     ; draw feature line
     const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
     const #12, [1.0]
