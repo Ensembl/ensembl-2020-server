@@ -366,29 +366,37 @@ transcript: |
     ; USES: #1 #7 #9 #11 #12 #13 #14 #60
     ; TMP: #70 #97 #98 #99
     ;
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light>{id}</light>]"}
-    const #99, {"gene"}
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
     ztmplspec #99, #98
-    const #98, {"gene"}
-    ztmpl #7, #98
-    const #98, {"symbol"}
-    zmenu #7, #98, #7
+    ztmpl #14, #99
     const #98, {"id"}
-    zmenu #7, #98, #7
+    zmenu #14, #98, #7
     const #98, {"tr_id"}
-    zmenu #7, #98, #14
+    zmenu #14, #98, #14
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]
     picks #99, #11, #99, #97
-    zmenu #7, #98, #99
+    zmenu #14, #98, #99
     const #98, {"biotype"}
-    zmenu #7, #98, #12
+    zmenu #14, #98, #12
     const #98, {"prestige"}
-    zmenu #7, #98, #13
+    zmenu #14, #98, #13
+    zassoc #7, #14
+    ; gene zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #7, #99
+    const #98, {"symbol"}
+    zmenu #7, #98, #7
+    const #98, {"id"}
+    zmenu #7, #98, #10
+    ; gene zmenus: draw
     const #70, [1,2]
     const #97, [7]
-    shape #70, #1, #9, #60, #97, #7
+    shape #70, #1, #9, #60, #97, #14
     ;
     ; *** BURST X START POSITIONS ***
     ; Use input data to generate list of start positions. Accumulate lengths
