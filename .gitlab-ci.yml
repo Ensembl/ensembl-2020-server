@@ -28,6 +28,7 @@ Build e!-Server:
   only:
   - dev
   - master
+  - feature/zmenu-integration
 
 # Deploy Stage 
 Staging:
@@ -35,6 +36,7 @@ Staging:
   image: alpine
   only:
   - dev
+  - feature/zmenu-integration
   before_script:
   - mkdir -p /etc/deploy
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
@@ -59,6 +61,7 @@ Live:
   image: alpine
   only:
   - master
+  - feature/zmenu-integration
   before_script:
   - mkdir -p /etc/deploy
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
@@ -83,6 +86,7 @@ Internal:
   image: alpine
   only:
   - master
+  - feature/zmenu-integration
   before_script:
   - mkdir -p /etc/deploy
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
