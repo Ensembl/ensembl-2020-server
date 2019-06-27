@@ -2,7 +2,7 @@
 
 ## Document Scope
 
-Note that this document is intended for designers and maintainers of the dauphin compiler or tánaiste bytecode interpreter and for language experts looking for the absolute truth on some minor issue. It is not a good place to learn or practice writing Dauphin and any attempt to do so from this document will be unduly daunting.
+Note that this document is intended for designers and maintainers of the dauphin compiler or tánaiste bytecode interpreter and for language experts looking for the absolute truth on some minor issue. It is not a good place to learn or practice writing Dauphin and any attempt to do so from this document will be unduly and wildly daunting.
 
 ## Purpose
 
@@ -165,7 +165,7 @@ A star comprises an asterisk and an expression. If the expression has type X the
 
 A variable is represented by a keyword which is not a reserved word. Its type is determined by its inferred contents at any time. Its initial type is `_` and initial value «». It must be introduced with a `let` statement (which cna be combined with another statement as syntactic sugar to create that statements first argument as a variable). It is an lvalue.
 
-The reserved words are: `enum`, `expr`, `false`, `func`, `let`, `nil`, `oper`, `struct`, `true`.
+The reserved words are: `enum`, `expr`, `false`, `func`, `import`, `let`, `nil`, `oper`, `struct`, `true`.
 
  ## Vectors
 
@@ -211,11 +211,11 @@ For example `list_concat` may be declared as `func list_concat(list(X),list(X)) 
 
 An inline-like operator can be unary or binary. It is a series of one or more punctuation characters and can be declared left or right associative. An inline-like operator is syntactic sugar for a function-like operator. A function-like operator is declared in the preamble to associate itself with a corresponding function-like operator.
 
-The following characters are permitted for inline-like operators: `#%&+-/;<=>\^_|`.
+The following characters are permitted for inline-like operators: `#%&+-/<=>\^_|~`.
 
-In addition, `!?` are valid at the start of an inline-like operator if followed by a non-keyword character.
+In addition, `!?:.` are valid at the start of an inline-like operator if followed by a non-keyword or number character. `*` is valid as a binary oparator.
 
-An inline-like operator can begin with an open parenthesis followed by at least one unrestricted or start character then any character excluding close parenthesis, followed by a close parenthesis. For example `(:eg-1)` or `(?)`.
+An inline-like operator can begin with an open parenthesis followed by at least one unrestricted character or `!?*,.` then any character excluding close parenthesis, followed by a close parenthesis. For example `(:eg-1)` or `(?)`.
 
 Note that inline-like operators share a namespace with inline-like statements.
 
@@ -223,7 +223,7 @@ If it does not begin with a parenthesis but begins directly with an unrestricted
 
 A preamble takes the form "`oper ` op-syntax func-name nature precedence". Here nature is one of `infixl`, `infixr`, `unaryl`, `unaryr` and precedence is a number (low is tighter). For example `oper + infixr 2`.
 
-The considerable additional effort of allowing the definition of additional operators is to compensate for the lack of object syntax and the absence of overloading.
+The considerable additional effort of allowing the definition of additional operators is to compensate for the lack of object-like syntax and the absence of overloading.
 
 ## Expression Macro Calls
 
@@ -231,3 +231,12 @@ An expression macro call is introduced by "`expr` name`(`X,Y,Z`) {` expression `
 
 # Statements
 
+Dauphin statements are separated by `;`. Dauphin source is a sequence of statements. Dauphin statements are executed in-order such that definition must precede use. The `import` statement allows inclusion of files with further content which is evaluated as if it occurred at the import point.
+
+A statement may be inline-like or function-like.
+
+## Import statements
+
+## Function-like statements
+
+## Inline-like statements
