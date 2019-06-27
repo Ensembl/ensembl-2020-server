@@ -15,7 +15,9 @@ class SequenceCache(object):
          math.ceil(end/BLOCK_SIZE)*BLOCK_SIZE)
 
     def decimate(self):
-        for key in random.shuffle(list(self.cache.keys() or []))[0:(MAX_BLOCKS/10)]:
+        targets = list(self.cache.keys() or [])
+        random.shuffle(targets)
+        for key in targets[0:(MAX_BLOCKS//10)]:
             del self.cache[key]
 
     def get_one(self,hash_,start,end):
