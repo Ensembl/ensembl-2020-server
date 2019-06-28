@@ -131,29 +131,37 @@ gene: |
     pick #15, #97, #15, #16
     const #25, [4]
     shape #10, #1, #2, #60, #25, #15
-    ; draw gene zmenus
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light>{id}</light>]"}
-    const #99, {"gene"}
+    ; gene zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
     ztmplspec #99, #98
-    const #98, {"gene"}
-    ztmpl #5, #98
-    const #98, {"symbol"}
-    zmenu #5, #98, #3
+    ztmpl #9, #99
     const #98, {"id"}
-    zmenu #5, #98, #5
+    zmenu #9, #98, #5
     const #98, {"tr_id"}
-    zmenu #5, #98, #9
+    zmenu #9, #98, #9
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]
     picks #99, #6, #99, #97
-    zmenu #5, #98, #99
+    zmenu #9, #98, #99
     const #98, {"biotype"}
-    zmenu #5, #98, #7
+    zmenu #9, #98, #7
     const #98, {"prestige"}
-    zmenu #5, #98, #8
+    zmenu #9, #98, #8
+    zassoc #5, #9
+    ; gene zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #5, #99
+    const #98, {"symbol"}
+    zmenu #5, #98, #3
+    const #98, {"id"}
+    zmenu #5, #98, #5
+    ; gene zmenus: draw
     const #10, [1,2]
-    shape #10, #1, #2, #60, #25, #5
+    shape #10, #1, #2, #60, #25, #9
     ; draw feature line
     const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
     const #12, [1.0]
@@ -358,29 +366,38 @@ transcript: |
     ; USES: #1 #7 #9 #11 #12 #13 #14 #60
     ; TMP: #70 #97 #98 #99
     ;
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light>{id}</light>]"}
-    const #99, {"gene"}
+    ; zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
     ztmplspec #99, #98
-    const #98, {"gene"}
-    ztmpl #7, #98
-    const #98, {"symbol"}
-    zmenu #7, #98, #7
+    ztmpl #14, #99
     const #98, {"id"}
-    zmenu #7, #98, #7
+    zmenu #14, #98, #7
     const #98, {"tr_id"}
-    zmenu #7, #98, #14
+    zmenu #14, #98, #14
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]
     picks #99, #11, #99, #97
-    zmenu #7, #98, #99
+    zmenu #14, #98, #99
     const #98, {"biotype"}
-    zmenu #7, #98, #12
+    zmenu #14, #98, #12
     const #98, {"prestige"}
-    zmenu #7, #98, #13
+    zmenu #14, #98, #13
+    zassoc #7, #14
+    ; zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #7, #99
+    const #98, {"symbol"}
+    zmenu #7, #98, #7
+    const #98, {"id"}
+    zmenu #7, #98, #10
+    ; zmenus: draw
     const #70, [1,2]
     const #97, [7]
-    shape #70, #1, #9, #60, #97, #7
+    shape #70, #1, #9, #60, #97, #14
     ;
     ; *** BURST X START POSITIONS ***
     ; Use input data to generate list of start positions. Accumulate lengths
@@ -585,13 +602,11 @@ gene-empty-box: |
     ; USES: #1 #7 #9 #11 #12 #13 #14 #60
     ; TMP: #70 #97 #98 #99
     ;   
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light>{id}</light>]"}
-    const #99, {"gene"}
+    ; zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
     ztmplspec #99, #98
-    const #98, {"gene"}
-    ztmpl #7, #98
-    const #98, {"symbol"}
-    zmenu #7, #98, #7
+    ztmpl #7, #99
     const #98, {"id"}
     zmenu #7, #98, #7
     const #98, {"tr_id"}
@@ -605,6 +620,17 @@ gene-empty-box: |
     zmenu #7, #98, #12
     const #98, {"prestige"}
     zmenu #7, #98, #13
+    zassoc #7, #14
+    ; zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #7, #99
+    const #98, {"symbol"}
+    zmenu #7, #98, #7
+    const #98, {"id"}
+    zmenu #7, #98, #10
+    ; zmenus: draw
     const #70, [1,2]
     const #97, [7]
     shape #70, #1, #9, #60, #97, #7
@@ -766,6 +792,43 @@ gene-letterbox: |
     ; (draw rhs)
     add #100, #100, #9
     shape #45, #100, #112, #113, #114, #200
+    ;
+    ; *** DRAW ZMENUS ***
+    ; USES: #1 #7 #9 #11 #12 #13 #14 #60
+    ; TMP: #70 #97 #98 #99
+    ;   
+    ; zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
+    ztmplspec #99, #98
+    ztmpl #7, #99
+    const #98, {"id"}
+    zmenu #7, #98, #7
+    const #98, {"tr_id"}
+    zmenu #7, #98, #14
+    const #98, {"strand"}
+    const #99, {"reverse strand", "forward strand"}
+    const #97, [1]
+    picks #99, #11, #99, #97
+    zmenu #7, #98, #99
+    const #98, {"biotype"}
+    zmenu #7, #98, #12
+    const #98, {"prestige"}
+    zmenu #7, #98, #13
+    zassoc #7, #14
+    ; zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #7, #99
+    const #98, {"symbol"}
+    zmenu #7, #98, #7
+    const #98, {"id"}
+    zmenu #7, #98, #10
+    ; zmenus: draw
+    const #70, [1,2]
+    const #97, [7]
+    shape #70, #1, #9, #60, #97, #7
     ;
     ; *** BURST X START POSITIONS ***
     ; Use input data to generate list of start positions. Accumulate lengths
