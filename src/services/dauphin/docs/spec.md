@@ -161,13 +161,23 @@ Inside the braces `$` has type X and `@` has type number. Neither are lvalues.
 
 A star comprises an asterisk and an expression. If the expression has type X the star will have type `vec(`X`)`. It is not an lvalue.
 
+## Empty Value
+
+A filter which assigns to a cell in a vector beyond the current limit "backfills" the intermediary values with the "empty" value for its type.
+
+The empty value for an atomic values is `0`, `false`, `""`, and `''`, for each atomic monotype respecitvely. The empty value for a vector is `[]`. For a struct, the empty value has all fields filled with their empty value. Enums choose the first declared branch and set their value to the empty value of the contained branch. For example, if `x:=[1]` and then `x[@==3] := 4` then x would have the final value «`[1,0,0,4]`».
+
+This is one way to create a list of repeating elements. `let x[@==9] := true; x[] := true;` creates a list of ten true members.
+
 ## Variables
 
-A variable is represented by a keyword which is not a reserved word. Its type is determined by its inferred contents at any time. Its initial type is `_` and initial value «». It must be introduced with a `let` statement (which cna be combined with another statement as syntactic sugar to create that statements first argument as a variable). It is an lvalue.
+A variable is represented by a keyword which is not a reserved word. Its type is determined by its inferred contents at any time. Its initial type is `_` and initial value «». It must be introduced with a `let` statement (which cna be combined with another statement as syntactic sugar to create that statements first argument as a new variable). `let` must be supplied again before any type change. 
 
-The reserved words are: `enum`, `expr`, `false`, `func`, `import`, `let`, `nil`, `oper`, `struct`, `true`.
+A variable is an lvalue.
 
- ## Vectors
+The reserved words are: `enum`, `expr`, `false`, `func`, `import`, `let`, `lvalue`, `nil`, `oper`, `stmt`, `struct`, `true`.
+
+ ## Vector Constants
 
 A vector constant is constructed from a comma-separated list of expressions enclosed in square brackets. Each enclosed expression must have the same type. For example, `[2,false]` is invalid. The type of the vector is `vec(`X`)`, where X is the type of the enclosed values. If no values are enclosed it is of type `vec(_)`. Its value is a multivalue with a single member, the obvious corresponding monovalue. It is not an lvalue.
 
@@ -205,38 +215,97 @@ A statement of the form "`func` name`(`X,Y,Z`) -> ` A `{` code `}`" declares a f
 
 For example `list_concat` may be declared as `func list_concat(list(X),list(X)) -> list(X)` to allow concatenation of arbitrary lists.
 
+An operator is not an lvalue.
+
 **TODO** func syntax when tánaiste is defined.
 
 ## Inline-like operators
 
-An inline-like operator can be unary or binary. It is a series of one or more punctuation characters and can be declared left or right associative. An inline-like operator is syntactic sugar for a function-like operator. A function-like operator is declared in the preamble to associate itself with a corresponding function-like operator.
+### Declaration
 
-The following characters are permitted for inline-like operators: `#%&+-/<=>\^_|~`.
+An inline-like operator can be unary or binary. It is a series of one or more punctuation characters and can be declared left or right associative if binary. An inline-like operator is syntactic sugar for some function-like operator. An inline-like operator is declared in the preamble to associate itself with a corresponding function-like operator.
 
-In addition, `!?:.` are valid at the start of an inline-like operator if followed by a non-keyword or number character. `*` is valid as a binary oparator.
-
-An inline-like operator can begin with an open parenthesis followed by at least one unrestricted character or `!?*,.` then any character excluding close parenthesis, followed by a close parenthesis. For example `(:eg-1)` or `(?)`.
-
-Note that inline-like operators share a namespace with inline-like statements.
-
-If it does not begin with a parenthesis but begins directly with an unrestricted punctuation character it may comprise any unambiguous prefix-free combination subsequent characters. For example `<hello>` may be defined on the condition that `<` is not (it probably will be).
-
-A preamble takes the form "`oper ` op-syntax func-name nature precedence". Here nature is one of `infixl`, `infixr`, `unaryl`, `unaryr` and precedence is a number (low is tighter). For example `oper + infixr 2`.
+A preamble takes the form "`oper ` op-syntax func-name nature precedence". Here nature is one of `infixl`, `infixr`, `unary`. and precedence is a number (low is tighter). For example `oper + plus infixr 2`.
 
 The considerable additional effort of allowing the definition of additional operators is to compensate for the lack of object-like syntax and the absence of overloading.
 
+### Valid syntax
+
+The syntax of validly definable operators is complex to ensure a wide range can be defined unambiguously.
+
+In the following definition, the following sets are used:
+
+* core characters: ``#%&+-/<=>\^`|~``
+* bracket characters: `()[]{}`
+* internal characters: `:*!?.,`
+
+A valid operator symbol is a sequence which either:
+* Class A:
+  * contains one or more core characters
+  * comprises only core or internal characters.
+* Class B:
+  * begins and ends with matching bracket characters;
+  * contains only internal characters;
+* Class C:
+  * begins and ends with matching bracket characters;
+  * contains a valid Class A, B, or C operator symbol.
+
+For example, `+=`, `||`, `$add`, `!=` are valid Class A operators. `(!)` is a valid Class B operator. `(||)` is a valid Class C operator containing a valid Class A operator.
+
+In addition, no operator can introduce a symbol such that one member of the set of operator symbols is now identical to some other operator symbol followed by zero-or-more further unary operator symbols. For example, if `+` is a unary operator and `=` a binary one, `+=` is valid but `=+` is not.
+
+*Rationale*: 
+* Class A: a core character is not valid in Dauphin except in an operator definition. Internal characters cannot end an expreesion and so a sequence of them followed by a core character must be unambiguously introducing an operator. Internal characters can also not begin an expression and so any further internal or core characters must be a continuation of the operator.
+* Class B: the contents of the brackets are entirely internal characters but such characters cannot introduce or end an expression so the contents are an invalid expression. The brackets ensure that they cannot be "composed" with any adjacent characters to make the operator ambiguous.
+* Class C: if the contents of brackets can only be unambiguously interpreted as an operator symbol, these cannot stand alone in parentheses, so the whole sequence is only interpreretable as an operator symbol.
+
 ## Expression Macro Calls
 
-An expression macro call is introduced by "`expr` name`(`X,Y,Z`) {` expression `}`". This literally substitutes the given expression into the place it is used. Note that expression must be a *valid* expression and all (non-argument) variables are local however argument variables are by-name. It is an lvalue if-and-only-if the contained expression is such and has the same type.
+An expression macro call is introduced by "`expr` name`(`X,Y,Z`) {` expression `}`". This literally substitutes the given expression into the place it is used. Note that expression must be a *valid* expression and all (non-argument) variables are local however argument variables are by-name. It is an lvalue if-and-only-if the contained expression is such. It has the same type as the contained expression.
 
 # Statements
 
-Dauphin statements are separated by `;`. Dauphin source is a sequence of statements. Dauphin statements are executed in-order such that definition must precede use. The `import` statement allows inclusion of files with further content which is evaluated as if it occurred at the import point.
+## Introduction
 
-A statement may be inline-like or function-like.
+Dauphin statements are separated by `;`. Dauphin source is a sequence of statements. Dauphin statements are executed in-order such that definition must precede use. The `import` statement allows inclusion of files with further content which is evaluated as if it occurred at the import point. An import statement has the form "`import` location" where location is a path for the compiler.
 
-## Import statements
+Other statements may be inline-like or function-like. They may be:
 
-## Function-like statements
+* an `import` statement;
+* a type declaration:
+  * an `enum` type declaration;
+  * a `struct` type declaration;
+* a macro declaration:
+  * an `expr` expression macro declaration;
+  * a `stmt` statement macro declaration;
+* an `oper` inline operator declaration;
+* a function/procedure declaration;
+  * a `func` function declaration;
+  * a `proc` procedure declaration;
+* a procedure call.
 
-## Inline-like statements
+## Statement Macros
+
+An statement macro call is introduced by "`stmt` name`(`X,Y,Z`) {` expression `}`". This literally substitutes the given statements into the place it is used. Note that statements must be a *valid* sequence of statements and all (non-argument) variables are local. However argument variables are by-name.
+
+If arguments are required to be lvalues by the statement defiinition (because they are used as lvalues by some statement within), then that argument is required to be an lvalue at point of use.
+
+## Procedure Declarations
+
+Procedures resemble operators but take the role of statements rather than expressions.
+
+A function-like procedure has no type (being a statement).
+
+A statement of the form "`proc` name`(`X,Y,Z`) {` code `}`" declares a function-like operator which takes arguments of type X, Y, Z, with the given inline tánaiste code (see later).
+
+For example `assign` may be declared as `proc assign(X,X)` to allow assignment of variables.
+
+Oper statements can also define inline procedures as well as inline operators. Which is defined depends on the func or proc refered to. For example `oper := assign infixr 2`. Note that associativity is irrelevant in opers defining statements.
+
+A procedure may define one or more of its arguments to be lvalues using the keyword `lvalue` before the type. This requires that in use that argument be a valid lvalue and is passed as a location to the definition.
+
+**TODO** func syntax when tánaiste is defined.
+
+# Dauphin to Tánaiste Translation
+## Type Mapping
+
