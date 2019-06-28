@@ -83,7 +83,7 @@ Note that multivalues can only contain monovalues, not other multivalues. So the
 
 ## Filtering
 
-Multivalues exist to facilitate filtering, which is how tánaiste condition arrays manifest themselves in Dauphin. A raw filter is enclosed in braces and has two special variables available inside: `$` denotes the value of the monovalue (as a single-member multivalue) and `@` denotes the position. Other (defined) varaibles and expressions can also be used within the filter.
+Multivalues exist to facilitate filtering, which is how tánaiste condition arrays manifest themselves in Dauphin. A raw filter is enclosed in braces and has two special variables available inside: `$` evaluates to a multivalue of the values of the filtered expression and `@` evaluates to the position. Other (defined) varaibles and expressions can also be used within the filter.
 
 For example, consider the multivalue «`1`, `2`, `3`» created, perhaps by `[1,2,3][]`. The expression `{$>1}` in, for exmaple, `[1,2,3][]{$>1}` would evaluate to «`2`, `3`». Similarly, `[1,2,3][]{@==0}` would evaluate to «`1`».
 
@@ -115,22 +115,22 @@ Conditional assignment is achieved by reducing the lvalue multivalue to length z
 
 An expression comprises one or more of.
 
-* an atomic monovalue constant;
-* nil;
-* a `$` or `@` (inside a filter);
-* a vector of expressions;
-* an enum branch of an expression;
-* a struct of expressions;
-* a variable;
-* a star of an expression;
+* an atomic monovalue constant; ✓
+* nil; ✓
+* a `$` or `@` (inside a filter); ✓
+* a vector of expressions; ✓
+* an enum branch of an expression; ✓
+* a struct of expressions; ✓
+* a variable; ✓
+* a star of an expression; ✓
 * an inline or function-like operator with appropriate expressions in its placeholders;
-* an _expression macro_ call with appropriate expressions;
+* an _expression macro_ call with appropriate expressions; ✓
 * an expression followed by:
-  * a qualifier to a struct;
-  * a square-bracket filter (to a vector);
-  * a brace filter;
-  * an enum test branch (to the respective enum);
-  * an enum value branch (to the respective enum).
+  * a qualifier to a struct; ✓
+  * a square-bracket filter (to a vector); ✓
+  * a brace filter; ✓
+  * an enum test branch (to the respective enum); ✓
+  * an enum value branch (to the respective enum) ✓.
 
 A type describes the structure of a value according to which of the options above are taken and the type of monovalues concerned. For example, `2` is an atomic monovalue of type `number`. `[2,3]` is a vector of expressions, these expressions having type `number` and so is of type `vec(number)`. Types may contain placeholders (which can be unified in expressions). A placeholder is a word beginning with an uppercase letter, or an underscore. Each underscore is treated as if a separate uppercase letter from an infinite set
 
@@ -151,13 +151,13 @@ Nil is represented by the constant `nil`. Its value is a multivalue with no memb
 
 ## Filters and Star
 
-A brace filter comprises an expression followed by a boolean-typed expression within braces. It has the same type as the preceding expression. I is an lvalue if-and-only-if the preceding expression is an lvalue.
+A brace filter comprises an expression followed by a boolean-typed expression within braces. It has the same type as the preceding expression. It is an lvalue if-and-only-if the preceding expression is an lvalue.
 
 Inside the braces `$` has the same type as the first expression, and `@` has type `number`. Neither are lvalues.
 
 A square bracket filter has the same syntax as a brace filter but with square brackets. The preceding expression must have a type `vec(`X`)` and the overall expression will have type X. It is an lvalue if-and-only-if the preceding expression is an lvalue.
 
-Inside the braces `$` has type X and `@` has type number. Neither are lvalues.
+Inside the square brackets `$` has type X and `@` has type number if the original expression has type `vec(`X`)`. Neither are lvalues.
 
 A star comprises an asterisk and an expression. If the expression has type X the star will have type `vec(`X`)`. It is not an lvalue.
 
@@ -197,7 +197,7 @@ A struct qualifier is an expression which has a struct type, followed by a perio
 
 ## Enums
 
-An enum must be declared prior to use. It is declared with the `enum` keyword, enum name, followed by braces. The contents of the braces are a comma separated list of branches. A branch is a branch name keyword followed by a colon and a type. For example `enum test2 { A: number, B: bool }`. Its type is `enum:`typename. For our example out example has type `enum:test2`. Note that the struct name is stored in the same namespace as enum names.
+An enum must be declared prior to use. It is declared with the `enum` keyword, enum name, followed by braces. The contents of the braces are a comma separated list of branches. A branch is a branch name keyword followed by a colon and a type. type may also be `nil` if that branch has no contents. For example `enum test2 { A: number, B: bool }`. Its type is `enum:`typename. For our example out example has type `enum:test2`. Note that the struct name is stored in the same namespace as enum names.
 
 An enum constant comprises the enum keyword, a colon and the enum branch name, parentheses and a value of the given type. For example, `test2:A(6)` or `test2:B(false)`. It is not an lvalue.
 
@@ -218,6 +218,8 @@ For example `list_concat` may be declared as `func list_concat(list(X),list(X)) 
 An operator is not an lvalue.
 
 **TODO** func syntax when tánaiste is defined.
+
+**TODO** overloading (eg `==`).
 
 ## Inline-like operators
 
@@ -253,6 +255,11 @@ A valid operator symbol is a sequence which either:
 For example, `+=`, `||`, `$add`, `!=` are valid Class A operators. `(!)` is a valid Class B operator. `(||)` is a valid Class C operator containing a valid Class A operator.
 
 In addition, no operator can introduce a symbol such that one member of the set of operator symbols is now identical to some other operator symbol followed by zero-or-more further unary operator symbols. For example, if `+` is a unary operator and `=` a binary one, `+=` is valid but `=+` is not.
+
+Some classes of operators are reserved even if not explicitly declared.
+
+* `#`one-or-more-alpha-maybe-with-embedded-colon...  – reserved for cooked intermediate form
+* `%alpha` – reserved for cooked intermediate form
 
 *Rationale*: 
 * Class A: a core character is not valid in Dauphin except in an operator definition. Internal characters cannot end an expreesion and so a sequence of them followed by a core character must be unambiguously introducing an operator. Internal characters can also not begin an expression and so any further internal or core characters must be a continuation of the operator.
@@ -307,5 +314,151 @@ A procedure may define one or more of its arguments to be lvalues using the keyw
 **TODO** func syntax when tánaiste is defined.
 
 # Dauphin to Tánaiste Translation
-## Type Mapping
+
+## Transformation into Cooked Instruction Form
+
+### Introduction
+
+Cooked instruction form is a linear, assembly-like form which still uses the rich types of Dauphin. The first stage in code generation is to transform parse trees of potentially complex expressions into this simple form. Instructions in this form are in the intermediate format `#instr %reg %reg`.... A few load instructions take atomic monovalues as an argument in addition to registers.
+
+`import`, `expr`, `stmt` and `oper` statements are processed during this stage and removed from the statement stream.
+
+`enum`, `struct`, `func` and `proc` statements survive unaltered into the statement stream.
+
+Procedure call statements are translated (the primary purpose of the transformation).
+
+### Types
+
+Registers have types. Initially these types may be partially undetermined. Constraints on the types of generated instructions will further refine the type.
+
+In addition to the types directly expressible in Dauphin, registers in cooked instruction format can be lvalues denoted by a leading `&` in the type. A placeholder can never contain a `&` type and `&` is always at the top level.
+
+### Building Constants
+
+ * `#nil %reg` — Put nil into `%reg`(gets type `_`)
+ * `#number %reg number` — Put number in `%reg` (gets type `number`); 
+ * `#bool %reg bool` — Put bool into `%reg`  (gets type `bool`);
+ * `#string %reg string` — Put string into `%reg`  (gets type `string`);
+ * `#const %reg bytes` — Put pytes into `%reg` (gets type `bytes`);
+ * `#list %reg` — Put «`[]`» into `%reg` (gets type `vec(_)`);
+ * `#push %reg %val` — add `%val` to list in `%reg` (`%reg` must be of type `vec(X)` where `X` is type of `%val`);
+ * `#struct:`typename `%reg %val1 %val2`... — Create struct in `%reg` with given vlaues (gets type `struct:`typename);
+ * `#enum:`typename`:`branch `%reg %val` — Create enum in `%reg` with given branch and value (gets type `enum:`typename).
+
+For example, the following program:
+
+```
+struct s {bool, number};
+enum e { A: s, B: nil };
+x := [e:A(s{ 0: true, 1: 42}),e:B];
+```
+
+could have the following cooked instruction form:
+
+```
+struct s {bool, number};
+enum e { A: s, B: nil };
+#bool %true true;
+#number %42 42;
+#struct:s %s %true %42;
+#enum:e:A %A %s;
+#enum:e:B %B;
+#list %x;
+#push %x %A;
+#push %x %B;
+```
+
+In this case the types of the registers are:
+
+* `%true` — `bool`
+* `%42` — `number`
+* `%s` — `struct:s`
+* `%A`, `%B` — `enum:e`
+* `%x` — `vec(enum:e)` but only known to be `vec(_)` initially.
+
+### Variables and lvalues
+
+A variable used as an rvalue is simply represented by the variable which it is contained within and has the corresponding type.
+
+When a variable is used in an statement which uses its argument as an lvalue, the value is represented as `&`type.
+
+A reference is generated with `#ref %out %in` where `%out` is of type `&`X if `%in` is of type X.
+
+### Qualifier and Branch rvalues
+
+* `#etest:`typename`:`branch ` %bool %reg` — Put «true»/«false» into bool depending on whether `%reg` has given branch. (type of `%bool` is `bool`, type of `%reg` must be `enum:`typename)
+* `#evalue:`typename`:`branch ` %val %reg` — Put branch value or nil into bool depending on whether `%reg` has given branch. (type of `%val` is type of branch, type of `%reg` must be `enum:`typename)
+* `#svalue:`typename`:`key `%val %reg` — Put value of given struct member of `%reg` into `%val`. (type of `%val` is type of member, type of `%reg` must be `struct:`typename)
+* `#refevalue:`typename`:`branch `%val %reg` — moves a reference into a reference to the branch value. Type of `%reg` must be `&`X where X is the corresponding enum type, and the type of `%val` becomes `&`Y, where Y is the type of the branch.
+* `#refsvalue:`typename`:`key `%val %reg` — Put reference to given struct member of `%reg` into `%val`. (type of `%val` is `&`X where X is the type of the member, type of `%reg` must be `&struct:`typename)
+
+### Filters
+
+After removal of the [`expression`] syntactic sugar, the remaining filter operators are `*`, `[]` (aka *square*), and `{`expression`}`.
+
+Filter expressions are first converted into equivalent expressions evaluating to a `vec(bool)` preceding the statement in question. These conversions are applied immediately before use. `$` is substituted with the expression in question. 
+
+`@` is replaced by `#at %out, %val` which puts a `vec(number)` into `%out` which is the length ov `%val` and increasing from 0 by 1.
+
+The resulting expression is applied with `#filter %out %in %filter`.
+
+For example: `x := x[$==3];` becomes (assuming `%3` is «3» etc):
+
+```
+#oper:equal %filter %x %3;
+#filter %new_x %x %filter;
+```
+
+Whereas `x := x[ y[$==2 && x[@==1]>z] || x[$==3] ]` becomes:
+
+```
+/* x[@==1]>z */
+#at %atx %x;
+#oper:equal %filter1 %1;
+#filter %tmp1 %x %filter1;
+#oper:gt %tmp2 %tmp1 %z;
+
+/* y[$==2 && x[@==1]>z] */
+#oper:equal %filter2 %y %2;
+#oper:and %filter21 %filter2 %filter1;
+#filter %tmp3 %y %filter21
+
+/* x[$==3] */
+#oper:equal %filter3 %x %3;
+#filter %tmp4 %x %filter3;
+
+/* x[ y[$==2 && x[@==1]>z] || x[$==3] ] */
+#oper:or %tmp5 %tmp3 %tmp4;
+#filter %out %x %tmp5;
+```
+
+* `#star %out %in` — Put vector of multival from `%in` into `%out`. type of `%out` is set to `vec(%in)`.
+* `#square %out %in` — Expand vec into multival. Type of `%out` is X when type of `%in` is `vec(`X`)`.
+* `#at %out %val` — Create run of values for position matching. Type of `%out` is `vec(number)`; type of `%val` must be `vec(_)`.
+* `#filter %out %in %filter` — Apply filter `%filter` to `%in`, yielding `%out`. `%in` and `%out` must be of the same (non-reference) type and `%filter` of type `vec(bool)`.
+* `#reffilter %out %in %filter` — Apply filter `%filter` to `%in`, yielding `%out`. `%in` and `%out` must be of the same (reference) type and `%filter` of type `vec(bool)`.
+
+
+### lvalue example
+
+Consider the following statements:
+
+```
+struct s {bool, vec(number)};
+enum e { A: s, B: nil };
+x := [e:A(s{ 0: true, 1: [0,42]}), e:B];
+x?e:A.1[$<10] := 23;
+```
+
+The result should be that x equal «`[e:A(s{0, true, 1: [23,42]}), e:B]`» and the last statement could be represented by the statements:
+```
+#ref %refx %x;
+#refevalue:e:A %refA %refx;
+#refsvalue:s:1 %ref1 %refA;
+#oper:lt %filter %x %10;
+#reffilter %refs %ref1 %filter;
+#oper:assign %refs, %23;
+```
+
+**TODO**: universalise infix
 
