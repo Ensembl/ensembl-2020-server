@@ -2,7 +2,9 @@
 
 ## Document Scope
 
-Note that this document is intended for designers and maintainers of the dauphin compiler or tánaiste bytecode interpreter and for language experts looking for the absolute truth on some minor issue. It is not a good place to learn or practice writing Dauphin and any attempt to do so from this document will be unduly and wildly daunting.
+Note that this document is intended for designers and maintainers of the dauphin compiler or tánaiste bytecode interpreter and for language experts looking for the absolute truth on some minor issue.
+
+This is not a good place to learn or to practice writing Dauphin. Any attempt to use this document to do so will be unduly and wildly daunting as it obsesses over minor or internal details which are largely irrelevant in practice, and almost all examples given are of complex pathological edge-cases.
 
 ## Purpose
 
@@ -115,22 +117,23 @@ Conditional assignment is achieved by reducing the lvalue multivalue to length z
 
 An expression comprises one or more of.
 
-* an atomic monovalue constant; ✓
-* nil; ✓
-* a `$` or `@` (inside a filter); ✓
-* a vector of expressions; ✓
-* an enum branch of an expression; ✓
-* a struct of expressions; ✓
-* a variable; ✓
-* a star of an expression; ✓
-* an inline or function-like operator with appropriate expressions in its placeholders;
-* an _expression macro_ call with appropriate expressions; ✓
+* an atomic monovalue constant;
+* nil;
+* a `$` or `@` (inside a filter);
+* a vector of expressions;
+* an enum branch of an expression;
+* a struct of expressions;
+* a variable;
+* a star of an expression;
+* an operator with appropriate expressions in its placeholders;
+* an _expression macro_ call with appropriate expressions;
+* an inlined expression of such an operator or expression macro;
 * an expression followed by:
-  * a qualifier to a struct; ✓
-  * a square-bracket filter (to a vector); ✓
-  * a brace filter; ✓
-  * an enum test branch (to the respective enum); ✓
-  * an enum value branch (to the respective enum) ✓.
+  * a qualifier to a struct;
+  * a square-bracket filter (to a vector);
+  * a brace filter;
+  * an enum test branch (to the respective enum);
+  * an enum value branch (to the respective enum).
 
 A type describes the structure of a value according to which of the options above are taken and the type of monovalues concerned. For example, `2` is an atomic monovalue of type `number`. `[2,3]` is a vector of expressions, these expressions having type `number` and so is of type `vec(number)`. Types may contain placeholders (which can be unified in expressions). A placeholder is a word beginning with an uppercase letter, or an underscore. Each underscore is treated as if a separate uppercase letter from an infinite set
 
@@ -175,7 +178,7 @@ A variable is represented by a keyword which is not a reserved word. Its type is
 
 A variable is an lvalue.
 
-The reserved words are: `enum`, `expr`, `false`, `func`, `import`, `let`, `lvalue`, `nil`, `oper`, `stmt`, `struct`, `true`.
+The reserved words are: `enum`, `expr`, `false`, `func`, `import`, `inline`, `let`, `lvalue`, `nil`, `stmt`, `struct`, `true`.
 
  ## Vector Constants
 
@@ -205,31 +208,35 @@ An enum test branch comprises an expression, a question-mark and a colon-separat
 
 An enum value branch comprises an expression, an exclamation-mark and a colon-separated enum branch name. In our example, `x!test2:A` would be such an expression assuming variable `x` exists. Its multivalue is either empty (if x has a different branch) or else the value of the branch. In our examples, if we have `x := test2:A(6)` then `x!test2:A` would have multivalue «`6`» whereas `x!test2:B` would have multivalue «». The type of the preceding expression must be the relevant enum (in our case `enum:test2`) and it has the type of the contained branches type. In our exmaple X`!test2:A` will have type `number` and  X`!test2:B` will have type bool. It is an lvalue if-and-only-if its preceding expression is an lvalue.
 
-## Function-like operators
+## Operators
 
-Operators access computation functionality within the corresponding tánaiste bytecode, which will vary based on the embedding. Every inline-like operator has a corresponding function-like operator but the converse is not the case. Where inline-like syntax exists it should be preferred.
+Operators access computation functionality within the corresponding tánaiste bytecode, the availability of which will vary based on the embedding. Many operators will have an inline syntax in addition to the syntax given here. Where such a syntax exists it should be preferred.
 
-A function-like operator has a type of its return value given its arguments. Operators may not be overloaded but may use placeholders within types.
+A function-like operator has the type of its return value given its arguments. Operators may be overloaded providing the compiler can unambiguously determine at use the correct operator. An operator may use type placeholders across its signature to map constraints across its arguments and return value. Each overloaded definition is a conceptually completely distinct operator.
 
 A statement of the form "`func` name`(`X,Y,Z`) -> ` A `{` code `}`" declares a function-like operator which takes arguments of type X, Y, Z and has type A, with the given inline tánaiste code (see later).
 
 For example `list_concat` may be declared as `func list_concat(list(X),list(X)) -> list(X)` to allow concatenation of arbitrary lists.
 
-An operator is not an lvalue.
+Operators are used by giving the operator name followed by the arguments in a parenthesised, comma-separated list.
+
+The name of an operator occupies the same namespace as that of statements.
+
+The arguments may not be lvalues. An operator is not an lvalue.
 
 **TODO** func syntax when tánaiste is defined.
 
-**TODO** overloading (eg `==`).
+## Expression Macros
 
-## Inline-like operators
+An expression macro call is introduced by "`expr` name`(`X,Y,Z`) {` expression `}`". This literally substitutes the given expression into the place it is used. Note that expression must be a *valid* expression and all (non-argument) variables are local however argument variables are by-name. It is an lvalue if-and-only-if the contained expression is such. It has the same type as the contained expression. Expression macros may be inlined.
+
+## Inlining
 
 ### Declaration
 
-An inline-like operator can be unary or binary. It is a series of one or more punctuation characters and can be declared left or right associative if binary. An inline-like operator is syntactic sugar for some function-like operator. An inline-like operator is declared in the preamble to associate itself with a corresponding function-like operator.
+A statement or macro (of either kind) can have an additional inline syntax. Such an inline syntax can be unary or binary. The inline can be declared left or right associative (if binary). Inline syntax is syntactic sugar for a given operator or statement. An inlining is declared in the preamble of a dauphin program where it associates itself with a corresponding operator, statement or macro. As operators, statements, and macros occupy the same namespace, this is unambiguous.
 
-A preamble takes the form "`oper ` op-syntax func-name nature precedence". Here nature is one of `infixl`, `infixr`, `unary`. and precedence is a number (low is tighter). For example `oper + plus infixr 2`.
-
-The considerable additional effort of allowing the definition of additional operators is to compensate for the lack of object-like syntax and the absence of overloading.
+A preamble takes the form "`inline ` inline-syntax op-or-stmt-name nature precedence". Here nature is one of `infixl`, `infixr`, `unary`. and precedence is a number (low is tighter). For example `inline + plus infixr 2`. Where appropriate it is recommended to use the same precedence numbers as those of C/C++. 
 
 ### Valid syntax
 
@@ -266,17 +273,13 @@ Some classes of operators are reserved even if not explicitly declared.
 * Class B: the contents of the brackets are entirely internal characters but such characters cannot introduce or end an expression so the contents are an invalid expression. The brackets ensure that they cannot be "composed" with any adjacent characters to make the operator ambiguous.
 * Class C: if the contents of brackets can only be unambiguously interpreted as an operator symbol, these cannot stand alone in parentheses, so the whole sequence is only interpreretable as an operator symbol.
 
-## Expression Macro Calls
-
-An expression macro call is introduced by "`expr` name`(`X,Y,Z`) {` expression `}`". This literally substitutes the given expression into the place it is used. Note that expression must be a *valid* expression and all (non-argument) variables are local however argument variables are by-name. It is an lvalue if-and-only-if the contained expression is such. It has the same type as the contained expression.
-
 # Statements
 
 ## Introduction
 
 Dauphin statements are separated by `;`. Dauphin source is a sequence of statements. Dauphin statements are executed in-order such that definition must precede use. The `import` statement allows inclusion of files with further content which is evaluated as if it occurred at the import point. An import statement has the form "`import` location" where location is a path for the compiler.
 
-Other statements may be inline-like or function-like. They may be:
+Statements can be:
 
 * an `import` statement;
 * a type declaration:
@@ -285,7 +288,7 @@ Other statements may be inline-like or function-like. They may be:
 * a macro declaration:
   * an `expr` expression macro declaration;
   * a `stmt` statement macro declaration;
-* an `oper` inline operator declaration;
+* an `inline` inline declaration;
 * a function/procedure declaration;
   * a `func` function declaration;
   * a `proc` procedure declaration;
@@ -294,6 +297,8 @@ Other statements may be inline-like or function-like. They may be:
 ## Statement Macros
 
 An statement macro call is introduced by "`stmt` name`(`X,Y,Z`) {` expression `}`". This literally substitutes the given statements into the place it is used. Note that statements must be a *valid* sequence of statements and all (non-argument) variables are local. However argument variables are by-name.
+
+Statement macros may be inlined.
 
 If arguments are required to be lvalues by the statement defiinition (because they are used as lvalues by some statement within), then that argument is required to be an lvalue at point of use.
 
@@ -307,7 +312,7 @@ A statement of the form "`proc` name`(`X,Y,Z`) {` code `}`" declares a function-
 
 For example `assign` may be declared as `proc assign(X,X)` to allow assignment of variables.
 
-Oper statements can also define inline procedures as well as inline operators. Which is defined depends on the func or proc refered to. For example `oper := assign infixr 2`. Note that associativity is irrelevant in opers defining statements.
+Statements can be inlined. For example `inline := assign infixr 2`. Note that associativity is irrelevant in inlines defining procedures as procedures cannot be nested.
 
 A procedure may define one or more of its arguments to be lvalues using the keyword `lvalue` before the type. This requires that in use that argument be a valid lvalue and is passed as a location to the definition.
 
@@ -321,7 +326,7 @@ A procedure may define one or more of its arguments to be lvalues using the keyw
 
 Cooked instruction form is a linear, assembly-like form which still uses the rich types of Dauphin. The first stage in code generation is to transform parse trees of potentially complex expressions into this simple form. Instructions in this form are in the intermediate format `#instr %reg %reg`.... A few load instructions take atomic monovalues as an argument in addition to registers.
 
-`import`, `expr`, `stmt` and `oper` statements are processed during this stage and removed from the statement stream.
+`import`, `expr`, `stmt` and `inline` statements are processed during this stage and removed from the statement stream.
 
 `enum`, `struct`, `func` and `proc` statements survive unaltered into the statement stream.
 
@@ -438,6 +443,9 @@ Whereas `x := x[ y[$==2 && x[@==1]>z] || x[$==3] ]` becomes:
 * `#filter %out %in %filter` — Apply filter `%filter` to `%in`, yielding `%out`. `%in` and `%out` must be of the same (non-reference) type and `%filter` of type `vec(bool)`.
 * `#reffilter %out %in %filter` — Apply filter `%filter` to `%in`, yielding `%out`. `%in` and `%out` must be of the same (reference) type and `%filter` of type `vec(bool)`.
 
+### Operators and Statements
+
+An operator is modelled as a simple instruction of the form "`#oper:`operator-name". Its arguments are those specified in the operator definition with the appropriate types. Statements incorporating lvalues requite `&` reference types.
 
 ### lvalue example
 
@@ -447,7 +455,7 @@ Consider the following statements:
 struct s {bool, vec(number)};
 enum e { A: s, B: nil };
 x := [e:A(s{ 0: true, 1: [0,42]}), e:B];
-x?e:A.1[$<10] := 23;
+x!e:A.1[$<10] := 23;
 ```
 
 The result should be that x equal «`[e:A(s{0, true, 1: [23,42]}), e:B]`» and the last statement could be represented by the statements:
@@ -460,5 +468,4 @@ The result should be that x equal «`[e:A(s{0, true, 1: [23,42]}), e:B]`» and t
 #oper:assign %refs, %23;
 ```
 
-**TODO**: universalise infix
 
