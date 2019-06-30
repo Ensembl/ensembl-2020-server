@@ -467,5 +467,234 @@ The result should be that x equal «`[e:A(s{0, true, 1: [23,42]}), e:B]`» and t
 #reffilter %refs %ref1 %filter;
 #oper:assign %refs, %23;
 ```
+## Reduction of Cooked Instruction Form
 
+### Introduction
 
+Cooked instruction form is then *reduced*, to remove structs and enums by expanding the register inventory. This moves the intermediate form closer to the available tánaiste data types. `struct` and `enum` statements are absorbed by this process, leaving only `func` and `proc` statements in addition to generated instructions. In addition, `#struct`, `#enum`, `#svalue`, `#etest`, `#evalue`, `#refsvalue` and `#refevalue` statements are removed and `#copy` introduced.
+
+### Iteration
+
+The process is iterative and continues until all registers are monovalues or nil, or else an arbitrarily deep nesting of vecs of monovalues, potentially references. Each register which contains a type which includes a struct or enum is split into multiple registers. These new registers may, in turn, contain structs or unions but only those *with* the original and so, as dauphin types may not be recursive, the process will terminate.
+
+### Reducing struct rvalues
+
+Struct registers are reduced by introducing a new register for each member of the struct. Each new register corresponds to the data of the member. Existing instructions which operate upon the original register operate upon all of the component registers.
+
+`#svalue:`component instrucions are replaced by `#copy` instructions which extract the relevant component. `#struct` instructions are also replaced by copies to their respective component variables.
+
+For example, the following code
+
+```
+struct s { bool, bool };
+struct t { s, bool };
+x := t{ s{true,true}, true };
+y := x.0.0;
+```
+
+would be first converted into unreduced cooked instruction form
+
+```
+struct s { bool, bool };
+struct t { s, bool };
+#bool %false false
+#bool %true true
+#struct:s %s %true %true
+#struct:t %x %s %true
+#svalue:t:0 %x0 %x
+#svalue:s:0 %y %x0
+```
+
+and then reduced in a first iteration to
+
+```
+struct s { bool, bool };
+#bool %false false
+#bool %true true
+#struct:s %s %true %true
+#copy %x:0 %s
+#copy %x:1 %true
+#copy %x0 %x:0
+#svalue:s:0 %y %x0
+```
+
+and in a second iteration to
+
+```
+#bool %false false
+#bool %true true
+#copy %s:0 %true
+#copy %s:1 %true
+#copy %x:0:0 %s:0
+#copy $x:0:1 %s:1
+#copy %x:1 %true
+#copy %x0:0 %x:0:0
+#copy %x0:1 %x:0:1
+#copy %y %x0:0
+```
+
+after which no etructs remain. This process creates many dead code branches for instructions which will later be eliminated. Though these are not removed at this stage if we do so here we see the dataflow more clearly
+
+```
+#bool %true true
+#copy %s:0 %true
+#copy %x:0:0 %s:0
+#copy %x0:0 %x:0:0
+#copy %y %x0:0
+```
+
+Removal of redunant copies to temporary variables is even more revealing:
+
+```
+#bool %true true
+#copy %y %true
+```
+
+### Reducing enum rvalues
+
+Enums are reduced by a similar process as structs. Each branch gets its own register and an additional register containing the branch used, using numbers assigned at this stage. Unused branches get nil. Even though the branch of an enum is known, registers for the other branches are created to facilitiate transformations at later stages of compilation (for example building vectors of enums of the same type which may include different branches).
+
+`#evalue` instrucions are replaced by `#copy` instructions which extract the relevant component. `#etest` instructions are replaced by equality tests. `#enum` instructions are also replaced by copies to their respective component variables.
+
+For example, the following code
+
+```
+enum s { A: number, B: number };
+enum t { Z: s };
+x := t:Z(s:A(42));
+y := x!Z!A;
+z := x?Z;
+```
+
+has unreduced cooked instruction form of
+
+```
+enum s { A: number, B: number };
+enum t { Z: s };
+#number %42 42;
+#enum:s:A %s %42;
+#enum:t:Z %x %s;
+#evalue:t:Z %y0 %x;
+#evalue:s:A %y %y0;
+#etest:t:Z %z %x;
+```
+
+A first reduction yields:
+
+```
+enum s { A: number, B: number };
+#number %Zb 0;
+#number %42 42;
+#enum:s:A %s %42;
+#copy %x %Zb;
+#copy %x:Z %s;
+#copy %y0 %x:Z;
+#evalue:s:A %y %y0;
+#oper:eq %z %x %Zb;
+```
+
+And a second reduction
+
+```
+#number %Zb 0;
+#number %Ab 0;
+#number %Bb 1;
+#number %42 42;
+#copy %s %Za;
+#copy %s:A %42;
+#nil %s:B;
+#copy %x %Zb;
+#copy %x:Z %s;
+#copy %x:Z:A %s:A;
+#copy %x:Z:B %s:B;
+#copy %y0 %z:Z;
+#copy %y0:A %x:Z:A;
+#copy %y0:B %x:Z:B;
+#copy %y %y0:A;
+#oper:eq %z %x %Zb;
+```
+
+### Reducing lvalues
+
+Lvalues are represented at this stage by reference (`&`) types and at this stage we manipulate the `#ref`, `#refevalue` and `#refsvalue` structures. Because of the limited operations performable on lvalues, the register contained within a reference type is always statically determinable. `#refevalue` and `#refsvalue` are replaced with `#copy`s of the relevant subregister.
+
+For example, the following code:
+
+```
+struct s { number, number };
+enum t { A:bool, B: s };
+x := t:B(s{1,2});
+x!t:B.1 = 23;
+```
+
+which initially compiles to:
+
+```
+struct s { number, number };
+enum t { A:bool, B: s };
+#number %1 1;
+#number %2 2;
+#struct:s %s %1 %2;
+#enum:t:B %x %s;
+#number %23 23;
+#ref %rx %x;
+#refevalue:t:B %rxb %rx;
+#refsvalue:s:1 %rs1 %rxb;
+#oper:assign %rs1 %23;
+```
+
+will be reduced to the following form:
+
+```
+struct s { number, number };
+enum t { A:bool, B: s };
+#number %bA 0;
+#number %bB 1;
+#number %1 1;
+#number %2 2;
+#copy %s:0 %1;
+#copy %s:1 %2;
+#copy %x %bB;
+#nil %x:A;
+#copy %x:B:0 %s:0;
+#copy %x:B:1 %s:1;
+#number %23 23;
+#ref %rx %x;
+#ref %rx:A %x:A;
+#ref %rx:B:0 %x:B:0;
+#ref %rx:B:1 %x:B:1;
+#copy %rxb:0 %rx:B:0;
+#copy %rxb:1 %rx:B:1;
+#copy %rs1 %rxb:1;
+#oper:assign %rs1 %23;
+```
+
+## Determinism
+
+### Introduction
+
+Following the reduction of cooked instruction form variables to the type `vec^n(atomic-monotype)` each variable is flagged according to the _determinism_ of each such vec and the determinism of its outer multivalue. In the context of dauphin its determinism is what can be conclusively said about its size and massively reduces the dimensionality of vectors in most cases. This is important in transformations after this point as we reduce the vecs to single-dimensional arrays and explicitly represent the multivalue, and larger-dimensional vecs are inefficient to represent. Specifically a sequence is:
+
+* `empty` if it can be shown to have no members;
+* `det` if it can be shown to contain _exactly one_ member;
+* `semidet` if it can be shown to contain _zero or one_ members;
+* `nondet` otherwise.
+
+Determinism is represented by a string beginning with the determinism of the multivalue followed by a colon and then the determinism of any contained vecs. At each position the determinism is represented by the first letter. For example a register of type `d:n` contains exactly one vec (of unknown size) whereas `s:dn` contains zero or one vecs of length one containing vecs of unknown length.
+
+The surviving instructions are the following, with the following determinism assignments:
+
+* `#nil %reg` — 
+* `#number %reg number` — 
+* `#bool %reg bool` — 
+* `#string %reg string` — 
+* `#const %reg bytes` — 
+* `#list %reg` — 
+* `#push %reg %val` — 
+* `#ref %rx %x` —
+* `#star %out %in` — 
+* `#square %out %in` — 
+* `#at %out %val` — 
+* `#filter %out %in %filter` — 
+* `#reffilter %out %in %filter` — 
+* `#oper`:name —
