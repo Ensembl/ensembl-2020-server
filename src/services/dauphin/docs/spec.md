@@ -957,6 +957,20 @@ After the second iteration, the inner vecs get resolved. After the first iterati
 * appends `%in:n` to `%out:n`
 * appends `%in:s` to `%out:s` having added old length of `%in` to each.
 
+Diag:
+
+```
+x := [[1,2],[3,4]]
+
+                 x:[0,2]
+                   [2,2]
+
+                 [1,2,3,4]
+
+            a: [0,1]     b:[2,3]
+               [1,1]       [1,1]
+```
+
 
 ### Complete list optimisation
 
