@@ -471,7 +471,13 @@ The result should be that x equal «`[e:A(s{0, true, 1: [23,42]}), e:B]`» and t
 
 ### Introduction
 
-Cooked instruction form is then *reduced*, to remove structs and enums by expanding the register inventory. This moves the intermediate form closer to the available tánaiste data types. `struct` and `enum` statements are absorbed by this process, leaving only `func` and `proc` statements in addition to generated instructions. In addition, `#struct`, `#enum`, `#svalue`, `#etest`, `#evalue`, `#refsvalue` and `#refevalue` statements are removed and `#copy` introduced.
+Cooked instruction form is then *reduced*, to remove structs, enums and vectors by expanding the register inventory.
+
+This proceeds in two stages: first structs and enums are removed. Once this is complete, vectors are removed.
+
+### Struct and Enum reduction
+
+Struct and enum reduction moves the intermediate form closer to the available tánaiste data types. `struct` and `enum` statements are absorbed by this process, leaving only `func` and `proc` statements in addition to generated instructions. In addition, `#struct`, `#enum`, `#svalue`, `#etest`, `#evalue`, `#refsvalue` and `#refevalue` statements are removed and `#copy` introduced.
 
 ### Iteration
 
@@ -646,8 +652,6 @@ enum t { A:bool, B: s };
 will be reduced to the following form:
 
 ```
-struct s { number, number };
-enum t { A:bool, B: s };
 #number %bA 0;
 #number %bB 1;
 #number %1 1;
@@ -669,32 +673,8 @@ enum t { A:bool, B: s };
 #oper:assign %rs1 %23;
 ```
 
-## Determinism
+### Reducing vectors
 
-### Introduction
+Once structs and enums have been reduced, vectors are reduced which is slightly more challenging. Many more unused allocations are created, including many redundant vector layers. These are later removed in optimisation steps.
 
-Following the reduction of cooked instruction form variables to the type `vec^n(atomic-monotype)` each variable is flagged according to the _determinism_ of each such vec and the determinism of its outer multivalue. In the context of dauphin its determinism is what can be conclusively said about its size and massively reduces the dimensionality of vectors in most cases. This is important in transformations after this point as we reduce the vecs to single-dimensional arrays and explicitly represent the multivalue, and larger-dimensional vecs are inefficient to represent. Specifically a sequence is:
-
-* `empty` if it can be shown to have no members;
-* `det` if it can be shown to contain _exactly one_ member;
-* `semidet` if it can be shown to contain _zero or one_ members;
-* `nondet` otherwise.
-
-Determinism is represented by a string beginning with the determinism of the multivalue followed by a colon and then the determinism of any contained vecs. At each position the determinism is represented by the first letter. For example a register of type `d:n` contains exactly one vec (of unknown size) whereas `s:dn` contains zero or one vecs of length one containing vecs of unknown length.
-
-The surviving instructions are the following, with the following determinism assignments:
-
-* `#nil %reg` — 
-* `#number %reg number` — 
-* `#bool %reg bool` — 
-* `#string %reg string` — 
-* `#const %reg bytes` — 
-* `#list %reg` — 
-* `#push %reg %val` — 
-* `#ref %rx %x` —
-* `#star %out %in` — 
-* `#square %out %in` — 
-* `#at %out %val` — 
-* `#filter %out %in %filter` — 
-* `#reffilter %out %in %filter` — 
-* `#oper`:name —
+**TODO**: specail numeq numadd op etc.
