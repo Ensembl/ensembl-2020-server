@@ -184,6 +184,8 @@ The reserved words are: `enum`, `expr`, `false`, `func`, `import`, `inline`, `le
 
 A vector constant is constructed from a comma-separated list of expressions enclosed in square brackets. Each enclosed expression must have the same type. For example, `[2,false]` is invalid. The type of the vector is `vec(`X`)`, where X is the type of the enclosed values. If no values are enclosed it is of type `vec(_)`. Its value is a multivalue with a single member, the obvious corresponding monovalue. It is not an lvalue.
 
+Multivalues used in construction propagate to the constructed value. If a constructor uses multiple multivalues they propagate as the product. For example: `x := *[ [1,2][], [3,4] ]` sets x to `[[1,3],[1,4],[2,3],[2,4]]`
+
 ## Structs
 
 An struct must be declared prior to use. It is declared with the `struct` keyword, the struct name, followed by braces. The contents of the braces are a comma-separated list of:
@@ -198,6 +200,8 @@ A struct constant comprises the struct keyword followed by the appropriate value
 
 A struct qualifier is an expression which has a struct type, followed by a period and then a valid key. For example, given x above, `x.0` has value «`6`». Its type is the type of the contained key in the type of the struct. It is an lvalue if-and-only-if the containing expression is an lvalue.
 
+Multivalues used in construction propagate to the constructed value as with vectors.
+
 ## Enums
 
 An enum must be declared prior to use. It is declared with the `enum` keyword, enum name, followed by braces. The contents of the braces are a comma separated list of branches. A branch is a branch name keyword followed by a colon and a type. type may also be `nil` if that branch has no contents. For example `enum test2 { A: number, B: bool }`. Its type is `enum:`typename. For our example out example has type `enum:test2`. Note that the struct name is stored in the same namespace as enum names.
@@ -207,6 +211,8 @@ An enum constant comprises the enum keyword, a colon and the enum branch name, p
 An enum test branch comprises an expression, a question-mark and a colon-separated enum branch name. In our example, `x?test2:A` would be such an expression assuming variable `x` exists. It has a boolean value which is true if-and-only-if the preceding expression is the corresponding branch of the enum. The type of the preceding expression must be the relevant enum (in our case `enum:test2`) and it has type `bool`. It is not an lvalue.
 
 An enum value branch comprises an expression, an exclamation-mark and a colon-separated enum branch name. In our example, `x!test2:A` would be such an expression assuming variable `x` exists. Its multivalue is either empty (if x has a different branch) or else the value of the branch. In our examples, if we have `x := test2:A(6)` then `x!test2:A` would have multivalue «`6`» whereas `x!test2:B` would have multivalue «». The type of the preceding expression must be the relevant enum (in our case `enum:test2`) and it has the type of the contained branches type. In our exmaple X`!test2:A` will have type `number` and  X`!test2:B` will have type bool. It is an lvalue if-and-only-if its preceding expression is an lvalue.
+
+Multivalues used in construction propagate to the constructed value as with vectors.
 
 ## Operators
 
@@ -338,14 +344,21 @@ Registers have types. Initially these types may be partially undetermined. Const
 
 In addition to the types directly expressible in Dauphin, registers in cooked instruction format can be lvalues denoted by a leading `&` in the type. A placeholder can never contain a `&` type and `&` is always at the top level.
 
+### Instruction transformation
+
+All instructions in initial cooked form accept the full range of Dauphin types. After generation there are two transformation stages, struct/enum elimination and vec elimination. Instructions which "survive" these transformation steps must define how they transform in these transformations.
+
+***TODO** and macros?
+***TODO*** and bytecodes
+
 ### Building Constants
 
  * `#nil %reg` — Put nil into `%reg`(gets type `_`)
  * `#number %reg number` — Put number in `%reg` (gets type `number`); 
  * `#bool %reg bool` — Put bool into `%reg`  (gets type `bool`);
  * `#string %reg string` — Put string into `%reg`  (gets type `string`);
- * `#const %reg bytes` — Put pytes into `%reg` (gets type `bytes`);
- * `#list %reg` — Put «`[]`» into `%reg` (gets type `vec(_)`);
+ * `#bytes %reg bytes` — Put bytes into `%reg` (gets type `bytes`);
+ * `#vec %reg` — Put «`[]`» into `%reg` (gets type `vec(_)`);
  * `#push %reg %val` — add `%val` to list in `%reg` (`%reg` must be of type `vec(X)` where `X` is type of `%val`);
  * `#struct:`typename `%reg %val1 %val2`... — Create struct in `%reg` with given vlaues (gets type `struct:`typename);
  * `#enum:`typename`:`branch `%reg %val` — Create enum in `%reg` with given branch and value (gets type `enum:`typename).
@@ -368,7 +381,7 @@ enum e { A: s, B: nil };
 #struct:s %s %true %42;
 #enum:e:A %A %s;
 #enum:e:B %B;
-#list %x;
+#vec %x;
 #push %x %A;
 #push %x %B;
 ```
@@ -403,45 +416,25 @@ After removal of the [`expression`] syntactic sugar, the remaining filter operat
 
 Filter expressions are first converted into equivalent expressions evaluating to a `vec(bool)` preceding the statement in question. These conversions are applied immediately before use. `$` is substituted with the expression in question. 
 
-`@` is replaced by `#at %out, %val` which puts a `vec(number)` into `%out` which is the length ov `%val` and increasing from 0 by 1.
+`@` is replaced by `#at %out, %val` which puts a `vec(number)` into `%out` which is the length of `%val` and increasing from 0 by 1.
 
 The resulting expression is applied with `#filter %out %in %filter`.
 
-For example: `x := x[$==3];` becomes (assuming `%3` is «3» etc):
-
-```
-#oper:equal %filter %x %3;
-#filter %new_x %x %filter;
-```
-
-Whereas `x := x[ y[$==2 && x[@==1]>z] || x[$==3] ]` becomes:
-
-```
-/* x[@==1]>z */
-#at %atx %x;
-#oper:equal %filter1 %1;
-#filter %tmp1 %x %filter1;
-#oper:gt %tmp2 %tmp1 %z;
-
-/* y[$==2 && x[@==1]>z] */
-#oper:equal %filter2 %y %2;
-#oper:and %filter21 %filter2 %filter1;
-#filter %tmp3 %y %filter21
-
-/* x[$==3] */
-#oper:equal %filter3 %x %3;
-#filter %tmp4 %x %filter3;
-
-/* x[ y[$==2 && x[@==1]>z] || x[$==3] ] */
-#oper:or %tmp5 %tmp3 %tmp4;
-#filter %out %x %tmp5;
-```
-
 * `#star %out %in` — Put vector of multival from `%in` into `%out`. type of `%out` is set to `vec(%in)`.
 * `#square %out %in` — Expand vec into multival. Type of `%out` is X when type of `%in` is `vec(`X`)`.
+* `#refsquare %out %in` — Expand vec reference into multival of references. Type of `%out` is `&`X when type of `%in` is `&vec(`X`)`.
 * `#at %out %val` — Create run of values for position matching. Type of `%out` is `vec(number)`; type of `%val` must be `vec(_)`.
 * `#filter %out %in %filter` — Apply filter `%filter` to `%in`, yielding `%out`. `%in` and `%out` must be of the same (non-reference) type and `%filter` of type `vec(bool)`.
 * `#reffilter %out %in %filter` — Apply filter `%filter` to `%in`, yielding `%out`. `%in` and `%out` must be of the same (reference) type and `%filter` of type `vec(bool)`.
+
+For example: `x := x[$==3];`, which is a sugared version of `x := *x[]{$==3}` becomes (assuming `%3` is «3» etc):
+
+```
+#square %t1 %x;
+#oper:eq %filter %t1 %3;
+#filter %t2 %t1 %filter;
+#star %x %t2;
+```
 
 ### Operators and Statements
 
@@ -455,27 +448,26 @@ Consider the following statements:
 struct s {bool, vec(number)};
 enum e { A: s, B: nil };
 x := [e:A(s{ 0: true, 1: [0,42]}), e:B];
-x!e:A.1[$<10] := 23;
+x[$!e:A].1[$<10] := 23;
 ```
 
 The result should be that x equal «`[e:A(s{0, true, 1: [23,42]}), e:B]`» and the last statement could be represented by the statements:
 ```
 #ref %refx %x;
-#refevalue:e:A %refA %refx;
+#refsquare %refxs %refx;
+#refevalue:e:A %refA %refxs;
 #refsvalue:s:1 %ref1 %refA;
 #oper:lt %filter %x %10;
 #reffilter %refs %ref1 %filter;
-#oper:assign %refs, %23;
+#oper:assign %refs %23;
 ```
-## Reduction of Cooked Instruction Form
+## Struct and Enum Reduction 
 
 ### Introduction
 
 Cooked instruction form is then *reduced*, to remove structs, enums and vectors by expanding the register inventory.
 
 This proceeds in two stages: first structs and enums are removed. Once this is complete, vectors are removed.
-
-### Struct and Enum reduction
 
 Struct and enum reduction moves the intermediate form closer to the available tánaiste data types. `struct` and `enum` statements are absorbed by this process, leaving only `func` and `proc` statements in addition to generated instructions. In addition, `#struct`, `#enum`, `#svalue`, `#etest`, `#evalue`, `#refsvalue` and `#refevalue` statements are removed and `#copy` introduced.
 
@@ -488,6 +480,8 @@ The process is iterative and continues until all registers are monovalues or nil
 Struct registers are reduced by introducing a new register for each member of the struct. Each new register corresponds to the data of the member. Existing instructions which operate upon the original register operate upon all of the component registers.
 
 `#svalue:`component instrucions are replaced by `#copy` instructions which extract the relevant component. `#struct` instructions are also replaced by copies to their respective component variables.
+
+Instructions which take structs are reduced to copied forms which apply to each field of the struct.
 
 For example, the following code
 
@@ -558,9 +552,17 @@ Removal of redunant copies to temporary variables is even more revealing:
 
 ### Reducing enum rvalues
 
-Enums are reduced by a similar process as structs. Each branch gets its own register and an additional register containing the branch used, using numbers assigned at this stage. Unused branches get nil. Even though the branch of an enum is known, registers for the other branches are created to facilitiate transformations at later stages of compilation (for example building vectors of enums of the same type which may include different branches).
+**TODO** empty values
+
+Enums are reduced by a similar process as structs. Each branch gets its own register and an additional register containing the branch used, using numbers assigned at this stage. 
+
+Unused branches get the appropriate empty value for their type. 
+
+Even though the branch of an enum is known, registers for the other branches are created to facilitiate transformations at later stages of compilation (for example building vectors of enums of the same type which may include different branches). Effectively an enum is reduced to a struct containing an extra type field and where construction ensures only one member is non-empty at any time.
 
 `#evalue` instrucions are replaced by `#copy` instructions which extract the relevant component. `#etest` instructions are replaced by equality tests. `#enum` instructions are also replaced by copies to their respective component variables.
+
+Instructions which take enums are reduced to copied forms which apply to each branch of the enum and to the main enum register.
 
 For example, the following code
 
@@ -596,7 +598,7 @@ enum s { A: number, B: number };
 #copy %x:Z %s;
 #copy %y0 %x:Z;
 #evalue:s:A %y %y0;
-#oper:eq %z %x %Zb;
+#numeq %z %x %Zb;
 ```
 
 And a second reduction
@@ -608,7 +610,7 @@ And a second reduction
 #number %42 42;
 #copy %s %Za;
 #copy %s:A %42;
-#nil %s:B;
+#number %s:B 0;
 #copy %x %Zb;
 #copy %x:Z %s;
 #copy %x:Z:A %s:A;
@@ -617,12 +619,12 @@ And a second reduction
 #copy %y0:A %x:Z:A;
 #copy %y0:B %x:Z:B;
 #copy %y %y0:A;
-#oper:eq %z %x %Zb;
+#numeq %z %x %Zb;
 ```
 
 ### Reducing lvalues
 
-Lvalues are represented at this stage by reference (`&`) types and at this stage we manipulate the `#ref`, `#refevalue` and `#refsvalue` structures. Because of the limited operations performable on lvalues, the register contained within a reference type is always statically determinable. `#refevalue` and `#refsvalue` are replaced with `#copy`s of the relevant subregister.
+Lvalues are represented at this stage by reference (`&`) types and at this stage we manipulate the `#ref`, remove `#refevalue` and `#refsvalue` and duplicate `#refsquare` instrustions. Because of the limited operations performable on lvalues, the register contained within a reference type is always statically determinable. `#refevalue` and `#refsvalue` are replaced with `#copy`s of the relevant subregister.
 
 For example, the following code:
 
@@ -630,7 +632,7 @@ For example, the following code:
 struct s { number, number };
 enum t { A:bool, B: s };
 x := t:B(s{1,2});
-x!t:B.1 = 23;
+x[$!t:B].1 = 23;
 ```
 
 which initially compiles to:
@@ -644,7 +646,8 @@ enum t { A:bool, B: s };
 #enum:t:B %x %s;
 #number %23 23;
 #ref %rx %x;
-#refevalue:t:B %rxb %rx;
+#refsquare %rxs %rx;
+#refevalue:t:B %rxb %rxs;
 #refsvalue:s:1 %rs1 %rxb;
 #oper:assign %rs1 %23;
 ```
@@ -659,7 +662,7 @@ will be reduced to the following form:
 #copy %s:0 %1;
 #copy %s:1 %2;
 #copy %x %bB;
-#nil %x:A;
+#bool %x:A false;
 #copy %x:B:0 %s:0;
 #copy %x:B:1 %s:1;
 #number %23 23;
@@ -673,8 +676,292 @@ will be reduced to the following form:
 #oper:assign %rs1 %23;
 ```
 
-### Reducing vectors
+### Instruction Transformation
+
+**TODO** nil optimisation
+
+* `#nil`, `#number`, `#bool`, `#string`, `#bytes`, `#numeq` do not take the types transformed in the first transformation.
+* `#struct:`, `#enum:`, `#etest:`, `#evalue:`, `#svalue:`, `#refevalue:`, `#refsvalue:` do not survive the transformation, the new forms are given above.
+* `#vec`, `#push` can contain structs and enums. In such a case, the vec and push is duplicated for all of the subregisters.
+* Similarly, `#star` creates a vector which must be similarly duplicated when the input argument is itself a vector;
+* `#square` is as for `#star` but with input and output swapped;
+* `#ref` and `#refsquare` are similarly duplicated;
+* `#filter` and `#reffilter` are duplicated for each subregister (all being the same length);
+* As all subregisters of this transformation are the same length, `#at` can operate on any one of them.
+
+For example:
+
+```
+enum e { A: number, B: number };
+x := [e:A(1),e:B(2)];
+y := e:B(1);
+x[@==0] := y;
+```
+
+the final line initially generates:
+
+```
+#ref %rx %x;
+#refsquare %rt1 %rx;
+#at %at %rx;
+#number %0 0;
+#oper:eq %filter %at %0;
+#filter %rt2 %rt1 %filter;
+#oper:assign %rt2 %y;
+```
+
+which reduces to:
+
+```
+#ref %rx %x;
+#ref %rx:A %x:A;
+#ref %rx:B %x:B;
+#refsquare %rt1 %rx;
+#refsquare %rt1:A %rx:A;
+#refsquare %rt1:B %rx:B;
+#at %at %rx;
+#number %0 0;
+#oper:eq %filter %at %0;
+#reffilter %rt2 %rt1 %filter;
+#reffilter %rt2:A %rt1:A %filter;
+#reffilter %rt2:B %rt1:B %filter;
+#oper:assign %rt2 %y;
+#oper:assign %rt2:A %y:A;
+#oper:assign %rt2:B %y:B;
+```
+
+## Reducing vector rvalues
 
 Once structs and enums have been reduced, vectors are reduced which is slightly more challenging. Many more unused allocations are created, including many redundant vector layers. These are later removed in optimisation steps.
 
-**TODO**: specail numeq numadd op etc.
+A vector of type `vec(X)` stored in register `%r` is replaced by three registers.
+
+* `%r` a register of type `X` containing the values
+* `%r:s` a register of type `number` containing offsets to the start of each entry.
+* `%r:n` a register of type `number` containing the length of each entry.
+
+Entries may have length not equal to one because registers contain multivalues not monovalues.
+
+* `#vec` is replaced by a sequence to initialise all three of these variables with nil.
+
+* `#square` is replaced by `#vecsquare %out %r %r:s %r:n` which takes segments from `%r` according to `%r:s` and `%r:n` to build `%out` as a multivalue of contents. (A later optimisation step optimises this operation to a copy of `%r` when it can be shown that the input register is *complete*, that is `%r:n` sums to the length of `%r`).
+
+* `#refsquare` is similarly replaced by `#refvecsquare`.
+
+* `#star` is replaced by a constructor which populates the start and length variables with the correct data, and copies the values into `%r`. `#mlen %len %r` sets `%len` to a single `number` being the number of entries in the `%r` multival.
+
+* `#push` is replaced by an operation `#madd %out %a %b`, which concatenates multivalues, and use of `#mlen` to update values of the auxilliary registers.
+
+* `#nil`, `#number`, `#bool`, `#string`, `#bytes`, and `#numeq` are unaffected by this transform as they do not manipulate the relevant types.
+
+* `#copy` and `#ref` are duplicated across subregisters.
+
+* `#at` is replaced by an `#mlen` on `%r:n` followed by an `#at` on the generated `number`.
+
+* `#filter %out %in %filter` of a vec is replaced by calls to `#filter %out %in %filter` on the start and length. Note that the value is not reduced in size. `*x[]` achives this if necessary.
+
+* Similarly, `#reffilter %out %in %filter` on a vec is replaced by calls to `#reffilter %out %in %filter` on the start and length.
+
+* `#refvecsquare` `#vecsquare` `#madd` `#mlen` **TODO**
+
+For example, consider this (somewhat unnecessary) code:
+
+```
+x := [1];
+y := *x[];
+```
+
+which initially compiles to
+
+```
+#vec %x;
+#number %1 1;
+#push %x %1;
+#square %t %x;
+#star %y %t;
+```
+
+which, after transformation, becomes:
+
+```
+/* #vec */
+#nil %x;
+#nil %x:s;
+#nil %x:n;
+/* #number */
+#number %1 1;
+/* #push */
+#madd %x %1;
+#mlen %xlen %x;
+#madd %x:s %xlen;
+#mlen %vlen %1;
+#madd %x:n %vlen;
+/* #square */
+#vecsquare %t %x %x:s %x:n;
+/* #star */
+#copy %y %t;
+#nil %y:s;
+#number %0 0;
+#madd %y:s %0;
+#nil %y:n;
+#mlen %tlen %t;
+#madd %y:n %tlen;
+```
+
+And in the following code:
+
+```
+x := [1,2,3];
+y := x[$>1];
+```
+
+the second line initially compiles to:
+
+```
+#number %1 1;
+#oper:gt %t %x %1;
+#filter %y %x %t;
+```
+
+which is transformed into:
+
+```
+#number %1 1;
+#oper:gt %t %x %1;
+#copy %y %x;
+#select %y:s %x:s %t;
+#select %y:n %x:n %t;
+```
+
+As an lvalue exmaple, the second line of:
+
+```
+x := [1,2,3];
+x[$>1] := 0;
+```
+
+which initially compiles to:
+
+```
+#ref %rx %x;
+#refsquare %rs %rx;
+#number %1 1;
+#oper:gt %filter %x %1;
+#reffilter %rt %rs %filter;
+#number %0 0;
+#oper:assign %rt %0;
+```
+
+is transformed into:
+
+**TODO** oper list ABI here at ...
+
+```
+#ref %rx %x;
+#ref %rx:s %x:s;
+#ref %rx:n %x:n;
+#refvecsquare %rs %rx %rx:s %rx:n;
+#number %1 1;
+#oper:gt %filter %rs %1;
+#copy %rt %rs;
+#reffilter %rt:s %rs:s %filter;
+#reffilter %rt:n %rs:n %filter;
+#number %0 0;
+#oper:assign %rt... %0;
+```
+
+As an example of a 2D vector, consider
+
+```
+x := [[1,2],[3,4]];
+```
+
+which initially compiles to:
+
+```
+#number %1 1;
+#number %2 2;
+#number %3 3;
+#number %4 4;
+#vec %a;
+#push %a %1;
+#push %a %2;
+#vec %b;
+#push %b %1;
+#push %b %2;
+#vec %x;
+#push %x %a;
+#push %x %b;
+```
+
+After the first iteration this becomes the following. Note that `#mlen` ... `%a` and `#mlen` ... `%b` is one, even though they are arrays.
+
+```
+/* inner arrays */
+#number %1 1;
+#number %2 2;
+#number %3 3;
+#number %4 4;
+#vec %a;
+#push %a %1;
+#push %a %2;
+#vec %b;
+#push %b %1;
+#push %b %2;
+#nil %x;
+#nil %x:s;
+#nil %x:n;
+/* push %a */
+#mlen %xlen %x;
+#madd %x:s %xlen;
+#mlen %alen %a;
+#madd %x:n %alen;
+/* push %b */
+#mlen %xlen %x;
+#madd %x:s %xlen;
+#mlen %blen %b;
+#madd %x:n %blen;
+```
+
+After the second iteration, the inner vecs get resolved. After the first iteration the remaining array registers are `%a`, `%b`, `%x`.
+
+```
+/* inner arrays */
+#number %1 1;
+#number %2 2;
+#number %3 3;
+#number %4 4;
+/* push 1 */
+#nil %a;
+#nil %a:s;
+#nil %a:n;
+#mlen %1len %1;
+#madd %a:s %1len;
+#mlen %alen %a;
+#madd %a:n %alen;
+/* ... same for 2, 3, 4 creating %b %b:s %b:n */
+/* create x */
+#nil %x;
+#nil %x:s;
+#nil %x:n;
+/* push %a */
+#mmerge %x %x:s %x:n %a %a:s %a:n;
+/* push %b */
+#mmerge %x %x:s %x:n %b %b:s %b:n;
+```
+
+**TODO** `#mmerge`
+
+`#mmerge %out %out:s %out:n %in %in:s %in:n`
+* appends `%in` to `%out`
+* appends `%in:n` to `%out:n`
+* appends `%in:s` to `%out:s` having added old length of `%in` to each.
+
+
+### Complete list optimisation
+
+**TODO**: special numeq numadd run op etc.
+**TODO**: recursive macro definitions.
+**TODO**: bytecode ABI.
+**TODO**: meaning of []
+
