@@ -15,7 +15,7 @@ impl OpRegistryLen {
         }
     }
 
-    fn contains(&self, cs: &mut CharSource) -> bool {
+    fn contains(&self, cs: &mut dyn CharSource) -> bool {
         let s = cs.peek(self.len);
         self.set.contains(&s)
     }
@@ -38,7 +38,7 @@ impl OpRegistry {
         }
     }
 
-    pub fn contains(&self, cs: &mut CharSource) -> Option<String> {
+    pub fn contains(&self, cs: &mut dyn CharSource) -> Option<String> {
         if let Some(start) = cs.peek(1).chars().next() {
             if let Some(lens) = self.starts.get(&start) {
                 for len in lens {

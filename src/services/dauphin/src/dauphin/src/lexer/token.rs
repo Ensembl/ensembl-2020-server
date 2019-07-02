@@ -7,6 +7,6 @@ pub enum Token {
     Error(String),
     LiteralString(String),
     LiteralBytes(Vec<u8>),
-    EndOfFile(Option<String>),
-    StartOfFile(String)
+    EndOfFile,
+    EndOfLex
 }

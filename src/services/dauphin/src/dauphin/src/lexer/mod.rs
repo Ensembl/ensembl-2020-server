@@ -1,6 +1,11 @@
-pub mod charsource;
-pub mod filelexer;
-pub mod token;
-pub mod opregistry;
-pub mod getting;
-pub mod fileresolver;
+mod charsource;
+mod filelexer;
+mod fileresolver;
+mod lexer;
+mod token;
+mod opregistry;
+mod getting;
+
+pub use self::fileresolver::FileResolver;
+pub use self::token::Token;
+pub use self::lexer::Lexer;

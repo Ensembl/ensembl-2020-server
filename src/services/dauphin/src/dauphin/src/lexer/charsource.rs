@@ -42,24 +42,6 @@ impl CharSource for StringCharSource {
     }
 }
 
-pub struct LocatedCharSource {
-    cs: Box<CharSource>,
-    line: u32,
-    col: u32
-}
-
-impl LocatedCharSource {
-    pub fn new(cs: Box<CharSource>) -> LocatedCharSource {
-        LocatedCharSource {
-            cs, line: 1, col: 1
-        }
-    }
-
-    pub fn position(&self) -> (u32,u32) {
-        (self.line,self.col)
-    }
-}
-
 impl CharSource for LocatedCharSource {
     fn name(&self) -> &str { self.cs.name() }
 
@@ -83,5 +65,24 @@ impl CharSource for LocatedCharSource {
     fn next(&mut self) -> Option<char> {
         let out = self.advance(1);
         out.chars().next()
+    }
+}
+
+
+pub struct LocatedCharSource {
+    cs: Box<dyn CharSource>,
+    line: u32,
+    col: u32
+}
+
+impl LocatedCharSource {
+    pub fn new(cs: Box<dyn CharSource>) -> LocatedCharSource {
+        LocatedCharSource {
+            cs, line: 1, col: 1
+        }
+    }
+
+    pub fn position(&self) -> (u32,u32) {
+        (self.line,self.col)
     }
 }

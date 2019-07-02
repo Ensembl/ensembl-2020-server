@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::borrow::BorrowMut;
 use std::rc::Rc;
 
 use super::charsource::{ CharSource, LocatedCharSource };
@@ -9,9 +8,7 @@ use super::getting::LexerGetting;
 use super::token::Token;
 
 pub struct FileLexer {
-    resolver: Rc<FileResolver>,
-    name: String,
-    stream: Result<LocatedCharSource,String>,
+    stream: LocatedCharSource,
     ops: OpRegistry,
     pending: Option<Token>,
     line: u32,
@@ -19,24 +16,19 @@ pub struct FileLexer {
 }
 
 impl FileLexer {
-    pub fn new(resolver: &Rc<FileResolver>, path: &str) -> FileLexer {
-        let resolver = resolver.clone();
-        let stream = resolver.resolve(path);
-        let first = match stream {
-            Ok(_) => Token::StartOfFile(path.to_string()),
-            Err(ref error) => Token::Error(error.to_string())
-        };
+    pub fn new(stream: Box<dyn CharSource>) -> FileLexer {
         FileLexer {
-            resolver, stream: stream.map(|x| LocatedCharSource::new(x)),
+            stream: LocatedCharSource::new(stream),
             ops: OpRegistry::new(),
-            name: path.to_string(),
-            pending: Some(first),
+            pending: None,
             line: 0,
             col: 0
         }
     }
 
-    pub fn position(&self) -> (&str,u32,u32) { (&self.name,self.line,self.col) }
+    pub fn position(&self) -> (&str,u32,u32) { 
+        (self.stream.name(),self.line,self.col)
+    }
 
     pub fn add_operator(&mut self, op: &str) {
         self.ops.add(op);
@@ -46,16 +38,12 @@ impl FileLexer {
         loop {
             let mut getting = LexerGetting::new();
             let stream = &mut self.stream;
-            if let Ok(ref mut stream) = stream {
-                let (line,col) = stream.position();
-                self.line = line;
-                self.col = col;
-                getting.go(stream,&self.ops);
-                if let Some(token) = getting.make_token() {
-                    return token;
-                }
-            } else {
-                return Token::EndOfFile(None);
+            let (line,col) = stream.position();
+            self.line = line;
+            self.col = col;
+            getting.go(stream,&self.ops);
+            if let Some(token) = getting.make_token() {
+                return token;
             }
         }
     }
@@ -78,10 +66,7 @@ impl FileLexer {
 
 #[cfg(test)]
 mod test {
-    use std::fs::read_to_string;
-
     use super::super::token::Token;
-    use super::super::charsource::StringCharSource;
     use super::*;
     use crate::testsuite::load_testdata;
 
@@ -93,7 +78,8 @@ mod test {
         let mut path = String::from_str("test:").ok().unwrap();
         path.push_str(path_in);
         let resolver = Rc::new(FileResolver::new());
-        let mut lexer = FileLexer::new(&resolver,&path);
+        let source = resolver.resolve(&path);
+        let mut lexer = FileLexer::new(source.ok().unwrap());
         lexer.add_operator(":=");
         lexer.add_operator("==");
         lexer.add_operator("+");
@@ -102,7 +88,7 @@ mod test {
         loop {
             let lx = &mut lexer;
             let tok = lx.get();
-            if let Token::EndOfFile(_) = tok { break; }
+            if let Token::EndOfFile = tok { break; }
             let (name,line,col) = lx.position();
             out.push((tok.clone(),name.to_string(),line,col));
         }
@@ -130,11 +116,5 @@ mod test {
     fn lexer_operator() {
         let res = try_lex("lexer/operator.in");
         compare_result(&res,&["lexer","operator.out"]);
-    }
-
-    #[test]
-    fn missing() {
-        let res = try_lex("missing");
-        compare_result(&res,&["lexer","missing.out"]);
     }
 }

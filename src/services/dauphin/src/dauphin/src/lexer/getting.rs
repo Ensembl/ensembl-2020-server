@@ -36,7 +36,7 @@ impl LexerGetting {
         }
     }
 
-    fn advance_char<F>(&mut self, cb: F, allow_bs : bool, stream: &mut CharSource) -> String where F: Fn(char) -> bool {
+    fn advance_char<F>(&mut self, cb: F, allow_bs : bool, stream: &mut dyn CharSource) -> String where F: Fn(char) -> bool {
         let mut out = String::new();
         let mut bs = false;
         while let Some(c) = stream.peek(1).chars().next() {
@@ -58,12 +58,12 @@ impl LexerGetting {
         out
     }
 
-    fn get_identifier(&mut self, stream: &mut CharSource) {
+    fn get_identifier(&mut self, stream: &mut dyn CharSource) {
         let out = self.advance_char(|c| identifier_stuff(c),false,stream);
         self.set_token(Token::Identifier(out));
     }
 
-    fn get_number(&mut self, stream: &mut CharSource) {
+    fn get_number(&mut self, stream: &mut dyn CharSource) {
         let out = self.advance_char(|c| c.is_ascii_digit() || c == '.',false,stream);
         if let Some(num) = out.parse::<f64>().ok() {
             self.set_token(Token::Number(num));
@@ -74,7 +74,7 @@ impl LexerGetting {
         }
     }
 
-    fn consume_comment(&mut self, stream: &mut CharSource) {
+    fn consume_comment(&mut self, stream: &mut dyn CharSource) {
         stream.advance(2);
         loop {
             self.advance_char(|c| c != '*',false,stream);
@@ -87,7 +87,7 @@ impl LexerGetting {
         }
     }
 
-    fn consume_string(&mut self, stream: &mut CharSource) {
+    fn consume_string(&mut self, stream: &mut dyn CharSource) {
         stream.advance(1);
         let out = self.advance_char(|c| c != '"',true,stream);
         if stream.advance(1) != "\"" {
@@ -96,7 +96,7 @@ impl LexerGetting {
         self.set_token(Token::LiteralString(out));
     }
 
-    fn consume_bytes(&mut self, stream: &mut CharSource) {
+    fn consume_bytes(&mut self, stream: &mut dyn CharSource) {
         stream.advance(1);
         let out = self.advance_char(|c| c != '\'',true,stream);
         if stream.advance(1) != "'" {
@@ -109,7 +109,7 @@ impl LexerGetting {
         }
     }
 
-    pub fn go(&mut self, stream: &mut CharSource, ops: &OpRegistry) {
+    pub fn go(&mut self, stream: &mut dyn CharSource, ops: &OpRegistry) {
         if let Some(c) = stream.peek(1).chars().next() {
             if identifier_stuff(c) {
                 self.get_identifier(stream);
@@ -130,7 +130,7 @@ impl LexerGetting {
                 self.set_token(Token::Other(c));
             }
         } else {
-            self.set_token(Token::EndOfFile(Some(stream.name().to_string())));
+            self.set_token(Token::EndOfFile);
         }
     }
 

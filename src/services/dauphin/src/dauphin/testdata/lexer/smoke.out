@@ -1,4 +1,3 @@
-StartOfFile("test:lexer/smoke.in") test:lexer/smoke.in 0,0
 Identifier("hello") test:lexer/smoke.in 1,1
 Operator(":=") test:lexer/smoke.in 1,7
 Other('[') test:lexer/smoke.in 1,10
