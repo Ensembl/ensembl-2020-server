@@ -1,17 +1,17 @@
-StartOfFile("test:lexer/smoke.in") 1,1 1,1
-Identifier("hello") 1,1 1,6
-Operator(":=") 1,7 1,9
-Other('[') 1,10 1,11
-Number(1.0) 1,11 1,12
-Other(',') 1,12 1,13
-Number(2.0) 1,13 1,14
-Other(',') 1,14 1,15
-Number(31.5) 1,15 1,19
-Other(']') 1,19 1,20
-Other(';') 1,20 1,21
-Other('\\') 1,21 1,22
-Identifier("n") 1,22 1,23
-Identifier("z") 1,24 1,25
-Operator(":=") 1,26 1,28
-Other('\\') 1,29 1,30
-Error("Unterminated string literal") 1,30 2,1
+StartOfFile("test:lexer/smoke.in") test:lexer/smoke.in 0,0
+Identifier("hello") test:lexer/smoke.in 1,1
+Operator(":=") test:lexer/smoke.in 1,7
+Other('[') test:lexer/smoke.in 1,10
+Number(1.0) test:lexer/smoke.in 1,11
+Other(',') test:lexer/smoke.in 1,12
+Number(2.0) test:lexer/smoke.in 1,13
+Other(',') test:lexer/smoke.in 1,14
+Number(31.5) test:lexer/smoke.in 1,15
+Other(']') test:lexer/smoke.in 1,19
+Other(';') test:lexer/smoke.in 1,20
+Other('\\') test:lexer/smoke.in 1,21
+Identifier("n") test:lexer/smoke.in 1,22
+Identifier("z") test:lexer/smoke.in 1,24
+Operator(":=") test:lexer/smoke.in 1,26
+Other('\\') test:lexer/smoke.in 1,29
+Error("Unterminated string literal") test:lexer/smoke.in 1,30
