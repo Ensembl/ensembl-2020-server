@@ -325,6 +325,43 @@ A procedure may define one or more of its arguments to be lvalues using the keyw
 **TODO** func syntax when tánaiste is defined.
 
 # Dauphin to Tánaiste Translation
+## Instruction Summary
+
+Validity:
+
+* '0': initial
+* '1': post struct/enum reduction
+* '2': post vec reduction
+
+| Instruction | Validity | Signature | S/E Reduction | V Reduction |
+|------------ | -----| ----- | -----| -----|
+| #nil | 012 | _ | none | none |
+| #number | 012 | number | none | none |
+| #bool | 012 | bool | none | none |
+| #string | 012 | string | none | none |
+| #bytes | 012 | bytes | none | none |
+| #list | 01 | vec(_) |  duplicate | see text |
+| #push | 01 | vec(X), X | duplicate | see text |
+| #struct:s | 0 | struct:s, s.0, s.1, ... | see text | N/A |
+| #enum | 0 | enum:e:B(X), X | see text | N/A |
+| #svalue:k | 0 | s.k, s | see text | N/A |
+| #evalue:e:A | 0 | e.A, e | see text | N/A |
+| #etest:e:A | 0 | bool, e | see text | N/A |
+| #refevalue | 0 | &e.A, &e | see text | N/A |
+| #refsvalue | 0 | &s.A, &s | see text | N/A |
+| #star | 01 | vec(X), X | duplicate |
+| #square | 01 | X, vec(X) | duplicate |
+| #refsquare | 01 | &X, &vec(X) | duplicate |
+| #at | 01 | number, vec(_) | duplicate |
+| #filter | 01 | X, X, bool | duplicate |
+| #reffilter | 01 | &X, &X, bool | duplicate |
+| #ref | 01 | &X, X |  duplicate |
+| #oper:X | 01 | **TODO** | **TODO** | **TODO**
+| #copy | 1 | X, X; &X, &X | N/A |
+| #numeq | 1 | bool, number, number | N/A |
+| #madd | 2 | X, X, X | N/A
+| #mlen | 2 | number, X | N/A
+| #extract | 2 | X, X, number, number | N/A
 
 ## Transformation into Cooked Instruction Form
 
@@ -622,6 +659,8 @@ And a second reduction
 #numeq %z %x %Zb;
 ```
 
+**TODO** nil optimisation
+
 ### Reducing lvalues
 
 Lvalues are represented at this stage by reference (`&`) types and at this stage we manipulate the `#ref`, remove `#refevalue` and `#refsvalue` and duplicate `#refsquare` instrustions. Because of the limited operations performable on lvalues, the register contained within a reference type is always statically determinable. `#refevalue` and `#refsvalue` are replaced with `#copy`s of the relevant subregister.
@@ -678,7 +717,6 @@ will be reduced to the following form:
 
 ### Instruction Transformation
 
-**TODO** nil optimisation
 
 * `#nil`, `#number`, `#bool`, `#string`, `#bytes`, `#numeq` do not take the types transformed in the first transformation.
 * `#struct:`, `#enum:`, `#etest:`, `#evalue:`, `#svalue:`, `#refevalue:`, `#refsvalue:` do not survive the transformation, the new forms are given above.
@@ -734,221 +772,213 @@ which reduces to:
 
 Once structs and enums have been reduced, vectors are reduced which is slightly more challenging. Many more unused allocations are created, including many redundant vector layers. These are later removed in optimisation steps.
 
-A vector of type `vec(X)` stored in register `%r` is replaced by three registers.
+In contrast to struct/enum reduction, vector reduction is recursive, that is it works from the inside out. 
 
-* `%r` a register of type `X` containing the values
+Whereas Dauphin appears to support multi-dimensional vecs, in reality a single dimension is supported, per tánaiste, corersponding to the multivalue level. Everything else is a fat pointer into such data. As Dauphin programs are short-lived space is not automatically reclaimed on being freed: `*x[]`, however, will cause reclamation through reconstructing an array.
+
+A vector of type `vec(X)` stored in register `%r`, where X is an atomic type, is replaced by three registers.
+
+* `%r:v` a register of type `X` containing the values
 * `%r:s` a register of type `number` containing offsets to the start of each entry.
 * `%r:n` a register of type `number` containing the length of each entry.
 
-Entries may have length not equal to one because registers contain multivalues not monovalues.
+all atomic.
+
+### Constructor and Deconstructor Reductions
+
+At the bottom level:
 
 * `#vec` is replaced by a sequence to initialise all three of these variables with nil.
+* `#push` is replaced by a series of `#madd` and `#mlen` to add the multivalue to the array.
+* `#star` is replaced by a sequence to initialise the variables.
+* `#square` is replaced by `#extract %out %r:v %r:s %r:n` which takes segments from `%r:v` according to `%r:s` and `%r:n` to build `%out` as a multivalue of contents. Non bottom-level squares are duplicated.
 
-* `#square` is replaced by `#vecsquare %out %r %r:s %r:n` which takes segments from `%r` according to `%r:s` and `%r:n` to build `%out` as a multivalue of contents. (A later optimisation step optimises this operation to a copy of `%r` when it can be shown that the input register is *complete*, that is `%r:n` sums to the length of `%r`).
+At higher levels these instructions are duplicated across subresisters.
 
-* `#refsquare` is similarly replaced by `#refvecsquare`.
 
-* `#star` is replaced by a constructor which populates the start and length variables with the correct data, and copies the values into `%r`. `#mlen %len %r` sets `%len` to a single `number` being the number of entries in the `%r` multival.
+`#extract` is later optimised in cases where the compiler can prove it dense.
 
-* `#push` is replaced by an operation `#madd %out %a %b`, which concatenates multivalues, and use of `#mlen` to update values of the auxilliary registers.
-
-* `#nil`, `#number`, `#bool`, `#string`, `#bytes`, and `#numeq` are unaffected by this transform as they do not manipulate the relevant types.
-
-* `#copy` and `#ref` are duplicated across subregisters.
-
-* `#at` is replaced by an `#mlen` on `%r:n` followed by an `#at` on the generated `number`.
-
-* `#filter %out %in %filter` of a vec is replaced by calls to `#filter %out %in %filter` on the start and length. Note that the value is not reduced in size. `*x[]` achives this if necessary.
-
-* Similarly, `#reffilter %out %in %filter` on a vec is replaced by calls to `#reffilter %out %in %filter` on the start and length.
-
-* `#refvecsquare` `#vecsquare` `#madd` `#mlen` **TODO**
-
-For example, consider this (somewhat unnecessary) code:
-
-```
-x := [1];
-y := *x[];
-```
-
-which initially compiles to
-
-```
-#vec %x;
-#number %1 1;
-#push %x %1;
-#square %t %x;
-#star %y %t;
-```
-
-which, after transformation, becomes:
-
-```
-/* #vec */
-#nil %x;
-#nil %x:s;
-#nil %x:n;
-/* #number */
-#number %1 1;
-/* #push */
-#madd %x %1;
-#mlen %xlen %x;
-#madd %x:s %xlen;
-#mlen %vlen %1;
-#madd %x:n %vlen;
-/* #square */
-#vecsquare %t %x %x:s %x:n;
-/* #star */
-#copy %y %t;
-#nil %y:s;
-#number %0 0;
-#madd %y:s %0;
-#nil %y:n;
-#mlen %tlen %t;
-#madd %y:n %tlen;
-```
-
-And in the following code:
-
-```
-x := [1,2,3];
-y := x[$>1];
-```
-
-the second line initially compiles to:
-
-```
-#number %1 1;
-#oper:gt %t %x %1;
-#filter %y %x %t;
-```
-
-which is transformed into:
-
-```
-#number %1 1;
-#oper:gt %t %x %1;
-#copy %y %x;
-#select %y:s %x:s %t;
-#select %y:n %x:n %t;
-```
-
-As an lvalue exmaple, the second line of:
-
-```
-x := [1,2,3];
-x[$>1] := 0;
-```
-
-which initially compiles to:
-
-```
-#ref %rx %x;
-#refsquare %rs %rx;
-#number %1 1;
-#oper:gt %filter %x %1;
-#reffilter %rt %rs %filter;
-#number %0 0;
-#oper:assign %rt %0;
-```
-
-is transformed into:
-
-**TODO** oper list ABI here at ...
-
-```
-#ref %rx %x;
-#ref %rx:s %x:s;
-#ref %rx:n %x:n;
-#refvecsquare %rs %rx %rx:s %rx:n;
-#number %1 1;
-#oper:gt %filter %rs %1;
-#copy %rt %rs;
-#reffilter %rt:s %rs:s %filter;
-#reffilter %rt:n %rs:n %filter;
-#number %0 0;
-#oper:assign %rt... %0;
-```
-
-As an example of a 2D vector, consider
+To show these transforms, consider:
 
 ```
 x := [[1,2],[3,4]];
+y := x[@==1][$>2];
 ```
 
-which initially compiles to:
+This is shorthand for:
 
 ```
-#number %1 1;
-#number %2 2;
-#number %3 3;
-#number %4 4;
+x := [[1,2],[3,4]];
+y := *x[]{$==2}[]{$==3};
+```
+
+Which has initial form (assuming number constants):
+
+```
 #vec %a;
 #push %a %1;
 #push %a %2;
 #vec %b;
-#push %b %1;
-#push %b %2;
+#push %b %3;
+#push %b %4;
 #vec %x;
 #push %x %a;
 #push %x %b;
+#square %xs %x;
+#oper:eq %f1 %xs %2;
+#filter %t1 %xs %f1;
+#square %t2 %t1;
+#oper:gt %f2 %t2 %2;
+#filter %t3 %t2 %f2;
+#star %y %t3;
 ```
 
-After the first iteration this becomes the following. Note that `#mlen` ... `%a` and `#mlen` ... `%b` is one, even though they are arrays.
+which is unaltered by S/R reduction, V-reducing a, b gives:
 
 ```
-/* inner arrays */
-#number %1 1;
-#number %2 2;
-#number %3 3;
-#number %4 4;
-#vec %a;
-#push %a %1;
-#push %a %2;
-#vec %b;
-#push %b %1;
-#push %b %2;
-#nil %x;
-#nil %x:s;
-#nil %x:n;
-/* push %a */
-#mlen %xlen %x;
-#madd %x:s %xlen;
-#mlen %alen %a;
-#madd %x:n %alen;
-/* push %b */
-#mlen %xlen %x;
-#madd %x:s %xlen;
-#mlen %blen %b;
-#madd %x:n %blen;
-```
-
-After the second iteration, the inner vecs get resolved. After the first iteration the remaining array registers are `%a`, `%b`, `%x`.
-
-```
-/* inner arrays */
-#number %1 1;
-#number %2 2;
-#number %3 3;
-#number %4 4;
-/* push 1 */
-#nil %a;
+#nil %a:v;
 #nil %a:s;
 #nil %a:n;
+#mlen %alen %a:v;
+#madd %a:s %alen;
 #mlen %1len %1;
-#madd %a:s %1len;
-#mlen %alen %a;
-#madd %a:n %alen;
-/* ... same for 2, 3, 4 creating %b %b:s %b:n */
-/* create x */
-#nil %x;
-#nil %x:s;
-#nil %x:n;
-/* push %a */
-#mmerge %x %x:s %x:n %a %a:s %a:n;
-/* push %b */
-#mmerge %x %x:s %x:n %b %b:s %b:n;
+#madd %a:n %1len;
+#madd %a:v %1;
+#mlen %alen %a:v;
+#madd %a:s %alen;
+#mlen %2len %2;
+#madd %a:n %2len;
+#madd %a:v %2;
+#nil %b:v;
+#nil %a:s;
+#nil %b:n;
+#mlen %blen %b:v;
+#madd %b:s %blen;
+#mlen %3len %3;
+#madd %b:n %3len;
+#madd %b:v %3;
+#mlen %blen %b:v;
+#madd %b:s %blen;
+#mlen %4len %4;
+#madd %b:n %4len;
+#madd %b:v %4;
+#vec %x:v;
+#vec %x:s;
+#vec %x:n;
+#push %x:v %a:v;
+#push %x:s %a:s;
+#push %x:n %a:n;
+#push %x:v %b:v;
+#push %x:s %b:s;
+#push %x:n %b:n;
+#square %xs:v %x:v;
+#square %xs:s %x:s;
+#square %xs:n %x:n;
+/* NB. x, y: vec(number); xs, t1, t2, t3: number */
+#oper:eq %f1 **TODO** %2;
+#filter %t1:v %xs:v %f1;
+#filter %t1:s %xs:s %f1;
+#filter %t1:n %xs:n %f1;
+#extract %t2 %t1:v %t1:s %t1:n;
+#oper:gt %f2 %t2 %2;
+#filter %t3 %t2 %f2;
+#star %y %t3;
 ```
+
+V-reducing again gives:
+```
+#nil %a:v;
+#nil %a:s;
+#nil %a:n;
+#mlen %alen %a:v;
+#madd %a:s %alen;
+#mlen %1len %1;
+#madd %a:n %1len;
+#madd %a:v %1;
+#mlen %alen %a:v;
+#madd %a:s %alen;
+#mlen %2len %2;
+#madd %a:n %2len;
+#madd %a:v %2;
+#nil %b:v;
+#nil %a:s;
+#nil %b:n;
+#mlen %blen %b:v;
+#madd %b:s %blen;
+#mlen %3len %3;
+#madd %b:n %3len;
+#madd %b:v %3;
+#mlen %blen %b:v;
+#madd %b:s %blen;
+#mlen %4len %4;
+#madd %b:n %4len;
+#madd %b:v %4;
+
+#nil %x:v:v;
+#nil %x:v:s;
+#nil %x:v:n;
+#nil %x:s:v;
+#nil %x:s:s;
+#nil %x:s:n;
+#nil %x:n:v;
+#nil %x:n:s;
+#nil %x:n:n;
+
+#mlen %xvlen %x:v:v;
+#madd %x:v:s %xvlen;
+#mlen %alen %a:v;
+#madd %x:v:n %alen;
+#madd %x:v:v %a:v;
+
+#mlen %xslen %x:s:v;
+#madd %x:s:s %xslen;
+#mlen %alen %a:s;
+#madd %x:s:n %alen;
+#madd %x:s:v %a:s;
+
+#mlen %xnlen %x:n:v;
+#madd %x:n:s %xnlen;
+#mlen %alen %a:n;
+#madd %x:n:n %alen;
+#madd %x:n:v %a:n;
+
+#mlen %xvlen %x:v:v;
+#madd %x:v:s %xvlen;
+#mlen %blen %b:v;
+#madd %x:v:n %blen;
+#madd %x:v:v %b:v;
+
+#mlen %xslen %x:s:v;
+#madd %x:s:s %xslen;
+#mlen %blen %b:s;
+#madd %x:s:n %blen;
+#madd %x:s:v %b:s;
+
+#mlen %xnlen %x:n:v;
+#madd %x:n:s %xnlen;
+#mlen %blen %b:n;
+#madd %x:n:n %blen;
+#madd %x:n:v %b:n;
+
+#extract %xs:v %x:v:v %x:v:s %x:v:n;
+#extract %xs:s %x:s:v %x:s:s %x:s:n;
+#extract %xs:n %x:n:v %x:n:s %x:n:n;
+
+#oper:eq %f1 **TODO** %2;
+
+#filter %t1:v %xs:v %f1;
+#filter %t1:s %xs:s %f1;
+#filter %t1:n %xs:n %f1;
+
+
+
+#extract %t2 %t1:v %t1:s %t1:n;
+#oper:gt %f2 %t2 %2;
+#filter %t3 %t2 %f2;
+#star %y %t3;
+```
+
+
 
 **TODO** `#mmerge`
 
