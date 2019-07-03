@@ -242,7 +242,7 @@ An expression macro call is introduced by "`expr` name`(`X,Y,Z`) {` expression `
 
 A statement or macro (of either kind) can have an additional inline syntax. Such an inline syntax can be unary or binary. The inline can be declared left or right associative (if binary). Inline syntax is syntactic sugar for a given operator or statement. An inlining is declared in the preamble of a dauphin program where it associates itself with a corresponding operator, statement or macro. As operators, statements, and macros occupy the same namespace, this is unambiguous.
 
-A preamble takes the form "`inline ` inline-syntax op-or-stmt-name nature precedence". Here nature is one of `infixl`, `infixr`, `unary`. and precedence is a number (low is tighter). For example `inline + plus infixr 2`. Where appropriate it is recommended to use the same precedence numbers as those of C/C++. 
+A preamble takes the form "`inline ` inline-syntax op-or-stmt-name nature precedence". Here nature is one of `left`, `right`, `prefix`. and precedence is a number (low is tighter). For example `inline "+" plus rightinfixr 2`. Where appropriate it is recommended to use the same precedence numbers as those of C/C++. 
 
 ### Valid syntax
 

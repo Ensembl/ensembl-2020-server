@@ -1,78 +1,84 @@
 use crate::lexer::{ Lexer, Token };
 
-use super::node::Statement;
+use super::inline::{ Inline, InlineStore, InlineMode };
+use super::node::{ Statement, ParseError };
+use super::lexutil::{ get_string, get_other, not_reserved, get_identifier, get_number, get_operator };
 use super::preproc::preprocess;
 
 /* https://steinwaywu.ghost.io/operator-precedence-climbing-parsing-with-user-defined-operators/ */
 
 struct Parser {
-    lexer: Lexer    
-}
-
-fn is_reserved(s: &str) -> bool {
-    s == "reserved"
+    lexer: Lexer,
+    inlines: InlineStore
 }
 
 impl Parser {
     fn new(lexer: Lexer) -> Parser {
         Parser {
-            lexer
+            lexer,
+            inlines: InlineStore::new()
         }
     }
 
-    fn parse_import(&mut self) -> Statement {
+    fn parse_import(&mut self) -> Result<Statement,Vec<ParseError>> {
         self.lexer.get();
-        if let Token::LiteralString(loc) = self.lexer.get() {
-            Statement::Import(loc)
-        } else {
-            Statement::Error("bad import statement".to_string())
-        }
+        Ok(Statement::Import(get_string(&mut self.lexer)?))
     }
 
-    fn parse_statement(&mut self) -> Option<Statement> {
+    fn parse_inline(&mut self) -> Result<Statement,Vec<ParseError>> {
+        self.lexer.get();
+        let symbol = get_string(&mut self.lexer)?;
+        let name = get_identifier(&mut self.lexer)?;
+        let mode = match &get_identifier(&mut self.lexer)?[..] {
+            "left" => Ok(InlineMode::LeftAssoc),
+            "right" => Ok(InlineMode::RightAssoc),
+            "prefix" => Ok(InlineMode::Prefix),
+            x => Err(vec![ParseError::new("Bad oper mode, expected left, right, or prefix",&mut self.lexer)])
+        }?;
+        let prio = get_number(&mut self.lexer)?;
+        Ok(Statement::Inline(symbol,name,mode,prio))
+    }
+
+    fn parse_regular(&mut self) -> Result<Statement,Vec<ParseError>> {
+        // TODO
+        get_identifier(&mut self.lexer)?;
+        let op = get_operator(&mut self.lexer)?;
+        get_identifier(&mut self.lexer)?;
+        Ok(Statement::Regular(op))
+    }
+
+    fn parse_statement(&mut self) -> Result<Statement,Vec<ParseError>> {
         let token = self.lexer.peek();
-        print!("token: {:?}\n",token);
         if let Token::Identifier(id) = token {
             let out = match &id[..] {
-                "import" => Some(self.parse_import()),
-                x => if is_reserved(x) {
-                    Some(Statement::Error(format!("Reserved keyword '{}' found",x)))
-                } else {
-                    Some(Statement::Error("TODO".to_string()))
+                "import" => self.parse_import(),
+                "inline" => self.parse_inline(),
+                x => {
+                    not_reserved(&x.to_string(),&mut self.lexer)?;
+                    self.parse_regular()
                 }
-            };
-            if out.is_none() {
-                return out;
-            }
-            if let Some(Statement::Error(_)) = out {
-                return out;
-            }
-            if out.is_some() && self.lexer.get() != Token::Other(';') {
-                Some(Statement::Error("Unterminated statement".to_string()))
-            } else {
-                out
-            }
+            }?;
+            get_other(&mut self.lexer,";")?;
+            Ok(out)
         } else {
-            Some(Statement::Error("TODO".to_string()))
+            Err(vec![ParseError::new("TODO",&mut self.lexer)])
         }
     }
 
-    fn try_get_preprocessed_statement(&mut self) -> Option<Statement> {
-        if let Some(stmt) = self.parse_statement() {
-            match preprocess(&stmt,&mut self.lexer) {
-                Ok(true) => None,  /* preprocessed, so consumed */
-                Ok(false) => Some(stmt), /* not preprocessed, so still exists */
-                Err(error) => Some(Statement::Error(error))
-            }
-        } else {
-            None
-        }
+    fn preprocess_stmt(&mut self, stmt: Statement) -> Result<Option<Statement>,Vec<ParseError>> {
+        preprocess(&stmt,&mut self.lexer,&mut self.inlines).map(|done| if done { None } else { Some(stmt) })
     }
 
-    fn get_preprocessed_statement(&mut self) -> Statement {
+    fn try_get_preprocessed_statement(&mut self) -> Result<Option<Statement>,Vec<ParseError>> {
+        self.parse_statement().and_then(|stmt| self.preprocess_stmt(stmt))
+    }
+
+    fn get_preprocessed_statement(&mut self) -> Result<Statement,Vec<ParseError>> {
         loop {
-            if let Some(stmt) = self.try_get_preprocessed_statement() {
-                return stmt;
+            match self.try_get_preprocessed_statement() {
+                Ok(Some(stmt)) => return Ok(stmt),
+                Ok(None) => (),
+                Err(errors) => return Err(errors)
             }
         }
     }
@@ -90,7 +96,7 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("data: import \"x\";").ok();
         let mut p = Parser::new(lexer);
-        assert_eq!(Some(Statement::Import("x".to_string())),p.parse_statement());
+        assert_eq!(Ok(Statement::Import("x".to_string())),p.parse_statement());
     }
 
     #[test]
@@ -99,7 +105,7 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("data: import \"data: *;\";").ok();
         let mut p = Parser::new(lexer);
-        preprocess(&p.parse_statement().unwrap(),&mut p.lexer).expect("100");
+        p.parse_statement().map(|stmt| preprocess(&stmt,&mut p.lexer,&mut p.inlines)).expect("failed");
         let tok = p.lexer.get().clone();
         assert_eq!(Token::Other('*'),tok);
         assert_eq!("data: *;".to_string(),p.lexer.position().0);
@@ -111,6 +117,15 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/import-smoke.dp").expect("cannot load file");
         let mut p = Parser::new(lexer);
-        assert_eq!(Statement::Error("Reserved keyword 'reserved' found".to_string()),p.get_preprocessed_statement());
+        assert_eq!("Reserved keyword 'reserved' found at line 1 column 1 in test:parser/import-smoke2.dp",p.get_preprocessed_statement().err().unwrap()[0].message());
+    }
+
+    #[test]
+    fn test_inline() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:parser/inline-smoke.dp").expect("cannot load file");
+        let mut p = Parser::new(lexer);
+        assert_eq!(Ok(Statement::Regular(":=".to_string())),p.get_preprocessed_statement());
     }
 }

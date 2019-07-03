@@ -1,0 +1,2 @@
+inline ":=" assign left 14;
+x := y;

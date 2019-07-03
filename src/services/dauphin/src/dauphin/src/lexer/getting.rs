@@ -1,5 +1,5 @@
 use super::charsource::CharSource;
-use super::opregistry::OpRegistry;
+use super::inlinetokens::InlineTokens;
 use super::token::Token;
 
 pub struct LexerGetting {
@@ -109,7 +109,7 @@ impl LexerGetting {
         }
     }
 
-    pub fn go(&mut self, stream: &mut dyn CharSource, ops: &OpRegistry) {
+    pub fn go(&mut self, stream: &mut dyn CharSource, ops: &InlineTokens) {
         if let Some(c) = stream.peek(1).chars().next() {
             if identifier_stuff(c) {
                 self.get_identifier(stream);

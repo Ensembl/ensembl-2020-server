@@ -2,14 +2,14 @@ use std::collections::{ HashSet, HashMap };
 
 use super::charsource::CharSource;
 
-struct OpRegistryLen {
+struct InlineTokensLen {
     len: usize,
     set: HashSet::<String>
 }
 
-impl OpRegistryLen {
-    fn new(len: usize) -> OpRegistryLen {
-        OpRegistryLen {
+impl InlineTokensLen {
+    fn new(len: usize) -> InlineTokensLen {
+        InlineTokensLen {
             len,
             set: HashSet::new()
         }
@@ -25,14 +25,14 @@ impl OpRegistryLen {
     }
 }
 
-pub struct OpRegistry {
-    lens: HashMap<usize,OpRegistryLen>,
+pub struct InlineTokens {
+    lens: HashMap<usize,InlineTokensLen>,
     starts: HashMap<char,HashSet<usize>>
 }
 
-impl OpRegistry {
-    pub fn new() -> OpRegistry {
-        OpRegistry {
+impl InlineTokens {
+    pub fn new() -> InlineTokens {
+        InlineTokens {
             lens: HashMap::new(),
             starts: HashMap::new()
         }
@@ -54,7 +54,7 @@ impl OpRegistry {
     pub fn add(&mut self, op: &str) {
         let len = op.len();
         if let Some(start) = op.chars().next() {
-            let r = self.lens.entry(len).or_insert_with(|| OpRegistryLen::new(len));
+            let r = self.lens.entry(len).or_insert_with(|| InlineTokensLen::new(len));
             r.add(op);
             self.starts.entry(start).or_insert_with(|| HashSet::new()).insert(len);
         }

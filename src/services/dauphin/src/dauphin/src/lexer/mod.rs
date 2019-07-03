@@ -3,7 +3,7 @@ mod filelexer;
 mod fileresolver;
 mod lexer;
 mod token;
-mod opregistry;
+mod inlinetokens;
 mod getting;
 
 pub use self::fileresolver::FileResolver;

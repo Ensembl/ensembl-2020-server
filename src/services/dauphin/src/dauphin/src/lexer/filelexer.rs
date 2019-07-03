@@ -3,13 +3,12 @@ use std::rc::Rc;
 
 use super::charsource::{ CharSource, LocatedCharSource };
 use super::fileresolver::FileResolver;
-use super::opregistry::OpRegistry;
+use super::inlinetokens::InlineTokens;
 use super::getting::LexerGetting;
 use super::token::Token;
 
 pub struct FileLexer {
     stream: LocatedCharSource,
-    ops: OpRegistry,
     pending: Option<Token>,
     line: u32,
     col: u32
@@ -19,7 +18,6 @@ impl FileLexer {
     pub fn new(stream: Box<dyn CharSource>) -> FileLexer {
         FileLexer {
             stream: LocatedCharSource::new(stream),
-            ops: OpRegistry::new(),
             pending: None,
             line: 0,
             col: 0
@@ -30,36 +28,32 @@ impl FileLexer {
         (self.stream.name(),self.line,self.col)
     }
 
-    pub fn add_operator(&mut self, op: &str) {
-        self.ops.add(op);
-    }
-
-    fn more(&mut self) -> Token {
+    fn more(&mut self, ops: &InlineTokens) -> Token {
         loop {
             let mut getting = LexerGetting::new();
             let stream = &mut self.stream;
             let (line,col) = stream.position();
             self.line = line;
             self.col = col;
-            getting.go(stream,&self.ops);
+            getting.go(stream,ops);
             if let Some(token) = getting.make_token() {
                 return token;
             }
         }
     }
 
-    pub fn peek(&mut self) -> &Token {
+    pub fn peek(&mut self, ops: &InlineTokens) -> &Token {
         if self.pending.is_none() {
-            self.pending = Some(self.more());
+            self.pending = Some(self.more(ops));
         }
         self.pending.as_ref().unwrap()
     }
 
-    pub fn get(&mut self) -> Token {
+    pub fn get(&mut self, ops: &InlineTokens) -> Token {
         if self.pending.is_some() {
             self.pending.take().unwrap()
         } else {
-            self.more()
+            self.more(ops)
         }
     }
 }
@@ -80,14 +74,15 @@ mod test {
         let resolver = Rc::new(FileResolver::new());
         let source = resolver.resolve(&path);
         let mut lexer = FileLexer::new(source.ok().unwrap());
-        lexer.add_operator(":=");
-        lexer.add_operator("==");
-        lexer.add_operator("+");
-        lexer.add_operator("-");
+        let mut ops = InlineTokens::new();
+        ops.add(":=");
+        ops.add("==");
+        ops.add("+");
+        ops.add("-");
         let mut out = Vec::new();
         loop {
             let lx = &mut lexer;
-            let tok = lx.get();
+            let tok = lx.get(&ops);
             if let Token::EndOfFile = tok { break; }
             let (name,line,col) = lx.position();
             out.push((tok.clone(),name.to_string(),line,col));

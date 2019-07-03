@@ -1,10 +1,12 @@
 use super::filelexer::FileLexer;
 use super::fileresolver::FileResolver;
+use super::inlinetokens::InlineTokens;
 use super::token::Token;
 
 pub struct Lexer {
     resolver: FileResolver,
     files: Vec<FileLexer>,
+    inlines: InlineTokens,
     end: Token
 }
 
@@ -12,9 +14,14 @@ impl Lexer {
     pub fn new(resolver: FileResolver) -> Lexer {
         Lexer {
             resolver,
+            inlines: InlineTokens::new(),
             files: Vec::new(),
             end: Token::EndOfLex
         }
+    }
+
+    pub fn add_inline(&mut self, s: &str) {
+        self.inlines.add(s);
     }
 
     pub fn import(&mut self, path: &str) -> Result<(),String> {
@@ -33,7 +40,7 @@ impl Lexer {
 
     pub fn peek(&mut self) -> &Token {
         if let Some(last) = self.files.last_mut() {
-            last.peek()
+            last.peek(&self.inlines)
         } else {
             &self.end
         }
@@ -41,7 +48,7 @@ impl Lexer {
 
     pub fn get(&mut self) -> Token {
         if let Some(last) = self.files.last_mut() {
-            let tok = last.get();
+            let tok = last.get(&self.inlines);
             if let Token::EndOfFile = tok {
                 self.files.pop();
             }
