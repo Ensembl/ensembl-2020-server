@@ -1,0 +1,8 @@
+assign(x,y)
+assign(x,plus(multiply(2,2),multiply(3,3)))
+assign(x,plus(2,plus(multiply(2,3),3)))
+assign(x,plus(2,plus(2,plus(3,3))))
+assign(x,minus(minus(minus(2,2),3),3))
+assign(x,multiply(2,multiply(plus(2,3),3)))
+assign(plus(z,z),true)
+assign(y,plus(2,twiddle(3)))

@@ -1,0 +1,18 @@
+proc assign;
+func plus;
+func multiply;
+func minus;
+func twiddle;
+inline ":=" assign left 14;
+inline "+" plus right 6;
+inline "-" minus left 6;
+inline "*" multiply right 5;
+inline "-" twiddle prefix 3;
+x := y;
+assign(x,2*2+3*3);
+assign(x,2+2*3+3);
+assign(x,2+2+3+3);
+assign(x,2-2-3-3);
+assign(x,2*(2+3)*3);
+assign(plus(z,z),true);
+assign(y,2+-3);
