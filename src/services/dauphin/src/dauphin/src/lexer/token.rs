@@ -1,7 +1,7 @@
 #[derive(Debug,PartialEq,Clone)]
 pub enum Token {
     Identifier(String),
-    Number(f64),
+    Number(f64,String),
     Operator(String),
     Other(char),
     Error(String),

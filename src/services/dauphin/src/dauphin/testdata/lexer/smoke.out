@@ -1,11 +1,11 @@
 Identifier("hello") test:lexer/smoke.in 1,1
 Operator(":=") test:lexer/smoke.in 1,7
 Other('[') test:lexer/smoke.in 1,10
-Number(1.0) test:lexer/smoke.in 1,11
+Number(1.0, "1") test:lexer/smoke.in 1,11
 Other(',') test:lexer/smoke.in 1,12
-Number(2.0) test:lexer/smoke.in 1,13
+Number(2.0, "2") test:lexer/smoke.in 1,13
 Other(',') test:lexer/smoke.in 1,14
-Number(31.5) test:lexer/smoke.in 1,15
+Number(31.5, "31.5") test:lexer/smoke.in 1,15
 Other(']') test:lexer/smoke.in 1,19
 Other(';') test:lexer/smoke.in 1,20
 Other('\\') test:lexer/smoke.in 1,21

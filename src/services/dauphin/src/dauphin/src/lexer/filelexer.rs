@@ -77,6 +77,7 @@ mod test {
         let mut ops = InlineTokens::new();
         ops.add(":=");
         ops.add("==");
+        ops.add("=");
         ops.add("+");
         ops.add("-");
         let mut out = Vec::new();

@@ -27,7 +27,7 @@ impl InlineTokensLen {
 
 pub struct InlineTokens {
     lens: HashMap<usize,InlineTokensLen>,
-    starts: HashMap<char,HashSet<usize>>
+    starts: HashMap<char,Vec<i32>>
 }
 
 impl InlineTokens {
@@ -42,8 +42,9 @@ impl InlineTokens {
         if let Some(start) = cs.peek(1).chars().next() {
             if let Some(lens) = self.starts.get(&start) {
                 for len in lens {
-                    if self.lens.get(len).unwrap().contains(cs) {
-                        return Some(cs.advance(*len));
+                    let len = *len as usize;
+                    if self.lens.get(&len).unwrap().contains(cs) {
+                        return Some(cs.advance(len));
                     }
                 }
             }
@@ -56,7 +57,9 @@ impl InlineTokens {
         if let Some(start) = op.chars().next() {
             let r = self.lens.entry(len).or_insert_with(|| InlineTokensLen::new(len));
             r.add(op);
-            self.starts.entry(start).or_insert_with(|| HashSet::new()).insert(len);
+            let lens = self.starts.entry(start).or_insert_with(|| Vec::new());
+            lens.push(len as i32);
+            lens.sort_by_key(|k| -k);
         }
     }
 }

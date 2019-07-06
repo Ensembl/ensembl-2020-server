@@ -35,7 +35,8 @@ impl Parser {
             "left" => Ok(InlineMode::LeftAssoc),
             "right" => Ok(InlineMode::RightAssoc),
             "prefix" => Ok(InlineMode::Prefix),
-            x => Err(ParseError::new("Bad oper mode, expected left, right, or prefix",&mut self.lexer))
+            "suffix" => Ok(InlineMode::Suffix),
+            x => Err(ParseError::new("Bad oper mode, expected left, right, prefix, or suffix",&mut self.lexer))
         }?;
         let prio = get_number(&mut self.lexer)?;
         Ok(ParserStatement::Inline(symbol,name,mode,prio))
@@ -96,7 +97,7 @@ impl Parser {
     fn parse_atom(&mut self) -> Result<Expression,ParseError> {
         Ok(match self.lexer.get() {
             Token::Identifier(id) => self.parse_atom_id(&id)?,
-            Token::Number(num) => Expression::Number(num),
+            Token::Number(num,_) => Expression::Number(num),
             Token::LiteralString(s) => Expression::LiteralString(s),
             Token::LiteralBytes(b) => Expression::LiteralBytes(b),
             Token::Other('(') => {
@@ -104,54 +105,88 @@ impl Parser {
                 get_other(&mut self.lexer,")")?;
                 out
             },
-            Token::Operator(op) => self.unary_op(&op)?,
+            Token::Operator(op) => self.parse_prefix(&op)?,
             _ => Err(ParseError::new(&format!("Expected expression"),&mut self.lexer))?
         })
     }
 
-    fn unary_op(&mut self, op: &str) -> Result<Expression,ParseError> {
+    fn parse_prefix(&mut self, op: &str) -> Result<Expression,ParseError> {
         if self.defstore.stmt_like(op, &mut self.lexer).unwrap_or(false) { /* stmt-like */
             return Err(ParseError::new("Unexpected statement",&mut self.lexer));
         }
         let inline = self.defstore.get_inline_unary(op,&mut self.lexer)?;
-        Ok(Expression::Operator(inline.name().to_string(),vec![
-            self.parse_expr_level(Some(inline.precedence()),true)?
-        ]))
+        if inline.mode() != &InlineMode::Prefix {
+            return Err(ParseError::new("Not a prefix operator",&mut self.lexer));
+        }
+        let name = inline.name().to_string();
+        let expr = self.parse_expr_level(Some(inline.precedence()),true)?;
+        Ok(match &name[..] {
+            "__star__" => Expression::Star(Box::new(expr)),
+            _ => Expression::Operator(name.to_string(),vec![expr])
+        })
     }
 
-    fn continue_op(&mut self, op: &str, min: Option<f64>, oreq: bool) -> Result<Option<(String,Option<f64>,bool)>,ParseError> {
-        let inline = self.defstore.get_inline_binary(op,&mut self.lexer)?;
+    fn parse_binary_right(&mut self, left: Expression, name: &str, min: f64, oreq: bool) -> Result<Expression,ParseError> {
+        self.lexer.get();
+        let right = self.parse_expr_level(Some(min),oreq)?;
+        Ok(Expression::Operator(name.to_string(),vec![left,right]))
+    }
+
+    fn parse_brackets(&mut self, left: Expression) -> Result<Expression,ParseError> {
+        if let Token::Other(']') = self.lexer.peek() {
+            self.lexer.get();
+            Ok(Expression::Square(Box::new(left)))
+        } else {
+            let inside = self.parse_expr()?;
+            get_other(&mut self.lexer, "]")?;
+            Ok(Expression::Bracket(Box::new(left),Box::new(inside)))
+        }
+    }
+
+    fn parse_suffix(&mut self, left: Expression, name: &str) -> Result<Expression,ParseError> {
+        self.lexer.get();
+        Ok(match &name[..] {
+            "__sqopen__" => self.parse_brackets(left)?,
+            "__dot__" => Expression::Dot(Box::new(left),get_identifier(&mut self.lexer)?),
+            "__query__" => Expression::Query(Box::new(left),get_identifier(&mut self.lexer)?),
+            "__pling__" => Expression::Pling(Box::new(left),get_identifier(&mut self.lexer)?),
+            _ => Expression::Operator(name.to_string(),vec![left])
+        })
+    }
+
+    fn extend_expr(&mut self, left: Expression, symbol: &str, min: Option<f64>, oreq: bool) -> Result<(Expression,bool),ParseError> {
+        let inline = self.defstore.get_inline_binary(symbol,&mut self.lexer)?;
         let prio = inline.precedence();
         if let Some(min) = min {
             if prio > min || (prio==min && !oreq) {
-                return Ok(None);
+                return Ok((left,false));
             }
         }
         let name = inline.name().to_string();
         if self.defstore.stmt_like(&name,&mut self.lexer)? {
-            return Ok(None);
+            return Ok((left,false));
         }
         Ok(match *inline.mode() {
-            InlineMode::LeftAssoc => Some((name,Some(prio),false)),
-            InlineMode::RightAssoc => Some((name,Some(prio),true)),
-            InlineMode::Prefix => None
+            InlineMode::LeftAssoc => (self.parse_binary_right(left,&name,prio,false)?,true),
+            InlineMode::RightAssoc => (self.parse_binary_right(left,&name,prio,true)?,true),
+            InlineMode::Prefix => (left,false),
+            InlineMode::Suffix => (self.parse_suffix(left,&name)?,true)
         })
     }
 
     fn parse_expr_level(&mut self, min: Option<f64>, oreq: bool) -> Result<Expression,ParseError> {
         let mut out = self.parse_atom()?;
         loop {
-            if let Token::Operator(op) = self.lexer.peek() {
-                let op = op.to_string();
-                if let Some((name,min,oreq)) = self.continue_op(&op,min,oreq)? {
-                    self.lexer.get();
-                    let more = self.parse_expr_level(min,oreq)?;
-                    out = Expression::Operator(name,vec![out,more]);
-                } else {
-                    return Ok(out);
-                }
-            } else {
-                return Ok(out);
+            match self.lexer.peek() {
+                Token::Operator(op) => {
+                    let op = op.to_string();
+                    let (expr,progress) = self.extend_expr(out,&op,min,oreq)?;
+                    out = expr;
+                    if !progress {
+                        return Ok(out);
+                    }
+                },
+                _ => { return Ok(out); }
             }
         }
     }

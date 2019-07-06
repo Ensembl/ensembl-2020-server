@@ -17,7 +17,7 @@ pub fn get_string(lexer: &mut Lexer) -> Result<String,ParseError> {
 
 pub fn get_number(lexer: &mut Lexer) -> Result<f64,ParseError> {
     match lexer.get() {
-        Token::Number(number) => Ok(number),
+        Token::Number(number,_) => Ok(number),
         _ => Err(ParseError::new("expected number",lexer))
     }
 }
@@ -25,7 +25,8 @@ pub fn get_number(lexer: &mut Lexer) -> Result<f64,ParseError> {
 pub fn get_identifier(lexer: &mut Lexer) -> Result<String,ParseError> {
     match lexer.get() {
         Token::Identifier(symbol) => Ok(symbol),
-        _ => Err(ParseError::new("expected identifier",lexer))
+        Token::Number(_,symbol) => Ok(symbol),
+        x => Err(ParseError::new(&format!("expected identifier, got {:?}",x),lexer))
     }
 }
 

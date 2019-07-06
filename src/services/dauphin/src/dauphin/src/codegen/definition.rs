@@ -5,7 +5,8 @@ use crate::parser::ParseError;
 pub enum InlineMode {
     LeftAssoc,
     RightAssoc,
-    Prefix
+    Prefix,
+    Suffix
 }
 
 #[derive(Debug)]

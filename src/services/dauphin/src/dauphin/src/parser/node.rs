@@ -11,7 +11,13 @@ pub enum Expression {
     LiteralString(String),
     LiteralBytes(Vec<u8>),
     LiteralBool(bool),
-    Operator(String,Vec<Expression>)
+    Operator(String,Vec<Expression>),
+    Star(Box<Expression>),
+    Square(Box<Expression>),
+    Bracket(Box<Expression>,Box<Expression>),
+    Dot(Box<Expression>,String),
+    Query(Box<Expression>,String),
+    Pling(Box<Expression>,String),
 }
 
 impl fmt::Debug for Expression {
@@ -22,6 +28,12 @@ impl fmt::Debug for Expression {
             Expression::LiteralString(s) => write!(f,"{:?}",s),
             Expression::LiteralBytes(b) => write!(f,"'{}'",hex::encode(b)),
             Expression::LiteralBool(b) => write!(f,"{}",if *b { "true" } else {"false"}),
+            Expression::Star(s) => write!(f,"*({:?})",s),
+            Expression::Square(s) => write!(f,"({:?})[]",s),
+            Expression::Bracket(left,inner) => write!(f,"({:?})[{:?}]",left,inner),
+            Expression::Dot(expr,key) => write!(f,"{:?}.{}",expr,key),
+            Expression::Query(expr,key) => write!(f,"{:?}?{}",expr,key),
+            Expression::Pling(expr,key) => write!(f,"{:?}!{}",expr,key),
             Expression::Operator(s,x) => {
                 write!(f,"{}(",s);
                 for (i,sub) in x.iter().enumerate() {
