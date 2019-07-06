@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::parser::ParseError;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
@@ -33,7 +32,7 @@ impl Inline {
     pub fn mode(&self) -> &InlineMode { &self.mode }
 }
 
-pub fn check_inline_symbol(sym: &str) -> Result<(),ParseError> {
+pub fn check_inline_symbol(_sym: &str) -> Result<(),ParseError> {
     /* TODO valid */
     /* TODO not already present */
     Ok(())

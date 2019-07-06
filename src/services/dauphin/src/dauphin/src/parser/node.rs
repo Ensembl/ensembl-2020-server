@@ -15,9 +15,12 @@ pub enum Expression {
     Star(Box<Expression>),
     Square(Box<Expression>),
     Bracket(Box<Expression>,Box<Expression>),
+    Filter(Box<Expression>,Box<Expression>),
     Dot(Box<Expression>,String),
     Query(Box<Expression>,String),
     Pling(Box<Expression>,String),
+    Dollar,
+    At
 }
 
 impl fmt::Debug for Expression {
@@ -31,11 +34,14 @@ impl fmt::Debug for Expression {
             Expression::Star(s) => write!(f,"*({:?})",s),
             Expression::Square(s) => write!(f,"({:?})[]",s),
             Expression::Bracket(left,inner) => write!(f,"({:?})[{:?}]",left,inner),
+            Expression::Filter(left,inner) => write!(f,"({:?})&[{:?}]",left,inner),
             Expression::Dot(expr,key) => write!(f,"{:?}.{}",expr,key),
             Expression::Query(expr,key) => write!(f,"{:?}?{}",expr,key),
             Expression::Pling(expr,key) => write!(f,"{:?}!{}",expr,key),
+            Expression::Dollar => write!(f,"$"),
+            Expression::At => write!(f,"@"),
             Expression::Operator(s,x) => {
-                write!(f,"{}(",s);
+                write!(f,"{}(",s)?;
                 for (i,sub) in x.iter().enumerate() {
                     if i > 0 {
                         write!(f,",")?;
@@ -54,7 +60,7 @@ pub struct Statement(pub String,pub Vec<Expression>);
 
 impl fmt::Debug for Statement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"{}(",self.0);
+        write!(f,"{}(",self.0)?;
         for (i,sub) in self.1.iter().enumerate() {
             if i > 0 {
                 write!(f,",")?;

@@ -1,5 +1,5 @@
 use crate::lexer::{ Lexer, Token };
-use crate::codegen::{ DefStore, Inline, InlineMode };
+use crate::codegen::{ DefStore, InlineMode };
 
 use super::node::{ Statement, ParserStatement, ParseError, Expression };
 use super::lexutil::{ get_string, get_other, not_reserved, get_identifier, get_number, get_operator };
@@ -36,7 +36,7 @@ impl Parser {
             "right" => Ok(InlineMode::RightAssoc),
             "prefix" => Ok(InlineMode::Prefix),
             "suffix" => Ok(InlineMode::Suffix),
-            x => Err(ParseError::new("Bad oper mode, expected left, right, prefix, or suffix",&mut self.lexer))
+            _ => Err(ParseError::new("Bad oper mode, expected left, right, prefix, or suffix",&mut self.lexer))
         }?;
         let prio = get_number(&mut self.lexer)?;
         Ok(ParserStatement::Inline(symbol,name,mode,prio))
@@ -78,13 +78,13 @@ impl Parser {
         Ok(ParserStatement::EnumDef(name.to_string()))
     }
 
-    fn parse_atom_id(&mut self,id: &str) -> Result<Expression,ParseError> {
+    fn parse_atom_id(&mut self,id: &str, nested: bool) -> Result<Expression,ParseError> {
         if self.defstore.stmt_like(id,&mut self.lexer).unwrap_or(false) {
             Err(ParseError::new("Unexpected statement in expression",&mut self.lexer))?;
         }
         if !self.defstore.stmt_like(id, &mut self.lexer).unwrap_or(true) { /* expr-like */
             get_other(&mut self.lexer, "(")?;
-            Ok(Expression::Operator(id.to_string(),self.parse_exprlist()?))
+            Ok(Expression::Operator(id.to_string(),self.parse_exprlist(nested)?))
         } else {
             Ok(match id {
                 "true" => Expression::LiteralBool(true),
@@ -94,41 +94,57 @@ impl Parser {
         }
     }
 
-    fn parse_atom(&mut self) -> Result<Expression,ParseError> {
+    fn require_filter(&mut self, c: char, nested: bool) -> Result<(),ParseError> {
+        if !nested {
+            return Err(ParseError::new(&format!("{} encountered outside filter",c),&mut self.lexer));
+        }
+        Ok(())
+    }
+
+    fn parse_atom(&mut self, nested: bool) -> Result<Expression,ParseError> {
         Ok(match self.lexer.get() {
-            Token::Identifier(id) => self.parse_atom_id(&id)?,
+            Token::Identifier(id) => self.parse_atom_id(&id,nested)?,
             Token::Number(num,_) => Expression::Number(num),
             Token::LiteralString(s) => Expression::LiteralString(s),
             Token::LiteralBytes(b) => Expression::LiteralBytes(b),
             Token::Other('(') => {
-                let out = self.parse_expr()?;
+                let out = self.parse_expr(nested)?;
                 get_other(&mut self.lexer,")")?;
                 out
             },
-            Token::Operator(op) => self.parse_prefix(&op)?,
+            Token::Other('$') => {
+                self.require_filter('$',nested)?;
+                Expression::Dollar
+            },
+            Token::Other('@') => {
+                self.require_filter('@',nested)?;
+                Expression::At
+            },
+            Token::Operator(op) => self.parse_prefix(&op,nested)?,
             _ => Err(ParseError::new(&format!("Expected expression"),&mut self.lexer))?
         })
     }
 
-    fn parse_prefix(&mut self, op: &str) -> Result<Expression,ParseError> {
+    fn parse_prefix(&mut self, op: &str, nested: bool) -> Result<Expression,ParseError> {
         if self.defstore.stmt_like(op, &mut self.lexer).unwrap_or(false) { /* stmt-like */
             return Err(ParseError::new("Unexpected statement",&mut self.lexer));
         }
         let inline = self.defstore.get_inline_unary(op,&mut self.lexer)?;
+        let prec = inline.precedence();
         if inline.mode() != &InlineMode::Prefix {
             return Err(ParseError::new("Not a prefix operator",&mut self.lexer));
         }
         let name = inline.name().to_string();
-        let expr = self.parse_expr_level(Some(inline.precedence()),true)?;
+        let expr = self.parse_expr_level(Some(prec),true,nested)?;
         Ok(match &name[..] {
             "__star__" => Expression::Star(Box::new(expr)),
             _ => Expression::Operator(name.to_string(),vec![expr])
         })
     }
 
-    fn parse_binary_right(&mut self, left: Expression, name: &str, min: f64, oreq: bool) -> Result<Expression,ParseError> {
+    fn parse_binary_right(&mut self, left: Expression, name: &str, min: f64, oreq: bool, nested: bool) -> Result<Expression,ParseError> {
         self.lexer.get();
-        let right = self.parse_expr_level(Some(min),oreq)?;
+        let right = self.parse_expr_level(Some(min),oreq,nested)?;
         Ok(Expression::Operator(name.to_string(),vec![left,right]))
     }
 
@@ -137,7 +153,7 @@ impl Parser {
             self.lexer.get();
             Ok(Expression::Square(Box::new(left)))
         } else {
-            let inside = self.parse_expr()?;
+            let inside = self.parse_expr(true)?;
             get_other(&mut self.lexer, "]")?;
             Ok(Expression::Bracket(Box::new(left),Box::new(inside)))
         }
@@ -150,11 +166,21 @@ impl Parser {
             "__dot__" => Expression::Dot(Box::new(left),get_identifier(&mut self.lexer)?),
             "__query__" => Expression::Query(Box::new(left),get_identifier(&mut self.lexer)?),
             "__pling__" => Expression::Pling(Box::new(left),get_identifier(&mut self.lexer)?),
+            "__ref__" => {
+                if get_operator(&mut self.lexer)? != "[" {
+                    return Err(ParseError::new("Expected [",&self.lexer));
+                }
+                if let Expression::Bracket(op,key) = self.parse_brackets(left)? {
+                    return Ok(Expression::Filter(op,key));
+                } else {
+                    return Err(ParseError::new("Expected filter",&self.lexer));
+                }
+            },
             _ => Expression::Operator(name.to_string(),vec![left])
         })
     }
 
-    fn extend_expr(&mut self, left: Expression, symbol: &str, min: Option<f64>, oreq: bool) -> Result<(Expression,bool),ParseError> {
+    fn extend_expr(&mut self, left: Expression, symbol: &str, min: Option<f64>, oreq: bool, nested: bool) -> Result<(Expression,bool),ParseError> {
         let inline = self.defstore.get_inline_binary(symbol,&mut self.lexer)?;
         let prio = inline.precedence();
         if let Some(min) = min {
@@ -167,35 +193,35 @@ impl Parser {
             return Ok((left,false));
         }
         Ok(match *inline.mode() {
-            InlineMode::LeftAssoc => (self.parse_binary_right(left,&name,prio,false)?,true),
-            InlineMode::RightAssoc => (self.parse_binary_right(left,&name,prio,true)?,true),
+            InlineMode::LeftAssoc => (self.parse_binary_right(left,&name,prio,false,nested)?,true),
+            InlineMode::RightAssoc => (self.parse_binary_right(left,&name,prio,true,nested)?,true),
             InlineMode::Prefix => (left,false),
             InlineMode::Suffix => (self.parse_suffix(left,&name)?,true)
         })
     }
 
-    fn parse_expr_level(&mut self, min: Option<f64>, oreq: bool) -> Result<Expression,ParseError> {
-        let mut out = self.parse_atom()?;
+    fn parse_expr_level(&mut self, min: Option<f64>, oreq: bool, nested: bool) -> Result<Expression,ParseError> {
+        let mut out = self.parse_atom(nested)?;
         loop {
             match self.lexer.peek() {
                 Token::Operator(op) => {
                     let op = op.to_string();
-                    let (expr,progress) = self.extend_expr(out,&op,min,oreq)?;
+                    let (expr,progress) = self.extend_expr(out,&op,min,oreq,nested)?;
                     out = expr;
                     if !progress {
                         return Ok(out);
                     }
                 },
-                _ => { return Ok(out); }
+                _ => return Ok(out)
             }
         }
     }
 
-    fn parse_expr(&mut self) -> Result<Expression,ParseError> {
-        self.parse_expr_level(None,true)
+    fn parse_expr(&mut self, nested: bool) -> Result<Expression,ParseError> {
+        self.parse_expr_level(None,true,nested)
     }
 
-    fn parse_exprlist(&mut self) -> Result<Vec<Expression>,ParseError> {
+    fn parse_exprlist(&mut self, nested: bool) -> Result<Vec<Expression>,ParseError> {
         let mut out = Vec::new();
         loop {
             match self.lexer.peek() {
@@ -207,7 +233,7 @@ impl Parser {
                     self.lexer.get();
                 },
                 _ => {
-                    out.push(self.parse_expr()?);
+                    out.push(self.parse_expr(nested)?);
                 }
             }
         }
@@ -216,14 +242,14 @@ impl Parser {
     fn parse_funcstmt(&mut self)-> Result<ParserStatement,ParseError> {
         let name = get_identifier(&mut self.lexer)?;
         get_other(&mut self.lexer,"(")?;
-        let exprs = self.parse_exprlist()?;
+        let exprs = self.parse_exprlist(false)?;
         Ok(ParserStatement::Regular(Statement(name,exprs)))
     } 
 
     fn parse_inlinestmt(&mut self)-> Result<ParserStatement,ParseError> {
-        let left = self.parse_expr()?;
+        let left = self.parse_expr(false)?;
         let op = get_operator(&mut self.lexer)?;
-        let right = self.parse_expr()?;
+        let right = self.parse_expr(false)?;
         let name = self.defstore.get_inline_binary(&op,&mut self.lexer)?.name();
         if !self.defstore.stmt_like(&name,&mut self.lexer)? {
             Err(ParseError::new("Got inline expr, expected inline stmt",&mut self.lexer))?;
@@ -265,7 +291,11 @@ impl Parser {
             },
             Token::EndOfFile => { self.lexer.get(); Ok(None) },
             Token::EndOfLex => Ok(Some(ParserStatement::EndOfParse)),
-            _ => Err(ParseError::new("Unexpected token",&mut self.lexer))
+            _ => {
+                let out = self.parse_regular()?;
+                get_other(&mut self.lexer,";")?;
+                Ok(Some(out))
+            }            
         }
     }
 
@@ -340,7 +370,7 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("data: import \"data: *;\";").ok();
         let mut p = Parser::new(lexer);
-        p.parse_statement().map(|stmt| preprocess(&stmt,&mut p.lexer,&mut p.defstore)).expect("failed");
+        p.parse_statement().map(|stmt| preprocess(&stmt,&mut p.lexer,&mut p.defstore).ok()).expect("failed");
         let tok = p.lexer.get().clone();
         assert_eq!(Token::Other('*'),tok);
         assert_eq!("data: *;".to_string(),p.lexer.position().0);
@@ -351,7 +381,7 @@ mod test {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/import-smoke.dp").expect("cannot load file");
-        let mut p = Parser::new(lexer);
+        let p = Parser::new(lexer);
         let txt = "Reserved keyword 'reserved' found at line 1 column 1 in test:parser/import-smoke2.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
@@ -361,8 +391,8 @@ mod test {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/parser-smoke.dp").expect("cannot load file");
-        let mut p = Parser::new(lexer);
-        let (stmts,defstore) = p.parse().expect("error");
+        let p = Parser::new(lexer);
+        let (stmts,_defstore) = p.parse().expect("error");
         let mut out : Vec<String> = stmts.iter().map(|x| format!("{:?}",x)).collect();
         out.push("".to_string()); /* For trailing \n */
         let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
@@ -370,11 +400,21 @@ mod test {
     }
 
     #[test]
+    fn test_no_nested_dollar() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:parser/parser-nonest.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let txt = "$ encountered outside filter at line 17 column 1 in test:parser/parser-nonest.dp";
+        assert_eq!(txt,p.parse().err().unwrap()[0].message());
+    }
+
+    #[test]
     fn test_id_clash() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/id-clash.dp").expect("cannot load file");
-        let mut p = Parser::new(lexer);
+        let p = Parser::new(lexer);
         let txt = "\'assign\' already defined at test:parser/id-clash.dp 1:12 at line 2 column 14 in test:parser/id-clash.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
