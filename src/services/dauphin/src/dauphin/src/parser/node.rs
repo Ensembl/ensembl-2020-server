@@ -19,8 +19,19 @@ pub enum Expression {
     Dot(Box<Expression>,String),
     Query(Box<Expression>,String),
     Pling(Box<Expression>,String),
+    Vector(Vec<Expression>),
     Dollar,
     At
+}
+
+fn write_csl(f: &mut fmt::Formatter<'_>, exprs: &Vec<Expression>) -> fmt::Result {
+    for (i,sub) in exprs.iter().enumerate() {
+        if i > 0 {
+            write!(f,",")?;
+        }
+        write!(f,"{:?}",sub)?;
+    }
+    Ok(())
 }
 
 impl fmt::Debug for Expression {
@@ -40,14 +51,15 @@ impl fmt::Debug for Expression {
             Expression::Pling(expr,key) => write!(f,"{:?}!{}",expr,key),
             Expression::Dollar => write!(f,"$"),
             Expression::At => write!(f,"@"),
+            Expression::Vector(x) => {
+                write!(f,"[")?;
+                write_csl(f,x)?;
+                write!(f,"]")?;
+                Ok(())
+            }
             Expression::Operator(s,x) => {
                 write!(f,"{}(",s)?;
-                for (i,sub) in x.iter().enumerate() {
-                    if i > 0 {
-                        write!(f,",")?;
-                    }
-                    write!(f,"{:?}",sub)?;
-                }
+                write_csl(f,x)?;
                 write!(f,")")?;
                 Ok(())
             }

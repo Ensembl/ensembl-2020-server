@@ -84,7 +84,7 @@ impl Parser {
         }
         if !self.defstore.stmt_like(id, &mut self.lexer).unwrap_or(true) { /* expr-like */
             get_other(&mut self.lexer, "(")?;
-            Ok(Expression::Operator(id.to_string(),self.parse_exprlist(nested)?))
+            Ok(Expression::Operator(id.to_string(),self.parse_exprlist(')',nested)?))
         } else {
             Ok(match id {
                 "true" => Expression::LiteralBool(true),
@@ -125,6 +125,10 @@ impl Parser {
         })
     }
 
+    fn vec_ctor(&mut self, nested: bool) -> Result<Expression,ParseError> {
+        Ok(Expression::Vector(self.parse_exprlist(']',nested)?))
+    }
+
     fn parse_prefix(&mut self, op: &str, nested: bool) -> Result<Expression,ParseError> {
         if self.defstore.stmt_like(op, &mut self.lexer).unwrap_or(false) { /* stmt-like */
             return Err(ParseError::new("Unexpected statement",&mut self.lexer));
@@ -135,10 +139,10 @@ impl Parser {
             return Err(ParseError::new("Not a prefix operator",&mut self.lexer));
         }
         let name = inline.name().to_string();
-        let expr = self.parse_expr_level(Some(prec),true,nested)?;
         Ok(match &name[..] {
-            "__star__" => Expression::Star(Box::new(expr)),
-            _ => Expression::Operator(name.to_string(),vec![expr])
+            "__star__" => Expression::Star(Box::new(self.parse_expr_level(Some(prec),true,nested)?)),
+            "__sqctor__" => self.vec_ctor(nested)?,
+            _ => Expression::Operator(name.to_string(),vec![self.parse_expr_level(Some(prec),true,nested)?])
         })
     }
 
@@ -221,11 +225,11 @@ impl Parser {
         self.parse_expr_level(None,true,nested)
     }
 
-    fn parse_exprlist(&mut self, nested: bool) -> Result<Vec<Expression>,ParseError> {
+    fn parse_exprlist(&mut self, term: char, nested: bool) -> Result<Vec<Expression>,ParseError> {
         let mut out = Vec::new();
         loop {
             match self.lexer.peek() {
-                Token::Other(')') => {
+                Token::Other(x) if x == &term => {
                     self.lexer.get();
                     return Ok(out)
                 },
@@ -242,7 +246,7 @@ impl Parser {
     fn parse_funcstmt(&mut self)-> Result<ParserStatement,ParseError> {
         let name = get_identifier(&mut self.lexer)?;
         get_other(&mut self.lexer,"(")?;
-        let exprs = self.parse_exprlist(false)?;
+        let exprs = self.parse_exprlist(')',false)?;
         Ok(ParserStatement::Regular(Statement(name,exprs)))
     } 
 
