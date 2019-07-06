@@ -9,6 +9,7 @@ use super::token::Token;
 
 pub struct FileLexer {
     stream: LocatedCharSource,
+    ungot: Option<Token>,
     pending: Option<Token>,
     line: u32,
     col: u32
@@ -18,6 +19,7 @@ impl FileLexer {
     pub fn new(stream: Box<dyn CharSource>) -> FileLexer {
         FileLexer {
             stream: LocatedCharSource::new(stream),
+            ungot: None,
             pending: None,
             line: 0,
             col: 0
@@ -43,6 +45,9 @@ impl FileLexer {
     }
 
     pub fn peek(&mut self, ops: &InlineTokens) -> &Token {
+        if self.ungot.is_some() {
+            return self.ungot.as_ref().unwrap()
+        }
         if self.pending.is_none() {
             self.pending = Some(self.more(ops));
         }
@@ -50,11 +55,18 @@ impl FileLexer {
     }
 
     pub fn get(&mut self, ops: &InlineTokens) -> Token {
+        if self.ungot.is_some() {
+            return self.ungot.take().unwrap();
+        }
         if self.pending.is_some() {
             self.pending.take().unwrap()
         } else {
             self.more(ops)
         }
+    }
+
+    pub fn unget(&mut self, t: Token) {
+        self.ungot = Some(t);
     }
 }
 

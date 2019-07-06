@@ -60,7 +60,7 @@ pub fn preprocess(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefS
             run_proc(&name,defstore,lexer).map(|_| true),
         ParserStatement::FuncDecl(name) =>
             run_func(&name,defstore,lexer).map(|_| true),
-        ParserStatement::StructDef(name) =>
+        ParserStatement::StructDef(name,_) =>
             run_struct(&name,defstore,lexer).map(|_| true),
         ParserStatement::EnumDef(name) =>
             run_enum(&name,defstore,lexer).map(|_| true),

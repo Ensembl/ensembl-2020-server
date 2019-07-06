@@ -1,7 +1,7 @@
 use crate::lexer::{ Lexer, Token };
 use crate::codegen::{ DefStore, InlineMode };
 
-use super::node::{ Statement, ParserStatement, ParseError, Expression };
+use super::node::{ Statement, ParserStatement, ParseError, Expression, Type, BaseType };
 use super::lexutil::{ get_string, get_other, not_reserved, get_identifier, get_number, get_operator };
 use super::preproc::preprocess;
 
@@ -68,10 +68,76 @@ impl Parser {
         Ok(ParserStatement::ProcDecl(name.to_string()))
     }
 
+    fn parse_type(&mut self) -> Result<Type,ParseError> {
+        Ok(match &get_identifier(&mut self.lexer)?[..] {
+            "boolean" => Type::Base(BaseType::BooleanType),
+            "number" => Type::Base(BaseType::NumberType),
+            "string" => Type::Base(BaseType::StringType),
+            "bytes" => Type::Base(BaseType::BytesType),
+            "vec" => {
+                get_other(&mut self.lexer,"(")?;
+                let out =  Type::Vector(Box::new(self.parse_type()?));
+                get_other(&mut self.lexer,")")?;
+                out
+            },
+            _ => Err(ParseError::new("TODO",&mut self.lexer))?
+        })
+    }
+
+    fn parse_struct_short(&mut self) -> Result<(Vec<Type>,Vec<String>),ParseError> {
+        let mut out = Vec::new();
+        loop {
+            out.push(self.parse_type()?);
+            match self.lexer.get() {
+                Token::Other(',') => (),
+                Token::Other('}') => break,
+                _ => return Err(ParseError::new("Unexpected token (expected ; or ,)",&mut self.lexer))
+            };
+        }
+        Ok((out,vec![]))
+    }
+
+    fn parse_struct_full(&mut self) -> Result<(Vec<Type>,Vec<String>),ParseError> {
+        let mut out = Vec::new();
+        let mut names = Vec::new();
+        let mut idx = 0;
+        loop {
+            names.push(get_identifier(&mut self.lexer)?);
+            get_other(&mut self.lexer,":")?;
+            out.push(self.parse_type()?);        
+            match self.lexer.get() {
+                Token::Other(',') => (),
+                Token::Other('}') => break,
+                _ => return Err(ParseError::new("Unexpected token (expected ; or ,)",&mut self.lexer))
+            }
+        }
+        Ok((out,names))
+    }
+
+    fn parse_struct_contents(&mut self) -> Result<(Vec<Type>,Vec<String>),ParseError> {
+        Ok(match self.lexer.get() {
+            Token::Identifier(first_id) => {
+                let next = self.lexer.peek().clone();
+                self.lexer.unget(Token::Identifier(first_id));
+                match next {
+                    Token::Other(':') => self.parse_struct_full()?,
+                    _ => self.parse_struct_short()?
+                }
+            },
+            Token::Other('}') => {
+                (vec![],vec![])
+            },
+            _ => return Err(ParseError::new("Unexpected token (expected ; or ,)",&mut self.lexer))
+        })
+    }
+
     fn parse_struct(&mut self) -> Result<ParserStatement,ParseError> {
         self.lexer.get();
         let name = get_identifier(&mut self.lexer)?;
-        Ok(ParserStatement::StructDef(name.to_string()))
+        get_other(&mut self.lexer, "{")?;
+        let types = self.parse_struct_contents();
+        print!("{:?}",types);
+        Ok(ParserStatement::StructDef(name.to_string(),vec![]))
     }
 
     fn parse_enum(&mut self) -> Result<ParserStatement,ParseError> {
@@ -431,7 +497,16 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/id-clash.dp").expect("cannot load file");
         let p = Parser::new(lexer);
-        let txt = "\'assign\' already defined at test:parser/id-clash.dp 1:12 at line 2 column 14 in test:parser/id-clash.dp";
+        let txt = "\'assign\' already defined at test:parser/id-clash.dp 1:12 at line 2 column 12 in test:parser/id-clash.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
+    }
+
+    #[test]
+    fn test_struct() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:parser/struct-smoke.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,_defstore) = p.parse().expect("error");
     }
 }

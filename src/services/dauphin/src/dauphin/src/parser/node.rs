@@ -84,6 +84,20 @@ impl fmt::Debug for Statement {
     }
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum BaseType {
+    StringType,
+    BytesType,
+    NumberType,
+    BooleanType, /* TODO nested */
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum Type {
+    Base(BaseType),
+    Vector(Box<Type>)
+}
+
 #[derive(Debug,PartialEq)]
 pub enum ParserStatement {
     Import(String),
@@ -93,7 +107,7 @@ pub enum ParserStatement {
     FuncDecl(String),
     ProcDecl(String),
     Regular(Statement),
-    StructDef(String),
+    StructDef(String,Vec<Type>),
     EnumDef(String),
     EndOfParse
 }

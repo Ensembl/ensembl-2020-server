@@ -57,6 +57,12 @@ impl Lexer {
             Token::EndOfLex
         }
     }
+
+    pub fn unget(&mut self, t: Token) {
+        if let Some(last) = self.files.last_mut() {
+            last.unget(t);
+        }
+    }
 }
 
 #[cfg(test)]
