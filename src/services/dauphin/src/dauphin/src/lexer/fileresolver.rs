@@ -1,6 +1,7 @@
 use crate::testsuite::load_testdata;
 
 use super::charsource::{ CharSource, StringCharSource };
+use super::preamble::PREAMBLE;
 
 pub struct FileResolver {
 
@@ -31,6 +32,8 @@ impl FileResolver {
             Ok(Box::new(StringCharSource::new(path,path[5..].to_string())))
         } else if path.starts_with("test:") {
             self.test_path(&path[5..])
+        } else if path.starts_with("preamble:") {
+            Ok(Box::new(StringCharSource::new(path,PREAMBLE.to_string())))
         } else {
             Err("protocol not supported".to_string())
         }

@@ -14,12 +14,14 @@ struct Parser {
 
 impl Parser {
     fn new(lexer: Lexer) -> Parser {
-        Parser {
+        let mut p = Parser {
             lexer,
             defstore: DefStore::new(),
             stmts: Vec::new(),
             errors: Vec::new()
-        }
+        };
+        p.lexer.import("preamble:").ok();
+        p
     }
 
     fn parse_import(&mut self) -> Result<ParserStatement,ParseError> {
@@ -359,25 +361,35 @@ mod test {
     use crate::lexer::FileResolver;
     use crate::testsuite::load_testdata;
 
+    fn last_statement(p: &mut Parser) -> Result<ParserStatement,ParseError> {
+        let mut prev = Err(ParseError::new("unexpected EOF",&mut p.lexer));
+        loop {
+            match p.parse_statement()? {
+                ParserStatement::EndOfParse => break,
+                x => prev = Ok(x)
+            }
+        }
+        return prev;
+    }
+
     #[test]
     fn statement() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import("data: import \"x\";").ok();
         let mut p = Parser::new(lexer);
-        assert_eq!(Ok(ParserStatement::Import("x".to_string())),p.parse_statement());
+
+        assert_eq!(Ok(ParserStatement::Import("x".to_string())),last_statement(&mut p));
     }
 
     #[test]
     fn import_statement() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
-        lexer.import("data: import \"data: *;\";").ok();
+        lexer.import("data: import \"data: $;\";").ok();
         let mut p = Parser::new(lexer);
-        p.parse_statement().map(|stmt| preprocess(&stmt,&mut p.lexer,&mut p.defstore).ok()).expect("failed");
-        let tok = p.lexer.get().clone();
-        assert_eq!(Token::Other('*'),tok);
-        assert_eq!("data: *;".to_string(),p.lexer.position().0);
+        let err = p.parse().err().unwrap();
+        assert_eq!("$ encountered outside filter at line 1 column 2 in data: $;".to_string(),err[0].message());
     }
 
     #[test]
@@ -409,7 +421,7 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/parser-nonest.dp").expect("cannot load file");
         let p = Parser::new(lexer);
-        let txt = "$ encountered outside filter at line 17 column 1 in test:parser/parser-nonest.dp";
+        let txt = "$ encountered outside filter at line 5 column 1 in test:parser/parser-nonest.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 
