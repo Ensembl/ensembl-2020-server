@@ -11,8 +11,10 @@ fn run_import(path: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
 
 fn run_inline(symbol: &str, name: &str, mode: &InlineMode, prio: f64, lexer: &mut Lexer, defstore: &mut DefStore) -> Result<(),ParseError> {
     let stmt_like = defstore.stmt_like(name,lexer)?;
+    lexer.add_inline(symbol).map_err(|s| {
+        ParseError::new(&s,lexer)
+    })?;
     defstore.add_inline(Inline::new(symbol,name,stmt_like,prio,mode))?;
-    lexer.add_inline(symbol);
     Ok(())
 }
 

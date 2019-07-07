@@ -6,8 +6,7 @@ use super::token::Token;
 pub struct Lexer {
     resolver: FileResolver,
     files: Vec<FileLexer>,
-    inlines: InlineTokens,
-    end: Token
+    inlines: InlineTokens
 }
 
 impl Lexer {
@@ -15,13 +14,12 @@ impl Lexer {
         Lexer {
             resolver,
             inlines: InlineTokens::new(),
-            files: Vec::new(),
-            end: Token::EndOfLex
+            files: Vec::new()
         }
     }
 
-    pub fn add_inline(&mut self, s: &str) {
-        self.inlines.add(s);
+    pub fn add_inline(&mut self, s: &str) -> Result<(),String> {
+        self.inlines.add(s)
     }
 
     pub fn import(&mut self, path: &str) -> Result<(),String> {
@@ -38,17 +36,25 @@ impl Lexer {
         }
     }
 
-    pub fn peek(&mut self) -> &Token {
+    pub fn peek(&mut self) -> Token {
         if let Some(last) = self.files.last_mut() {
-            last.peek(&self.inlines)
+            last.peek(&self.inlines,false)
         } else {
-            &self.end
+            Token::EndOfLex
         }
     }
 
-    pub fn get(&mut self) -> Token {
+    pub fn peek_oper(&mut self) -> Token {
         if let Some(last) = self.files.last_mut() {
-            let tok = last.get(&self.inlines);
+            last.peek(&self.inlines,true)
+        } else {
+            Token::EndOfLex
+        }
+    }
+
+    fn more(&mut self, allow_ops: bool) -> Token {
+        if let Some(last) = self.files.last_mut() {
+            let tok = last.get(&self.inlines,allow_ops);
             if let Token::EndOfFile = tok {
                 self.files.pop();
             }
@@ -58,9 +64,25 @@ impl Lexer {
         }
     }
 
-    pub fn unget(&mut self, t: Token) {
+    pub fn get(&mut self) -> Token {
+        self.more(false)
+    }
+
+    pub fn get_oper(&mut self) -> Token {
+        self.more(true)
+    }
+
+    pub fn pos(&self) -> usize {
+        if let Some(last) = self.files.last() {
+            last.pos()
+        } else {
+            0
+        }
+    }
+
+    pub fn back_to(&mut self, pos: usize) {
         if let Some(last) = self.files.last_mut() {
-            last.unget(t);
+            last.back_to(pos);
         }
     }
 }

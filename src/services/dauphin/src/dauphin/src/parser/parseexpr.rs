@@ -33,9 +33,10 @@ fn require_filter(lexer: &mut Lexer, c: char, nested: bool) -> Result<(),ParseEr
 
 fn parse_struct_ctor(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool) -> Result<Expression,ParseError> {
     get_other(lexer,"{")?;
-    if let Token::Identifier(first_id) = lexer.get() {
-        if lexer.peek() == &Token::Other(':') {
-            lexer.unget(Token::Identifier(first_id));
+    let pos = lexer.pos();
+    if let Token::Identifier(_) = lexer.get() {
+        if lexer.peek() == Token::Other(':') {
+            lexer.back_to(pos);
             return parse_ctor_full(lexer,defstore,id,nested);
         }
     }
@@ -79,12 +80,25 @@ fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool)
     }
 }
 
+fn peek_enum_ctor(lexer: &mut Lexer) -> bool {
+    let pos = lexer.pos();
+    let x = lexer.get();
+    let y = lexer.peek();
+    let out = if let Token::Identifier(_) = y {
+        x == Token::Other(':')
+    } else {
+        false
+    };
+    lexer.back_to(pos);
+    out
+}
+
 fn parse_atom(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Expression,ParseError> {
-    Ok(match lexer.get() {
+    Ok(match lexer.get_oper() {
         Token::Identifier(id) => {
-            if lexer.peek() == &Token::Other('{') {
+            if lexer.peek() == Token::Other('{') {
                 parse_struct_ctor(lexer,defstore,&id,nested)?
-            } else if lexer.peek() == &Token::Other(':') {
+            } else if peek_enum_ctor(lexer) {
                 lexer.get();
                 let branch = get_identifier(lexer)?;
                 let expr = parse_expr(lexer,defstore,nested)?;
@@ -126,7 +140,7 @@ fn parse_brackets(lexer: &mut Lexer, defstore: &DefStore, left: Expression) -> R
 }
 
 fn parse_suffix(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: &str) -> Result<Expression,ParseError> {
-    lexer.get();
+    lexer.get_oper();
     Ok(match &name[..] {
         "__sqopen__" => parse_brackets(lexer,defstore,left)?,
         "__dot__" => Expression::Dot(Box::new(left),get_identifier(lexer)?),
@@ -147,7 +161,7 @@ fn parse_suffix(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: 
 }
 
 fn parse_binary_right(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: &str, min: f64, oreq: bool, nested: bool) -> Result<Expression,ParseError> {
-    lexer.get();
+    lexer.get_oper();
     let right = parse_expr_level(lexer,defstore,Some(min),oreq,nested)?;
     Ok(Expression::Operator(name.to_string(),vec![left,right]))
 }
@@ -175,7 +189,7 @@ fn extend_expr(lexer: &mut Lexer, defstore: &DefStore, left: Expression, symbol:
 fn parse_expr_level(lexer: &mut Lexer, defstore: &DefStore, min: Option<f64>, oreq: bool, nested: bool) -> Result<Expression,ParseError> {
     let mut out = parse_atom(lexer,defstore,nested)?;
     loop {
-        match lexer.peek() {
+        match lexer.peek_oper() {
             Token::Operator(op) => {
                 let op = op.to_string();
                 let (expr,progress) = extend_expr(lexer,defstore,out,&op,min,oreq,nested)?;
@@ -197,7 +211,7 @@ pub(in super) fn parse_exprlist(lexer: &mut Lexer, defstore: &DefStore, term: ch
     let mut out = Vec::new();
     loop {
         match lexer.peek() {
-            Token::Other(x) if x == &term => {
+            Token::Other(x) if x == term => {
                 lexer.get();
                 return Ok(out)
             },

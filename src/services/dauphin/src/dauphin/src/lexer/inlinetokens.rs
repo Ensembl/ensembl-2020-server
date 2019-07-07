@@ -38,6 +38,22 @@ impl InlineTokens {
         }
     }
 
+    fn check_inline(&self, c: &str) -> Result<(),String> {
+        /* operators cannot contain slash-star, slash-slash, semicolon */
+        for b in &vec!["//","/*",";"] {
+            if c.contains(b) {
+                return Err(format!("operator '{}' invalid, cannot contain '{}'",c,b));
+            }
+        }
+        /* operators cannot contain whitespace */
+        for c in c.chars() {
+            if c.is_whitespace() {
+                return Err(format!("operator '{}' invalid, cannot contain whitespace",c));
+            }
+        }
+        Ok(())
+    }
+
     pub fn contains(&self, cs: &mut dyn CharSource) -> Option<String> {
         if let Some(start) = cs.peek(1).chars().next() {
             if let Some(lens) = self.starts.get(&start) {
@@ -52,7 +68,8 @@ impl InlineTokens {
         None
     }
 
-    pub fn add(&mut self, op: &str) {
+    pub fn add(&mut self, op: &str) -> Result<(),String> {
+        self.check_inline(op)?;
         let len = op.len();
         if let Some(start) = op.chars().next() {
             let r = self.lens.entry(len).or_insert_with(|| InlineTokensLen::new(len));
@@ -61,5 +78,6 @@ impl InlineTokens {
             lens.push(len as i32);
             lens.sort_by_key(|k| -k);
         }
+        Ok(())
     }
 }

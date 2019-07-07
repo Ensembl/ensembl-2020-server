@@ -9,8 +9,6 @@ use super::token::Token;
 
 pub struct FileLexer {
     stream: LocatedCharSource,
-    ungot: Option<Token>,
-    pending: Option<Token>,
     line: u32,
     col: u32
 }
@@ -19,8 +17,6 @@ impl FileLexer {
     pub fn new(stream: Box<dyn CharSource>) -> FileLexer {
         FileLexer {
             stream: LocatedCharSource::new(stream),
-            ungot: None,
-            pending: None,
             line: 0,
             col: 0
         }
@@ -30,43 +26,33 @@ impl FileLexer {
         (self.stream.name(),self.line,self.col)
     }
 
-    fn more(&mut self, ops: &InlineTokens) -> Token {
+    pub fn get(&mut self, ops: &InlineTokens, allow_ops: bool) -> Token {
         loop {
             let mut getting = LexerGetting::new();
             let stream = &mut self.stream;
             let (line,col) = stream.position();
             self.line = line;
             self.col = col;
-            getting.go(stream,ops);
+            getting.go(stream,ops,allow_ops);
             if let Some(token) = getting.make_token() {
                 return token;
             }
         }
     }
 
-    pub fn peek(&mut self, ops: &InlineTokens) -> &Token {
-        if self.ungot.is_some() {
-            return self.ungot.as_ref().unwrap()
-        }
-        if self.pending.is_none() {
-            self.pending = Some(self.more(ops));
-        }
-        self.pending.as_ref().unwrap()
+    pub fn peek(&mut self, ops: &InlineTokens, allow_ops: bool) -> Token {
+        let pos = self.stream.pos();
+        let token = self.get(ops,allow_ops);
+        self.stream.retreat(self.stream.pos()-pos);
+        token
     }
 
-    pub fn get(&mut self, ops: &InlineTokens) -> Token {
-        if self.ungot.is_some() {
-            return self.ungot.take().unwrap();
-        }
-        if self.pending.is_some() {
-            self.pending.take().unwrap()
-        } else {
-            self.more(ops)
-        }
+    pub fn pos(&self) -> usize {
+        self.stream.pos()
     }
 
-    pub fn unget(&mut self, t: Token) {
-        self.ungot = Some(t);
+    pub fn back_to(&mut self, pos: usize) {
+        self.stream.retreat(self.stream.pos()-pos);
     }
 }
 
@@ -87,15 +73,15 @@ mod test {
         let source = resolver.resolve(&path);
         let mut lexer = FileLexer::new(source.ok().unwrap());
         let mut ops = InlineTokens::new();
-        ops.add(":=");
-        ops.add("==");
-        ops.add("=");
-        ops.add("+");
-        ops.add("-");
+        ops.add(":=").ok();
+        ops.add("==").ok();
+        ops.add("=").ok();
+        ops.add("+").ok();
+        ops.add("-").ok();
         let mut out = Vec::new();
         loop {
             let lx = &mut lexer;
-            let tok = lx.get(&ops);
+            let tok = lx.get(&ops,true);
             if let Token::EndOfFile = tok { break; }
             let (name,line,col) = lx.position();
             out.push((tok.clone(),name.to_string(),line,col));

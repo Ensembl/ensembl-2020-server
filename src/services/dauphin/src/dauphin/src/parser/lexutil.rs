@@ -31,7 +31,7 @@ pub fn get_identifier(lexer: &mut Lexer) -> Result<String,ParseError> {
 }
 
 pub fn get_operator(lexer: &mut Lexer) -> Result<String,ParseError> {
-    match lexer.get() {
+    match lexer.get_oper() {
         Token::Operator(symbol) => Ok(symbol),
         x => Err(ParseError::new(&format!("expected operator not {:?}",x),lexer))
     }

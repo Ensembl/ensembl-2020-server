@@ -77,10 +77,11 @@ fn parse_struct_enum_full(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),P
 }
 
 fn parse_struct_contents(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),ParseError> {
+    let start = lexer.pos();
     Ok(match lexer.get() {
-        Token::Identifier(first_id) => {
+        Token::Identifier(_) => {
             let next = lexer.peek().clone();
-            lexer.unget(Token::Identifier(first_id));
+            lexer.back_to(start);
             match next {
                 Token::Other(':') => parse_struct_enum_full(lexer)?,
                 _ => parse_struct_short(lexer)?

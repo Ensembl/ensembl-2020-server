@@ -4,3 +4,4 @@ enum A { M: number, N: vec(number) };
 enum B { X: number, Y: vec(A) };
 enum C {};
 x := B:Y [ A:M 42, B:N [1,2,3] ];
+

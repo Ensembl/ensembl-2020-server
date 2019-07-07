@@ -113,13 +113,17 @@ impl LexerGetting {
         }
     }
 
-    pub fn go(&mut self, stream: &mut dyn CharSource, ops: &InlineTokens) {
+    fn ops_test(&self, stream: &mut dyn CharSource, ops: &InlineTokens, allow_ops: bool) -> Option<String> {
+        if allow_ops { ops.contains(stream) } else { None }
+    }
+
+    pub fn go(&mut self, stream: &mut dyn CharSource, ops: &InlineTokens, allow_ops: bool) {
         if let Some(c) = stream.peek(1).chars().next() {
             if identifier_stuff(c) {
                 self.get_identifier(stream);
             } else if c.is_ascii_digit() {
                 self.get_number(stream);
-            } else if let Some(op) = ops.contains(stream) {
+            } else if let Some(op) = self.ops_test(stream,ops,allow_ops) {
                 self.set_token(Token::Operator(op));
             } else if c.is_whitespace() {
                 self.advance_char(|c| c.is_whitespace(),false,stream);
