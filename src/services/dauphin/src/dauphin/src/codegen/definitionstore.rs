@@ -91,6 +91,10 @@ impl DefStore {
         Ok(())
     }
 
+    pub fn get_enum(&self, name: &str) -> Option<&EnumDef> {
+        self.enums.get(name)
+    }
+
     pub fn add_inline(&mut self, inline: Inline) -> Result<(),ParseError> {
         check_inline_symbol(&inline.symbol())?; // TODO
         if inline.mode() == &InlineMode::Prefix {

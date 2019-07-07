@@ -98,9 +98,13 @@ impl Parser {
         Ok((out,(0..len).into_iter().map(|x| (x.to_string())).collect()))
     }
 
-    fn parse_struct_full(&mut self) -> Result<(Vec<Type>,Vec<String>),ParseError> {
+    fn parse_struct_enum_full(&mut self) -> Result<(Vec<Type>,Vec<String>),ParseError> {
         let mut out = Vec::new();
         let mut names = Vec::new();
+        if let Token::Other('}') = self.lexer.peek() {
+            self.lexer.get();
+            return Ok((vec![],vec![]));
+        }
         loop {
             names.push(get_identifier(&mut self.lexer)?);
             get_other(&mut self.lexer,":")?;
@@ -120,7 +124,7 @@ impl Parser {
                 let next = self.lexer.peek().clone();
                 self.lexer.unget(Token::Identifier(first_id));
                 match next {
-                    Token::Other(':') => self.parse_struct_full()?,
+                    Token::Other(':') => self.parse_struct_enum_full()?,
                     _ => self.parse_struct_short()?
                 }
             },
@@ -142,7 +146,9 @@ impl Parser {
     fn parse_enum(&mut self) -> Result<ParserStatement,ParseError> {
         self.lexer.get();
         let name = get_identifier(&mut self.lexer)?;
-        Ok(ParserStatement::EnumDef(name.to_string()))
+        get_other(&mut self.lexer, "{")?;
+        let (types,names) = self.parse_struct_enum_full()?;
+        Ok(ParserStatement::EnumDef(name.to_string(),types,names))
     }
 
     fn parse_atom_id(&mut self,id: &str, nested: bool) -> Result<Expression,ParseError> {
@@ -510,5 +516,17 @@ mod test {
         assert_eq!("struct A { 0: number, 1: vec(number) }",format!("{:?}",defstore.get_struct("A").unwrap()));
         assert_eq!("struct B { X: number, Y: vec(A) }",format!("{:?}",defstore.get_struct("B").unwrap()));
         assert_eq!("struct C {  }",format!("{:?}",defstore.get_struct("C").unwrap()));
+    }
+
+    #[test]
+    fn test_enum() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:parser/enum-smoke.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        assert_eq!("enum A { M: number, N: vec(number) }",format!("{:?}",defstore.get_enum("A").unwrap()));
+        assert_eq!("enum B { X: number, Y: vec(A) }",format!("{:?}",defstore.get_enum("B").unwrap()));
+        assert_eq!("enum C {  }",format!("{:?}",defstore.get_enum("C").unwrap()));
     }
 }

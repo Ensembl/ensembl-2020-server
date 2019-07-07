@@ -42,8 +42,9 @@ fn run_struct(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut
     Ok(())
 }
 
-fn run_enum(name: &str, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
-    defstore.add_enum(EnumDef::new(name),lexer)?;
+fn run_enum(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
+    let def = EnumDef::new(name,types,names,defstore).map_err(|e| ParseError::new(&e,lexer) )?;
+    defstore.add_enum(def,lexer)?;
     Ok(())
 }
 
@@ -63,8 +64,8 @@ pub fn preprocess(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefS
             run_func(&name,defstore,lexer).map(|_| true),
         ParserStatement::StructDef(name,types,names) =>
             run_struct(&name,&types,&names,defstore,lexer).map(|_| true),
-        ParserStatement::EnumDef(name) =>
-            run_enum(&name,defstore,lexer).map(|_| true),
+        ParserStatement::EnumDef(name,types,names) =>
+            run_enum(&name,types,names,defstore,lexer).map(|_| true),
         _ => { return Ok(false); }
     }
 }

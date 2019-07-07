@@ -110,7 +110,7 @@ pub enum ParserStatement {
     ProcDecl(String),
     Regular(Statement),
     StructDef(String,Vec<Type>,Vec<String>),
-    EnumDef(String),
+    EnumDef(String,Vec<Type>,Vec<String>),
     EndOfParse
 }
 

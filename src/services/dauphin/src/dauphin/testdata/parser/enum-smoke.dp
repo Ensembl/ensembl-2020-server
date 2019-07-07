@@ -1,0 +1,3 @@
+enum A { M: number, N: vec(number) };
+enum B { X: number, Y: vec(A) };
+enum C {};

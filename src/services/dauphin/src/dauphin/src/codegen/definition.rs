@@ -113,7 +113,9 @@ impl BaseTypeDef {
             BaseType::IdentifiedType(name) => {
                 if defstore.get_struct(name).is_some() {
                     BaseTypeDef::StructType(name.to_string())
-                } else { // TODO enum
+                } else if defstore.get_enum(name).is_some() {
+                    BaseTypeDef::EnumType(name.to_string())
+                } else {
                     return Err(format!("No such struct/enum '{}'",name));
                 }
             }
@@ -158,16 +160,17 @@ impl fmt::Debug for TypeDef {
     }
 }
 
-pub struct StructDef {
+pub struct StructEnumDef {
+    type_: String,
     name: String,
     types: Vec<TypeDef>,
     names: HashMap<String,usize>
 }
 
-impl fmt::Debug for StructDef {
+impl fmt::Debug for StructEnumDef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let revname : HashMap<usize,String> = self.names.iter().map(|(a,b)| (*b,a.to_string())).collect();
-        write!(f,"struct {} {{ ",self.name)?;
+        write!(f,"{} {} {{ ",self.type_,self.name)?;
         for (i,t) in self.types.iter().enumerate() {
             if i > 0 { write!(f,", ")?; }
             write!(f,"{}: ",revname[&i])?;
@@ -207,11 +210,12 @@ fn collect_errors<T>(input: Vec<Result<T,String>>) -> Result<Vec<T>,String> {
     }
 }
 
-impl StructDef {
-    pub fn new(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &DefStore) -> Result<StructDef,String> {
+impl StructEnumDef {
+    pub fn new(type_: &str, name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &DefStore) -> Result<StructEnumDef,String> {
         let types = collect_errors(types.iter().map(|x| TypeDef::new(x, defstore)).collect())?;
         no_duplicates(names)?;
-        Ok(StructDef {
+        Ok(StructEnumDef {
+            type_: type_.to_string(),
             name: name.to_string(),
             types,
             names: names.iter().enumerate().map(|(k,v)| (v.to_string(),k)).collect()
@@ -221,15 +225,42 @@ impl StructDef {
     pub fn name(&self) -> &str { &self.name }
 }
 
-#[derive(Debug)]
+pub struct StructDef {
+    common: StructEnumDef
+}
+
+impl StructDef {
+    pub fn new(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &DefStore) -> Result<StructDef,String> {
+        Ok(StructDef {
+            common: StructEnumDef::new("struct",name,types,names,defstore)?
+        })
+    }
+
+    pub fn name(&self) -> &str { &self.common.name }
+}
+
+impl fmt::Debug for StructDef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{:?}",self.common)
+    }
+}
+
 pub struct EnumDef {
-    name: String
+    common: StructEnumDef
 }
 
 impl EnumDef {
-    pub fn new(name: &str) -> EnumDef {
-        EnumDef { name: name.to_string() }
+    pub fn new(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &DefStore) -> Result<EnumDef,String> {
+        Ok(EnumDef {
+            common: StructEnumDef::new("enum",name,types,names,defstore)?
+        })
     }
 
-    pub fn name(&self) -> &str { &self.name }
+    pub fn name(&self) -> &str { &self.common.name }
+}
+
+impl fmt::Debug for EnumDef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{:?}",self.common)
+    }
 }
