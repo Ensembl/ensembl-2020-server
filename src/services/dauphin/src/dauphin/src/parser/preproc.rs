@@ -1,4 +1,4 @@
-use super::node::{ ParserStatement, ParseError };
+use super::node::{ ParserStatement, ParseError, Type };
 use crate::codegen::{
     InlineMode, Inline, DefStore, ExprMacro, StmtMacro, FuncDecl, ProcDecl,
     StructDef, EnumDef
@@ -36,8 +36,9 @@ fn run_func(name: &str, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),Par
     Ok(())
 }
 
-fn run_struct(name: &str, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
-    defstore.add_struct(StructDef::new(name),lexer)?;
+fn run_struct(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
+    let def = StructDef::new(name,types,names,defstore).map_err(|e| ParseError::new(&e,lexer) )?;
+    defstore.add_struct(def,lexer)?;
     Ok(())
 }
 
@@ -60,8 +61,8 @@ pub fn preprocess(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefS
             run_proc(&name,defstore,lexer).map(|_| true),
         ParserStatement::FuncDecl(name) =>
             run_func(&name,defstore,lexer).map(|_| true),
-        ParserStatement::StructDef(name,_) =>
-            run_struct(&name,defstore,lexer).map(|_| true),
+        ParserStatement::StructDef(name,types,names) =>
+            run_struct(&name,&types,&names,defstore,lexer).map(|_| true),
         ParserStatement::EnumDef(name) =>
             run_enum(&name,defstore,lexer).map(|_| true),
         _ => { return Ok(false); }

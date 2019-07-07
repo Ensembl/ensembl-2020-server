@@ -84,12 +84,14 @@ impl fmt::Debug for Statement {
     }
 }
 
+// TODO disallow keyword definitions (eg struct enum)
 #[derive(PartialEq, Debug, Clone)]
 pub enum BaseType {
     StringType,
     BytesType,
     NumberType,
-    BooleanType, /* TODO nested */
+    BooleanType,
+    IdentifiedType(String)
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -107,7 +109,7 @@ pub enum ParserStatement {
     FuncDecl(String),
     ProcDecl(String),
     Regular(Statement),
-    StructDef(String,Vec<Type>),
+    StructDef(String,Vec<Type>,Vec<String>),
     EnumDef(String),
     EndOfParse
 }

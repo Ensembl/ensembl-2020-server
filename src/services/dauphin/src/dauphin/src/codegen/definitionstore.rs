@@ -7,6 +7,7 @@ use super::definition::{
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
 
+#[derive(Debug)]
 pub struct DefStore {
     namespace: HashMap<String,(String,u32,u32)>,
     exprs: HashMap<String,ExprMacro>,
@@ -78,6 +79,10 @@ impl DefStore {
         self.detect_clash(struct_.name(),lexer)?;
         self.structs.insert(struct_.name().to_string(),struct_);
         Ok(())
+    }
+
+    pub fn get_struct(&self, name: &str) -> Option<&StructDef> {
+        self.structs.get(name)
     }
 
     pub fn add_enum(&mut self, enum_: EnumDef, lexer: &Lexer) -> Result<(),ParseError> {

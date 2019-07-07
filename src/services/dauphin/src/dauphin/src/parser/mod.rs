@@ -3,4 +3,4 @@ mod node;
 mod parser;
 mod preproc;
 
-pub use node::ParseError;
+pub use node::{ ParseError, Type, BaseType };

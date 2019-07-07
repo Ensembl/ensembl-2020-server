@@ -80,7 +80,7 @@ impl Parser {
                 get_other(&mut self.lexer,")")?;
                 out
             },
-            _ => Err(ParseError::new("TODO",&mut self.lexer))?
+            x => Type::Base(BaseType::IdentifiedType(x.to_string()))
         })
     }
 
@@ -94,13 +94,13 @@ impl Parser {
                 _ => return Err(ParseError::new("Unexpected token (expected ; or ,)",&mut self.lexer))
             };
         }
-        Ok((out,vec![]))
+        let len = out.len();
+        Ok((out,(0..len).into_iter().map(|x| (x.to_string())).collect()))
     }
 
     fn parse_struct_full(&mut self) -> Result<(Vec<Type>,Vec<String>),ParseError> {
         let mut out = Vec::new();
         let mut names = Vec::new();
-        let mut idx = 0;
         loop {
             names.push(get_identifier(&mut self.lexer)?);
             get_other(&mut self.lexer,":")?;
@@ -135,9 +135,8 @@ impl Parser {
         self.lexer.get();
         let name = get_identifier(&mut self.lexer)?;
         get_other(&mut self.lexer, "{")?;
-        let types = self.parse_struct_contents();
-        print!("{:?}",types);
-        Ok(ParserStatement::StructDef(name.to_string(),vec![]))
+        let (types,names) = self.parse_struct_contents()?;
+        Ok(ParserStatement::StructDef(name.to_string(),types,names))
     }
 
     fn parse_enum(&mut self) -> Result<ParserStatement,ParseError> {
@@ -507,6 +506,9 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/struct-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
-        let (stmts,_defstore) = p.parse().expect("error");
+        let (stmts,defstore) = p.parse().expect("error");
+        assert_eq!("struct A { 0: number, 1: vec(number) }",format!("{:?}",defstore.get_struct("A").unwrap()));
+        assert_eq!("struct B { X: number, Y: vec(A) }",format!("{:?}",defstore.get_struct("B").unwrap()));
+        assert_eq!("struct C {  }",format!("{:?}",defstore.get_struct("C").unwrap()));
     }
 }
