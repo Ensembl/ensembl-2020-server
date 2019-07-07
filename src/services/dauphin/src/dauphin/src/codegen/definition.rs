@@ -236,7 +236,7 @@ impl StructDef {
         })
     }
 
-    pub fn name(&self) -> &str { &self.common.name }
+    pub fn name(&self) -> &str { &self.common.name() }
 }
 
 impl fmt::Debug for StructDef {
@@ -256,7 +256,7 @@ impl EnumDef {
         })
     }
 
-    pub fn name(&self) -> &str { &self.common.name }
+    pub fn name(&self) -> &str { &self.common.name() }
 }
 
 impl fmt::Debug for EnumDef {

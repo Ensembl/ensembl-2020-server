@@ -48,7 +48,7 @@ fn run_enum(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut D
     Ok(())
 }
 
-pub fn preprocess(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStore) -> Result<bool,ParseError> {
+pub fn declare(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStore) -> Result<bool,ParseError> {
     match stmt {
         ParserStatement::Import(path) =>
             run_import(path,lexer).map(|_| true),
