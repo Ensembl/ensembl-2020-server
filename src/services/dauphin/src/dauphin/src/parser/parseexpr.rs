@@ -31,7 +31,6 @@ fn require_filter(lexer: &mut Lexer, c: char, nested: bool) -> Result<(),ParseEr
     Ok(())
 }
 
-/* TODO // comments */
 fn parse_struct_ctor(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool) -> Result<Expression,ParseError> {
     get_other(lexer,"{")?;
     if let Token::Identifier(first_id) = lexer.get() {
