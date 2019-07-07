@@ -1,3 +1,7 @@
+proc assign;
+inline ":=" assign left 14;
 struct A { number, vec(number) };
 struct B { X: number, Y: vec(A) };
 struct C {};
+x := A { 42, [1,2,3] };
+y := B { X: 23, Y: [x,x] };

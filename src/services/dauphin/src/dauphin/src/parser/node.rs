@@ -20,6 +20,9 @@ pub enum Expression {
     Query(Box<Expression>,String),
     Pling(Box<Expression>,String),
     Vector(Vec<Expression>),
+    CtorShort(String,Vec<Expression>),
+    CtorFull(String,Vec<Expression>,Vec<String>),
+    CtorEnum(String,String,Box<Expression>),
     Dollar,
     At
 }
@@ -30,6 +33,18 @@ fn write_csl(f: &mut fmt::Formatter<'_>, exprs: &Vec<Expression>) -> fmt::Result
             write!(f,",")?;
         }
         write!(f,"{:?}",sub)?;
+    }
+    Ok(())
+}
+
+fn write_csl_named(f: &mut fmt::Formatter<'_>, exprs: &Vec<Expression>, names: &Vec<String>) -> fmt::Result {
+    let mut names = names.iter();
+    for (i,sub) in exprs.iter().enumerate() {
+        let name = names.next().unwrap();
+        if i > 0 {
+            write!(f,",")?;
+        }
+        write!(f,"{}: {:?}",name,sub)?;
     }
     Ok(())
 }
@@ -62,11 +77,28 @@ impl fmt::Debug for Expression {
                 write_csl(f,x)?;
                 write!(f,")")?;
                 Ok(())
+            },
+            Expression::CtorShort(s,x) => {
+                write!(f,"{} {{",s)?;
+                write_csl(f,x)?;
+                write!(f,"}}")?;
+                Ok(())
+            },
+            Expression::CtorFull(s,x,n) => {
+                write!(f,"{} {{",s)?;
+                write_csl_named(f,x,n)?;
+                write!(f,"}}")?;
+                Ok(())
+            },
+            Expression::CtorEnum(e,b,v) => {
+                write!(f,"{}:{} {:?}",e,b,v)?;
+                Ok(())
             }
         }
     }
 }
 
+/* TODO statement line numbers */
 #[derive(PartialEq)]
 pub struct Statement(pub String,pub Vec<Expression>);
 

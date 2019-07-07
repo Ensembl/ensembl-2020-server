@@ -151,6 +151,39 @@ impl Parser {
         Ok(ParserStatement::EnumDef(name.to_string(),types,names))
     }
 
+    fn parse_ctor_full(&mut self, id: &str, nested: bool) -> Result<Expression,ParseError> {
+        let mut inner = Vec::new();
+        let mut names = Vec::new();
+        if let Token::Other('}') = self.lexer.peek() {
+            self.lexer.get();
+            return Ok(Expression::CtorFull(id.to_string(),vec![],vec![]));
+        }
+        loop {
+            names.push(get_identifier(&mut self.lexer)?);
+            get_other(&mut self.lexer,":")?;
+            inner.push(self.parse_expr(nested)?);        
+            match self.lexer.get() {
+                Token::Other(',') => (),
+                Token::Other('}') => break,
+                _ => return Err(ParseError::new("Unexpected token (expected ; or ,)",&mut self.lexer))
+            }
+        }
+        Ok(Expression::CtorFull(id.to_string(),inner,names))
+    }
+
+    /* TODO // comments */
+    fn parse_struct_ctor(&mut self,id: &str, nested: bool) -> Result<Expression,ParseError> {
+        get_other(&mut self.lexer,"{")?;
+        if let Token::Identifier(first_id) = self.lexer.get() {
+            if self.lexer.peek() == &Token::Other(':') {
+                self.lexer.unget(Token::Identifier(first_id));
+                return self.parse_ctor_full(id,nested);
+            }
+        }
+        let inner = self.parse_exprlist('}',nested)?;
+        return Ok(Expression::CtorShort(id.to_string(),inner));
+    }
+
     fn parse_atom_id(&mut self,id: &str, nested: bool) -> Result<Expression,ParseError> {
         if self.defstore.stmt_like(id,&mut self.lexer).unwrap_or(false) {
             Err(ParseError::new("Unexpected statement in expression",&mut self.lexer))?;
@@ -176,7 +209,18 @@ impl Parser {
 
     fn parse_atom(&mut self, nested: bool) -> Result<Expression,ParseError> {
         Ok(match self.lexer.get() {
-            Token::Identifier(id) => self.parse_atom_id(&id,nested)?,
+            Token::Identifier(id) => {
+                if self.lexer.peek() == &Token::Other('{') {
+                    self.parse_struct_ctor(&id,nested)?
+                } else if self.lexer.peek() == &Token::Other(':') {
+                    self.lexer.get();
+                    let branch = get_identifier(&mut self.lexer)?;
+                    let expr = self.parse_expr(nested)?;
+                    Expression::CtorEnum(id.to_string(),branch.to_string(),Box::new(expr))
+                } else {
+                    self.parse_atom_id(&id,nested)?
+                }
+            },
             Token::Number(num,_) => Expression::Number(num),
             Token::LiteralString(s) => Expression::LiteralString(s),
             Token::LiteralBytes(b) => Expression::LiteralBytes(b),
@@ -516,6 +560,7 @@ mod test {
         assert_eq!("struct A { 0: number, 1: vec(number) }",format!("{:?}",defstore.get_struct("A").unwrap()));
         assert_eq!("struct B { X: number, Y: vec(A) }",format!("{:?}",defstore.get_struct("B").unwrap()));
         assert_eq!("struct C {  }",format!("{:?}",defstore.get_struct("C").unwrap()));
+        assert_eq!("[assign(x,A {[1,2,3]}), assign(y,B {X: 23,Y: [x,x]})]",&format!("{:?}",stmts));
     }
 
     #[test]
@@ -528,5 +573,6 @@ mod test {
         assert_eq!("enum A { M: number, N: vec(number) }",format!("{:?}",defstore.get_enum("A").unwrap()));
         assert_eq!("enum B { X: number, Y: vec(A) }",format!("{:?}",defstore.get_enum("B").unwrap()));
         assert_eq!("enum C {  }",format!("{:?}",defstore.get_enum("C").unwrap()));
+        assert_eq!("[assign(x,B:Y [A:M 42,B:N [1,2,3]])]",&format!("{:?}",stmts));
     }
 }
