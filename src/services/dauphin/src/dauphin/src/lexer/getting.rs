@@ -87,6 +87,10 @@ impl LexerGetting {
         }
     }
 
+    fn consume_to_eol(&mut self, stream: &mut dyn CharSource) {
+        self.advance_char(|c| c != '\n',false,stream);
+    }
+
     fn consume_string(&mut self, stream: &mut dyn CharSource) {
         stream.advance(1);
         let out = self.advance_char(|c| c != '"',true,stream);
@@ -121,6 +125,8 @@ impl LexerGetting {
                 self.advance_char(|c| c.is_whitespace(),false,stream);
             } else if c == '/' && stream.peek(2) == "/*" {
                 self.consume_comment(stream);
+            } else if c == '/' && stream.peek(2) == "//" {
+                self.consume_to_eol(stream);
             } else if c == '"' {
                 self.consume_string(stream);
             } else if c == '\'' {
