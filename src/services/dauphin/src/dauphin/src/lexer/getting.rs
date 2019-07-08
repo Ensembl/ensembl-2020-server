@@ -1,7 +1,6 @@
 use super::charsource::CharSource;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
-use crate::codegen::InlineMode;
 
 pub struct LexerGetting {
     token: Option<Token>,

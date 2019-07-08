@@ -7,3 +7,4 @@ mod parser;
 mod declare;
 
 pub use node::{ ParseError, Type, BaseType };
+pub use parser::Parser;

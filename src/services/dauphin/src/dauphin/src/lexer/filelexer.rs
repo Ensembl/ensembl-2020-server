@@ -1,12 +1,7 @@
-use std::str::FromStr;
-use std::rc::Rc;
-
 use super::charsource::{ CharSource, LocatedCharSource };
-use super::fileresolver::FileResolver;
 use super::inlinetokens::InlineTokens;
 use super::getting::LexerGetting;
 use super::token::Token;
-use crate::codegen::InlineMode;
 
 pub struct FileLexer {
     stream: LocatedCharSource,
@@ -62,7 +57,9 @@ mod test {
     use super::super::token::Token;
     use super::*;
     use crate::testsuite::load_testdata;
-    use crate::codegen::InlineMode;
+    use std::str::FromStr;
+    use std::rc::Rc;
+    use super::super::fileresolver::FileResolver;
 
     fn add_token(out: &mut String, token: &(Token,String,u32,u32)) {
         out.push_str(&format!("{:?} {} {},{}\n",token.0,token.1,token.2,token.3));

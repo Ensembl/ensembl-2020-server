@@ -1,5 +1,4 @@
 use crate::lexer::{ Lexer, Token };
-use crate::codegen::InlineMode;
 use super::node::ParseError;
 
 pub fn not_reserved(s: &str, lexer: &mut Lexer) -> Result<(),ParseError> {

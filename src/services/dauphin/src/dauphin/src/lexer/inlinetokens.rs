@@ -1,7 +1,6 @@
 use std::collections::{ HashSet, HashMap };
 
 use super::charsource::CharSource;
-use crate::codegen::InlineMode;
 
 struct InlineTokensLen {
     len: usize,
@@ -68,17 +67,16 @@ impl InlineTokensSection {
                 return Err("operator cannot begin , ) ] or (".to_string());
             }
         }
-        /* "." "?" "!" "(" are not valid alone */
-        if c == "." || c == "?" || c == "!" {
-            return Err("operator cannot be .?!".to_string());
-        }
-        /* "." "?" "!" not valid followed by alphanumeric */
+        /* "." "?" "!" not valid followed by alphanumeric, not valid alone */
         let mut c = c.chars();
-        if let Some(c) = c.next() {
-            if c == '.' || c == '?'| || c == '!' {
-                let c = c.next();
-                if c.is_alphanumeric() || c == '_' {
-                    return Err("operator cannot be .?! followed by alphanumeric".to_string());
+        if let Some(ch) = c.next() {
+            if ch == '.' || ch == '?' || ch == '!' {
+                if let Some(ch) = c.next() {
+                    if ch.is_alphanumeric() || ch == '_' {
+                        return Err("operator cannot be .?! followed by alphanumeric".to_string());
+                    }
+                } else {
+                    return Err("operator cannot be .?!".to_string());
                 }
             }
         }
@@ -101,7 +99,7 @@ impl InlineTokensSection {
     }
 
     pub fn add(&mut self, op: &str) -> Result<(),String> {
-        self.check_inline(op)?;
+        //self.check_inline(op)?;
         let len = op.len();
         if let Some(start) = op.chars().next() {
             let r = self.lens.entry(len).or_insert_with(|| InlineTokensLen::new(len));

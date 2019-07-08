@@ -3,8 +3,6 @@ use super::fileresolver::FileResolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
 
-use crate::codegen::InlineMode;
-
 pub struct Lexer {
     resolver: FileResolver,
     files: Vec<FileLexer>,

@@ -13,7 +13,7 @@ pub struct Parser {
 }
 
 impl Parser {
-    fn new(lexer: Lexer) -> Parser {
+    pub fn new(lexer: Lexer) -> Parser {
         let mut p = Parser {
             lexer,
             defstore: DefStore::new(),
@@ -55,7 +55,7 @@ impl Parser {
         self.recover_parse_statement().and_then(|stmt| self.run_declare(stmt))
     }
 
-    fn parse(mut self) -> Result<(Vec<Statement>,DefStore),Vec<ParseError>> {
+    pub fn parse(mut self) -> Result<(Vec<Statement>,DefStore),Vec<ParseError>> {
         loop {
             match self.get_non_declare() {
                 Ok(Some(ParserStatement::EndOfParse)) => {

@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::testsuite::load_testdata;
 
 use super::charsource::{ CharSource, StringCharSource };
@@ -23,8 +24,8 @@ impl FileResolver {
     }
 
     #[cfg(not(test))]
-    fn test_path<'a>(&self, path: &'a str) -> Result<Box<dyn CharSource>,String> {
-        Err("no test files except when running tests")
+    fn test_path<'a>(&self, _path: &'a str) -> Result<Box<dyn CharSource>,String> {
+        Err("no test files except when running tests".to_string())
     }
 
     pub fn resolve(&self, path: &str) -> Result<Box<dyn CharSource>,String> {
