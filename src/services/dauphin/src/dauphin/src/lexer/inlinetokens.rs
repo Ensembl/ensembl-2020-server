@@ -1,6 +1,7 @@
 use std::collections::{ HashSet, HashMap };
 
 use super::charsource::CharSource;
+use crate::codegen::InlineMode;
 
 struct InlineTokensLen {
     len: usize,
@@ -25,32 +26,63 @@ impl InlineTokensLen {
     }
 }
 
-pub struct InlineTokens {
+pub struct InlineTokensSection {
+    prefix: bool,
     lens: HashMap<usize,InlineTokensLen>,
     starts: HashMap<char,Vec<i32>>
 }
 
-impl InlineTokens {
-    pub fn new() -> InlineTokens {
-        InlineTokens {
+impl InlineTokensSection {
+    pub fn new(prefix: bool) -> InlineTokensSection {
+        InlineTokensSection {
+            prefix,
             lens: HashMap::new(),
             starts: HashMap::new()
         }
     }
 
     fn check_inline(&self, c: &str) -> Result<(),String> {
-        /* operators cannot contain slash-star, slash-slash, semicolon */
+        /* cannot contain slash-star, slash-slash, semicolon */
         for b in &vec!["//","/*",";"] {
             if c.contains(b) {
                 return Err(format!("operator '{}' invalid, cannot contain '{}'",c,b));
             }
         }
-        /* operators cannot contain whitespace */
+        /* cannot contain whitespace */
         for c in c.chars() {
             if c.is_whitespace() {
                 return Err(format!("operator '{}' invalid, cannot contain whitespace",c));
             }
         }
+        /* cannot begin with alphanumerics or be blank */
+        if let Some(c) = c.chars().next() {
+            if c.is_alphanumeric() || c == '_' {
+                return Err("operator cannot begin with alphanumeric".to_string());
+            }
+        } else {
+            return Err("operator cannot be blank".to_string());
+        }
+        /* cannot begin "," ")" "]": expression end? or "(" function start? */
+        if let Some(c) = c.chars().next() {
+            if c == ',' || c == ';' || c == ')' || c == ']' || c == '(' {
+                return Err("operator cannot begin , ) ] or (".to_string());
+            }
+        }
+        /* "." "?" "!" "(" are not valid alone */
+        if c == "." || c == "?" || c == "!" {
+            return Err("operator cannot be .?!".to_string());
+        }
+        /* "." "?" "!" not valid followed by alphanumeric */
+        let mut c = c.chars();
+        if let Some(c) = c.next() {
+            if c == '.' || c == '?'| || c == '!' {
+                let c = c.next();
+                if c.is_alphanumeric() || c == '_' {
+                    return Err("operator cannot be .?! followed by alphanumeric".to_string());
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -79,5 +111,35 @@ impl InlineTokens {
             lens.sort_by_key(|k| -k);
         }
         Ok(())
+    }
+}
+
+pub struct InlineTokens {
+    prefix: InlineTokensSection,
+    normal: InlineTokensSection
+}
+
+impl InlineTokens {
+    pub fn new() -> InlineTokens {
+        InlineTokens {
+            prefix: InlineTokensSection::new(true),
+            normal: InlineTokensSection::new(false)
+        }
+    }
+
+    fn part(&self, prefix: bool) -> &InlineTokensSection {
+        if prefix { &self.prefix } else { &self.normal }
+    }
+
+    fn part_mut(&mut self, prefix: bool) -> &mut InlineTokensSection {
+        if prefix { &mut self.prefix } else { &mut self.normal }
+    }
+
+    pub fn contains(&self, cs: &mut dyn CharSource, prefix: bool) -> Option<String> {
+        self.part(prefix).contains(cs)
+    }
+
+    pub fn add(&mut self, op: &str, prefix: bool) -> Result<(),String> {
+        self.part_mut(prefix).add(op)
     }
 }

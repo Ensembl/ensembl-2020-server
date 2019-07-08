@@ -1,6 +1,7 @@
 use super::charsource::CharSource;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
+use crate::codegen::InlineMode;
 
 pub struct LexerGetting {
     token: Option<Token>,
@@ -113,17 +114,21 @@ impl LexerGetting {
         }
     }
 
-    fn ops_test(&self, stream: &mut dyn CharSource, ops: &InlineTokens, allow_ops: bool) -> Option<String> {
-        if allow_ops { ops.contains(stream) } else { None }
+    fn ops_test(&self, stream: &mut dyn CharSource, ops: &InlineTokens, mode: Option<bool>) -> Option<String> {
+        if let Some(mode) = mode {
+            ops.contains(stream,mode)
+        } else {
+            None
+        }
     }
 
-    pub fn go(&mut self, stream: &mut dyn CharSource, ops: &InlineTokens, allow_ops: bool) {
+    pub fn go(&mut self, stream: &mut dyn CharSource, ops: &InlineTokens, mode: Option<bool>) {
         if let Some(c) = stream.peek(1).chars().next() {
             if identifier_stuff(c) {
                 self.get_identifier(stream);
             } else if c.is_ascii_digit() {
                 self.get_number(stream);
-            } else if let Some(op) = self.ops_test(stream,ops,allow_ops) {
+            } else if let Some(op) = self.ops_test(stream,ops,mode) {
                 self.set_token(Token::Operator(op));
             } else if c.is_whitespace() {
                 self.advance_char(|c| c.is_whitespace(),false,stream);

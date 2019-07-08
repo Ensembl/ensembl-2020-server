@@ -1,4 +1,5 @@
 use crate::lexer::{ Lexer, Token };
+use crate::codegen::InlineMode;
 use super::node::ParseError;
 
 pub fn not_reserved(s: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
@@ -30,8 +31,8 @@ pub fn get_identifier(lexer: &mut Lexer) -> Result<String,ParseError> {
     }
 }
 
-pub fn get_operator(lexer: &mut Lexer) -> Result<String,ParseError> {
-    match lexer.get_oper() {
+pub fn get_operator(lexer: &mut Lexer, mode: bool) -> Result<String,ParseError> {
+    match lexer.get_oper(mode) {
         Token::Operator(symbol) => Ok(symbol),
         x => Err(ParseError::new(&format!("expected operator not {:?}",x),lexer))
     }

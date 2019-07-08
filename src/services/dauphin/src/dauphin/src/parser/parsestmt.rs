@@ -47,7 +47,7 @@ fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStateme
 
 fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
     let left = parse_expr(lexer,defstore, false)?;
-    let op = get_operator(lexer)?;
+    let op = get_operator(lexer,false)?;
     let right = parse_expr(lexer,defstore,false)?;
     let name = defstore.get_inline_binary(&op,lexer)?.name();
     if !defstore.stmt_like(&name,lexer)? {

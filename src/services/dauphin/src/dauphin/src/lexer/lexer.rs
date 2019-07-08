@@ -3,6 +3,8 @@ use super::fileresolver::FileResolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
 
+use crate::codegen::InlineMode;
+
 pub struct Lexer {
     resolver: FileResolver,
     files: Vec<FileLexer>,
@@ -18,8 +20,8 @@ impl Lexer {
         }
     }
 
-    pub fn add_inline(&mut self, s: &str) -> Result<(),String> {
-        self.inlines.add(s)
+    pub fn add_inline(&mut self, s: &str, mode: bool) -> Result<(),String> {
+        self.inlines.add(s,mode)
     }
 
     pub fn import(&mut self, path: &str) -> Result<(),String> {
@@ -38,21 +40,21 @@ impl Lexer {
 
     pub fn peek(&mut self) -> Token {
         if let Some(last) = self.files.last_mut() {
-            last.peek(&self.inlines,false)
+            last.peek(&self.inlines,None)
         } else {
             Token::EndOfLex
         }
     }
 
-    pub fn peek_oper(&mut self) -> Token {
+    pub fn peek_oper(&mut self, mode: bool) -> Token {
         if let Some(last) = self.files.last_mut() {
-            last.peek(&self.inlines,true)
+            last.peek(&self.inlines,Some(mode))
         } else {
             Token::EndOfLex
         }
     }
 
-    fn more(&mut self, allow_ops: bool) -> Token {
+    fn more(&mut self, allow_ops: Option<bool>) -> Token {
         if let Some(last) = self.files.last_mut() {
             let tok = last.get(&self.inlines,allow_ops);
             if let Token::EndOfFile = tok {
@@ -65,11 +67,11 @@ impl Lexer {
     }
 
     pub fn get(&mut self) -> Token {
-        self.more(false)
+        self.more(None)
     }
 
-    pub fn get_oper(&mut self) -> Token {
-        self.more(true)
+    pub fn get_oper(&mut self, mode: bool) -> Token {
+        self.more(Some(mode))
     }
 
     pub fn pos(&self) -> usize {

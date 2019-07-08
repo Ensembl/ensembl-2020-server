@@ -94,7 +94,7 @@ fn peek_enum_ctor(lexer: &mut Lexer) -> bool {
 }
 
 fn parse_atom(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Expression,ParseError> {
-    Ok(match lexer.get_oper() {
+    Ok(match lexer.get_oper(true) {
         Token::Identifier(id) => {
             if lexer.peek() == Token::Other('{') {
                 parse_struct_ctor(lexer,defstore,&id,nested)?
@@ -140,14 +140,14 @@ fn parse_brackets(lexer: &mut Lexer, defstore: &DefStore, left: Expression) -> R
 }
 
 fn parse_suffix(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: &str) -> Result<Expression,ParseError> {
-    lexer.get_oper();
+    lexer.get_oper(false);
     Ok(match &name[..] {
         "__sqopen__" => parse_brackets(lexer,defstore,left)?,
         "__dot__" => Expression::Dot(Box::new(left),get_identifier(lexer)?),
         "__query__" => Expression::Query(Box::new(left),get_identifier(lexer)?),
         "__pling__" => Expression::Pling(Box::new(left),get_identifier(lexer)?),
         "__ref__" => {
-            if get_operator(lexer)? != "[" {
+            if get_operator(lexer,false)? != "[" {
                 return Err(ParseError::new("Expected [",lexer));
             }
             if let Expression::Bracket(op,key) = parse_brackets(lexer,defstore,left)? {
@@ -161,7 +161,7 @@ fn parse_suffix(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: 
 }
 
 fn parse_binary_right(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: &str, min: f64, oreq: bool, nested: bool) -> Result<Expression,ParseError> {
-    lexer.get_oper();
+    lexer.get_oper(false);
     let right = parse_expr_level(lexer,defstore,Some(min),oreq,nested)?;
     Ok(Expression::Operator(name.to_string(),vec![left,right]))
 }
@@ -189,7 +189,7 @@ fn extend_expr(lexer: &mut Lexer, defstore: &DefStore, left: Expression, symbol:
 fn parse_expr_level(lexer: &mut Lexer, defstore: &DefStore, min: Option<f64>, oreq: bool, nested: bool) -> Result<Expression,ParseError> {
     let mut out = parse_atom(lexer,defstore,nested)?;
     loop {
-        match lexer.peek_oper() {
+        match lexer.peek_oper(false) {
             Token::Operator(op) => {
                 let op = op.to_string();
                 let (expr,progress) = extend_expr(lexer,defstore,out,&op,min,oreq,nested)?;
