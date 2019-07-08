@@ -1,0 +1,3 @@
+proc assign;
+inline ":=" assign left 14;
+x := [1,2,3];

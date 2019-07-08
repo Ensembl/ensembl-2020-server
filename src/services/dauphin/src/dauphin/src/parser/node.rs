@@ -6,8 +6,8 @@ use crate::lexer::Lexer;
 
 #[derive(PartialEq)]
 pub enum Expression {
-    Identifier(String),
-    Number(f64),
+    Identifier(String), //y
+    Number(f64), //y
     LiteralString(String),
     LiteralBytes(Vec<u8>),
     LiteralBool(bool),
@@ -19,7 +19,7 @@ pub enum Expression {
     Dot(Box<Expression>,String),
     Query(Box<Expression>,String),
     Pling(Box<Expression>,String),
-    Vector(Vec<Expression>),
+    Vector(Vec<Expression>), //y
     CtorShort(String,Vec<Expression>),
     CtorFull(String,Vec<Expression>,Vec<String>),
     CtorEnum(String,String,Box<Expression>),
