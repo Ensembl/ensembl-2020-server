@@ -13,6 +13,6 @@ inline "[" __sqctor__ prefix 4;
 inline "." __dot__ suffix 4;
 inline "?" __query__ suffix 4;
 inline "!" __pling__ suffix 4;
-inline "&" __ref__ suffix 4;
+inline "&[" __ref__ suffix 4;
 
 "#;

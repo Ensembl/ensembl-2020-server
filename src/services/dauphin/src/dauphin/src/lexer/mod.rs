@@ -3,6 +3,7 @@ mod filelexer;
 mod fileresolver;
 mod lexer;
 mod token;
+mod inlinecheck;
 mod inlinetokens;
 mod getting;
 mod preamble;

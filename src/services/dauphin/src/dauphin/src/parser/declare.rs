@@ -1,4 +1,5 @@
 use super::node::{ ParserStatement, ParseError, Type };
+use super::lexutil::not_reserved;
 use crate::codegen::{
     InlineMode, Inline, DefStore, ExprMacro, StmtMacro, FuncDecl, ProcDecl,
     StructDef, EnumDef
@@ -18,33 +19,39 @@ fn run_inline(symbol: &str, name: &str, mode: &InlineMode, prio: f64, lexer: &mu
     Ok(())
 }
 
-fn run_expr(name: &str, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
+fn run_expr(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+    not_reserved(name,lexer)?;
     defstore.add_expr(ExprMacro::new(name),lexer)?;
     Ok(())
 }
 
-fn run_stmt(name: &str, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
+fn run_stmt(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+    not_reserved(name,lexer)?;
     defstore.add_stmt(StmtMacro::new(name),lexer)?;
     Ok(())
 }
 
-fn run_proc(name: &str, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
+fn run_proc(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+    not_reserved(name,lexer)?;
     defstore.add_proc(ProcDecl::new(name),lexer)?;
     Ok(())
 }
 
-fn run_func(name: &str, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
+fn run_func(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+    not_reserved(name,lexer)?;
     defstore.add_func(FuncDecl::new(name),lexer)?;
     Ok(())
 }
 
-fn run_struct(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
+fn run_struct(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+    not_reserved(name,lexer)?;
     let def = StructDef::new(name,types,names,defstore).map_err(|e| ParseError::new(&e,lexer) )?;
     defstore.add_struct(def,lexer)?;
     Ok(())
 }
 
-fn run_enum(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &Lexer) -> Result<(),ParseError> {
+fn run_enum(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+    not_reserved(name,lexer)?;
     let def = EnumDef::new(name,types,names,defstore).map_err(|e| ParseError::new(&e,lexer) )?;
     defstore.add_enum(def,lexer)?;
     Ok(())

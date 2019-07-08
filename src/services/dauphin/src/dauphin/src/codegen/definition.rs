@@ -1,7 +1,7 @@
 use std::collections::{ HashMap, HashSet };
 use std::fmt;
 
-use crate::parser::{ Type, BaseType, ParseError };
+use crate::parser::{ Type, BaseType };
 use super::definitionstore::DefStore;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
@@ -34,12 +34,6 @@ impl Inline {
     pub fn name(&self) -> &str { &self.name }
     pub fn precedence(&self) -> f64 { self.precedence }
     pub fn mode(&self) -> &InlineMode { &self.mode }
-}
-
-pub fn check_inline_symbol(_sym: &str) -> Result<(),ParseError> {
-    /* TODO valid */
-    /* TODO not already present */
-    Ok(())
 }
 
 #[derive(Debug)]

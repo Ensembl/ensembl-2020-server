@@ -116,7 +116,6 @@ impl fmt::Debug for Statement {
     }
 }
 
-// TODO disallow keyword definitions (eg struct enum)
 #[derive(PartialEq, Debug, Clone)]
 pub enum BaseType {
     StringType,

@@ -1,8 +1,14 @@
 use crate::lexer::{ Lexer, Token };
 use super::node::ParseError;
 
+lazy_static! {
+    static ref KEYWORDS: Vec<&'static str> = {
+        vec!["reserved","struct","enum","func","proc","expr","stmt","inline","import"]
+    };
+}
+
 pub fn not_reserved(s: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
-    if s == "reserved" {
+    if KEYWORDS.contains(&s) {
         Err(ParseError::new(&format!("Reserved keyword '{}' found",s),lexer))?;
     }
     Ok(())

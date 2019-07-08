@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use super::definition::{
     ExprMacro, StmtMacro, FuncDecl, ProcDecl, StructDef, EnumDef, Inline,
-    check_inline_symbol, InlineMode
+    InlineMode
 };
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
@@ -96,7 +96,6 @@ impl DefStore {
     }
 
     pub fn add_inline(&mut self, inline: Inline) -> Result<(),ParseError> {
-        check_inline_symbol(&inline.symbol())?; // TODO
         if inline.mode() == &InlineMode::Prefix {
             self.inlines_unary.insert(inline.symbol().to_string(),inline);
         } else {

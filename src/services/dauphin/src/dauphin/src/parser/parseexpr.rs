@@ -1,7 +1,7 @@
 use crate::lexer::{ Lexer, Token };
 use crate::codegen::{ DefStore, InlineMode };
 use super::node::{ ParseError, Expression };
-use super::lexutil::{get_other, get_identifier, get_operator };
+use super::lexutil::{get_other, get_identifier };
 
 fn vec_ctor(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Expression,ParseError> {
     Ok(Expression::Vector(parse_exprlist(lexer,defstore,']',nested)?))
@@ -147,9 +147,6 @@ fn parse_suffix(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: 
         "__query__" => Expression::Query(Box::new(left),get_identifier(lexer)?),
         "__pling__" => Expression::Pling(Box::new(left),get_identifier(lexer)?),
         "__ref__" => {
-            if get_operator(lexer,false)? != "[" {
-                return Err(ParseError::new("Expected [",lexer));
-            }
             if let Expression::Bracket(op,key) = parse_brackets(lexer,defstore,left)? {
                 return Ok(Expression::Filter(op,key));
             } else {

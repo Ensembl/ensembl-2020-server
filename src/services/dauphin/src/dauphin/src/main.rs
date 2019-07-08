@@ -3,6 +3,9 @@ mod lexer;
 mod parser;
 mod testsuite;
 
+#[macro_use]
+extern crate lazy_static;
+
 /* This to remove RLS unused warns */
 
 use crate::lexer::{ FileResolver, Lexer };
