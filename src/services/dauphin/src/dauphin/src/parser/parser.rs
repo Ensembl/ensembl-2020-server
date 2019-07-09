@@ -163,7 +163,7 @@ mod test {
         assert_eq!("struct A { 0: number, 1: vec(number) }",format!("{:?}",defstore.get_struct("A").unwrap()));
         assert_eq!("struct B { X: number, Y: vec(A) }",format!("{:?}",defstore.get_struct("B").unwrap()));
         assert_eq!("struct C {  }",format!("{:?}",defstore.get_struct("C").unwrap()));
-        assert_eq!("[assign(x,A {[1,2,3]}), assign(y,B {X: 23,Y: [x,x]})]",&format!("{:?}",stmts));
+        assert_eq!("[assign(x,A {0: [1,2,3]}), assign(y,B {X: 23,Y: [x,x]})]",&format!("{:?}",stmts));
     }
 
     #[test]

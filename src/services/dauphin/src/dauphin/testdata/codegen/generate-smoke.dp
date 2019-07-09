@@ -1,3 +1,10 @@
+enum etest { X: string, Y: boolean };
+struct stest { A: vec(number), B: etest };
 proc assign;
 inline ":=" assign left 14;
 x := [1,2,3];
+y := "hello";
+z := stest { B: etest:X y, A: x };
+a := z.B;
+b := z.B?X;
+c := z.B!X;

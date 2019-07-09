@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::instruction::Instruction;
 use super::register::{ Register, RegisterAllocator };
 use super::definitionstore::DefStore;
@@ -18,39 +20,115 @@ impl Generator {
         }
     }
 
-    fn build_vec(&mut self, values: &Vec<Expression>) -> Register {
+    fn build_vec(&mut self, values: &Vec<Expression>) -> Result<Register,String> {
         let out = self.regalloc.allocate();
         self.instrs.push(Instruction::List(out.clone()));
         for val in values {
-            let push = Instruction::Push(out.clone(),self.build_expr(val));
+            let push = Instruction::Push(out.clone(),self.build_expr(val)?);
             self.instrs.push(push);
         }
-        out
+        Ok(out)
     }
 
-    fn build_expr(&mut self, expr: &Expression) -> Register {
-        match expr {
+    fn map_expressions(&mut self, x: &Vec<Expression>) -> Result<Vec<Register>,String> {
+        x.iter().map(|e| self.build_expr(e)).collect()
+    }
+
+    fn struct_rearrange(&mut self, s: &str, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
+        if let Some(decl) = self.defstore.get_struct(s) {
+            let gotpos : HashMap<String,usize> = got_names.iter().enumerate().map(|(i,e)| (e.to_string(),i)).collect();
+            let mut out = Vec::new();
+            for want_name in decl.get_names().iter() {
+                if let Some(got_pos) = gotpos.get(want_name) {
+                    out.push(x[*got_pos].clone());
+                } else {
+                    return Err(format!("Missing member '{}'",want_name));
+                }
+            }
+            Ok(out)
+        } else {
+            Err(format!("no such struct '{}'",s))
+        }
+    }
+
+    fn build_expr(&mut self, expr: &Expression) -> Result<Register,String> {
+        Ok(match expr {
             Expression::Identifier(id) => Register::Named(id.to_string()),
             Expression::Number(n) => {
                 let r = self.regalloc.allocate();
                 self.instrs.push(Instruction::NumberConst(r.clone(),*n));
                 r
             },
-            Expression::Vector(v) => self.build_vec(v),
+            Expression::LiteralString(s) => {
+                let r = self.regalloc.allocate();
+                self.instrs.push(Instruction::StringConst(r.clone(),s.to_string()));
+                r
+            },
+            Expression::LiteralBool(b) => {
+                let r = self.regalloc.allocate();
+                self.instrs.push(Instruction::BooleanConst(r.clone(),*b));
+                r
+            },
+            Expression::LiteralBytes(b) => {
+                let r = self.regalloc.allocate();
+                self.instrs.push(Instruction::BytesConst(r.clone(),b.to_vec()));
+                r
+            },
+            Expression::Vector(v) => self.build_vec(v)?,
+            Expression::CtorStruct(s,x,n) => {
+                let r = self.regalloc.allocate();
+                let x = self.map_expressions(x)?;
+                let x = self.struct_rearrange(s,x,n)?;
+                self.instrs.push(Instruction::CtorStruct(s.clone(),r.clone(),x));
+                r
+            },
+            Expression::CtorEnum(e,b,x) => {
+                let r = self.regalloc.allocate();
+                let x = self.build_expr(x)?;
+                self.instrs.push(Instruction::CtorEnum(e.clone(),b.clone(),r.clone(),x));
+                r
+            },
+            Expression::Dot(x,f) => {
+                let r = self.regalloc.allocate();
+                let x = self.build_expr(x)?;
+                self.instrs.push(Instruction::Dot(f.clone(),r.clone(),x));
+                r
+            },
+            Expression::Query(x,f) => {
+                let r = self.regalloc.allocate();
+                let x = self.build_expr(x)?;
+                self.instrs.push(Instruction::Query(f.clone(),r.clone(),x));
+                r
+            },
+            Expression::Pling(x,f) => {
+                let r = self.regalloc.allocate();
+                let x = self.build_expr(x)?;
+                self.instrs.push(Instruction::Pling(f.clone(),r.clone(),x));
+                r
+            },
             _ => self.regalloc.allocate()
-        }
+        })
     }
 
-    fn build(&mut self, stmt: &Statement) {
-        let regs : Vec<Register> = stmt.1.iter().map(|e| self.build_expr(e)).collect();
-        self.instrs.push(Instruction::Proc(stmt.0.to_string(),regs))
+    fn build(&mut self, stmt: &Statement) -> Result<(),String> {
+        let regs : Vec<Register> = self.map_expressions(&stmt.1)?;
+        self.instrs.push(Instruction::Proc(stmt.0.to_string(),regs));
+        Ok(())
     }
 
-    pub fn go(mut self, stmts: Vec<Statement>) -> Vec<Instruction> {
+    pub fn go(mut self, stmts: Vec<Statement>) -> Result<Vec<Instruction>,Vec<String>> {
+        let mut errors = Vec::new();
         for stmt in &stmts {
-            self.build(stmt);
+            let r = self.build(stmt);
+            if let Err(r) = r {
+                errors.push(format!("{} at {} {}",r,stmt.2,stmt.3));
+            }
         }
-        self.instrs
+        if errors.len() > 0 {
+            Err(errors)
+        } else {
+            Ok(self.instrs)
+        }
     }
 }
 

@@ -8,21 +8,20 @@ use crate::lexer::Lexer;
 pub enum Expression {
     Identifier(String), //y
     Number(f64), //y
-    LiteralString(String),
-    LiteralBytes(Vec<u8>),
-    LiteralBool(bool),
+    LiteralString(String), //y
+    LiteralBytes(Vec<u8>), //y
+    LiteralBool(bool), //y
     Operator(String,Vec<Expression>),
     Star(Box<Expression>),
     Square(Box<Expression>),
     Bracket(Box<Expression>,Box<Expression>),
     Filter(Box<Expression>,Box<Expression>),
-    Dot(Box<Expression>,String),
-    Query(Box<Expression>,String),
-    Pling(Box<Expression>,String),
+    Dot(Box<Expression>,String), //y
+    Query(Box<Expression>,String), //y
+    Pling(Box<Expression>,String), //y
     Vector(Vec<Expression>), //y
-    CtorShort(String,Vec<Expression>),
-    CtorFull(String,Vec<Expression>,Vec<String>),
-    CtorEnum(String,String,Box<Expression>),
+    CtorStruct(String,Vec<Expression>,Vec<String>), //y
+    CtorEnum(String,String,Box<Expression>), //y
     Dollar,
     At
 }
@@ -78,13 +77,7 @@ impl fmt::Debug for Expression {
                 write!(f,")")?;
                 Ok(())
             },
-            Expression::CtorShort(s,x) => {
-                write!(f,"{} {{",s)?;
-                write_csl(f,x)?;
-                write!(f,"}}")?;
-                Ok(())
-            },
-            Expression::CtorFull(s,x,n) => {
+            Expression::CtorStruct(s,x,n) => {
                 write!(f,"{} {{",s)?;
                 write_csl_named(f,x,n)?;
                 write!(f,"}}")?;
@@ -98,9 +91,9 @@ impl fmt::Debug for Expression {
     }
 }
 
-/* TODO statement line numbers */
+/* TODO economical statement line numbers */
 #[derive(PartialEq)]
-pub struct Statement(pub String,pub Vec<Expression>);
+pub struct Statement(pub String,pub Vec<Expression>,pub String,pub u32);
 
 impl fmt::Debug for Statement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

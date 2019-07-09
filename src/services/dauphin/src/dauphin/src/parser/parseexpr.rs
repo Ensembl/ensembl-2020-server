@@ -31,6 +31,10 @@ fn require_filter(lexer: &mut Lexer, c: char, nested: bool) -> Result<(),ParseEr
     Ok(())
 }
 
+fn make_names(len: usize) -> Vec<String> {
+    (0..len).map(|v| v.to_string()).collect()
+}
+
 fn parse_struct_ctor(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool) -> Result<Expression,ParseError> {
     get_other(lexer,"{")?;
     let pos = lexer.pos();
@@ -41,7 +45,8 @@ fn parse_struct_ctor(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: b
         }
     }
     let inner = parse_exprlist(lexer,defstore,'}',nested)?;
-    return Ok(Expression::CtorShort(id.to_string(),inner));
+    let names = make_names(inner.len());
+    return Ok(Expression::CtorStruct(id.to_string(),inner,names));
 }
 
 fn parse_ctor_full(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool) -> Result<Expression,ParseError> {
@@ -49,7 +54,7 @@ fn parse_ctor_full(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: boo
     let mut names = Vec::new();
     if let Token::Other('}') = lexer.peek() {
         lexer.get();
-        return Ok(Expression::CtorFull(id.to_string(),vec![],vec![]));
+        return Ok(Expression::CtorStruct(id.to_string(),vec![],vec![]));
     }
     loop {
         names.push(get_identifier(lexer)?);
@@ -61,7 +66,7 @@ fn parse_ctor_full(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: boo
             _ => return Err(ParseError::new("Unexpected token (expected ; or ,)",lexer))
         }
     }
-    Ok(Expression::CtorFull(id.to_string(),inner,names))
+    Ok(Expression::CtorStruct(id.to_string(),inner,names))
 }
 
 fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool) -> Result<Expression,ParseError> {

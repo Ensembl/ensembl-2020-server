@@ -158,16 +158,15 @@ pub struct StructEnumDef {
     type_: String,
     name: String,
     types: Vec<TypeDef>,
-    names: HashMap<String,usize>
+    names: Vec<String>
 }
 
 impl fmt::Debug for StructEnumDef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let revname : HashMap<usize,String> = self.names.iter().map(|(a,b)| (*b,a.to_string())).collect();
         write!(f,"{} {} {{ ",self.type_,self.name)?;
         for (i,t) in self.types.iter().enumerate() {
             if i > 0 { write!(f,", ")?; }
-            write!(f,"{}: ",revname[&i])?;
+            write!(f,"{}: ",self.names[i])?;
             write!(f,"{:?}",t)?;
         }
         write!(f," }}")?;
@@ -212,11 +211,12 @@ impl StructEnumDef {
             type_: type_.to_string(),
             name: name.to_string(),
             types,
-            names: names.iter().enumerate().map(|(k,v)| (v.to_string(),k)).collect()
+            names: names.clone()
         })
     }
 
     pub fn name(&self) -> &str { &self.name }
+    pub fn get_names(&self) -> &Vec<String> { &self.names }
 }
 
 pub struct StructDef {
@@ -231,6 +231,7 @@ impl StructDef {
     }
 
     pub fn name(&self) -> &str { &self.common.name() }
+    pub fn get_names(&self) -> &Vec<String> { &self.common.get_names() }
 }
 
 impl fmt::Debug for StructDef {
