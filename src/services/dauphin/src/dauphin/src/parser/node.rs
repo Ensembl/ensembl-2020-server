@@ -124,6 +124,19 @@ pub enum Type {
     Vector(Box<Type>)
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum TypeSig {
+    Base(BaseType),
+    Vector(Box<Type>),
+    Placeholder(String)
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct Sig {
+    pub lvalue: bool,
+    pub typesig: TypeSig
+}
+
 #[derive(Debug,PartialEq)]
 pub enum ParserStatement {
     Import(String),
@@ -131,7 +144,7 @@ pub enum ParserStatement {
     ExprMacro(String),
     StmtMacro(String),
     FuncDecl(String),
-    ProcDecl(String),
+    ProcDecl(String,Vec<Sig>),
     Regular(Statement),
     StructDef(String,Vec<Type>,Vec<String>),
     EnumDef(String,Vec<Type>,Vec<String>),

@@ -1,2 +1,2 @@
-proc assign;
+proc assign(lvalue _A, _A);
 func assign;

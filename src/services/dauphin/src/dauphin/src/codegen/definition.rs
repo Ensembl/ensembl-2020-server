@@ -1,7 +1,7 @@
 use std::collections::{ HashMap, HashSet };
 use std::fmt;
 
-use crate::parser::{ Type, BaseType };
+use crate::parser::{ Type, BaseType, Sig };
 use super::definitionstore::DefStore;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
@@ -77,15 +77,17 @@ impl FuncDecl {
 
 #[derive(Debug)]
 pub struct ProcDecl {
-    name: String
+    name: String,
+    sigs: Vec<Sig>
 }
 
 impl ProcDecl {
-    pub fn new(name: &str) -> ProcDecl {
-        ProcDecl { name: name.to_string() }
+    pub fn new(name: &str, sigs: &Vec<Sig>) -> ProcDecl {
+        ProcDecl { name: name.to_string(), sigs: sigs.to_vec() }
     }
 
     pub fn name(&self) -> &str { &self.name }
+    pub fn sigs(&self) -> &Vec<Sig> { &self.sigs }
 }
 
 pub enum BaseTypeDef {

@@ -1,4 +1,4 @@
-use super::node::{ ParserStatement, ParseError, Type };
+use super::node::{ ParserStatement, ParseError, Type, Sig };
 use super::lexutil::not_reserved;
 use crate::codegen::{
     InlineMode, Inline, DefStore, ExprMacro, StmtMacro, FuncDecl, ProcDecl,
@@ -31,9 +31,9 @@ fn run_stmt(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<()
     Ok(())
 }
 
-fn run_proc(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_proc(name: &str, sigs: &Vec<Sig>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    defstore.add_proc(ProcDecl::new(name),lexer)?;
+    defstore.add_proc(ProcDecl::new(name,sigs),lexer)?;
     Ok(())
 }
 
@@ -67,8 +67,8 @@ pub fn declare(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStor
             run_expr(&name,defstore,lexer).map(|_| true),
         ParserStatement::StmtMacro(name) =>
             run_stmt(&name,defstore,lexer).map(|_| true),
-        ParserStatement::ProcDecl(name) =>
-            run_proc(&name,defstore,lexer).map(|_| true),
+        ParserStatement::ProcDecl(name,sigs) =>
+            run_proc(&name,sigs,defstore,lexer).map(|_| true),
         ParserStatement::FuncDecl(name) =>
             run_func(&name,defstore,lexer).map(|_| true),
         ParserStatement::StructDef(name,types,names) =>

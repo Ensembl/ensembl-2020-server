@@ -149,7 +149,7 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/id-clash.dp").expect("cannot load file");
         let p = Parser::new(lexer);
-        let txt = "\'assign\' already defined at test:parser/id-clash.dp 1:12 at line 2 column 12 in test:parser/id-clash.dp";
+        let txt = "\'assign\' already defined at test:parser/id-clash.dp 1:26 at line 2 column 12 in test:parser/id-clash.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 

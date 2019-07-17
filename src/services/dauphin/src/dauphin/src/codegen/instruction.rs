@@ -15,11 +15,17 @@ pub enum Instruction {
     Dot(String,Register,Register), // becomes #svalue after type inference
     Query(String,Register,Register), // becomes #etest after type inference
     Pling(String,Register,Register), // becomes #evalue after type inference
+    RefDot(String,Register,Register), // becomes #refsvalue after type inference
+    RefPling(String,Register,Register), // becomes #refevalue after type inference
     Square(Register,Register),
+    RefSquare(Register,Register),
     Star(Register,Register),
     Filter(Register,Register,Register),
+    RefFilter(Register,Register,Register),
     At(Register,Register),
-    Operator(String,Vec<Register>)
+    Operator(String,Vec<Register>),
+    Ref(Register,Register),
+    RefStar(Register,Register),
 }
 
 fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {
@@ -59,23 +65,41 @@ impl fmt::Debug for Instruction {
             Instruction::Dot(field,dst,src) => {
                 fmt_instr(f,&format!("dot:{}",field),&vec![dst,src],&vec![])?
             },
+            Instruction::RefDot(field,dst,src) => {
+                fmt_instr(f,&format!("refdot:{}",field),&vec![dst,src],&vec![])?
+            },
             Instruction::Query(field,dst,src) => {
                 fmt_instr(f,&format!("query:{}",field),&vec![dst,src],&vec![])?
             },
             Instruction::Pling(field,dst,src) => {
                 fmt_instr(f,&format!("pling:{}",field),&vec![dst,src],&vec![])?
             },
+            Instruction::RefPling(field,dst,src) => {
+                fmt_instr(f,&format!("refpling:{}",field),&vec![dst,src],&vec![])?
+            },
             Instruction::Square(dst,src) => {
                 fmt_instr(f,"square",&vec![dst,src],&vec![])?
             },
+            Instruction::RefSquare(dst,src) => {
+                fmt_instr(f,"refsquare",&vec![dst,src],&vec![])?
+            },
             Instruction::Star(dst,src) => {
                 fmt_instr(f,"star",&vec![dst,src],&vec![])?
+            },
+            Instruction::Ref(dst,src) => {
+                fmt_instr(f,"ref",&vec![dst,src],&vec![])?
             },
             Instruction::At(dst,src) => {
                 fmt_instr(f,"at",&vec![dst,src],&vec![])?
             },
             Instruction::Filter(dst,src,filter) => {
                 fmt_instr(f,"filter",&vec![dst,src,filter],&vec![])?
+            },
+            Instruction::RefFilter(dst,src,filter) => {
+                fmt_instr(f,"reffilter",&vec![dst,src,filter],&vec![])?
+            },
+            Instruction::RefStar(dst,src) => {
+                fmt_instr(f,"refstar",&vec![dst,src],&vec![])?
             }
         }
         Ok(())

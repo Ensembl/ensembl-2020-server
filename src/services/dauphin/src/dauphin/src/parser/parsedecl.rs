@@ -1,5 +1,5 @@
 use crate::lexer::{ Lexer, Token };
-use super::node::{ ParserStatement, ParseError, Type, BaseType };
+use super::node::{ ParserStatement, ParseError, Type, BaseType, TypeSig, Sig };
 use super::lexutil::{ get_other, get_identifier };
 
 pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
@@ -23,7 +23,34 @@ pub(in super) fn parse_func(lexer: &mut Lexer) -> Result<ParserStatement,ParseEr
 pub(in super) fn parse_proc(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let name = get_identifier(lexer)?;
-    Ok(ParserStatement::ProcDecl(name.to_string()))
+    let mut sigs = Vec::new();
+    get_other(lexer,"(")?;
+    loop {
+        sigs.push(parse_signature(lexer)?);
+        match lexer.get() {
+            Token::Other(',') => (),
+            Token::Other(')') => break,
+            _ => return Err(ParseError::new("Unexpected token (expected ) or ,)",lexer))
+        };
+    }
+    Ok(ParserStatement::ProcDecl(name.to_string(),sigs))
+}
+
+fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
+    let mut lvalue = false;
+    match lexer.peek() {
+        Token::Identifier(name) => {
+            match &name[..] {
+                "lvalue" => {
+                    lvalue = true;
+                    lexer.get();
+                },
+                _ => ()
+            }
+        },
+        _ => ()
+    }
+    Ok(Sig { lvalue, typesig: parse_typesig(lexer)? })
 }
 
 fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {
@@ -39,6 +66,28 @@ fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {
             out
         },
         x => Type::Base(BaseType::IdentifiedType(x.to_string()))
+    })
+}
+
+fn parse_typesig(lexer: &mut Lexer) -> Result<TypeSig,ParseError> {
+    Ok(match &get_identifier(lexer)?[..] {
+        "boolean" => TypeSig::Base(BaseType::BooleanType),
+        "number" => TypeSig::Base(BaseType::NumberType),
+        "string" => TypeSig::Base(BaseType::StringType),
+        "bytes" => TypeSig::Base(BaseType::BytesType),
+        "vec" => {
+            get_other(lexer,"(")?;
+            let out =  TypeSig::Vector(Box::new(parse_type(lexer)?));
+            get_other(lexer,")")?;
+            out
+        },
+        x => {
+            if x.starts_with("_") {
+                TypeSig::Placeholder(x[1..].to_string())
+            } else {
+                TypeSig::Base(BaseType::IdentifiedType(x.to_string()))
+            }
+        }
     })
 }
 

@@ -125,4 +125,8 @@ impl DefStore {
             Err(ParseError::new(&format!("No such symbol: '{}'",cmp),lexer))
         }
     }
+
+    pub fn get_proc(&self, name: &str) -> Option<&ProcDecl> {
+        self.procs.get(name)
+    }
 }
