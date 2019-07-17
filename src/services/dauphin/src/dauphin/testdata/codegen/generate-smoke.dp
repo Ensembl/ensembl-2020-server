@@ -1,10 +1,16 @@
 enum etest { X: string, Y: boolean };
 struct stest { A: vec(number), B: etest };
 proc assign;
+func gt;
+func lt;
 inline ":=" assign left 14;
+inline ">" gt left 6;
+inline "<" lt left 6;
 x := [1,2,3];
 y := "hello";
 z := stest { B: etest:X y, A: x };
 a := z.B;
 b := z.B?X;
 c := z.B!X;
+y := *x[];
+y := x[@>0][$<3];

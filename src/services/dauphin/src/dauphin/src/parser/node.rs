@@ -6,22 +6,22 @@ use crate::lexer::Lexer;
 
 #[derive(PartialEq)]
 pub enum Expression {
-    Identifier(String), //y
-    Number(f64), //y
-    LiteralString(String), //y
-    LiteralBytes(Vec<u8>), //y
-    LiteralBool(bool), //y
+    Identifier(String),
+    Number(f64),
+    LiteralString(String),
+    LiteralBytes(Vec<u8>),
+    LiteralBool(bool),
     Operator(String,Vec<Expression>),
     Star(Box<Expression>),
     Square(Box<Expression>),
     Bracket(Box<Expression>,Box<Expression>),
     Filter(Box<Expression>,Box<Expression>),
-    Dot(Box<Expression>,String), //y
-    Query(Box<Expression>,String), //y
-    Pling(Box<Expression>,String), //y
-    Vector(Vec<Expression>), //y
-    CtorStruct(String,Vec<Expression>,Vec<String>), //y
-    CtorEnum(String,String,Box<Expression>), //y
+    Dot(Box<Expression>,String),
+    Query(Box<Expression>,String),
+    Pling(Box<Expression>,String),
+    Vector(Vec<Expression>),
+    CtorStruct(String,Vec<Expression>,Vec<String>),
+    CtorEnum(String,String,Box<Expression>),
     Dollar,
     At
 }

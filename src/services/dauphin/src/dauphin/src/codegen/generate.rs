@@ -20,18 +20,18 @@ impl Generator {
         }
     }
 
-    fn build_vec(&mut self, values: &Vec<Expression>) -> Result<Register,String> {
+    fn build_vec(&mut self, values: &Vec<Expression>, dollar: &Option<Register>) -> Result<Register,String> {
         let out = self.regalloc.allocate();
         self.instrs.push(Instruction::List(out.clone()));
         for val in values {
-            let push = Instruction::Push(out.clone(),self.build_expr(val)?);
+            let push = Instruction::Push(out.clone(),self.build_expr(val,dollar)?);
             self.instrs.push(push);
         }
         Ok(out)
     }
 
-    fn map_expressions(&mut self, x: &Vec<Expression>) -> Result<Vec<Register>,String> {
-        x.iter().map(|e| self.build_expr(e)).collect()
+    fn map_expressions(&mut self, x: &Vec<Expression>, dollar: &Option<Register>) -> Result<Vec<Register>,String> {
+        x.iter().map(|e| self.build_expr(e,dollar)).collect()
     }
 
     fn struct_rearrange(&mut self, s: &str, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
@@ -51,7 +51,7 @@ impl Generator {
         }
     }
 
-    fn build_expr(&mut self, expr: &Expression) -> Result<Register,String> {
+    fn build_expr(&mut self, expr: &Expression, dollar: &Option<Register>) -> Result<Register,String> {
         Ok(match expr {
             Expression::Identifier(id) => Register::Named(id.to_string()),
             Expression::Number(n) => {
@@ -74,44 +74,97 @@ impl Generator {
                 self.instrs.push(Instruction::BytesConst(r.clone(),b.to_vec()));
                 r
             },
-            Expression::Vector(v) => self.build_vec(v)?,
+            Expression::Vector(v) => self.build_vec(v,dollar)?,
             Expression::CtorStruct(s,x,n) => {
                 let r = self.regalloc.allocate();
-                let x = self.map_expressions(x)?;
+                let x = self.map_expressions(x,dollar)?;
                 let x = self.struct_rearrange(s,x,n)?;
                 self.instrs.push(Instruction::CtorStruct(s.clone(),r.clone(),x));
                 r
             },
             Expression::CtorEnum(e,b,x) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_expr(x)?;
+                let x = self.build_expr(x,dollar)?;
                 self.instrs.push(Instruction::CtorEnum(e.clone(),b.clone(),r.clone(),x));
+                r
+            },
+            Expression::Operator(name,x) => {
+                let r = self.regalloc.allocate();
+                let x = self.map_expressions(x,dollar)?;
+                self.instrs.push(Instruction::Operator(name.clone(),x));
                 r
             },
             Expression::Dot(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_expr(x)?;
+                let x = self.build_expr(x,dollar)?;
                 self.instrs.push(Instruction::Dot(f.clone(),r.clone(),x));
                 r
             },
             Expression::Query(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_expr(x)?;
+                let x = self.build_expr(x,dollar)?;
                 self.instrs.push(Instruction::Query(f.clone(),r.clone(),x));
                 r
             },
             Expression::Pling(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_expr(x)?;
+                let x = self.build_expr(x,dollar)?;
                 self.instrs.push(Instruction::Pling(f.clone(),r.clone(),x));
                 r
+            },
+            Expression::Square(x) => {
+                let r = self.regalloc.allocate();
+                let x = self.build_expr(x,dollar)?;
+                self.instrs.push(Instruction::Square(r.clone(),x));
+                r
+            },
+            Expression::Star(x) => {
+                let r = self.regalloc.allocate();
+                let x = self.build_expr(x,dollar)?;
+                self.instrs.push(Instruction::Star(r.clone(),x));
+                r
+            },
+            Expression::Filter(x,f) => {
+                let r = self.regalloc.allocate();
+                let x = self.build_expr(x,dollar)?;
+                let f = self.build_expr(f,&Some(x.clone()))?;
+                self.instrs.push(Instruction::Filter(r.clone(),x,f));
+                r
+            },
+            Expression::Bracket(x,f) => {
+                let r = self.regalloc.allocate();
+                let x = self.build_expr(x,dollar)?;
+                let xsq = self.regalloc.allocate();
+                self.instrs.push(Instruction::Square(xsq.clone(),x));
+                let f = self.build_expr(f,&Some(xsq.clone()))?;
+                let rm = self.regalloc.allocate();
+                self.instrs.push(Instruction::Filter(rm.clone(),xsq,f));
+                self.instrs.push(Instruction::Star(r.clone(),rm));
+                r
+            },
+            Expression::Dollar => {
+                if let Some(dollar) = dollar {
+                    dollar.clone()
+                } else {
+                    return Err("Unexpected $".to_string());
+                }
+            },
+            Expression::At => {
+                if let Some(dollar) = dollar {
+                    let r = self.regalloc.allocate();
+                    self.instrs.push(Instruction::At(r.clone(),dollar.clone()));
+                    r
+                } else {
+                    return Err("Unexpected $".to_string());
+                }
             },
             _ => self.regalloc.allocate()
         })
     }
+    // TODO deduplicate at
 
     fn build(&mut self, stmt: &Statement) -> Result<(),String> {
-        let regs : Vec<Register> = self.map_expressions(&stmt.1)?;
+        let regs : Vec<Register> = self.map_expressions(&stmt.1,&None)?;
         self.instrs.push(Instruction::Proc(stmt.0.to_string(),regs));
         Ok(())
     }

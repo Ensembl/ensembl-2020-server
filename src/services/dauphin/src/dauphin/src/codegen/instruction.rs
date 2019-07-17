@@ -15,6 +15,11 @@ pub enum Instruction {
     Dot(String,Register,Register), // becomes #svalue after type inference
     Query(String,Register,Register), // becomes #etest after type inference
     Pling(String,Register,Register), // becomes #evalue after type inference
+    Square(Register,Register),
+    Star(Register,Register),
+    Filter(Register,Register,Register),
+    At(Register,Register),
+    Operator(String,Vec<Register>)
 }
 
 fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {
@@ -41,6 +46,8 @@ impl fmt::Debug for Instruction {
                 fmt_instr(f,"push",&vec![r0,r1],&vec![])?,
             Instruction::Proc(name,regs) => 
                 fmt_instr(f,&format!("proc:{}",name),&regs.iter().map(|x| x).collect(),&vec![])?,
+            Instruction::Operator(name,regs) => 
+                fmt_instr(f,&format!("oper:{}",name),&regs.iter().map(|x| x).collect(),&vec![])?,
             Instruction::CtorStruct(name,dest,regs) => {
                 let mut r = vec![dest];
                 r.extend(regs.iter());
@@ -57,6 +64,18 @@ impl fmt::Debug for Instruction {
             },
             Instruction::Pling(field,dst,src) => {
                 fmt_instr(f,&format!("pling:{}",field),&vec![dst,src],&vec![])?
+            },
+            Instruction::Square(dst,src) => {
+                fmt_instr(f,"square",&vec![dst,src],&vec![])?
+            },
+            Instruction::Star(dst,src) => {
+                fmt_instr(f,"star",&vec![dst,src],&vec![])?
+            },
+            Instruction::At(dst,src) => {
+                fmt_instr(f,"at",&vec![dst,src],&vec![])?
+            },
+            Instruction::Filter(dst,src,filter) => {
+                fmt_instr(f,"filter",&vec![dst,src,filter],&vec![])?
             }
         }
         Ok(())
