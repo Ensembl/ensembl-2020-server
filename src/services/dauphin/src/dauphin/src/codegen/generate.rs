@@ -5,7 +5,7 @@ use super::register::{ Register, RegisterAllocator };
 use super::definitionstore::DefStore;
 use crate::parser::{ Statement, Expression };
 
-struct Generator {
+pub struct Generator {
     regalloc: RegisterAllocator,
     defstore: DefStore,
     instrs: Vec<Instruction>
@@ -217,8 +217,7 @@ impl Generator {
                 } else {
                     return Err("Unexpected $".to_string());
                 }
-            },
-            _ => return Err("Unexpected parse token".to_string())
+            }
         })
     }
     // TODO deduplicate at

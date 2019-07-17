@@ -10,6 +10,7 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
+use crate::codegen::Generator;
 use crate::testsuite::load_testdata;
 
 fn main() {
@@ -17,9 +18,13 @@ fn main() {
     let mut lexer = Lexer::new(resolver);
     lexer.import("test:parser/parser-smoke.dp").expect("cannot load file");
     let p = Parser::new(lexer);
-    let (stmts,_defstore) = p.parse().map_err(|e| e[0].message().to_string()).expect("error");
+    let (stmts,defstore) = p.parse().map_err(|e| e[0].message().to_string()).expect("error");
     let mut out : Vec<String> = stmts.iter().map(|x| format!("{:?}",x)).collect();
     out.push("".to_string()); /* For trailing \n */
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
+    //
+    let gen = Generator::new(defstore);
+    let cmds : Vec<String> = gen.go(stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
+    print!("{}",cmds.join(""));
 }
