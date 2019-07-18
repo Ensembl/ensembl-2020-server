@@ -8,22 +8,20 @@ enum Referrer {
     Temporary(u32)
 }
 
-struct TypeInf {
-    next_temp: u32,
+struct TypeInfStore {
     signatures: HashMap<Referrer,TypeSig>,
     uses_placeholder: HashMap<String,HashSet<Referrer>>
 }
 
-impl TypeInf {
-    pub fn new() -> TypeInf {
-        TypeInf {
-            next_temp: 0,
+impl TypeInfStore {
+    fn new() -> TypeInfStore {
+        TypeInfStore {
             signatures: HashMap::new(),
             uses_placeholder: HashMap::new()
         }
     }
 
-    pub fn remove(&mut self, reg: &Referrer) {
+    fn remove(&mut self, reg: &Referrer) {
         if let Some(typesig) = self.signatures.remove(reg) {
             if let Some(ph) = typesig.get_placeholder() {
                 self.uses_placeholder.entry(ph.to_string()).or_insert_with(|| HashSet::new()).remove(reg);
@@ -32,8 +30,48 @@ impl TypeInf {
         self.signatures.remove(reg);
     }
 
-    pub fn get_sig(&self, reg: &Referrer) -> Option<&TypeSig> {
+    fn get_sig(&self, reg: &Referrer) -> Option<&TypeSig> {
         self.signatures.get(reg)
+    }
+
+    fn add(&mut self, reg: &Referrer, typesig: &TypeSig) {
+        if self.signatures.contains_key(reg) {
+            self.remove(reg);
+        }
+        if let Some(ph) = typesig.get_placeholder() {
+            self.uses_placeholder.entry(ph.to_string()).or_insert_with(|| HashSet::new()).insert(reg.clone());
+        }
+        self.signatures.insert(reg.clone(),typesig.clone());
+    }
+
+    fn all_using(&self, ph: &str) -> HashSet<Referrer> {
+        if let Some(ref reg_set) = self.uses_placeholder.get(ph).cloned() {
+            reg_set.iter().cloned().collect()
+        } else {
+            HashSet::new()
+        }
+    }
+}
+
+struct TypeInf {
+    next_temp: u32,
+    store: TypeInfStore
+}
+
+impl TypeInf {
+    pub fn new() -> TypeInf {
+        TypeInf {
+            next_temp: 0,
+            store: TypeInfStore::new()
+        }
+    }
+
+    pub fn remove(&mut self, reg: &Referrer) {
+        self.store.remove(reg);
+    }
+
+    pub fn get_sig(&self, reg: &Referrer) -> Option<&TypeSig> {
+        self.store.get_sig(reg)
     }
 
     pub fn new_register(&mut self, reg: &Register) -> Referrer {
@@ -46,13 +84,17 @@ impl TypeInf {
     }
 
     pub fn add(&mut self, reg: &Referrer, typesig: &TypeSig) {
-        if self.signatures.contains_key(reg) {
-            self.remove(reg);
+        self.store.add(reg,typesig);
+    }
+
+    fn add_equiv(&mut self, ph: &str, val: &TypeSig) {
+        let new_ph = val.get_placeholder();
+        for reg in &self.store.all_using(ph) {
+            if let Some(old_val) = self.store.get_sig(reg) {
+                let new_val = TypeInf::updated_sig(old_val,val);
+                self.add(reg,&new_val);
+            }
         }
-        if let Some(ph) = typesig.get_placeholder() {
-            self.uses_placeholder.entry(ph.to_string()).or_insert_with(|| HashSet::new()).insert(reg.clone());
-        }
-        self.signatures.insert(reg.clone(),typesig.clone());
     }
 
     fn extract_equiv(&mut self, a: &TypeSig, b: &TypeSig) -> Result<Option<(String,TypeSig)>,()> {
@@ -79,25 +121,9 @@ impl TypeInf {
         }
     }
 
-    fn add_equiv(&mut self, ph: &str, val: &TypeSig) {
-        let new_ph = val.get_placeholder();
-        if let Some(ref reg_set) = self.uses_placeholder.remove(ph) {
-            for reg in reg_set.iter() {
-                if let Some(old_val) = self.signatures.get(reg) {
-                    let new_val = TypeInf::updated_sig(old_val,val);
-                    self.signatures.insert(reg.clone(),new_val);
-                }
-                if let Some(new_ph) = new_ph {
-                    self.uses_placeholder.entry(new_ph.to_string()).or_insert_with(|| HashSet::new()).insert(reg.clone());
-                }
-            }
-            
-        }
-    }
-
     pub fn unify(&mut self, a_reg: &Referrer, b_reg: &Referrer) -> Result<(),String> {
-        let a_sig = self.signatures.get(a_reg).ok_or_else(|| format!("No type for {:?}",a_reg))?.clone();
-        let b_sig = self.signatures.get(b_reg).ok_or_else(|| format!("No type for {:?}",b_reg))?.clone();
+        let a_sig = self.get_sig(a_reg).ok_or_else(|| format!("No type for {:?}",a_reg))?.clone();
+        let b_sig = self.get_sig(b_reg).ok_or_else(|| format!("No type for {:?}",b_reg))?.clone();
         if let Some((ph,val)) = self.extract_equiv(&a_sig,&b_sig).map_err(|_|
             format!("Cannot unify types {:?} and {:?}",a_sig,b_sig)
         )? {
