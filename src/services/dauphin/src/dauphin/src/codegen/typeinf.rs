@@ -211,6 +211,10 @@ mod test {
         parse_typesig(&mut lexer).expect("bad typesig")
     }
 
+    fn render(ts: Option<&TypeSig>) -> String {
+        format!("{:?}",ts.unwrap())
+    }
+
     #[test]
     fn failed_unify() {
         let mut ti = TypeInf::new();
@@ -251,13 +255,13 @@ mod test {
         ti.add(&b,&typesig_gen("vec(vec(string))"));
         ti.add(&c,&typesig_gen("_A"));
         ti.unify(&a,&b).expect("smoke");
-        print!("{:?}\n",ti.get_sig(&a));
-        print!("{:?}\n",ti.get_sig(&b));
-        print!("{:?}\n",ti.get_sig(&c));
+        assert_eq!("vec(vec(string))",render(ti.get_sig(&a)));
+        assert_eq!("vec(vec(string))",render(ti.get_sig(&b)));
+        assert_eq!("vec(string)",render(ti.get_sig(&c)));
         ti.commit();
-        print!("{:?}\n",ti.get_sig(&a));
-        print!("{:?}\n",ti.get_sig(&b));
-        print!("{:?}\n",ti.get_sig(&c));
+        assert_eq!("vec(vec(string))",render(ti.get_sig(&a)));
+        assert_eq!("vec(vec(string))",render(ti.get_sig(&b)));
+        assert_eq!("vec(string)",render(ti.get_sig(&c)));
     }
 
     #[test]
@@ -271,12 +275,12 @@ mod test {
         ti.add(&c,&typesig_gen("_A"));
         ti.commit();
         ti.unify(&a,&b).expect("smoke");
-        print!("{:?}\n",ti.get_sig(&a));
-        print!("{:?}\n",ti.get_sig(&b));
-        print!("{:?}\n",ti.get_sig(&c));
+        assert_eq!("vec(vec(string))",render(ti.get_sig(&a)));
+        assert_eq!("vec(vec(string))",render(ti.get_sig(&b)));
+        assert_eq!("vec(string)",render(ti.get_sig(&c)));
         ti.rollback();
-        print!("{:?}\n",ti.get_sig(&a));
-        print!("{:?}\n",ti.get_sig(&b));
-        print!("{:?}\n",ti.get_sig(&c));
+        assert_eq!("vec(_A)",render(ti.get_sig(&a)));
+        assert_eq!("vec(vec(string))",render(ti.get_sig(&b)));
+        assert_eq!("_A",render(ti.get_sig(&c)));
     }
 }

@@ -109,13 +109,26 @@ impl fmt::Debug for Statement {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq,Clone)]
 pub enum BaseType {
     StringType,
     BytesType,
     NumberType,
     BooleanType,
     IdentifiedType(String)
+}
+impl fmt::Debug for BaseType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let v = match self {
+            BaseType::StringType => "string",
+            BaseType::BytesType => "bytes",
+            BaseType::NumberType => "number",
+            BaseType::BooleanType => "boolean",
+            BaseType::IdentifiedType(t) => t
+        };
+        write!(f,"{}",v);
+        Ok(())
+    }
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -124,7 +137,7 @@ pub enum Type {
     Vector(Box<Type>)
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum TypeSig {
     Base(BaseType),
     Vector(Box<TypeSig>),
@@ -137,6 +150,16 @@ impl TypeSig {
             TypeSig::Base(_) => None,
             TypeSig::Vector(t) => t.get_placeholder(),
             TypeSig::Placeholder(p) => Some(p)
+        }
+    }
+}
+
+impl fmt::Debug for TypeSig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeSig::Base(v) => write!(f,"{:?}",v),
+            TypeSig::Vector(v) => write!(f,"vec({:?})",v),
+            TypeSig::Placeholder(p) => write!(f,"_{}",p)
         }
     }
 }
