@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Clone)]
+#[derive(Clone,Hash,PartialEq,Eq)]
 pub enum Register {
     Named(String),
     Temporary(usize)

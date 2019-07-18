@@ -127,8 +127,18 @@ pub enum Type {
 #[derive(PartialEq, Debug, Clone)]
 pub enum TypeSig {
     Base(BaseType),
-    Vector(Box<Type>),
+    Vector(Box<TypeSig>),
     Placeholder(String)
+}
+
+impl TypeSig {
+    pub fn get_placeholder(&self) -> Option<&str> {
+        match self {
+            TypeSig::Base(_) => None,
+            TypeSig::Vector(t) => t.get_placeholder(),
+            TypeSig::Placeholder(p) => Some(p)
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Clone)]

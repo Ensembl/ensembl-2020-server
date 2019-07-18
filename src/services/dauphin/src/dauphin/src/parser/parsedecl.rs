@@ -69,7 +69,7 @@ fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {
     })
 }
 
-fn parse_typesig(lexer: &mut Lexer) -> Result<TypeSig,ParseError> {
+pub fn parse_typesig(lexer: &mut Lexer) -> Result<TypeSig,ParseError> {
     Ok(match &get_identifier(lexer)?[..] {
         "boolean" => TypeSig::Base(BaseType::BooleanType),
         "number" => TypeSig::Base(BaseType::NumberType),
@@ -77,7 +77,7 @@ fn parse_typesig(lexer: &mut Lexer) -> Result<TypeSig,ParseError> {
         "bytes" => TypeSig::Base(BaseType::BytesType),
         "vec" => {
             get_other(lexer,"(")?;
-            let out =  TypeSig::Vector(Box::new(parse_type(lexer)?));
+            let out =  TypeSig::Vector(Box::new(parse_typesig(lexer)?));
             get_other(lexer,")")?;
             out
         },
