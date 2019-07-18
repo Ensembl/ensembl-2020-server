@@ -1,5 +1,7 @@
 proc assign(lvalue _A, _A);
 inline ":=" assign left 14;
 x := 1;
-//y := true;
+y := true;
 //z := a;
+z := [1,2,3];
+m := [["hello","world"]];

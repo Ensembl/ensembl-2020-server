@@ -1,5 +1,5 @@
 use crate::lexer::{ Lexer, Token };
-use super::node::{ ParserStatement, ParseError, Type, BaseType, TypeSig, Sig };
+use super::node::{ ParserStatement, ParseError, Type, BaseType, TypeSig, Sig, TypeSigExpr };
 use super::lexutil::{ get_other, get_identifier };
 
 pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
@@ -77,22 +77,26 @@ fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {
 }
 
 pub fn parse_typesig(lexer: &mut Lexer) -> Result<TypeSig,ParseError> {
+    Ok(TypeSig::Right(parse_typesigexpr(lexer)?))
+}
+
+pub fn parse_typesigexpr(lexer: &mut Lexer) -> Result<TypeSigExpr,ParseError> {
     Ok(match &get_identifier(lexer)?[..] {
-        "boolean" => TypeSig::Base(BaseType::BooleanType),
-        "number" => TypeSig::Base(BaseType::NumberType),
-        "string" => TypeSig::Base(BaseType::StringType),
-        "bytes" => TypeSig::Base(BaseType::BytesType),
+        "boolean" => TypeSigExpr::Base(BaseType::BooleanType),
+        "number" => TypeSigExpr::Base(BaseType::NumberType),
+        "string" => TypeSigExpr::Base(BaseType::StringType),
+        "bytes" => TypeSigExpr::Base(BaseType::BytesType),
         "vec" => {
             get_other(lexer,"(")?;
-            let out =  TypeSig::Vector(Box::new(parse_typesig(lexer)?));
+            let out =  TypeSigExpr::Vector(Box::new(parse_typesigexpr(lexer)?));
             get_other(lexer,")")?;
             out
         },
         x => {
             if x.starts_with("_") {
-                TypeSig::Placeholder(x.to_string())
+                TypeSigExpr::Placeholder(x.to_string())
             } else {
-                TypeSig::Base(BaseType::IdentifiedType(x.to_string()))
+                TypeSigExpr::Base(BaseType::IdentifiedType(x.to_string()))
             }
         }
     })

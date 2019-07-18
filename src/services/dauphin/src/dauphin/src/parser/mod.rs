@@ -7,7 +7,7 @@ mod parser;
 mod declare;
 
 pub use lexutil::not_reserved;
-pub use node::{ ParseError, Type, BaseType, Statement, Expression, Sig, TypeSig };
+pub use node::{ ParseError, Type, BaseType, Statement, Expression, Sig, TypeSig, TypeSigExpr };
 pub use parser::Parser;
 
 #[cfg(test)]

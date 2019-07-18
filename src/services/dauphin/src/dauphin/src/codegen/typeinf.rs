@@ -1,7 +1,7 @@
 use std::collections::{ HashMap, HashSet };
 use std::fmt;
 use std::hash::Hash;
-use crate::parser::{ TypeSig, BaseType };
+use crate::parser::{ TypeSig, BaseType, TypeSigExpr };
 use super::register::Register;
 
 #[derive(Debug,Clone,Hash,PartialEq,Eq)]
@@ -144,7 +144,7 @@ impl TypeInf {
         TypeInf {
             next_temp: 0,
             store: TypeInfStore::new(),
-            invalid: TypeSig::Base(BaseType::Invalid)
+            invalid: TypeSig::Right(TypeSigExpr::Base(BaseType::Invalid))
         }
     }
 
@@ -173,7 +173,7 @@ impl TypeInf {
     }
 
     // TODO distinct invalids
-    fn add_equiv(&mut self, ph: &str, val: &TypeSig) {
+    fn add_equiv(&mut self, ph: &str, val: &TypeSigExpr) {
         for reg in &self.store.all_using(ph) {
             if let Some(old_val) = self.store.get_sig(reg) {
                 let new_val = TypeInf::updated_sig(old_val,val);
@@ -182,22 +182,23 @@ impl TypeInf {
         }
     }
 
-    fn extract_equiv(&mut self, a: &TypeSig, b: &TypeSig) -> Result<Option<(String,TypeSig)>,()> {
+    fn extract_equivexpr(&mut self, a: &TypeSigExpr, b: &TypeSigExpr) -> Result<Option<(String,TypeSigExpr)>,()> {
         let out = match (a,b) {
-            (TypeSig::Base(a_v),TypeSig::Base(b_v)) => {
+            (TypeSigExpr::Base(a_v),TypeSigExpr::Base(b_v)) => {
                 if a_v == b_v { Ok(None) } else { Err(()) }
             },
-            (TypeSig::Vector(a_v),TypeSig::Vector(b_v)) => self.extract_equiv(a_v,b_v),
-            (TypeSig::Placeholder(a_v),b) => {
+            (TypeSigExpr::Vector(a_v),TypeSigExpr::Vector(b_v)) =>
+                self.extract_equivexpr(a_v,b_v),
+            (TypeSigExpr::Placeholder(a_v),b) => {
                 Ok(Some((a_v.to_string(),b.clone())))
             },
-            (a,TypeSig::Placeholder(b_v)) => {
+            (a,TypeSigExpr::Placeholder(b_v)) => {
                 Ok(Some((b_v.to_string(),a.clone())))
             },
             _ => Err(())
         }?;
         if let Some((ref ph,ref new_val)) = out {
-            if &TypeSig::Placeholder(ph.to_string()) == new_val {
+            if &TypeSigExpr::Placeholder(ph.to_string()) == new_val {
                 return Ok(None);
             }
             if let Some(new_ph) = new_val.get_placeholder() {
@@ -209,18 +210,31 @@ impl TypeInf {
         Ok(out)
     }
 
-    fn updated_sig(old_val: &TypeSig, repl: &TypeSig) -> TypeSig {
+    fn extract_equiv(&mut self, a: &TypeSig, b: &TypeSig) -> Result<Option<(String,TypeSigExpr)>,()> {
+        self.extract_equivexpr(a.expr(),b.expr())
+    }
+
+    fn updated_sigexpr(old_val: &TypeSigExpr, repl: &TypeSigExpr) -> TypeSigExpr {
         match old_val {
-            TypeSig::Base(v) => TypeSig::Base(v.clone()),
-            TypeSig::Vector(v) => TypeSig::Vector(Box::new(TypeInf::updated_sig(v,repl))),
-            TypeSig::Placeholder(_) => repl.clone()
+            TypeSigExpr::Base(v) => TypeSigExpr::Base(v.clone()),
+            TypeSigExpr::Vector(v) => TypeSigExpr::Vector(Box::new(TypeInf::updated_sigexpr(v,repl))),
+            TypeSigExpr::Placeholder(_) => repl.clone()
+        }
+    }
+
+    fn updated_sig(old_val: &TypeSig, repl: &TypeSigExpr) -> TypeSig {
+        match old_val {
+            TypeSig::Left(old_val,reg) => 
+                TypeSig::Left(TypeInf::updated_sigexpr(old_val,repl),reg.clone()),
+            TypeSig::Right(old_val) => 
+                TypeSig::Right(TypeInf::updated_sigexpr(old_val,repl))
         }
     }
 
     pub fn unify(&mut self, a_reg: &Referrer, b_reg: &Referrer) -> Result<(),String> {
         let a_sig = self.get_sig(a_reg).clone();
         let b_sig = self.get_sig(b_reg).clone();
-        print!("unify {:?} <-> {:?} ie {:?} <-> {:?}\n",a_reg,b_reg,a_sig,b_sig);
+        //print!("unify {:?} <-> {:?} ie {:?} <-> {:?}\n",a_reg,b_reg,a_sig,b_sig);
         if let Some((ph,val)) = self.extract_equiv(&a_sig,&b_sig).map_err(|_|
             format!("Cannot unify types {:?} and {:?}",a_sig,b_sig)
         )? {
@@ -229,7 +243,6 @@ impl TypeInf {
             print!("static check\n");
             return Err(format!("Cannot unify {:?} and {:?}",a_sig,b_sig));
         }
-        print!("after {:?}\n",self);
         Ok(())
     }
 

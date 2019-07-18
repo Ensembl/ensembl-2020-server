@@ -4,7 +4,7 @@ use super::instruction::Instruction;
 use super::typeinf::{ TypeInf, Referrer };
 use super::register::Register;
 use super::definitionstore::DefStore;
-use crate::parser::{ Sig, TypeSig, BaseType };
+use crate::parser::{ Sig, TypeSig, BaseType, TypeSigExpr };
 
 struct TypePass {
     next_placeholder: u32,
@@ -26,13 +26,28 @@ impl TypePass {
         self.next_placeholder.to_string()
     }
 
+    fn get_name(&mut self, names: &mut HashMap<String,String>, p: &str) -> String {
+        if p == "_" {
+            self.new_placeholder()
+        } else {
+            names.entry(p.to_string()).or_insert_with(|| self.new_placeholder()).to_string()
+        }
+    }
+
+    fn unique_member_typesigexpr(&mut self, names: &mut HashMap<String,String>, sig: &TypeSigExpr) -> TypeSigExpr {
+        match sig {
+            TypeSigExpr::Placeholder(p) =>
+                TypeSigExpr::Placeholder(self.get_name(names,p)),
+            TypeSigExpr::Vector(v) =>
+                TypeSigExpr::Vector(Box::new(self.unique_member_typesigexpr(names,v))),
+            TypeSigExpr::Base(v) => TypeSigExpr::Base(v.clone())
+        }
+    }
+
     fn unique_member_typesig(&mut self, names: &mut HashMap<String,String>, sig: &TypeSig) -> TypeSig {
         match sig {
-            TypeSig::Placeholder(p) =>
-                TypeSig::Placeholder(names.entry(p.to_string()).or_insert_with(|| self.new_placeholder()).to_string()),
-            TypeSig::Vector(v) =>
-                TypeSig::Vector(Box::new(self.unique_member_typesig(names,v))),
-            TypeSig::Base(v) => TypeSig::Base(v.clone())
+            TypeSig::Left(x,reg) => TypeSig::Left(self.unique_member_typesigexpr(names,x),reg.clone()),
+            TypeSig::Right(x) => TypeSig::Right(self.unique_member_typesigexpr(names,x)),
         }
     }
 
@@ -64,18 +79,30 @@ impl TypePass {
     fn extract_sig_regs(&self, instr: &Instruction, defstore: &DefStore) -> Result<Vec<(Sig,Register)>,String> {
         match instr {
             Instruction::Proc(name,regs) => self.extract_proc_sig_regs(name,defstore,regs),
-            Instruction::NumberConst(reg,_) => Ok(vec![(Sig { lvalue: true, out: true, reverse: false, typesig: TypeSig::Base(BaseType::NumberType) },reg.clone())]),
-            Instruction::BooleanConst(reg,_) => Ok(vec![(Sig { lvalue: true, out: true, reverse: false, typesig: TypeSig::Base(BaseType::BooleanType) },reg.clone())]),
-            Instruction::Ref(dst,src) => {
-                Ok(vec![(Sig { lvalue: true, out: true, reverse: false, typesig: TypeSig::Placeholder("A".to_string()) },dst.clone()),
-                        (Sig { lvalue: false, out: false, reverse: true, typesig: TypeSig::Placeholder("A".to_string()) },src.clone())])
-            },
+            Instruction::NumberConst(reg,_) => Ok(vec![(Sig { lvalue: false, out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Base(BaseType::NumberType)) },reg.clone())]),
+            Instruction::BooleanConst(reg,_) => Ok(vec![(Sig { lvalue: false, out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Base(BaseType::BooleanType)) },reg.clone())]),
+            Instruction::StringConst(reg,_) => Ok(vec![(Sig { lvalue: false, out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Base(BaseType::StringType)) },reg.clone())]),
+            Instruction::List(reg) => Ok(vec![(Sig { lvalue: false, out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Vector(Box::new(TypeSigExpr::Placeholder("_".to_string())))) },reg.clone())]),
+            Instruction::Push(dst,src) => Ok(vec![(Sig { lvalue: false, out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Vector(Box::new(TypeSigExpr::Placeholder("A".to_string())))) },dst.clone()),
+                                                  (Sig { lvalue: false, out: false, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Placeholder("A".to_string())) },src.clone()),]),
             _ => Err(format!("no signature for {:?}",instr))
         }
     }
 
+    // TODO remove reverse
+    /* ref is special as the root of all leftyness! */
+    pub fn try_apply_ref(&mut self, dst: &Register, src: &Register, defstore: &DefStore) -> Result<(),String> {
+        let src_t = self.typeinf.new_register(src);
+        let dst_t = self.typeinf.new_register(dst);
+        let src_ph = TypeSigExpr::Placeholder(self.new_placeholder().clone());
+        let dst_ph = TypeSigExpr::Placeholder(self.new_placeholder().clone());
+        self.typeinf.add(&dst_t,&TypeSig::Left(dst_ph,src.clone()));
+        self.typeinf.add(&src_t,&TypeSig::Right(src_ph));
+        Ok(())
+    }
+
     pub fn try_apply_command(&mut self, instr: &Instruction, defstore: &DefStore) -> Result<(),String> {
-        let (sig_regs) = self.extract_sig_regs(instr,defstore)?;
+        let sig_regs = self.extract_sig_regs(instr,defstore)?;
         let typesig = self.uniqueize(&sig_regs);
         let mut unifies = Vec::new();
         let mut check_valid = Vec::new();
@@ -83,16 +110,18 @@ impl TypePass {
             let reg = self.typeinf.new_register(reg);
             if sig.out {
                 self.typeinf.remove(&reg);
-                let ph = self.new_placeholder().clone();
-                self.typeinf.add(&reg,&TypeSig::Placeholder(ph));
+                let ph = TypeSigExpr::Placeholder(self.new_placeholder().clone());
+                let ph = match &sig.typesig {
+                    TypeSig::Right(_) => TypeSig::Right(ph),
+                    TypeSig::Left(_,reg) => TypeSig::Left(ph,reg.clone())
+                };
+                self.typeinf.add(&reg,&ph);
             } else {
                 check_valid.push(reg.clone());
             }
             let tmp = self.typeinf.new_temp().clone();
             self.typeinf.add(&tmp,&sig.typesig);
-
             unifies.push((reg,tmp));
-            
         }
         for (reg,tmp) in &unifies {
             self.typeinf.unify(&reg,&tmp)?;
@@ -100,14 +129,28 @@ impl TypePass {
         for reg in &check_valid {
             let sig = self.typeinf.get_sig(reg);
             if sig.is_invalid() {
-                //return Err(format!("Use of invalid value from {:?}",reg));
+                return Err(format!("Use of invalid value from {:?}",reg));
+            }
+        }
+        for (sig,reg) in &typesig {
+            if sig.lvalue {
+                match self.typeinf.get_sig(&Referrer::Register(reg.clone())).clone() {
+                    TypeSig::Left(x,r) => {
+                        print!("LVALUE! {:?}->{:?}\n",x,r);
+                        self.typeinf.add(&Referrer::Register(r.clone()),&TypeSig::Right(x.clone()));
+                    },
+                    TypeSig::Right(x) => Err("Expected lvalue".to_string())?
+                }
             }
         }
         Ok(())
     }
 
     pub fn apply_command(&mut self, instr: &Instruction, defstore: &DefStore) -> Result<(),String> {
-        let x = self.try_apply_command(instr,defstore);
+        let x = match instr {
+            Instruction::Ref(dst,src) => self.try_apply_ref(dst,src,defstore),
+            instr => self.try_apply_command(instr,defstore)
+        };
         match x {
             Ok(_) => self.typeinf.commit(),
             Err(_) => self.typeinf.rollback()
@@ -115,8 +158,6 @@ impl TypePass {
         x
     }
 }
-
-// TODO proper register names
 
 #[cfg(test)]
 mod test {
@@ -139,8 +180,9 @@ mod test {
         print!("{}\n",instrs_str.join(""));
         let mut tp = TypePass::new();
         for instr in &instrs {
+            print!("=== {:?}",instr);
             tp.apply_command(instr,&defstore).expect("ok");
-            print!("{:?}\n",tp.typeinf);
         }
+        print!("finish {:?}\n",tp.typeinf);
     }
 }

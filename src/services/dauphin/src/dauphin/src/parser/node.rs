@@ -1,7 +1,7 @@
 use std::fmt;
 use hex;
 
-use crate::codegen::InlineMode;
+use crate::codegen::{ InlineMode, Register };
 use crate::lexer::Lexer;
 
 #[derive(PartialEq)]
@@ -140,27 +140,67 @@ pub enum Type {
 }
 
 #[derive(PartialEq, Clone)]
-pub enum TypeSig {
+pub enum TypeSigExpr {
     Base(BaseType),
-    Vector(Box<TypeSig>),
+    Vector(Box<TypeSigExpr>),
     Placeholder(String)
 }
 
-impl TypeSig {
+impl TypeSigExpr {
     pub fn get_placeholder(&self) -> Option<&str> {
         match self {
-            TypeSig::Base(_) => None,
-            TypeSig::Vector(t) => t.get_placeholder(),
-            TypeSig::Placeholder(p) => Some(p)
+            TypeSigExpr::Base(_) => None,
+            TypeSigExpr::Vector(t) => t.get_placeholder(),
+            TypeSigExpr::Placeholder(p) => Some(p)
         }
     }
 
     pub fn is_invalid(&self) -> bool {
         match self {
-            TypeSig::Base(BaseType::Invalid) => true,
-            TypeSig::Base(_) => false,
-            TypeSig::Vector(t) => t.is_invalid(),
-            TypeSig::Placeholder(p) => false
+            TypeSigExpr::Base(BaseType::Invalid) => true,
+            TypeSigExpr::Base(_) => false,
+            TypeSigExpr::Vector(t) => t.is_invalid(),
+            TypeSigExpr::Placeholder(p) => false
+        }
+    }
+}
+
+impl fmt::Debug for TypeSigExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeSigExpr::Base(v) => write!(f,"{:?}",v),
+            TypeSigExpr::Vector(v) => write!(f,"vec({:?})",v),
+            TypeSigExpr::Placeholder(p) => write!(f,"{}",p)
+        }
+    }
+}
+
+#[derive(PartialEq, Clone)]
+pub enum TypeSig {
+    Right(TypeSigExpr),
+    Left(TypeSigExpr,Register)
+}
+
+impl TypeSig {
+    pub fn get_placeholder(&self) -> Option<&str> {
+        self.expr().get_placeholder()
+    }
+
+    pub fn is_invalid(&self) -> bool {
+        self.expr().is_invalid()
+    }
+
+    pub fn expr(&self) -> &TypeSigExpr {
+        match self {
+            TypeSig::Right(x) => x,
+            TypeSig::Left(x,r) => x
+        }
+    }
+
+    pub fn is_left(&self) -> bool {
+        match self {
+            TypeSig::Right(_) => false,
+            TypeSig::Left(_,_) => true
         }
     }
 }
@@ -168,9 +208,8 @@ impl TypeSig {
 impl fmt::Debug for TypeSig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TypeSig::Base(v) => write!(f,"{:?}",v),
-            TypeSig::Vector(v) => write!(f,"vec({:?})",v),
-            TypeSig::Placeholder(p) => write!(f,"{}",p)
+            TypeSig::Right(x) => write!(f,"{:?}",x),
+            TypeSig::Left(x,r) => write!(f,"ref({:?},{:?})",x,r)
         }
     }
 }
