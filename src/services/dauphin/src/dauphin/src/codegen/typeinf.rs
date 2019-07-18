@@ -10,46 +10,92 @@ enum Referrer {
 
 struct TypeInfStore {
     signatures: HashMap<Referrer,TypeSig>,
-    uses_placeholder: HashMap<String,HashSet<Referrer>>
+    signatures_txn: HashMap<Referrer,TypeSig>,
+    signatures_txn_rm: HashSet<Referrer>,
+    uses_placeholder: HashMap<String,HashSet<Referrer>>,
+    uses_placeholder_txn: HashMap<String,HashSet<Referrer>>
 }
 
 impl TypeInfStore {
     fn new() -> TypeInfStore {
         TypeInfStore {
             signatures: HashMap::new(),
-            uses_placeholder: HashMap::new()
+            signatures_txn: HashMap::new(),
+            signatures_txn_rm: HashSet::new(),
+            uses_placeholder: HashMap::new(),
+            uses_placeholder_txn: HashMap::new()
+        }
+    }
+
+    fn update_set(&mut self, ph: &str) -> &mut HashSet<Referrer> {
+        if self.uses_placeholder_txn.contains_key(ph) {
+            return self.uses_placeholder_txn.get_mut(ph).unwrap();
+        } else {
+            self.uses_placeholder.entry(ph.to_string()).or_insert_with(|| {
+                HashSet::new()
+            });
+            self.uses_placeholder_txn.insert(ph.to_string(),self.uses_placeholder[ph].iter().cloned().collect());
+            self.uses_placeholder_txn.get_mut(ph).unwrap()
         }
     }
 
     fn remove(&mut self, reg: &Referrer) {
-        if let Some(typesig) = self.signatures.remove(reg) {
+        if let Some(typesig) = self.signatures.get(reg).cloned() {
             if let Some(ph) = typesig.get_placeholder() {
-                self.uses_placeholder.entry(ph.to_string()).or_insert_with(|| HashSet::new()).remove(reg);
+                self.update_set(ph).remove(reg);
             }
         }
-        self.signatures.remove(reg);
+        self.signatures_txn_rm.insert(reg.clone());
+        self.signatures_txn.remove(reg);
     }
 
     fn get_sig(&self, reg: &Referrer) -> Option<&TypeSig> {
+        if self.signatures_txn.contains_key(reg) {
+            return self.signatures_txn.get(reg);
+        }
+        if self.signatures_txn_rm.contains(reg) {
+            return None
+        }
         self.signatures.get(reg)
     }
 
     fn add(&mut self, reg: &Referrer, typesig: &TypeSig) {
-        if self.signatures.contains_key(reg) {
+        if self.get_sig(reg).is_some() {
             self.remove(reg);
         }
         if let Some(ph) = typesig.get_placeholder() {
-            self.uses_placeholder.entry(ph.to_string()).or_insert_with(|| HashSet::new()).insert(reg.clone());
+            self.update_set(ph).insert(reg.clone());
         }
-        self.signatures.insert(reg.clone(),typesig.clone());
+        self.signatures_txn.insert(reg.clone(),typesig.clone());
+        self.signatures_txn_rm.remove(reg);
     }
 
     fn all_using(&self, ph: &str) -> HashSet<Referrer> {
-        if let Some(ref reg_set) = self.uses_placeholder.get(ph).cloned() {
+        if let Some(ref reg_set) = self.uses_placeholder_txn.get(ph).cloned() {
+            reg_set.iter().cloned().collect()
+        } else if let Some(ref reg_set) = self.uses_placeholder.get(ph).cloned() {
             reg_set.iter().cloned().collect()
         } else {
             HashSet::new()
         }
+    }
+
+    fn commit(&mut self) {
+        for (ph,rr) in self.uses_placeholder_txn.drain() {
+            self.uses_placeholder.insert(ph,rr);
+        }
+        for reg in self.signatures_txn_rm.drain() {
+            self.signatures.remove(&reg);
+        }
+        for (reg,sig) in self.signatures_txn.drain() {
+            self.signatures.insert(reg,sig);
+        }
+    }
+
+    fn rollback(&mut self) {
+        self.uses_placeholder_txn.clear();
+        self.signatures_txn.clear();
+        self.signatures_txn_rm.clear();
     }
 }
 
@@ -112,7 +158,6 @@ impl TypeInf {
         }?;
         if let Some((ref ph,ref new_val)) = out {
             if &TypeSig::Placeholder(ph.to_string()) == new_val {
-                print!("rec\n");
                 return Ok(None);
             }
             if let Some(new_ph) = new_val.get_placeholder() {
@@ -141,6 +186,14 @@ impl TypeInf {
             self.add_equiv(&ph,&val);
         }
         Ok(())
+    }
+
+    pub fn commit(&mut self) {
+        self.store.commit();
+    }
+
+    pub fn rollback(&mut self) {
+        self.store.rollback();
     }
 }
 
@@ -198,6 +251,30 @@ mod test {
         ti.add(&b,&typesig_gen("vec(vec(string))"));
         ti.add(&c,&typesig_gen("_A"));
         ti.unify(&a,&b).expect("smoke");
+        print!("{:?}\n",ti.get_sig(&a));
+        print!("{:?}\n",ti.get_sig(&b));
+        print!("{:?}\n",ti.get_sig(&c));
+        ti.commit();
+        print!("{:?}\n",ti.get_sig(&a));
+        print!("{:?}\n",ti.get_sig(&b));
+        print!("{:?}\n",ti.get_sig(&c));
+    }
+
+    #[test]
+    fn rollback() {
+        let mut ti = TypeInf::new();
+        let a = ti.new_temp();
+        let b = ti.new_temp();
+        let c = ti.new_temp();
+        ti.add(&a,&typesig_gen("vec(_A)"));
+        ti.add(&b,&typesig_gen("vec(vec(string))"));
+        ti.add(&c,&typesig_gen("_A"));
+        ti.commit();
+        ti.unify(&a,&b).expect("smoke");
+        print!("{:?}\n",ti.get_sig(&a));
+        print!("{:?}\n",ti.get_sig(&b));
+        print!("{:?}\n",ti.get_sig(&c));
+        ti.rollback();
         print!("{:?}\n",ti.get_sig(&a));
         print!("{:?}\n",ti.get_sig(&b));
         print!("{:?}\n",ti.get_sig(&c));
