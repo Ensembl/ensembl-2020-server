@@ -88,7 +88,6 @@ impl TypeInf {
     }
 
     fn add_equiv(&mut self, ph: &str, val: &TypeSig) {
-        let new_ph = val.get_placeholder();
         for reg in &self.store.all_using(ph) {
             if let Some(old_val) = self.store.get_sig(reg) {
                 let new_val = TypeInf::updated_sig(old_val,val);
@@ -98,7 +97,7 @@ impl TypeInf {
     }
 
     fn extract_equiv(&mut self, a: &TypeSig, b: &TypeSig) -> Result<Option<(String,TypeSig)>,()> {
-        match (a,b) {
+        let out = match (a,b) {
             (TypeSig::Base(a_v),TypeSig::Base(b_v)) => {
                 if a_v == b_v { Ok(None) } else { Err(()) }
             },
@@ -110,7 +109,19 @@ impl TypeInf {
                 Ok(Some((b_v.to_string(),a.clone())))
             },
             _ => Err(())
+        }?;
+        if let Some((ref ph,ref new_val)) = out {
+            if &TypeSig::Placeholder(ph.to_string()) == new_val {
+                print!("rec\n");
+                return Ok(None);
+            }
+            if let Some(new_ph) = new_val.get_placeholder() {
+                if new_ph == ph {
+                    return Err(());
+                }
+            }
         }
+        Ok(out)
     }
 
     fn updated_sig(old_val: &TypeSig, repl: &TypeSig) -> TypeSig {
@@ -157,6 +168,25 @@ mod test {
         ti.unify(&a,&b).expect_err("failed_unify");
     }
 
+    #[test]
+    fn recursive() {
+        let mut ti = TypeInf::new();
+        let a = ti.new_temp();
+        let b = ti.new_temp();
+        ti.add(&a,&typesig_gen("vec(_A)"));
+        ti.add(&b,&typesig_gen("_A"));
+        ti.unify(&a,&b).expect_err("recursive");
+    }
+
+    #[test]
+    fn identity() {
+        let mut ti = TypeInf::new();
+        let a = ti.new_temp();
+        let b = ti.new_temp();
+        ti.add(&a,&typesig_gen("_A"));
+        ti.add(&b,&typesig_gen("_A"));
+        ti.unify(&a,&b).expect("identity");
+    }
 
     #[test]
     fn typeinf_smoke() {
