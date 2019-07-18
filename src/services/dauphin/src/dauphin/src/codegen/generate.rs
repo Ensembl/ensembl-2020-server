@@ -265,6 +265,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let gen = Generator::new(defstore);
         let cmds : Vec<String> = gen.go(stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
-        print!("{}",cmds.join(""));
+        let outdata = load_testdata(&["codegen","generate-smoke.out"]).ok().unwrap();
+        assert_eq!(outdata,cmds.join(""));
     }
 }

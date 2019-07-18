@@ -7,7 +7,7 @@ func eq;
 inline ":=" assign left 14;
 inline ">" gt left 6;
 inline "<" lt left 6;
-inline "==" eq left 6;
+inline "==" eq left 5;
 x := [1,2,3];
 y := "hello";
 z := stest { B: etest:X y, A: x };
