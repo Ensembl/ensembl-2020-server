@@ -38,19 +38,26 @@ pub(in super) fn parse_proc(lexer: &mut Lexer) -> Result<ParserStatement,ParseEr
 
 fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
     let mut lvalue = false;
-    match lexer.peek() {
-        Token::Identifier(name) => {
-            match &name[..] {
-                "lvalue" => {
-                    lvalue = true;
-                    lexer.get();
-                },
-                _ => ()
-            }
-        },
-        _ => ()
+    let mut out = false;
+    loop {
+        match lexer.peek() {
+            Token::Identifier(name) => {
+                match &name[..] {
+                    "lvalue" => {
+                        lvalue = true;
+                        lexer.get();
+                    },
+                    "out" => {
+                        out = true;
+                        lexer.get();
+                    },
+                    _ => break
+                }
+            },
+            _ => ()
+        }
     }
-    Ok(Sig { lvalue, typesig: parse_typesig(lexer)? })
+    Ok(Sig { lvalue, out, reverse: false, typesig: parse_typesig(lexer)? })
 }
 
 fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {
@@ -83,7 +90,7 @@ pub fn parse_typesig(lexer: &mut Lexer) -> Result<TypeSig,ParseError> {
         },
         x => {
             if x.starts_with("_") {
-                TypeSig::Placeholder(x[1..].to_string())
+                TypeSig::Placeholder(x.to_string())
             } else {
                 TypeSig::Base(BaseType::IdentifiedType(x.to_string()))
             }

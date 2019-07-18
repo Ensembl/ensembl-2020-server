@@ -115,7 +115,8 @@ pub enum BaseType {
     BytesType,
     NumberType,
     BooleanType,
-    IdentifiedType(String)
+    IdentifiedType(String),
+    Invalid
 }
 impl fmt::Debug for BaseType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -124,6 +125,7 @@ impl fmt::Debug for BaseType {
             BaseType::BytesType => "bytes",
             BaseType::NumberType => "number",
             BaseType::BooleanType => "boolean",
+            BaseType::Invalid => "***INVALID***",
             BaseType::IdentifiedType(t) => t
         };
         write!(f,"{}",v);
@@ -152,6 +154,15 @@ impl TypeSig {
             TypeSig::Placeholder(p) => Some(p)
         }
     }
+
+    pub fn is_invalid(&self) -> bool {
+        match self {
+            TypeSig::Base(BaseType::Invalid) => true,
+            TypeSig::Base(_) => false,
+            TypeSig::Vector(t) => t.is_invalid(),
+            TypeSig::Placeholder(p) => false
+        }
+    }
 }
 
 impl fmt::Debug for TypeSig {
@@ -159,14 +170,17 @@ impl fmt::Debug for TypeSig {
         match self {
             TypeSig::Base(v) => write!(f,"{:?}",v),
             TypeSig::Vector(v) => write!(f,"vec({:?})",v),
-            TypeSig::Placeholder(p) => write!(f,"_{}",p)
+            TypeSig::Placeholder(p) => write!(f,"{}",p)
         }
     }
 }
 
+// TODO fix sig junk
 #[derive(PartialEq, Debug, Clone)]
 pub struct Sig {
     pub lvalue: bool,
+    pub out: bool,
+    pub reverse: bool,
     pub typesig: TypeSig
 }
 

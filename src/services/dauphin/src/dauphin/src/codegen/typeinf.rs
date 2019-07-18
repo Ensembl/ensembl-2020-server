@@ -1,19 +1,32 @@
 use std::collections::{ HashMap, HashSet };
-use crate::parser::TypeSig;
+use std::fmt;
+use std::hash::Hash;
+use crate::parser::{ TypeSig, BaseType };
 use super::register::Register;
 
 #[derive(Debug,Clone,Hash,PartialEq,Eq)]
-enum Referrer {
+pub enum Referrer {
     Register(Register),
     Temporary(u32)
 }
+
+impl Referrer {
+    fn is_perm(&self) -> bool {
+        match self {
+            Referrer::Register(_) => true,
+            Referrer::Temporary(_) => false
+        }
+    }
+}
+
 
 struct TypeInfStore {
     signatures: HashMap<Referrer,TypeSig>,
     signatures_txn: HashMap<Referrer,TypeSig>,
     signatures_txn_rm: HashSet<Referrer>,
     uses_placeholder: HashMap<String,HashSet<Referrer>>,
-    uses_placeholder_txn: HashMap<String,HashSet<Referrer>>
+    uses_placeholder_txn: HashMap<String,HashSet<Referrer>>,
+    resolution_txn: HashMap<String,TypeSig>
 }
 
 impl TypeInfStore {
@@ -23,7 +36,8 @@ impl TypeInfStore {
             signatures_txn: HashMap::new(),
             signatures_txn_rm: HashSet::new(),
             uses_placeholder: HashMap::new(),
-            uses_placeholder_txn: HashMap::new()
+            uses_placeholder_txn: HashMap::new(),
+            resolution_txn: HashMap::new()
         }
     }
 
@@ -82,14 +96,17 @@ impl TypeInfStore {
 
     fn commit(&mut self) {
         for (ph,rr) in self.uses_placeholder_txn.drain() {
+            let rr : HashSet<Referrer> = rr.iter().filter(|x| x.is_perm()).cloned().collect();
             self.uses_placeholder.insert(ph,rr);
         }
         for reg in self.signatures_txn_rm.drain() {
             self.signatures.remove(&reg);
         }
         for (reg,sig) in self.signatures_txn.drain() {
-            self.signatures.insert(reg,sig);
-        }
+            if reg.is_perm() {
+                self.signatures.insert(reg,sig);
+            }
+        }       
     }
 
     fn rollback(&mut self) {
@@ -99,16 +116,35 @@ impl TypeInfStore {
     }
 }
 
-struct TypeInf {
+impl fmt::Debug for TypeInfStore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"types {{ ")?;
+        for (reg,sig) in &self.signatures {
+            if !self.signatures_txn.contains_key(reg) {
+                write!(f,"{:?} = {:?} ",reg,sig)?;
+            }
+        }
+        for (reg,sig) in &self.signatures_txn {
+            if !self.signatures_txn_rm.contains(reg) {
+                write!(f,"{:?} = {:?} ",reg,sig)?;
+            }
+        }
+        write!(f,"}}")
+    }
+}
+
+pub struct TypeInf {
     next_temp: u32,
-    store: TypeInfStore
+    store: TypeInfStore,
+    invalid: TypeSig
 }
 
 impl TypeInf {
     pub fn new() -> TypeInf {
         TypeInf {
             next_temp: 0,
-            store: TypeInfStore::new()
+            store: TypeInfStore::new(),
+            invalid: TypeSig::Base(BaseType::Invalid)
         }
     }
 
@@ -116,8 +152,11 @@ impl TypeInf {
         self.store.remove(reg);
     }
 
-    pub fn get_sig(&self, reg: &Referrer) -> Option<&TypeSig> {
-        self.store.get_sig(reg)
+    pub fn get_sig(&mut self, reg: &Referrer) -> &TypeSig {
+        if self.store.get_sig(reg).is_none() {
+            self.store.add(reg,&self.invalid);
+        }
+        self.store.get_sig(reg).unwrap()
     }
 
     pub fn new_register(&mut self, reg: &Register) -> Referrer {
@@ -133,6 +172,7 @@ impl TypeInf {
         self.store.add(reg,typesig);
     }
 
+    // TODO distinct invalids
     fn add_equiv(&mut self, ph: &str, val: &TypeSig) {
         for reg in &self.store.all_using(ph) {
             if let Some(old_val) = self.store.get_sig(reg) {
@@ -178,13 +218,18 @@ impl TypeInf {
     }
 
     pub fn unify(&mut self, a_reg: &Referrer, b_reg: &Referrer) -> Result<(),String> {
-        let a_sig = self.get_sig(a_reg).ok_or_else(|| format!("No type for {:?}",a_reg))?.clone();
-        let b_sig = self.get_sig(b_reg).ok_or_else(|| format!("No type for {:?}",b_reg))?.clone();
+        let a_sig = self.get_sig(a_reg).clone();
+        let b_sig = self.get_sig(b_reg).clone();
+        print!("unify {:?} <-> {:?} ie {:?} <-> {:?}\n",a_reg,b_reg,a_sig,b_sig);
         if let Some((ph,val)) = self.extract_equiv(&a_sig,&b_sig).map_err(|_|
             format!("Cannot unify types {:?} and {:?}",a_sig,b_sig)
         )? {
             self.add_equiv(&ph,&val);
+        } else if a_sig != b_sig {
+            print!("static check\n");
+            return Err(format!("Cannot unify {:?} and {:?}",a_sig,b_sig));
         }
+        print!("after {:?}\n",self);
         Ok(())
     }
 
@@ -194,6 +239,12 @@ impl TypeInf {
 
     pub fn rollback(&mut self) {
         self.store.rollback();
+    }
+}
+
+impl fmt::Debug for TypeInf {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{:?}",self.store)
     }
 }
 
@@ -211,8 +262,8 @@ mod test {
         parse_typesig(&mut lexer).expect("bad typesig")
     }
 
-    fn render(ts: Option<&TypeSig>) -> String {
-        format!("{:?}",ts.unwrap())
+    fn render(ts: &TypeSig) -> String {
+        format!("{:?}",ts)
     }
 
     #[test]

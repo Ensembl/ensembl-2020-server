@@ -7,47 +7,45 @@ use crate::parser::{ Statement, Expression };
 
 pub struct Generator {
     regalloc: RegisterAllocator,
-    defstore: DefStore,
     instrs: Vec<Instruction>
 }
 
 impl Generator {
-    pub fn new(defstore: DefStore) -> Generator {
+    pub fn new() -> Generator {
         Generator {
             regalloc: RegisterAllocator::new(),
-            defstore,
             instrs: Vec::new()
         }
     }
 
-    fn build_vec(&mut self, values: &Vec<Expression>, dollar: &Option<Register>) -> Result<Register,String> {
+    fn build_vec(&mut self, defstore: &DefStore, values: &Vec<Expression>, dollar: &Option<Register>) -> Result<Register,String> {
         let out = self.regalloc.allocate();
         self.instrs.push(Instruction::List(out.clone()));
         for val in values {
-            let push = Instruction::Push(out.clone(),self.build_rvalue(val,dollar)?);
+            let push = Instruction::Push(out.clone(),self.build_rvalue(defstore,val,dollar)?);
             self.instrs.push(push);
         }
         Ok(out)
     }
 
-    fn map_expressions(&mut self, x: &Vec<Expression>, dollar: &Option<Register>) -> Result<Vec<Register>,String> {
-        x.iter().map(|e| self.build_rvalue(e,dollar)).collect()
+    fn map_expressions(&mut self, defstore: &DefStore, x: &Vec<Expression>, dollar: &Option<Register>) -> Result<Vec<Register>,String> {
+        x.iter().map(|e| self.build_rvalue(defstore,e,dollar)).collect()
     }
 
-    fn map_expressions_top(&mut self, x: &Vec<Expression>, lvalues: &Vec<bool>) -> Result<Vec<Register>,String> {
+    fn map_expressions_top(&mut self, defstore: &DefStore, x: &Vec<Expression>, lvalues: &Vec<bool>) -> Result<Vec<Register>,String> {
         let mut out = Vec::new();
         for (i,e) in x.iter().enumerate() {
             out.push(if lvalues[i] {
-                self.build_lvalue(e)?
+                self.build_lvalue(defstore,e)?
             } else {
-                self.build_rvalue(e,&None)?
+                self.build_rvalue(defstore,e,&None)?
             });
         }
         Ok(out)
     }
 
-    fn struct_rearrange(&mut self, s: &str, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
-        if let Some(decl) = self.defstore.get_struct(s) {
+    fn struct_rearrange(&mut self, defstore: &DefStore, s: &str, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
+        if let Some(decl) = defstore.get_struct(s) {
             let gotpos : HashMap<String,usize> = got_names.iter().enumerate().map(|(i,e)| (e.to_string(),i)).collect();
             let mut out = Vec::new();
             for want_name in decl.get_names().iter() {
@@ -63,7 +61,7 @@ impl Generator {
         }
     }
 
-    fn build_lvalue(&mut self, expr: &Expression) -> Result<Register,String> {
+    fn build_lvalue(&mut self, defstore: &DefStore, expr: &Expression) -> Result<Register,String> {
         Ok(match expr {
             Expression::Identifier(id) => {
                 let r = self.regalloc.allocate();
@@ -73,35 +71,35 @@ impl Generator {
             },
             Expression::Dot(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_lvalue(x)?;
+                let x = self.build_lvalue(defstore,x)?;
                 self.instrs.push(Instruction::RefDot(f.clone(),r.clone(),x));
                 r
             },
             Expression::Pling(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_lvalue(x)?;
+                let x = self.build_lvalue(defstore,x)?;
                 self.instrs.push(Instruction::RefPling(f.clone(),r.clone(),x));
                 r
             },
             Expression::Square(x) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_lvalue(x)?;
+                let x = self.build_lvalue(defstore,x)?;
                 self.instrs.push(Instruction::RefSquare(r.clone(),x));
                 r
             },
             Expression::Filter(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_lvalue(x)?;
-                let f = self.build_rvalue(f,&Some(x.clone()))?;
+                let x = self.build_lvalue(defstore,x)?;
+                let f = self.build_rvalue(defstore,f,&Some(x.clone()))?;
                 self.instrs.push(Instruction::RefFilter(r.clone(),x,f));
                 r
             },
             Expression::Bracket(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_lvalue(x)?;
+                let x = self.build_lvalue(defstore,x)?;
                 let xsq = self.regalloc.allocate();
                 self.instrs.push(Instruction::RefSquare(xsq.clone(),x));
-                let f = self.build_rvalue(f,&Some(xsq.clone()))?;
+                let f = self.build_rvalue(defstore,f,&Some(xsq.clone()))?;
                 let rm = self.regalloc.allocate();
                 self.instrs.push(Instruction::RefFilter(rm.clone(),xsq,f));
                 self.instrs.push(Instruction::RefStar(r.clone(),rm));
@@ -111,7 +109,7 @@ impl Generator {
         })
     }
 
-    fn build_rvalue(&mut self, expr: &Expression, dollar: &Option<Register>) -> Result<Register,String> {
+    fn build_rvalue(&mut self, defstore: &DefStore, expr: &Expression, dollar: &Option<Register>) -> Result<Register,String> {
         Ok(match expr {
             Expression::Identifier(id) => Register::Named(id.to_string()),
             Expression::Number(n) => {
@@ -134,69 +132,69 @@ impl Generator {
                 self.instrs.push(Instruction::BytesConst(r.clone(),b.to_vec()));
                 r
             },
-            Expression::Vector(v) => self.build_vec(v,dollar)?,
+            Expression::Vector(v) => self.build_vec(defstore,v,dollar)?,
             Expression::CtorStruct(s,x,n) => {
                 let r = self.regalloc.allocate();
-                let x = self.map_expressions(x,dollar)?;
-                let x = self.struct_rearrange(s,x,n)?;
+                let x = self.map_expressions(defstore,x,dollar)?;
+                let x = self.struct_rearrange(defstore,s,x,n)?;
                 self.instrs.push(Instruction::CtorStruct(s.clone(),r.clone(),x));
                 r
             },
             Expression::CtorEnum(e,b,x) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_rvalue(x,dollar)?;
+                let x = self.build_rvalue(defstore,x,dollar)?;
                 self.instrs.push(Instruction::CtorEnum(e.clone(),b.clone(),r.clone(),x));
                 r
             },
             Expression::Operator(name,x) => {
                 let r = self.regalloc.allocate();
-                let x = self.map_expressions(x,dollar)?;
+                let x = self.map_expressions(defstore,x,dollar)?;
                 self.instrs.push(Instruction::Operator(name.clone(),x));
                 r
             },
             Expression::Dot(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_rvalue(x,dollar)?;
+                let x = self.build_rvalue(defstore,x,dollar)?;
                 self.instrs.push(Instruction::Dot(f.clone(),r.clone(),x));
                 r
             },
             Expression::Query(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_rvalue(x,dollar)?;
+                let x = self.build_rvalue(defstore,x,dollar)?;
                 self.instrs.push(Instruction::Query(f.clone(),r.clone(),x));
                 r
             },
             Expression::Pling(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_rvalue(x,dollar)?;
+                let x = self.build_rvalue(defstore,x,dollar)?;
                 self.instrs.push(Instruction::Pling(f.clone(),r.clone(),x));
                 r
             },
             Expression::Square(x) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_rvalue(x,dollar)?;
+                let x = self.build_rvalue(defstore,x,dollar)?;
                 self.instrs.push(Instruction::Square(r.clone(),x));
                 r
             },
             Expression::Star(x) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_rvalue(x,dollar)?;
+                let x = self.build_rvalue(defstore,x,dollar)?;
                 self.instrs.push(Instruction::Star(r.clone(),x));
                 r
             },
             Expression::Filter(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_rvalue(x,dollar)?;
-                let f = self.build_rvalue(f,&Some(x.clone()))?;
+                let x = self.build_rvalue(defstore,x,dollar)?;
+                let f = self.build_rvalue(defstore,f,&Some(x.clone()))?;
                 self.instrs.push(Instruction::Filter(r.clone(),x,f));
                 r
             },
             Expression::Bracket(x,f) => {
                 let r = self.regalloc.allocate();
-                let x = self.build_rvalue(x,dollar)?;
+                let x = self.build_rvalue(defstore,x,dollar)?;
                 let xsq = self.regalloc.allocate();
                 self.instrs.push(Instruction::Square(xsq.clone(),x));
-                let f = self.build_rvalue(f,&Some(xsq.clone()))?;
+                let f = self.build_rvalue(defstore,f,&Some(xsq.clone()))?;
                 let rm = self.regalloc.allocate();
                 self.instrs.push(Instruction::Filter(rm.clone(),xsq,f));
                 self.instrs.push(Instruction::Star(r.clone(),rm));
@@ -222,21 +220,21 @@ impl Generator {
     }
     // TODO deduplicate at
 
-    fn build_stmt(&mut self, stmt: &Statement) -> Result<(),String> {
-        let procdecl = self.defstore.get_proc(&stmt.0);
+    fn build_stmt(&mut self, defstore: &DefStore, stmt: &Statement) -> Result<(),String> {
+        let procdecl = defstore.get_proc(&stmt.0);
         if procdecl.is_none() {
             return Err(format!("No such procedure '{}'",stmt.0));
         }
         let lvalues : Vec<bool> = procdecl.unwrap().sigs().iter().map(|x| x.lvalue).collect();
-        let regs : Vec<Register> = self.map_expressions_top(&stmt.1,&lvalues)?;
+        let regs : Vec<Register> = self.map_expressions_top(defstore,&stmt.1,&lvalues)?;
         self.instrs.push(Instruction::Proc(stmt.0.to_string(),regs));
         Ok(())
     }
 
-    pub fn go(mut self, stmts: Vec<Statement>) -> Result<Vec<Instruction>,Vec<String>> {
+    pub fn go(mut self, defstore: &DefStore, stmts: Vec<Statement>) -> Result<Vec<Instruction>,Vec<String>> {
         let mut errors = Vec::new();
         for stmt in &stmts {
-            let r = self.build_stmt(stmt);
+            let r = self.build_stmt(defstore,stmt);
             if let Err(r) = r {
                 errors.push(format!("{} at {} {}",r,stmt.2,stmt.3));
             }
@@ -263,8 +261,8 @@ mod test {
         lexer.import("test:codegen/generate-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let gen = Generator::new(defstore);
-        let cmds : Vec<String> = gen.go(stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
+        let gen = Generator::new();
+        let cmds : Vec<String> = gen.go(&defstore,stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
         let outdata = load_testdata(&["codegen","generate-smoke.out"]).ok().unwrap();
         assert_eq!(outdata,cmds.join(""));
     }

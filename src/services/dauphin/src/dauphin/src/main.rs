@@ -24,7 +24,7 @@ fn main() {
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
     //
-    let gen = Generator::new(defstore);
-    let cmds : Vec<String> = gen.go(stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
+    let gen = Generator::new();
+    let cmds : Vec<String> = gen.go(&defstore,stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
     print!("{}",cmds.join(""));
 }

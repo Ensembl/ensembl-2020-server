@@ -95,6 +95,7 @@ pub enum BaseTypeDef {
     BytesType,
     NumberType,
     BooleanType,
+    InvalidType,
     StructType(String),
     EnumType(String)
 }
@@ -106,6 +107,7 @@ impl BaseTypeDef {
             BaseType::BytesType => BaseTypeDef::BytesType,
             BaseType::NumberType => BaseTypeDef::NumberType,
             BaseType::BooleanType => BaseTypeDef::BooleanType,
+            BaseType::Invalid => BaseTypeDef::InvalidType,
             BaseType::IdentifiedType(name) => {
                 if defstore.get_struct(name).is_some() {
                     BaseTypeDef::StructType(name.to_string())
@@ -126,6 +128,7 @@ impl fmt::Debug for BaseTypeDef {
             BaseTypeDef::BytesType => write!(f,"bytes")?,
             BaseTypeDef::NumberType => write!(f,"number")?,
             BaseTypeDef::BooleanType => write!(f,"boolean")?,
+            BaseTypeDef::InvalidType => write!(f,"invalid")?,
             BaseTypeDef::StructType(name) => write!(f,"{}",name)?,
             BaseTypeDef::EnumType(name) => write!(f,"{}",name)?,
         }
