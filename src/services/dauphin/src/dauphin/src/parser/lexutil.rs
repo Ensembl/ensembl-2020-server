@@ -3,7 +3,7 @@ use super::node::ParseError;
 
 lazy_static! {
     static ref KEYWORDS: Vec<&'static str> = {
-        vec!["reserved","struct","enum","func","proc","expr","stmt","inline","import"]
+        vec!["reserved","struct","enum","func","proc","expr","stmt","inline","import","becomes"]
     };
 }
 

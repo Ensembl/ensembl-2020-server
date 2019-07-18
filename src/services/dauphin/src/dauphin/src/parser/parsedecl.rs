@@ -57,7 +57,16 @@ fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
             _ => ()
         }
     }
-    Ok(Sig { lvalue, out, reverse: false, typesig: parse_typesig(lexer)? })
+    let fromsig = parse_typesig(lexer)?;
+    let lvalue = if lvalue {
+        if get_identifier(lexer)? != "becomes" {
+            return Err(ParseError::new("missing 'becomes'",lexer));
+        }
+        Some(parse_typesigexpr(lexer)?)
+    } else {
+        None
+    };
+    Ok(Sig { lvalue, out, reverse: false, typesig: fromsig })
 }
 
 fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {

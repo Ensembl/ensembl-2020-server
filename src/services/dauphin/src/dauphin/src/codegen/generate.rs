@@ -225,7 +225,7 @@ impl Generator {
         if procdecl.is_none() {
             return Err(format!("No such procedure '{}'",stmt.0));
         }
-        let lvalues : Vec<bool> = procdecl.unwrap().sigs().iter().map(|x| x.lvalue).collect();
+        let lvalues : Vec<bool> = procdecl.unwrap().sigs().iter().map(|x| x.lvalue.is_some()).collect();
         let regs : Vec<Register> = self.map_expressions_top(defstore,&stmt.1,&lvalues)?;
         self.instrs.push(Instruction::Proc(stmt.0.to_string(),regs));
         Ok(())

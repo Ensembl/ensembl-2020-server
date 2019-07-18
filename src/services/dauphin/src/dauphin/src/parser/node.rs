@@ -217,7 +217,7 @@ impl fmt::Debug for TypeSig {
 // TODO fix sig junk
 #[derive(PartialEq, Debug, Clone)]
 pub struct Sig {
-    pub lvalue: bool,
+    pub lvalue: Option<TypeSigExpr>,
     pub out: bool,
     pub reverse: bool,
     pub typesig: TypeSig
