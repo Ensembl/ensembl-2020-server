@@ -4,7 +4,15 @@ use super::instruction::Instruction;
 use super::typeinf::{ TypeInf, Referrer };
 use super::register::Register;
 use super::definitionstore::DefStore;
-use crate::parser::{ Sig, TypeSig, BaseType, TypeSigExpr };
+use crate::lexer::{ FileResolver, Lexer };
+use crate::parser::{ Sig, TypeSig, BaseType, TypeSigExpr, parse_signature };
+
+fn sig_gen(sig: &str) -> Result<Sig,String> {
+    let resolver = FileResolver::new();
+    let mut lexer = Lexer::new(resolver);
+    lexer.import(&format!("data: {}",sig)).ok();
+    parse_signature(&mut lexer).map_err(|e| "internal sig parsing failed".to_string())
+}
 
 struct TypePass {
     next_placeholder: u32,
@@ -54,7 +62,7 @@ impl TypePass {
     fn unique_member_sig(&mut self, names: &mut HashMap<String,String>, sig: &Sig) -> Sig {
         let typesig = self.unique_member_typesig(names,&sig.typesig);
         let lvalue = sig.lvalue.as_ref().map(|lvalue| self.unique_member_typesigexpr(names,&lvalue));
-        Sig { lvalue, out: sig.out, reverse: sig.reverse, typesig }
+        Sig { lvalue, out: sig.out, typesig }
     }
 
     fn uniqueize(&mut self, sig: &Vec<(Sig,Register)>) -> Vec<(Sig,Register)> {
@@ -82,12 +90,15 @@ impl TypePass {
     fn extract_sig_regs(&self, instr: &Instruction, defstore: &DefStore) -> Result<Vec<(Sig,Register)>,String> {
         match instr {
             Instruction::Proc(name,regs) => self.extract_proc_sig_regs(name,defstore,regs),
-            Instruction::NumberConst(reg,_) => Ok(vec![(Sig { lvalue: Some(TypeSigExpr::Base(BaseType::NumberType)), out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())) },reg.clone())]),
-            Instruction::BooleanConst(reg,_) => Ok(vec![(Sig { lvalue: Some(TypeSigExpr::Base(BaseType::BooleanType)), out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())) },reg.clone())]),
-            Instruction::StringConst(reg,_) => Ok(vec![(Sig { lvalue: Some(TypeSigExpr::Base(BaseType::StringType)), out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())) },reg.clone())]),            
-            Instruction::List(reg) => Ok(vec![(Sig { lvalue: Some(TypeSigExpr::Vector(Box::new(TypeSigExpr::Placeholder("_".to_string())))), out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())) },reg.clone())]),
-            Instruction::Push(dst,src) => Ok(vec![(Sig { lvalue: None, out: true, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Vector(Box::new(TypeSigExpr::Placeholder("A".to_string())))) },dst.clone()),
-                                                  (Sig { lvalue: None, out: false, reverse: false, typesig: TypeSig::Right(TypeSigExpr::Placeholder("A".to_string())) },src.clone()),]),
+            Instruction::NumberConst(reg,_) => Ok(vec![(sig_gen("out number")?,reg.clone())]),
+            Instruction::BooleanConst(reg,_) => Ok(vec![(sig_gen("out boolean")?,reg.clone())]),
+            Instruction::StringConst(reg,_) => Ok(vec![(sig_gen("out string")?,reg.clone())]),
+            Instruction::BytesConst(reg,_) => Ok(vec![(sig_gen("out bytes")?,reg.clone())]),
+            Instruction::List(reg) => Ok(vec![(sig_gen("out vec(_)")?,reg.clone())]),
+            Instruction::Push(dst,src) => Ok(vec![
+                (sig_gen("out vec(_A)")?,dst.clone()),
+                (sig_gen("_A")?,src.clone()),
+            ]),
             _ => Err(format!("no signature for {:?}",instr))
         }
     }

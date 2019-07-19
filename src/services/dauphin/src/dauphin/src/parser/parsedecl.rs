@@ -36,7 +36,7 @@ pub(in super) fn parse_proc(lexer: &mut Lexer) -> Result<ParserStatement,ParseEr
     Ok(ParserStatement::ProcDecl(name.to_string(),sigs))
 }
 
-fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
+pub fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
     let mut lvalue = false;
     let mut out = false;
     loop {
@@ -58,15 +58,17 @@ fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
         }
     }
     let fromsig = parse_typesig(lexer)?;
-    let lvalue = if lvalue {
+    let (fromsig,lvalue) = if lvalue {
         if get_identifier(lexer)? != "becomes" {
             return Err(ParseError::new("missing 'becomes'",lexer));
         }
-        Some(parse_typesigexpr(lexer)?)
+        (fromsig,Some(parse_typesigexpr(lexer)?))
+    } else if out {
+        (TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())),Some(fromsig.expr().clone()))
     } else {
-        None
+        (fromsig,None)
     };
-    Ok(Sig { lvalue, out, reverse: false, typesig: fromsig })
+    Ok(Sig { lvalue, out, typesig: fromsig })
 }
 
 fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {

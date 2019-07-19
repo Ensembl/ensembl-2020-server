@@ -219,7 +219,6 @@ impl fmt::Debug for TypeSig {
 pub struct Sig {
     pub lvalue: Option<TypeSigExpr>,
     pub out: bool,
-    pub reverse: bool,
     pub typesig: TypeSig
 }
 
