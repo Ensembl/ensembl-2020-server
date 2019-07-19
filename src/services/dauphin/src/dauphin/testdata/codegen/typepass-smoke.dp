@@ -1,3 +1,5 @@
+enum etest { X: string, Y: boolean };
+struct stest { A: vec(number), B: etest };
 proc assign(lvalue _ becomes _A, _A);
 proc incr(lvalue number becomes number, number);
 inline ":=" assign left 14;
@@ -9,3 +11,4 @@ z := [1,2,3];
 m := [["hello","world"]];
 x += 3;
 //z += 2;
+n := stest { B: etest:X "hi", A: z };

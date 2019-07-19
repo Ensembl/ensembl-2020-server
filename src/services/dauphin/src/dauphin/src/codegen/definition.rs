@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::parser::{ Type, BaseType, Sig };
+use crate::parser::{ Type, BaseType, Sig, TypeSigExpr };
 use super::definitionstore::DefStore;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
@@ -119,6 +119,18 @@ impl BaseTypeDef {
             }
         })
     }
+
+    fn to_typesigexpr(&self) -> TypeSigExpr {
+        TypeSigExpr::Base(match self {
+            BaseTypeDef::StringType => BaseType::StringType,
+            BaseTypeDef::BytesType => BaseType::BytesType,
+            BaseTypeDef::NumberType => BaseType::NumberType,
+            BaseTypeDef::BooleanType => BaseType::BooleanType,
+            BaseTypeDef::InvalidType => BaseType::Invalid,
+            BaseTypeDef::StructType(name) => BaseType::IdentifiedType(name.to_string()),
+            BaseTypeDef::EnumType(name) => BaseType::IdentifiedType(name.to_string()),
+        })
+    }
 }
 
 impl fmt::Debug for BaseTypeDef {
@@ -147,6 +159,13 @@ impl TypeDef {
             Type::Base(t) => TypeDef::Base(BaseTypeDef::new(t,defstore)?),
             Type::Vector(t) => TypeDef::Vector(Box::new(TypeDef::new(t,defstore)?))
         })
+    }
+
+    pub fn to_typesigexpr(&self) -> TypeSigExpr {
+        match self {
+            TypeDef::Base(v) => v.to_typesigexpr(),
+            TypeDef::Vector(v) => TypeSigExpr::Vector(Box::new(v.to_typesigexpr()))
+        }
     }
 }
 
@@ -222,6 +241,16 @@ impl StructEnumDef {
 
     pub fn name(&self) -> &str { &self.name }
     pub fn get_names(&self) -> &Vec<String> { &self.names }
+    pub fn get_types(&self) -> &Vec<TypeDef> { &self.types }
+
+    pub fn type_from_name(&self, name: &str) -> Option<&TypeDef> {
+        for (i,this_name) in self.names.iter().enumerate() {
+            if this_name == name {
+                return Some(&self.types[i]);
+            }
+        }
+        None
+    }
 }
 
 pub struct StructDef {
@@ -237,6 +266,10 @@ impl StructDef {
 
     pub fn name(&self) -> &str { &self.common.name() }
     pub fn get_names(&self) -> &Vec<String> { &self.common.get_names() }
+
+    pub fn get_member_types(&self) -> &Vec<TypeDef> {
+        self.common.get_types()
+    }
 }
 
 impl fmt::Debug for StructDef {
@@ -257,6 +290,10 @@ impl EnumDef {
     }
 
     pub fn name(&self) -> &str { &self.common.name() }
+
+    pub fn get_branch_type(&self, name: &str) -> Option<&TypeDef> {
+        self.common.type_from_name(name)
+    }
 }
 
 impl fmt::Debug for EnumDef {

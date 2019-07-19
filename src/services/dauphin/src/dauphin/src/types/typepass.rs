@@ -5,7 +5,7 @@ use crate::codegen::Register;
 use crate::codegen::DefStore;
 use super::uniquifier::Uniquifier;
 use crate::lexer::{ FileResolver, Lexer };
-use crate::parser::{ Sig, TypeSig, TypeSigExpr, parse_signature };
+use crate::parser::{ Sig, TypeSig, TypeSigExpr, parse_signature, BaseType };
 
 fn sig_gen(sig: &str) -> Result<Sig,String> {
     let resolver = FileResolver::new();
@@ -56,6 +56,55 @@ impl TypePass {
                 (sig_gen("out vec(_A)")?,dst.clone()),
                 (sig_gen("_A")?,src.clone()),
             ]),
+            Instruction::CtorEnum(name,branch,dst,src) => {
+                let exprdecl = defstore.get_enum(name).ok_or_else(|| format!("No such enum {:?}",name))?;
+                let base = BaseType::IdentifiedType(name.to_string());
+                let expr = TypeSigExpr::Base(base);
+                let branch_typedef = exprdecl.get_branch_type(branch)
+                        .ok_or_else(|| format!("No such enum branch {:?}",name))?
+                        .to_typesigexpr();
+                let dst_sig = Sig {
+                    lvalue: Some(expr),
+                    out: true,
+                    typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+                };
+                let src_sig = Sig {
+                    lvalue: None,
+                    out: false,
+                    typesig: TypeSig::Right(branch_typedef)
+                };
+                Ok(vec![
+                    (dst_sig,dst.clone()),
+                    (src_sig,src.clone()),
+                ])
+            },
+            Instruction::CtorStruct(name,dst,srcs) => {
+                let mut out = Vec::new();
+                let exprdecl = defstore.get_struct(name).ok_or_else(|| format!("No such struct {:?}",name))?;
+                let base = BaseType::IdentifiedType(name.to_string());
+                let expr = TypeSigExpr::Base(base);
+                let dst_sig = Sig {
+                    lvalue: Some(expr),
+                    out: true,
+                    typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+                };
+                let intypes : Vec<TypeSigExpr> = exprdecl.get_member_types().iter()
+                                .map(|x| x.to_typesigexpr()).collect();
+                if srcs.len() != intypes.len() {
+                    return Err("Incorrect number of arguments".to_string());
+                }
+                for (i,intype) in intypes.iter().enumerate() {
+                    out.push((
+                        Sig {
+                            lvalue: None, out: false,
+                            typesig: TypeSig::Right(intype.clone())
+                        },
+                        srcs.get(i).unwrap().clone()
+                    ));
+                }
+                out.push((dst_sig,dst.clone()));
+                Ok(out)
+            },
             _ => Err(format!("no signature for {:?}",instr))
         }
     }
@@ -107,10 +156,12 @@ mod test {
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));
         let mut tp = TypePass::new();
-        for instr in &instrs {
+        for (i,instr) in instrs.iter().enumerate() {
             print!("=== {:?}",instr);
             tp.apply_command(instr,&defstore).expect("ok");
-            print!("finish {:?}\n",tp.typeinf);
+            if i > instrs.len()-5 {
+                print!("finish {:?}\n",tp.typeinf);
+            }
         }
     }
 }
