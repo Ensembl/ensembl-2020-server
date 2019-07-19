@@ -3,13 +3,9 @@ proc incr(lvalue number becomes number, number);
 inline ":=" assign left 14;
 inline "+=" incr left 14;
 x := 1;
-/*
 y := true;
-*/
 //z := a;
 z := [1,2,3];
-/*
 m := [["hello","world"]];
-*/
 x += 3;
 //z += 2;
