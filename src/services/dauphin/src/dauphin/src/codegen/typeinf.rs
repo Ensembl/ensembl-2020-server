@@ -312,9 +312,9 @@ mod test {
     #[test]
     fn typeinf_smoke() {
         let mut ti = TypeInf::new();
-        let a = ti.new_temp();
-        let b = ti.new_temp();
-        let c = ti.new_temp();
+        let a = ti.new_register(&Register::Temporary(1));
+        let b = ti.new_register(&Register::Temporary(2));
+        let c = ti.new_register(&Register::Temporary(3));
         ti.add(&a,&typesig_gen("vec(_A)"));
         ti.add(&b,&typesig_gen("vec(vec(string))"));
         ti.add(&c,&typesig_gen("_A"));
@@ -331,9 +331,9 @@ mod test {
     #[test]
     fn rollback() {
         let mut ti = TypeInf::new();
-        let a = ti.new_temp();
-        let b = ti.new_temp();
-        let c = ti.new_temp();
+        let a = ti.new_register(&Register::Temporary(1));
+        let b = ti.new_register(&Register::Temporary(2));
+        let c = ti.new_register(&Register::Temporary(3));
         ti.add(&a,&typesig_gen("vec(_A)"));
         ti.add(&b,&typesig_gen("vec(vec(string))"));
         ti.add(&c,&typesig_gen("_A"));

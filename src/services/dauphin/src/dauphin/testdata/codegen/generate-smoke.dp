@@ -1,6 +1,6 @@
 enum etest { X: string, Y: boolean };
 struct stest { A: vec(number), B: etest };
-proc assign(lvalue _A, _A);
+proc assign(out _A, _A);
 func gt;
 func lt;
 func eq;

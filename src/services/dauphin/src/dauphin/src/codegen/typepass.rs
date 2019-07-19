@@ -86,7 +86,6 @@ impl TypePass {
         Ok(out)
     }
 
-    // TODO as strings
     fn extract_sig_regs(&self, instr: &Instruction, defstore: &DefStore) -> Result<Vec<(Sig,Register)>,String> {
         match instr {
             Instruction::Proc(name,regs) => self.extract_proc_sig_regs(name,defstore,regs),
@@ -103,7 +102,6 @@ impl TypePass {
         }
     }
 
-    // TODO remove reverse
     /* ref is special as the root of all leftyness! */
     pub fn try_apply_ref(&mut self, dst: &Register, src: &Register, defstore: &DefStore) -> Result<(),String> {
         let dst_t = self.typeinf.new_register(dst);

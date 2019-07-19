@@ -1,4 +1,4 @@
-proc assign(lvalue _A, _A);
+proc assign(out _A, _A);
 func eq;
 inline ":=" assign left 14;
 inline "==" eq left 10;
