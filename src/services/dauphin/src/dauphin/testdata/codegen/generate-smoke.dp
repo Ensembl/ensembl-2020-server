@@ -1,9 +1,9 @@
 enum etest { X: string, Y: boolean };
 struct stest { A: vec(number), B: etest };
 proc assign(out _A, _A);
-func gt;
-func lt;
-func eq;
+func gt(number,number) becomes boolean;
+func lt(number,number) becomes boolean;
+func eq(number,number) becomes boolean;
 inline ":=" assign left 14;
 inline ">" gt left 6;
 inline "<" lt left 6;

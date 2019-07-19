@@ -1,12 +1,12 @@
 pub const PREAMBLE: &str = r#"
 
-func __star__;
-func __sqopen__;
-func __dot__;
-func __query__;
-func __pling__;
-func __ref__;
-func __sqctor__;
+func __star__() becomes _;
+func __sqopen__() becomes _;
+func __dot__() becomes _;
+func __query__() becomes _;
+func __pling__() becomes _;
+func __ref__() becomes _;
+func __sqctor__() becomes _;
 inline "*" __star__ prefix 8;
 inline "[" __sqopen__ suffix 4;
 inline "[" __sqctor__ prefix 4;

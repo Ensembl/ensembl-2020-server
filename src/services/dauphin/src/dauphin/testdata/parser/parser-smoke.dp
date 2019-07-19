@@ -1,11 +1,11 @@
 proc assign(out _A, _A);
-func plus;
-func multiply;
-func minus;
-func twiddle;
-func and;
-func or;
-func eq;
+func plus(number,number) becomes number;
+func multiply(number,number) becomes number;
+func minus(number,number) becomes number;
+func twiddle(number) becomes number;
+func and(boolean,boolean) becomes boolean;
+func or(boolean,boolean) becomes boolean;
+func eq(boolean,boolean) becomes boolean;
 inline ":=" assign left 14;
 inline "+" plus right 6;
 inline "-" minus left 6;

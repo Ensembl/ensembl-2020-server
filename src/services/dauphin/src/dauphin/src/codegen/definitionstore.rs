@@ -85,6 +85,10 @@ impl DefStore {
         self.structs.get(name)
     }
 
+    pub fn get_func(&self, name: &str) -> Option<&FuncDecl> {
+        self.funcs.get(name)
+    }
+
     pub fn add_enum(&mut self, enum_: EnumDef, lexer: &Lexer) -> Result<(),ParseError> {
         self.detect_clash(enum_.name(),lexer)?;
         self.enums.insert(enum_.name().to_string(),enum_);

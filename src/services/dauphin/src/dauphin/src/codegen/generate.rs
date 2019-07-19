@@ -149,7 +149,7 @@ impl Generator {
             Expression::Operator(name,x) => {
                 let r = self.regalloc.allocate();
                 let x = self.map_expressions(defstore,x,dollar)?;
-                self.instrs.push(Instruction::Operator(name.clone(),x));
+                self.instrs.push(Instruction::Operator(name.clone(),r.clone(),x));
                 r
             },
             Expression::Dot(x,f) => {

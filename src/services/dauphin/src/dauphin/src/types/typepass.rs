@@ -105,6 +105,30 @@ impl TypePass {
                 out.push((dst_sig,dst.clone()));
                 Ok(out)
             },
+            Instruction::Operator(name,dst,srcs) => {
+                let mut out = Vec::new();
+                let exprdecl = defstore.get_func(name).ok_or_else(|| format!("No such function {:?}",name))?;
+                let dst_sig = Sig {
+                    lvalue: Some(exprdecl.get_dst().clone()),
+                    out: true,
+                    typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+                };
+                let intypes : &Vec<TypeSigExpr> = exprdecl.get_srcs();
+                if srcs.len() != intypes.len() {
+                    return Err("Incorrect number of arguments".to_string());
+                }
+                for (i,intype) in intypes.iter().enumerate() {
+                    out.push((
+                        Sig {
+                            lvalue: None, out: false,
+                            typesig: TypeSig::Right(intype.clone())
+                        },
+                        srcs.get(i).unwrap().clone()
+                    ));
+                }
+                out.push((dst_sig,dst.clone()));
+                Ok(out)
+            },
             _ => Err(format!("no signature for {:?}",instr))
         }
     }
@@ -159,7 +183,7 @@ mod test {
         for (i,instr) in instrs.iter().enumerate() {
             print!("=== {:?}",instr);
             tp.apply_command(instr,&defstore).expect("ok");
-            if i > instrs.len()-5 {
+            if i > instrs.len()-3 {
                 print!("finish {:?}\n",tp.typeinf);
             }
         }

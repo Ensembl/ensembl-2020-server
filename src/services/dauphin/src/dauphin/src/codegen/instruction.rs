@@ -3,15 +3,15 @@ use std::fmt;
 use super::register::Register;
 
 pub enum Instruction {
-    NumberConst(Register,f64),
-    BooleanConst(Register,bool),
-    StringConst(Register,String),
-    BytesConst(Register,Vec<u8>),
-    CtorStruct(String,Register,Vec<Register>),
-    CtorEnum(String,String,Register,Register),
-    List(Register),
-    Push(Register,Register),
-    Proc(String,Vec<Register>),
+    NumberConst(Register,f64), //y
+    BooleanConst(Register,bool), //y
+    StringConst(Register,String), //y
+    BytesConst(Register,Vec<u8>), //y
+    CtorStruct(String,Register,Vec<Register>), //y
+    CtorEnum(String,String,Register,Register), //y
+    List(Register), //y
+    Push(Register,Register), //y
+    Proc(String,Vec<Register>), //y
     Dot(String,Register,Register), // becomes #svalue after type inference
     Query(String,Register,Register), // becomes #etest after type inference
     Pling(String,Register,Register), // becomes #evalue after type inference
@@ -23,7 +23,7 @@ pub enum Instruction {
     Filter(Register,Register,Register),
     RefFilter(Register,Register,Register),
     At(Register,Register),
-    Operator(String,Vec<Register>),
+    Operator(String,Register,Vec<Register>), //y
     Ref(Register,Register),
     RefStar(Register,Register),
 }
@@ -52,8 +52,11 @@ impl fmt::Debug for Instruction {
                 fmt_instr(f,"push",&vec![r0,r1],&vec![])?,
             Instruction::Proc(name,regs) => 
                 fmt_instr(f,&format!("proc:{}",name),&regs.iter().map(|x| x).collect(),&vec![])?,
-            Instruction::Operator(name,regs) => 
-                fmt_instr(f,&format!("oper:{}",name),&regs.iter().map(|x| x).collect(),&vec![])?,
+            Instruction::Operator(name,dst,srcs) =>  {
+                let mut r = vec![dst];
+                r.extend(srcs.iter());
+                fmt_instr(f,&format!("oper:{}",name),&r,&vec![])?
+            },
             Instruction::CtorStruct(name,dest,regs) => {
                 let mut r = vec![dest];
                 r.extend(regs.iter());

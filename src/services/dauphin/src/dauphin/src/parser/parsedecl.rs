@@ -17,7 +17,22 @@ pub(in super) fn parse_stmtdecl(lexer: &mut Lexer) -> Result<ParserStatement,Par
 pub(in super) fn parse_func(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let name = get_identifier(lexer)?;
-    Ok(ParserStatement::FuncDecl(name.to_string()))
+    let mut srcs = Vec::new();
+    get_other(lexer,"(")?;
+    loop {
+        if lexer.peek() == Token::Other(')') { lexer.get(); break; }
+        srcs.push(parse_typesigexpr(lexer)?);
+        match lexer.get() {
+            Token::Other(',') => (),
+            Token::Other(')') => break,
+            _ => return Err(ParseError::new("Unexpected token (expected ) or ,)",lexer))
+        };
+    }
+    if get_identifier(lexer)? != "becomes" {
+        return Err(ParseError::new("missing 'becomes'",lexer));
+    }
+    let dst = parse_typesigexpr(lexer)?;
+    Ok(ParserStatement::FuncDecl(name.to_string(),dst,srcs))
 }
 
 pub(in super) fn parse_proc(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
@@ -26,6 +41,7 @@ pub(in super) fn parse_proc(lexer: &mut Lexer) -> Result<ParserStatement,ParseEr
     let mut sigs = Vec::new();
     get_other(lexer,"(")?;
     loop {
+        if lexer.peek() == Token::Other(')') { break; }
         sigs.push(parse_signature(lexer)?);
         match lexer.get() {
             Token::Other(',') => (),

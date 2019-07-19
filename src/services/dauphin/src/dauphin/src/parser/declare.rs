@@ -1,4 +1,4 @@
-use super::node::{ ParserStatement, ParseError, Type, Sig };
+use super::node::{ ParserStatement, ParseError, Type, Sig, TypeSigExpr };
 use super::lexutil::not_reserved;
 use crate::codegen::{
     InlineMode, Inline, DefStore, ExprMacro, StmtMacro, FuncDecl, ProcDecl,
@@ -37,9 +37,9 @@ fn run_proc(name: &str, sigs: &Vec<Sig>, defstore: &mut DefStore, lexer: &mut Le
     Ok(())
 }
 
-fn run_func(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_func(name: &str, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    defstore.add_func(FuncDecl::new(name),lexer)?;
+    defstore.add_func(FuncDecl::new(name,dst,srcs),lexer)?;
     Ok(())
 }
 
@@ -50,6 +50,7 @@ fn run_struct(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut
     Ok(())
 }
 
+// TODO allow one operator as prefix of another
 fn run_enum(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
     let def = EnumDef::new(name,types,names,defstore).map_err(|e| ParseError::new(&e,lexer) )?;
@@ -69,8 +70,8 @@ pub fn declare(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStor
             run_stmt(&name,defstore,lexer).map(|_| true),
         ParserStatement::ProcDecl(name,sigs) =>
             run_proc(&name,sigs,defstore,lexer).map(|_| true),
-        ParserStatement::FuncDecl(name) =>
-            run_func(&name,defstore,lexer).map(|_| true),
+        ParserStatement::FuncDecl(name,dst,srcs) =>
+            run_func(&name,dst,srcs,defstore,lexer).map(|_| true),
         ParserStatement::StructDef(name,types,names) =>
             run_struct(&name,&types,&names,defstore,lexer).map(|_| true),
         ParserStatement::EnumDef(name,types,names) =>

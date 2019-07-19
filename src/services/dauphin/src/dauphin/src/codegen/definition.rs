@@ -64,15 +64,19 @@ impl StmtMacro {
 
 #[derive(Debug)]
 pub struct FuncDecl {
-    name: String
+    name: String,
+    dst: TypeSigExpr,
+    srcs: Vec<TypeSigExpr>
 }
 
 impl FuncDecl {
-    pub fn new(name: &str) -> FuncDecl {
-        FuncDecl { name: name.to_string() }
+    pub fn new(name: &str, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>) -> FuncDecl {
+        FuncDecl { name: name.to_string(), srcs: srcs.to_vec(), dst: dst.clone() }
     }
 
     pub fn name(&self) -> &str { &self.name }
+    pub fn get_srcs(&self) -> &Vec<TypeSigExpr> { &self.srcs }
+    pub fn get_dst(&self) -> &TypeSigExpr { &self.dst }
 }
 
 #[derive(Debug)]

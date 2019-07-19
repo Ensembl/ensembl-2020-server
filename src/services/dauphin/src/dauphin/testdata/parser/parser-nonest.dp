@@ -1,5 +1,5 @@
 proc assign(out _A, _A);
-func eq;
+func eq(number,number) becomes boolean;
 inline ":=" assign left 14;
 inline "==" eq left 10;
 $==1 := @==2;

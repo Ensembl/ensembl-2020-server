@@ -1,2 +1,2 @@
 proc assign(out _A, _A);
-func assign;
+func assign(_A,_A) becomes _;
