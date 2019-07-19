@@ -128,7 +128,7 @@ impl fmt::Debug for BaseType {
             BaseType::Invalid => "***INVALID***",
             BaseType::IdentifiedType(t) => t
         };
-        write!(f,"{}",v);
+        write!(f,"{}",v)?;
         Ok(())
     }
 }
@@ -160,7 +160,7 @@ impl TypeSigExpr {
             TypeSigExpr::Base(BaseType::Invalid) => true,
             TypeSigExpr::Base(_) => false,
             TypeSigExpr::Vector(t) => t.is_invalid(),
-            TypeSigExpr::Placeholder(p) => false
+            TypeSigExpr::Placeholder(_) => false
         }
     }
 }
@@ -193,14 +193,7 @@ impl TypeSig {
     pub fn expr(&self) -> &TypeSigExpr {
         match self {
             TypeSig::Right(x) => x,
-            TypeSig::Left(x,r) => x
-        }
-    }
-
-    pub fn is_left(&self) -> bool {
-        match self {
-            TypeSig::Right(_) => false,
-            TypeSig::Left(_,_) => true
+            TypeSig::Left(x,_) => x
         }
     }
 }

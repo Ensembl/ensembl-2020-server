@@ -10,3 +10,6 @@ pub use self::definition::{ Inline, InlineMode, ExprMacro, StmtMacro, ProcDecl, 
 pub use self::definitionstore::DefStore;
 pub use self::generate::Generator;
 pub use self::register::Register;
+
+// TODO remove
+pub use self::typepass::TypePass;

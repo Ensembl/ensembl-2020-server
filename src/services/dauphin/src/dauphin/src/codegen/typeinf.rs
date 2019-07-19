@@ -1,6 +1,5 @@
 use std::collections::{ HashMap, HashSet };
 use std::fmt;
-use std::hash::Hash;
 use crate::parser::{ TypeSig, BaseType, TypeSigExpr };
 use super::register::Register;
 
@@ -25,8 +24,7 @@ struct TypeInfStore {
     signatures_txn: HashMap<Referrer,TypeSig>,
     signatures_txn_rm: HashSet<Referrer>,
     uses_placeholder: HashMap<String,HashSet<Referrer>>,
-    uses_placeholder_txn: HashMap<String,HashSet<Referrer>>,
-    resolution_txn: HashMap<String,TypeSig>
+    uses_placeholder_txn: HashMap<String,HashSet<Referrer>>
 }
 
 impl TypeInfStore {
@@ -36,8 +34,7 @@ impl TypeInfStore {
             signatures_txn: HashMap::new(),
             signatures_txn_rm: HashSet::new(),
             uses_placeholder: HashMap::new(),
-            uses_placeholder_txn: HashMap::new(),
-            resolution_txn: HashMap::new()
+            uses_placeholder_txn: HashMap::new()
         }
     }
 
@@ -146,10 +143,6 @@ impl TypeInf {
             store: TypeInfStore::new(),
             invalid: TypeSig::Right(TypeSigExpr::Base(BaseType::Invalid))
         }
-    }
-
-    pub fn remove(&mut self, reg: &Referrer) {
-        self.store.remove(reg);
     }
 
     pub fn get_sig(&mut self, reg: &Referrer) -> &TypeSig {
@@ -265,8 +258,7 @@ impl fmt::Debug for TypeInf {
 mod test {
     use super::*;
     use crate::lexer::{ FileResolver, Lexer };
-    use crate::parser::{ Parser, parse_typesig };
-    use crate::testsuite::load_testdata;
+    use crate::parser::{ parse_typesig };
 
     fn typesig_gen(sig: &str) -> TypeSig {
         let resolver = FileResolver::new();

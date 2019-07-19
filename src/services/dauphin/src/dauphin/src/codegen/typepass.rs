@@ -5,16 +5,16 @@ use super::typeinf::{ TypeInf, Referrer };
 use super::register::Register;
 use super::definitionstore::DefStore;
 use crate::lexer::{ FileResolver, Lexer };
-use crate::parser::{ Sig, TypeSig, BaseType, TypeSigExpr, parse_signature };
+use crate::parser::{ Sig, TypeSig, TypeSigExpr, parse_signature };
 
 fn sig_gen(sig: &str) -> Result<Sig,String> {
     let resolver = FileResolver::new();
     let mut lexer = Lexer::new(resolver);
     lexer.import(&format!("data: {}",sig)).ok();
-    parse_signature(&mut lexer).map_err(|e| "internal sig parsing failed".to_string())
+    parse_signature(&mut lexer).map_err(|_| "internal sig parsing failed".to_string())
 }
 
-struct TypePass {
+pub struct TypePass {
     next_placeholder: u32,
     typeinf: TypeInf
 }
@@ -103,7 +103,7 @@ impl TypePass {
     }
 
     /* ref is special as the root of all leftyness! */
-    pub fn try_apply_ref(&mut self, dst: &Register, src: &Register, defstore: &DefStore) -> Result<(),String> {
+    pub fn try_apply_ref(&mut self, dst: &Register, src: &Register) -> Result<(),String> {
         let dst_t = self.typeinf.new_register(dst);
         let dst_ph = TypeSigExpr::Placeholder(self.new_placeholder().clone());
         self.typeinf.add(&dst_t,&TypeSig::Left(dst_ph,src.clone()));
@@ -143,12 +143,12 @@ impl TypePass {
             let tmp_sig = self.typeinf.get_sig(tmp).clone();
             let reg_sig = self.typeinf.get_sig(reg).clone();
             match &reg_sig {
-                TypeSig::Left(x,r) => {
+                TypeSig::Left(_,r) => {
                     self.typeinf.unify(&Referrer::Register(r.clone()),rtmp)?;
                     self.typeinf.add(&Referrer::Register(r.clone()),&tmp_sig.clone());
                     self.typeinf.add(&reg,&TypeSig::Left(tmp_sig.expr().clone(),r.clone()));
                 },
-                TypeSig::Right(x) => {
+                TypeSig::Right(_) => {
                     self.typeinf.add(&reg,&tmp_sig.clone());
                 }
             }
@@ -158,7 +158,7 @@ impl TypePass {
 
     pub fn apply_command(&mut self, instr: &Instruction, defstore: &DefStore) -> Result<(),String> {
         let x = match instr {
-            Instruction::Ref(dst,src) => self.try_apply_ref(dst,src,defstore),
+            Instruction::Ref(dst,src) => self.try_apply_ref(dst,src),
             instr => self.try_apply_command(instr,defstore)
         };
         match x {
@@ -173,8 +173,7 @@ impl TypePass {
 mod test {
     use super::*;
     use crate::lexer::{ FileResolver, Lexer };
-    use crate::parser::{ Parser, parse_typesig };
-    use crate::testsuite::load_testdata;
+    use crate::parser::{ Parser };
     use super::super::generate::Generator;
 
     #[test]

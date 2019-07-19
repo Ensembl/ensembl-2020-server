@@ -10,7 +10,7 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
-use crate::codegen::Generator;
+use crate::codegen::{ Generator, TypePass };
 use crate::testsuite::load_testdata;
 
 fn main() {
@@ -25,6 +25,11 @@ fn main() {
     assert_eq!(outdata,out.join("\n"));
     //
     let gen = Generator::new();
-    let cmds : Vec<String> = gen.go(&defstore,stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
-    print!("{}",cmds.join(""));
+    let instrs = gen.go(&defstore,stmts).expect("codegen");
+    let mut tp = TypePass::new();
+    for instr in &instrs {
+        print!("=== {:?}",instr);
+        tp.apply_command(instr,&defstore).expect("ok");
+        //print!("finish {:?}\n",tp.typeinf);
+    }
 }
