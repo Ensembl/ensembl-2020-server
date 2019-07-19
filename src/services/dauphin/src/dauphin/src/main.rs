@@ -2,6 +2,7 @@ mod codegen;
 mod lexer;
 mod parser;
 mod testsuite;
+mod types;
 
 #[macro_use]
 extern crate lazy_static;
@@ -10,7 +11,8 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
-use crate::codegen::{ Generator, TypePass };
+use crate::codegen::Generator;
+use crate::types::TypePass;
 use crate::testsuite::load_testdata;
 
 fn main() {

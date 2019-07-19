@@ -1,7 +1,7 @@
 use std::collections::{ HashMap, HashSet };
 use std::fmt;
 use crate::parser::{ TypeSig, BaseType, TypeSigExpr };
-use super::register::Register;
+use crate::codegen::Register;
 
 #[derive(Debug,Clone,Hash,PartialEq,Eq)]
 pub enum Referrer {
