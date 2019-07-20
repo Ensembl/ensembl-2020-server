@@ -18,3 +18,4 @@ x (+=) 3;
 //z (+=) 2;
 n := stest { B: etest:X "hi", A: z };
 x := x + 2;
+z := *z[true];

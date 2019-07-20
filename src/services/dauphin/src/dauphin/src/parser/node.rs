@@ -109,7 +109,7 @@ impl fmt::Debug for Statement {
     }
 }
 
-#[derive(PartialEq,Clone)]
+#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum BaseType {
     StringType,
     BytesType,
@@ -139,7 +139,7 @@ pub enum Type {
     Vector(Box<Type>)
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum TypeSigExpr {
     Base(BaseType),
     Vector(Box<TypeSigExpr>),
@@ -175,7 +175,7 @@ impl fmt::Debug for TypeSigExpr {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum TypeSig {
     Right(TypeSigExpr),
     Left(TypeSigExpr,Register)

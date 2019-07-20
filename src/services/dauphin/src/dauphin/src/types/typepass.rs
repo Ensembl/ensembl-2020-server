@@ -14,7 +14,7 @@ fn sig_gen(sig: &str) -> Result<Sig,String> {
     parse_signature(&mut lexer).map_err(|_| "internal sig parsing failed".to_string())
 }
 
-
+#[derive(Clone)]
 pub struct TypePass {
     uniquifier: Uniquifier,
     typeinf: TypeInf
@@ -52,6 +52,23 @@ impl TypePass {
             Instruction::StringConst(reg,_) => Ok(vec![(sig_gen("out string")?,reg.clone())]),
             Instruction::BytesConst(reg,_) => Ok(vec![(sig_gen("out bytes")?,reg.clone())]),
             Instruction::List(reg) => Ok(vec![(sig_gen("out vec(_)")?,reg.clone())]),
+            Instruction::Star(dst,src) => Ok(vec![
+                (sig_gen("out vec(_A)")?,dst.clone()),
+                (sig_gen("_A")?,src.clone())
+            ]),
+            Instruction::Square(dst,src) => Ok(vec![
+                (sig_gen("out _A")?,dst.clone()),
+                (sig_gen("vec(_A)")?,src.clone())
+            ]),
+            Instruction::Star(dst,src) => Ok(vec![
+                (sig_gen("out _A")?,dst.clone()),
+                (sig_gen("vec(_A)")?,src.clone())
+            ]),
+            Instruction::Filter(dst,src,filter) => Ok(vec![
+                (sig_gen("out _A")?,dst.clone()),
+                (sig_gen("_A")?,src.clone()),
+                (sig_gen("boolean")?,filter.clone()),
+            ]),
             Instruction::Push(dst,src) => Ok(vec![
                 (sig_gen("out vec(_A)")?,dst.clone()),
                 (sig_gen("_A")?,src.clone()),
@@ -180,12 +197,11 @@ mod test {
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));
         let mut tp = TypePass::new();
-        for (i,instr) in instrs.iter().enumerate() {
+        for instr in &instrs {
             print!("=== {:?}",instr);
+            let before = tp.clone();
             tp.apply_command(instr,&defstore).expect("ok");
-            if i > instrs.len()-3 {
-                print!("finish {:?}\n",tp.typeinf);
-            }
+            print!("{}",tp.typeinf.make_diff(&before.typeinf));
         }
     }
 }

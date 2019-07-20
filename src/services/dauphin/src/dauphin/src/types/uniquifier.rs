@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::parser::{ Sig, TypeSig, TypeSigExpr };
 use crate::codegen::Register;
 
+#[derive(Clone)]
 pub struct Uniquifier {
     next_placeholder: u32
 }

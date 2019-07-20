@@ -3,7 +3,7 @@ use std::fmt;
 use crate::parser::{ TypeSig, BaseType, TypeSigExpr };
 use crate::codegen::Register;
 
-#[derive(Debug,Clone,Hash,PartialEq,Eq)]
+#[derive(Clone,Hash,PartialEq,Eq,PartialOrd,Ord)]
 pub enum Referrer {
     Register(Register),
     Temporary(u32)
@@ -18,7 +18,17 @@ impl Referrer {
     }
 }
 
+impl fmt::Debug for Referrer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Referrer::Register(n) => write!(f,"{:?}",n)?,
+            Referrer::Temporary(i) => write!(f,"tmp({})",i)?
+        }
+        Ok(())
+    }
+}
 
+#[derive(Clone)]
 struct TypeInfStore {
     signatures: HashMap<Referrer,TypeSig>,
     signatures_txn: HashMap<Referrer,TypeSig>,
@@ -36,6 +46,39 @@ impl TypeInfStore {
             uses_placeholder: HashMap::new(),
             uses_placeholder_txn: HashMap::new()
         }
+    }
+
+    fn compile_ordered_list(&self) -> Vec<(&Referrer,&TypeSig)> {
+        let mut out = Vec::new();
+        for (reg,sig) in &self.signatures {
+            if !self.signatures_txn.contains_key(reg) {
+                out.push((reg,sig));
+            }
+        }
+        for (reg,sig) in &self.signatures_txn {
+            if !self.signatures_txn_rm.contains(reg) {
+                out.push((reg,sig));
+            }
+        }
+        out.sort();
+        out
+    }
+
+    fn format(&self, e: &Vec<(&Referrer,&TypeSig)>) -> String {
+        let mut out = String::new();
+        for (reg,sig) in e {
+            out.push_str(&format!("{:?} = {:?}\n",reg,sig));
+        }
+        out
+    }
+
+    fn make_diff(&self, other: &TypeInfStore) -> String {
+        let self_list: HashSet<(&Referrer,&TypeSig)> =
+            self.compile_ordered_list().drain(..).collect();
+        let other_list: HashSet<(&Referrer,&TypeSig)> =
+            other.compile_ordered_list().drain(..).collect();
+        let changes = self_list.difference(&other_list).cloned().collect();
+        self.format(&changes)
     }
 
     fn update_set(&mut self, ph: &str) -> &mut HashSet<Referrer> {
@@ -115,21 +158,11 @@ impl TypeInfStore {
 
 impl fmt::Debug for TypeInfStore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"types {{ ")?;
-        for (reg,sig) in &self.signatures {
-            if !self.signatures_txn.contains_key(reg) {
-                write!(f,"{:?} = {:?} ",reg,sig)?;
-            }
-        }
-        for (reg,sig) in &self.signatures_txn {
-            if !self.signatures_txn_rm.contains(reg) {
-                write!(f,"{:?} = {:?} ",reg,sig)?;
-            }
-        }
-        write!(f,"}}")
+        write!(f,"{}",self.format(&self.compile_ordered_list()))
     }
 }
 
+#[derive(Clone)]
 pub struct TypeInf {
     next_temp: u32,
     store: TypeInfStore,
@@ -245,6 +278,10 @@ impl TypeInf {
 
     pub fn rollback(&mut self) {
         self.store.rollback();
+    }
+
+    pub fn make_diff(&self, other: &TypeInf) -> String {
+        self.store.make_diff(&other.store)
     }
 }
 
