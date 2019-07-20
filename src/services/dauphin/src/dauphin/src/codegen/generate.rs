@@ -95,14 +95,12 @@ impl Generator {
                 r
             },
             Expression::Bracket(x,f) => {
-                let r = self.regalloc.allocate();
                 let x = self.build_lvalue(defstore,x)?;
                 let xsq = self.regalloc.allocate();
                 self.instrs.push(Instruction::RefSquare(xsq.clone(),x));
                 let f = self.build_rvalue(defstore,f,&Some(xsq.clone()))?;
-                let rm = self.regalloc.allocate();
-                self.instrs.push(Instruction::RefFilter(rm.clone(),xsq,f));
-                self.instrs.push(Instruction::RefStar(r.clone(),rm));
+                let r = self.regalloc.allocate();
+                self.instrs.push(Instruction::RefFilter(r.clone(),xsq,f));
                 r
             },
             _ => return Err("Invalid lvalue".to_string())
@@ -195,9 +193,7 @@ impl Generator {
                 let xsq = self.regalloc.allocate();
                 self.instrs.push(Instruction::Square(xsq.clone(),x));
                 let f = self.build_rvalue(defstore,f,&Some(xsq.clone()))?;
-                let rm = self.regalloc.allocate();
-                self.instrs.push(Instruction::Filter(rm.clone(),xsq,f));
-                self.instrs.push(Instruction::Star(r.clone(),rm));
+                self.instrs.push(Instruction::Filter(r.clone(),xsq,f));
                 r
             },
             Expression::Dollar => {
