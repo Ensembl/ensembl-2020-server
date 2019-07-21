@@ -60,3 +60,15 @@
 #refevalue:etest:X %:40 %:41;
 #string %:43 "1";
 #proc:assign %:40 %:43;
+#ref %:44 %x;
+#refsquare %:45 %:44;
+#at %:47 %:45;
+#number %:48 0;
+#oper:eq %:46 %:47 %:48;
+#reffilter %:49 %:45 %:46;
+#refsquare %:50 %:49;
+#number %:52 4;
+#oper:eq %:51 %:50 %:52;
+#reffilter %:53 %:50 %:51;
+#number %:54 44;
+#proc:assign %:53 %:54;

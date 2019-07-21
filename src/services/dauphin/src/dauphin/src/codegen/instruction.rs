@@ -3,28 +3,28 @@ use std::fmt;
 use super::register::Register;
 
 pub enum Instruction {
-    NumberConst(Register,f64), //y
-    BooleanConst(Register,bool), //y
-    StringConst(Register,String), //y
-    BytesConst(Register,Vec<u8>), //y
-    CtorStruct(String,Register,Vec<Register>), //y
-    CtorEnum(String,String,Register,Register), //y
-    List(Register), //y
-    Push(Register,Register), //y
-    Proc(String,Vec<Register>), //y
-    SValue(String,String,Register,Register), //y
-    EValue(String,String,Register,Register), //y
-    ETest(String,String,Register,Register), //y
-    RefSValue(String,String,Register,Register), //y
-    RefEValue(String,String,Register,Register), //y
-    Square(Register,Register), //y
+    NumberConst(Register,f64),
+    BooleanConst(Register,bool),
+    StringConst(Register,String),
+    BytesConst(Register,Vec<u8>),
+    CtorStruct(String,Register,Vec<Register>),
+    CtorEnum(String,String,Register,Register),
+    List(Register),
+    Push(Register,Register),
+    Proc(String,Vec<Register>),
+    SValue(String,String,Register,Register),
+    EValue(String,String,Register,Register),
+    ETest(String,String,Register,Register),
+    RefSValue(String,String,Register,Register),
+    RefEValue(String,String,Register,Register),
+    Square(Register,Register),
     RefSquare(Register,Register),
-    Star(Register,Register), //y
-    Filter(Register,Register,Register), //y
+    Star(Register,Register),
+    Filter(Register,Register,Register),
     RefFilter(Register,Register,Register),
-    At(Register,Register), //y
-    Operator(String,Register,Vec<Register>), //y
-    Ref(Register,Register) //y
+    At(Register,Register),
+    Operator(String,Register,Vec<Register>),
+    Ref(Register,Register)
 }
 
 fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {

@@ -155,6 +155,27 @@ impl TypePass {
                     (Sig::new_left_in(&stypesig,&upstream),src.clone())
                 ])
             },
+            Instruction::RefSquare(dst,src) => {
+                let upstream = self.get_upstream(src)?;
+                let newreg = Register::Sub(Box::new(upstream.clone()),"+".to_string());
+                let newtype = Sig::new_left_out(&sig_gen("_A")?.typesig.expr(),&newreg).typesig;
+                self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype);
+                Ok(vec![
+                    (Sig::new_left_out(&sig_gen("_A")?.typesig.expr(),&newreg),dst.clone()),
+                    (Sig::new_left_in(&sig_gen("vec(_A)")?.typesig.expr(),&upstream),src.clone())
+                ])
+            },
+            Instruction::RefFilter(dst,src,filter) => {
+                let upstream = self.get_upstream(src)?;
+                let newreg = Register::Sub(Box::new(upstream.clone()),"f".to_string());
+                let newtype = Sig::new_left_out(&sig_gen("_A")?.typesig.expr(),&newreg).typesig;
+                self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype);
+                Ok(vec![
+                    (Sig::new_left_out(&sig_gen("_A")?.typesig.expr(),&newreg),dst.clone()),
+                    (Sig::new_left_in(&sig_gen("_A")?.typesig.expr(),&upstream),upstream.clone()),
+                    (Sig::new_right_in(&sig_gen("boolean")?.typesig.expr()),filter.clone())
+                ])
+            },
             Instruction::Operator(name,dst,srcs) => {
                 let mut out = Vec::new();
                 let exprdecl = defstore.get_func(name).ok_or_else(|| format!("No such function {:?}",name))?;
