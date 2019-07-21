@@ -84,6 +84,7 @@ pub fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
     } else {
         (fromsig,None)
     };
+    let lvalue = lvalue.map(|x| TypeSig::Right(x));
     Ok(Sig { lvalue, out, typesig: fromsig })
 }
 

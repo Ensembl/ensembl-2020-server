@@ -210,9 +210,39 @@ impl fmt::Debug for TypeSig {
 // TODO fix sig junk
 #[derive(PartialEq, Debug, Clone)]
 pub struct Sig {
-    pub lvalue: Option<TypeSigExpr>,
+    pub lvalue: Option<TypeSig>,
     pub out: bool,
     pub typesig: TypeSig
+}
+
+impl Sig {
+    pub fn new_left_in(typesig: &TypeSigExpr, reg: &Register) -> Sig {
+        Sig {
+            lvalue: None, out: false,
+            typesig: TypeSig::Left(typesig.clone(),reg.clone())
+        }
+    }
+
+    pub fn new_right_in(typesig: &TypeSigExpr) -> Sig {
+        Sig {
+            lvalue: None, out: false,
+            typesig: TypeSig::Right(typesig.clone())
+        }
+    }
+
+    pub fn new_left_out(typesig: &TypeSigExpr, reg: &Register) -> Sig {
+        Sig {
+            lvalue: Some(TypeSig::Left(typesig.clone(),reg.clone())), out: true,
+            typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+        }
+    }
+
+    pub fn new_right_out(typesig: &TypeSigExpr) -> Sig {
+        Sig {
+            lvalue: Some(TypeSig::Right(typesig.clone())), out: true,
+            typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+        }
+    }
 }
 
 #[derive(Debug,PartialEq)]

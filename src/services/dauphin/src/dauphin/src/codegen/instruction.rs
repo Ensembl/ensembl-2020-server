@@ -12,17 +12,17 @@ pub enum Instruction {
     List(Register), //y
     Push(Register,Register), //y
     Proc(String,Vec<Register>), //y
-    Dot(String,Register,Register), // becomes #svalue after type inference
-    Query(String,Register,Register), // becomes #etest after type inference
-    Pling(String,Register,Register), // becomes #evalue after type inference
-    RefDot(String,Register,Register), // becomes #refsvalue after type inference
-    RefPling(String,Register,Register), // becomes #refevalue after type inference
-    Square(Register,Register),
+    SValue(String,String,Register,Register), //y
+    EValue(String,String,Register,Register), //y
+    ETest(String,String,Register,Register), //y
+    RefSValue(String,String,Register,Register), //y
+    RefEValue(String,String,Register,Register), //y
+    Square(Register,Register), //y
     RefSquare(Register,Register),
-    Star(Register,Register),
-    Filter(Register,Register,Register),
+    Star(Register,Register), //y
+    Filter(Register,Register,Register), //y
     RefFilter(Register,Register,Register),
-    At(Register,Register),
+    At(Register,Register), //y
     Operator(String,Register,Vec<Register>), //y
     Ref(Register,Register) //y
 }
@@ -64,20 +64,20 @@ impl fmt::Debug for Instruction {
             Instruction::CtorEnum(name,branch,dst,src) => {
                 fmt_instr(f,&format!("enum:{}:{}",name,branch),&vec![dst,src],&vec![])?
             },
-            Instruction::Dot(field,dst,src) => {
-                fmt_instr(f,&format!("dot:{}",field),&vec![dst,src],&vec![])?
+            Instruction::SValue(field,name,dst,src) => {
+                fmt_instr(f,&format!("svalue:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
-            Instruction::RefDot(field,dst,src) => {
-                fmt_instr(f,&format!("refdot:{}",field),&vec![dst,src],&vec![])?
+            Instruction::EValue(field,name,dst,src) => {
+                fmt_instr(f,&format!("evalue:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
-            Instruction::Query(field,dst,src) => {
-                fmt_instr(f,&format!("query:{}",field),&vec![dst,src],&vec![])?
+            Instruction::ETest(field,name,dst,src) => {
+                fmt_instr(f,&format!("etest:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
-            Instruction::Pling(field,dst,src) => {
-                fmt_instr(f,&format!("pling:{}",field),&vec![dst,src],&vec![])?
+            Instruction::RefSValue(field,name,dst,src) => {
+                fmt_instr(f,&format!("refsvalue:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
-            Instruction::RefPling(field,dst,src) => {
-                fmt_instr(f,&format!("refpling:{}",field),&vec![dst,src],&vec![])?
+            Instruction::RefEValue(field,name,dst,src) => {
+                fmt_instr(f,&format!("refevalue:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
             Instruction::Square(dst,src) => {
                 fmt_instr(f,"square",&vec![dst,src],&vec![])?

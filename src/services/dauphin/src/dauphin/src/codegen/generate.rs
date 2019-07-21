@@ -3,9 +3,11 @@ use std::collections::HashMap;
 use super::instruction::Instruction;
 use super::register::{ Register, RegisterAllocator };
 use super::definitionstore::DefStore;
-use crate::parser::{ Statement, Expression };
+use crate::parser::{ Statement, Expression, TypeSigExpr, BaseType };
+use crate::types::{ TypePass, Referrer };
 
 pub struct Generator {
+    types: TypePass,
     regalloc: RegisterAllocator,
     instrs: Vec<Instruction>
 }
@@ -13,17 +15,24 @@ pub struct Generator {
 impl Generator {
     pub fn new() -> Generator {
         Generator {
+            types: TypePass::new(),
             regalloc: RegisterAllocator::new(),
             instrs: Vec::new()
         }
     }
 
+    fn add_instr(&mut self, instr: Instruction, defstore: &DefStore) -> Result<(),String> {
+        self.types.apply_command(&instr,defstore)?;
+        self.instrs.push(instr);
+        Ok(())
+    }
+
     fn build_vec(&mut self, defstore: &DefStore, values: &Vec<Expression>, dollar: &Option<Register>) -> Result<Register,String> {
         let out = self.regalloc.allocate();
-        self.instrs.push(Instruction::List(out.clone()));
+        self.add_instr(Instruction::List(out.clone()),defstore)?;
         for val in values {
             let push = Instruction::Push(out.clone(),self.build_rvalue(defstore,val,dollar)?);
-            self.instrs.push(push);
+            self.add_instr(push,defstore)?;
         }
         Ok(out)
     }
@@ -66,41 +75,51 @@ impl Generator {
             Expression::Identifier(id) => {
                 let r = self.regalloc.allocate();
                 let a = Register::Named(id.to_string());
-                self.instrs.push(Instruction::Ref(r.clone(),a));
+                self.add_instr(Instruction::Ref(r.clone(),a),defstore)?;
                 r
             },
             Expression::Dot(x,f) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_lvalue(defstore,x)?;
-                self.instrs.push(Instruction::RefDot(f.clone(),r.clone(),x));
+                let stype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
+                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = stype.expr() {
+                    self.add_instr(Instruction::RefSValue(f.clone(),name.to_string(),r.clone(),x),defstore)?;
+                } else {
+                    return Err("Can only take \"dot\" of structs".to_string());
+                }
                 r
             },
             Expression::Pling(x,f) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_lvalue(defstore,x)?;
-                self.instrs.push(Instruction::RefPling(f.clone(),r.clone(),x));
+                let etype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
+                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = etype.expr() {
+                    self.add_instr(Instruction::RefEValue(f.clone(),name.to_string(),r.clone(),x),defstore)?;
+                } else {
+                    return Err("Can only take \"pling\" of enums".to_string());
+                }
                 r
             },
             Expression::Square(x) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_lvalue(defstore,x)?;
-                self.instrs.push(Instruction::RefSquare(r.clone(),x));
+                self.add_instr(Instruction::RefSquare(r.clone(),x),defstore)?;
                 r
             },
             Expression::Filter(x,f) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_lvalue(defstore,x)?;
                 let f = self.build_rvalue(defstore,f,&Some(x.clone()))?;
-                self.instrs.push(Instruction::RefFilter(r.clone(),x,f));
+                self.add_instr(Instruction::RefFilter(r.clone(),x,f),defstore)?;
                 r
             },
             Expression::Bracket(x,f) => {
                 let x = self.build_lvalue(defstore,x)?;
                 let xsq = self.regalloc.allocate();
-                self.instrs.push(Instruction::RefSquare(xsq.clone(),x));
+                self.add_instr(Instruction::RefSquare(xsq.clone(),x),defstore)?;
                 let f = self.build_rvalue(defstore,f,&Some(xsq.clone()))?;
                 let r = self.regalloc.allocate();
-                self.instrs.push(Instruction::RefFilter(r.clone(),xsq,f));
+                self.add_instr(Instruction::RefFilter(r.clone(),xsq,f),defstore)?;
                 r
             },
             _ => return Err("Invalid lvalue".to_string())
@@ -112,22 +131,22 @@ impl Generator {
             Expression::Identifier(id) => Register::Named(id.to_string()),
             Expression::Number(n) => {
                 let r = self.regalloc.allocate();
-                self.instrs.push(Instruction::NumberConst(r.clone(),*n));
+                self.add_instr(Instruction::NumberConst(r.clone(),*n),defstore)?;
                 r
             },
             Expression::LiteralString(s) => {
                 let r = self.regalloc.allocate();
-                self.instrs.push(Instruction::StringConst(r.clone(),s.to_string()));
+                self.add_instr(Instruction::StringConst(r.clone(),s.to_string()),defstore)?;
                 r
             },
             Expression::LiteralBool(b) => {
                 let r = self.regalloc.allocate();
-                self.instrs.push(Instruction::BooleanConst(r.clone(),*b));
+                self.add_instr(Instruction::BooleanConst(r.clone(),*b),defstore)?;
                 r
             },
             Expression::LiteralBytes(b) => {
                 let r = self.regalloc.allocate();
-                self.instrs.push(Instruction::BytesConst(r.clone(),b.to_vec()));
+                self.add_instr(Instruction::BytesConst(r.clone(),b.to_vec()),defstore)?;
                 r
             },
             Expression::Vector(v) => self.build_vec(defstore,v,dollar)?,
@@ -135,65 +154,80 @@ impl Generator {
                 let r = self.regalloc.allocate();
                 let x = self.map_expressions(defstore,x,dollar)?;
                 let x = self.struct_rearrange(defstore,s,x,n)?;
-                self.instrs.push(Instruction::CtorStruct(s.clone(),r.clone(),x));
+                self.add_instr(Instruction::CtorStruct(s.clone(),r.clone(),x),defstore)?;
                 r
             },
             Expression::CtorEnum(e,b,x) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
-                self.instrs.push(Instruction::CtorEnum(e.clone(),b.clone(),r.clone(),x));
+                self.add_instr(Instruction::CtorEnum(e.clone(),b.clone(),r.clone(),x),defstore)?;
                 r
             },
             Expression::Operator(name,x) => {
                 let r = self.regalloc.allocate();
                 let x = self.map_expressions(defstore,x,dollar)?;
-                self.instrs.push(Instruction::Operator(name.clone(),r.clone(),x));
+                self.add_instr(Instruction::Operator(name.clone(),r.clone(),x),defstore)?;
                 r
             },
             Expression::Dot(x,f) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
-                self.instrs.push(Instruction::Dot(f.clone(),r.clone(),x));
+                let stype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
+                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = stype.expr() {
+                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),r.clone(),x),defstore)?;
+                } else {
+                    return Err("Can only take \"dot\" of structs".to_string());
+                }
                 r
             },
             Expression::Query(x,f) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
-                self.instrs.push(Instruction::Query(f.clone(),r.clone(),x));
+                let etype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
+                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = etype.expr() {
+                    self.add_instr(Instruction::ETest(f.clone(),name.to_string(),r.clone(),x),defstore)?;
+                } else {
+                    return Err("Can only take \"query\" of enums".to_string());
+                }
                 r
             },
             Expression::Pling(x,f) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
-                self.instrs.push(Instruction::Pling(f.clone(),r.clone(),x));
+                let etype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
+                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = etype.expr() {
+                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),r.clone(),x),defstore)?;
+                } else {
+                    return Err("Can only take \"pling\" of enums".to_string());
+                }
                 r
             },
             Expression::Square(x) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
-                self.instrs.push(Instruction::Square(r.clone(),x));
+                self.add_instr(Instruction::Square(r.clone(),x),defstore)?;
                 r
             },
             Expression::Star(x) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
-                self.instrs.push(Instruction::Star(r.clone(),x));
+                self.add_instr(Instruction::Star(r.clone(),x),defstore)?;
                 r
             },
             Expression::Filter(x,f) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
                 let f = self.build_rvalue(defstore,f,&Some(x.clone()))?;
-                self.instrs.push(Instruction::Filter(r.clone(),x,f));
+                self.add_instr(Instruction::Filter(r.clone(),x,f),defstore)?;
                 r
             },
             Expression::Bracket(x,f) => {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
                 let xsq = self.regalloc.allocate();
-                self.instrs.push(Instruction::Square(xsq.clone(),x));
+                self.add_instr(Instruction::Square(xsq.clone(),x),defstore)?;
                 let f = self.build_rvalue(defstore,f,&Some(xsq.clone()))?;
-                self.instrs.push(Instruction::Filter(r.clone(),xsq,f));
+                self.add_instr(Instruction::Filter(r.clone(),xsq,f),defstore)?;
                 r
             },
             Expression::Dollar => {
@@ -206,7 +240,7 @@ impl Generator {
             Expression::At => {
                 if let Some(dollar) = dollar {
                     let r = self.regalloc.allocate();
-                    self.instrs.push(Instruction::At(r.clone(),dollar.clone()));
+                    self.add_instr(Instruction::At(r.clone(),dollar.clone()),defstore)?;
                     r
                 } else {
                     return Err("Unexpected $".to_string());
@@ -223,7 +257,7 @@ impl Generator {
         }
         let lvalues : Vec<bool> = procdecl.unwrap().sigs().iter().map(|x| x.lvalue.is_some()).collect();
         let regs : Vec<Register> = self.map_expressions_top(defstore,&stmt.1,&lvalues)?;
-        self.instrs.push(Instruction::Proc(stmt.0.to_string(),regs));
+        self.add_instr(Instruction::Proc(stmt.0.to_string(),regs),defstore)?;
         Ok(())
     }
 

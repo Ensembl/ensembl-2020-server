@@ -260,13 +260,11 @@ impl TypeInf {
     pub fn unify(&mut self, a_reg: &Referrer, b_reg: &Referrer) -> Result<(),String> {
         let a_sig = self.get_sig(a_reg).clone();
         let b_sig = self.get_sig(b_reg).clone();
-        //print!("unify {:?} <-> {:?} ie {:?} <-> {:?}\n",a_reg,b_reg,a_sig,b_sig);
         if let Some((ph,val)) = self.extract_equiv(&a_sig,&b_sig).map_err(|_|
-            format!("Cannot unify types {:?} and {:?}",a_sig,b_sig)
+            format!("Cannot unify types {:?} (in {:?}) and {:?} (in {:?})",a_sig,a_reg,b_sig,b_reg)
         )? {
             self.add_equiv(&ph,&val);
-        } else if a_sig != b_sig {
-            print!("static check\n");
+        } else if a_sig.expr() != b_sig.expr() {
             return Err(format!("Cannot unify {:?} and {:?}",a_sig,b_sig));
         }
         Ok(())

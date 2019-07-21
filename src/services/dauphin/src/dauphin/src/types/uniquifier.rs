@@ -44,7 +44,7 @@ impl Uniquifier {
 
     fn unique_member_sig(&mut self, names: &mut HashMap<String,String>, sig: &Sig) -> Sig {
         let typesig = self.unique_member_typesig(names,&sig.typesig);
-        let lvalue = sig.lvalue.as_ref().map(|lvalue| self.unique_member_typesigexpr(names,&lvalue));
+        let lvalue = sig.lvalue.as_ref().map(|lvalue| self.unique_member_typesig(names,&lvalue));
         Sig { lvalue, out: sig.out, typesig }
     }
 

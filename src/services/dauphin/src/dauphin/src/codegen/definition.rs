@@ -274,6 +274,10 @@ impl StructDef {
     pub fn get_member_types(&self) -> &Vec<TypeDef> {
         self.common.get_types()
     }
+
+    pub fn get_member_type(&self, name: &str) -> Option<&TypeDef> {
+        self.common.type_from_name(name)
+    }
 }
 
 impl fmt::Debug for StructDef {

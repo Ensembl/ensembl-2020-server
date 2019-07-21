@@ -1,13 +1,15 @@
 enum etest { X: string, Y: boolean };
 struct stest { A: vec(number), B: etest };
 
-proc assign(lvalue _ becomes _A, _A);
+proc assign(out _A, _A);
 proc incr(lvalue number becomes number, number);
 inline ":=" assign left 14;
 inline "(+=)" incr left 14;
 
+func gt(number,number) becomes boolean;
 func plus(number,number) becomes number;
 inline "+" plus left 4;
+inline ">" gt left 6;
 
 x := 1;
 y := true;
@@ -18,4 +20,4 @@ x (+=) 3;
 //z (+=) 2;
 n := stest { B: etest:X "hi", A: z };
 x := x + 2;
-z := *z[true];
+z := *z[@>1];

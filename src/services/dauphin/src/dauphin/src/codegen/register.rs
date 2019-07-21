@@ -3,6 +3,7 @@ use std::fmt;
 #[derive(Clone,Hash,PartialEq,Eq,PartialOrd,Ord)]
 pub enum Register {
     Named(String),
+    Sub(Box<Register>,String),
     Temporary(usize)
 }
 
@@ -10,6 +11,7 @@ impl fmt::Debug for Register {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Register::Named(n) => write!(f,"%{}",n)?,
+            Register::Sub(r,v) => write!(f,"{:?}:{}",r,v)?,
             Register::Temporary(i) => write!(f,"%:{}",i)?
         }
         Ok(())

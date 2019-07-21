@@ -14,7 +14,7 @@ pub fn try_apply_command(typeinf: &mut TypeInf, typesig: &Vec<(Sig,Register)>) -
         let tmp = typeinf.new_temp().clone();
         if sig.lvalue.is_some() {
             let ltmp = typeinf.new_temp();
-            typeinf.add(&ltmp,&TypeSig::Right(sig.lvalue.as_ref().unwrap().clone()));
+            typeinf.add(&ltmp,sig.lvalue.as_ref().unwrap());
             xform.push((reg.clone(),ltmp,tmp.clone()));
         }
         typeinf.add(&tmp,&sig.typesig);
