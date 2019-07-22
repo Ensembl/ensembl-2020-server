@@ -8,11 +8,11 @@ use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::parse_signature;
 use super::types::{ Sig, TypeSig, TypeSigExpr, BaseType };
 
-fn sig_gen(sig: &str) -> Result<Sig,String> {
+fn sig_gen(sig: &str,defstore: &DefStore) -> Result<Sig,String> {
     let resolver = FileResolver::new();
     let mut lexer = Lexer::new(resolver);
     lexer.import(&format!("data: {}",sig)).ok();
-    parse_signature(&mut lexer).map_err(|_| "internal sig parsing failed".to_string())
+    parse_signature(&mut lexer,defstore).map_err(|_| "internal sig parsing failed".to_string())
 }
 
 #[derive(Clone)]
@@ -56,35 +56,35 @@ impl TypePass {
     fn extract_sig_regs(&mut self,instr: &Instruction, defstore: &DefStore) -> Result<Vec<(Sig,Register)>,String> {
         match instr {
             Instruction::Proc(name,regs) => TypePass::extract_proc_sig_regs(name,defstore,regs),
-            Instruction::NumberConst(reg,_) => Ok(vec![(sig_gen("out number")?,reg.clone())]),
-            Instruction::BooleanConst(reg,_) => Ok(vec![(sig_gen("out boolean")?,reg.clone())]),
-            Instruction::StringConst(reg,_) => Ok(vec![(sig_gen("out string")?,reg.clone())]),
-            Instruction::BytesConst(reg,_) => Ok(vec![(sig_gen("out bytes")?,reg.clone())]),
-            Instruction::List(reg) => Ok(vec![(sig_gen("out vec(_)")?,reg.clone())]),
+            Instruction::NumberConst(reg,_) => Ok(vec![(sig_gen("out number",defstore)?,reg.clone())]),
+            Instruction::BooleanConst(reg,_) => Ok(vec![(sig_gen("out boolean",defstore)?,reg.clone())]),
+            Instruction::StringConst(reg,_) => Ok(vec![(sig_gen("out string",defstore)?,reg.clone())]),
+            Instruction::BytesConst(reg,_) => Ok(vec![(sig_gen("out bytes",defstore)?,reg.clone())]),
+            Instruction::List(reg) => Ok(vec![(sig_gen("out vec(_)",defstore)?,reg.clone())]),
             Instruction::Star(dst,src) => Ok(vec![
-                (sig_gen("out vec(_A)")?,dst.clone()),
-                (sig_gen("_A")?,src.clone())
+                (sig_gen("out vec(_A)",defstore)?,dst.clone()),
+                (sig_gen("_A",defstore)?,src.clone())
             ]),
             Instruction::Square(dst,src) => Ok(vec![
-                (sig_gen("out _A")?,dst.clone()),
-                (sig_gen("vec(_A)")?,src.clone())
+                (sig_gen("out _A",defstore)?,dst.clone()),
+                (sig_gen("vec(_A)",defstore)?,src.clone())
             ]),
             Instruction::At(dst,src) => Ok(vec![
-                (sig_gen("out number")?,dst.clone()),
-                (sig_gen("_")?,src.clone())
+                (sig_gen("out number",defstore)?,dst.clone()),
+                (sig_gen("_",defstore)?,src.clone())
             ]),
             Instruction::Filter(dst,src,filter) => Ok(vec![
-                (sig_gen("out _A")?,dst.clone()),
-                (sig_gen("_A")?,src.clone()),
-                (sig_gen("boolean")?,filter.clone()),
+                (sig_gen("out _A",defstore)?,dst.clone()),
+                (sig_gen("_A",defstore)?,src.clone()),
+                (sig_gen("boolean",defstore)?,filter.clone()),
             ]),
             Instruction::Push(dst,src) => Ok(vec![
-                (sig_gen("out vec(_A)")?,dst.clone()),
-                (sig_gen("_A")?,src.clone()),
+                (sig_gen("out vec(_A)",defstore)?,dst.clone()),
+                (sig_gen("_A",defstore)?,src.clone()),
             ]),
             Instruction::CtorEnum(name,branch,dst,src) => {
                 let exprdecl = defstore.get_enum(name).ok_or_else(|| format!("No such enum {:?}",name))?;
-                let base = BaseType::IdentifiedType(name.to_string());
+                let base = BaseType::EnumType(name.to_string());
                 let branch_typedef = exprdecl.get_branch_type(branch)
                         .ok_or_else(|| format!("No such enum branch {:?}",name))?
                         .to_typesigexpr();
@@ -96,7 +96,7 @@ impl TypePass {
             Instruction::CtorStruct(name,dst,srcs) => {
                 let mut out = Vec::new();
                 let exprdecl = defstore.get_struct(name).ok_or_else(|| format!("No such struct {:?}",name))?;
-                let base = BaseType::IdentifiedType(name.to_string());
+                let base = BaseType::StructType(name.to_string());
                 let dst_sig = Sig::new_right_out(&TypeSigExpr::Base(base));
                 let intypes : Vec<TypeSigExpr> = exprdecl.get_member_types().iter()
                                 .map(|x| x.to_typesigexpr()).collect();
@@ -112,30 +112,30 @@ impl TypePass {
             Instruction::SValue(field,stype,dst,src) => {
                 let exprdecl = defstore.get_struct(stype).ok_or_else(|| format!("No such struct {:?}",stype))?;
                 let dtype = exprdecl.get_member_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
-                let stype = TypeSigExpr::Base(BaseType::IdentifiedType(stype.to_string()));
+                let stype = TypeSigExpr::Base(BaseType::StructType(stype.to_string()));
                 Ok(vec![(Sig::new_right_out(&dtype.to_typesigexpr()),dst.clone()),
                         (Sig::new_right_in(&stype),src.clone())])
             },
             Instruction::EValue(field,etype,dst,src) => {
                 let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
                 let dtype = exprdecl.get_branch_type(field).ok_or_else(|| format!("No such branch {:?}",field))?;
-                let etype = TypeSigExpr::Base(BaseType::IdentifiedType(etype.to_string()));
+                let etype = TypeSigExpr::Base(BaseType::EnumType(etype.to_string()));
                 Ok(vec![(Sig::new_right_out(&dtype.to_typesigexpr()),dst.clone()),
                         (Sig::new_right_in(&etype),src.clone())])
             },
             Instruction::ETest(field,etype,dst,src) => {
                 let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
                 exprdecl.get_branch_type(field).ok_or_else(|| format!("No such branch {:?}",field))?;
-                let etype = TypeSigExpr::Base(BaseType::IdentifiedType(etype.to_string()));
-                Ok(vec![(sig_gen("out boolean")?,dst.clone()),
+                let etype = TypeSigExpr::Base(BaseType::EnumType(etype.to_string()));
+                Ok(vec![(sig_gen("out boolean",defstore)?,dst.clone()),
                         (Sig::new_right_in(&etype),src.clone())])
             },
             Instruction::RefSValue(field,stype,dst,src) => {
                 let exprdecl = defstore.get_struct(stype).ok_or_else(|| format!("No such struct {:?}",stype))?;
                 let dtype = exprdecl.get_member_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
-                let stypesig = TypeSigExpr::Base(BaseType::IdentifiedType(stype.to_string()));
+                let stypesig = TypeSigExpr::Base(BaseType::StructType(stype.to_string()));
                 let upstream = self.get_upstream(src)?;
-                let newreg = Register::Sub(Box::new(upstream.clone()),field.to_string());
+                let newreg = Register::Left(Box::new(upstream.clone()),field.to_string());
                 let newtype = TypeSig::Left(dtype.to_typesigexpr(),newreg.clone());
                 self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype);
                 Ok(vec![
@@ -146,9 +146,9 @@ impl TypePass {
             Instruction::RefEValue(field,etype,dst,src) => {
                 let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
                 let dtype = exprdecl.get_branch_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
-                let stypesig = TypeSigExpr::Base(BaseType::IdentifiedType(etype.to_string()));
+                let stypesig = TypeSigExpr::Base(BaseType::EnumType(etype.to_string()));
                 let upstream = self.get_upstream(src)?;
-                let newreg = Register::Sub(Box::new(upstream.clone()),field.to_string());
+                let newreg = Register::Left(Box::new(upstream.clone()),field.to_string());
                 let newtype = TypeSig::Left(dtype.to_typesigexpr(),newreg.clone());
                 self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype);
                 Ok(vec![
@@ -158,23 +158,23 @@ impl TypePass {
             },
             Instruction::RefSquare(dst,src) => {
                 let upstream = self.get_upstream(src)?;
-                let newreg = Register::Sub(Box::new(upstream.clone()),"+".to_string());
-                let newtype = Sig::new_left_out(&sig_gen("_A")?.typesig.expr(),&newreg).typesig;
+                let newreg = Register::Left(Box::new(upstream.clone()),"+".to_string());
+                let newtype = Sig::new_left_out(&sig_gen("_A",defstore)?.typesig.expr(),&newreg).typesig;
                 self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype);
                 Ok(vec![
-                    (Sig::new_left_out(&sig_gen("_A")?.typesig.expr(),&newreg),dst.clone()),
-                    (Sig::new_left_in(&sig_gen("vec(_A)")?.typesig.expr(),&upstream),src.clone())
+                    (Sig::new_left_out(&sig_gen("_A",defstore)?.typesig.expr(),&newreg),dst.clone()),
+                    (Sig::new_left_in(&sig_gen("vec(_A)",defstore)?.typesig.expr(),&upstream),src.clone())
                 ])
             },
             Instruction::RefFilter(dst,src,filter) => {
                 let upstream = self.get_upstream(src)?;
-                let newreg = Register::Sub(Box::new(upstream.clone()),"f".to_string());
-                let newtype = Sig::new_left_out(&sig_gen("_A")?.typesig.expr(),&newreg).typesig;
+                let newreg = Register::Left(Box::new(upstream.clone()),"f".to_string());
+                let newtype = Sig::new_left_out(&sig_gen("_A",defstore)?.typesig.expr(),&newreg).typesig;
                 self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype);
                 Ok(vec![
-                    (Sig::new_left_out(&sig_gen("_A")?.typesig.expr(),&newreg),dst.clone()),
-                    (Sig::new_left_in(&sig_gen("_A")?.typesig.expr(),&upstream),upstream.clone()),
-                    (Sig::new_right_in(&sig_gen("boolean")?.typesig.expr()),filter.clone())
+                    (Sig::new_left_out(&sig_gen("_A",defstore)?.typesig.expr(),&newreg),dst.clone()),
+                    (Sig::new_left_in(&sig_gen("_A",defstore)?.typesig.expr(),&upstream),upstream.clone()),
+                    (Sig::new_right_in(&sig_gen("boolean",defstore)?.typesig.expr()),filter.clone())
                 ])
             },
             Instruction::Operator(name,dst,srcs) => {

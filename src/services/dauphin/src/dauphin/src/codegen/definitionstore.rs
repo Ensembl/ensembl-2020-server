@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use super::definition::{
-    ExprMacro, StmtMacro, FuncDecl, ProcDecl, StructDef, EnumDef, Inline,
-    InlineMode
+    ExprMacro, StmtMacro, FuncDecl, ProcDecl, Inline, InlineMode
 };
+use super::structenum::{ StructDef, EnumDef };
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
 

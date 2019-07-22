@@ -1,5 +1,6 @@
 use crate::lexer::{ Lexer, Token };
 use super::node::{ ParserStatement, ParseError };
+use crate::codegen::DefStore;
 use crate::types::{ Type, BaseType, TypeSig, Sig, TypeSigExpr };
 use super::lexutil::{ get_other, get_identifier };
 
@@ -15,14 +16,14 @@ pub(in super) fn parse_stmtdecl(lexer: &mut Lexer) -> Result<ParserStatement,Par
     Ok(ParserStatement::StmtMacro(name.to_string()))
 }
 
-pub(in super) fn parse_func(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let name = get_identifier(lexer)?;
     let mut srcs = Vec::new();
     get_other(lexer,"(")?;
     loop {
         if lexer.peek() == Token::Other(')') { lexer.get(); break; }
-        srcs.push(parse_typesigexpr(lexer)?);
+        srcs.push(parse_typesigexpr(lexer,defstore)?);
         match lexer.get() {
             Token::Other(',') => (),
             Token::Other(')') => break,
@@ -32,18 +33,18 @@ pub(in super) fn parse_func(lexer: &mut Lexer) -> Result<ParserStatement,ParseEr
     if get_identifier(lexer)? != "becomes" {
         return Err(ParseError::new("missing 'becomes'",lexer));
     }
-    let dst = parse_typesigexpr(lexer)?;
+    let dst = parse_typesigexpr(lexer,defstore)?;
     Ok(ParserStatement::FuncDecl(name.to_string(),dst,srcs))
 }
 
-pub(in super) fn parse_proc(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_proc(lexer: &mut Lexer,defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let name = get_identifier(lexer)?;
     let mut sigs = Vec::new();
     get_other(lexer,"(")?;
     loop {
         if lexer.peek() == Token::Other(')') { break; }
-        sigs.push(parse_signature(lexer)?);
+        sigs.push(parse_signature(lexer,defstore)?);
         match lexer.get() {
             Token::Other(',') => (),
             Token::Other(')') => break,
@@ -53,7 +54,7 @@ pub(in super) fn parse_proc(lexer: &mut Lexer) -> Result<ParserStatement,ParseEr
     Ok(ParserStatement::ProcDecl(name.to_string(),sigs))
 }
 
-pub fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
+pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Sig,ParseError> {
     let mut lvalue = false;
     let mut out = false;
     loop {
@@ -74,12 +75,12 @@ pub fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
             _ => ()
         }
     }
-    let fromsig = parse_typesig(lexer)?;
+    let fromsig = parse_typesig(lexer,defstore)?;
     let (fromsig,lvalue) = if lvalue {
         if get_identifier(lexer)? != "becomes" {
             return Err(ParseError::new("missing 'becomes'",lexer));
         }
-        (fromsig,Some(parse_typesigexpr(lexer)?))
+        (fromsig,Some(parse_typesigexpr(lexer,defstore)?))
     } else if out {
         (TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())),Some(fromsig.expr().clone()))
     } else {
@@ -89,7 +90,17 @@ pub fn parse_signature(lexer: &mut Lexer) -> Result<Sig,ParseError> {
     Ok(Sig { lvalue, out, typesig: fromsig })
 }
 
-fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {
+fn id_to_type(id: &str, lexer: &Lexer, defstore: &DefStore) -> Result<BaseType,ParseError> {
+    if defstore.get_struct(id).is_some() {
+        Ok(BaseType::StructType(id.to_string()))
+    } else if defstore.get_enum(id).is_some() {
+        Ok(BaseType::EnumType(id.to_string()))
+    } else {
+        Err(ParseError::new(&format!("No such struct/enum '{}'",id),lexer))
+    }
+}
+
+fn parse_type(lexer: &mut Lexer, defstore: &DefStore) -> Result<Type,ParseError> {
     Ok(match &get_identifier(lexer)?[..] {
         "boolean" => Type::Base(BaseType::BooleanType),
         "number" => Type::Base(BaseType::NumberType),
@@ -97,19 +108,19 @@ fn parse_type(lexer: &mut Lexer) -> Result<Type,ParseError> {
         "bytes" => Type::Base(BaseType::BytesType),
         "vec" => {
             get_other(lexer,"(")?;
-            let out =  Type::Vector(Box::new(parse_type(lexer)?));
+            let out =  Type::Vector(Box::new(parse_type(lexer,defstore)?));
             get_other(lexer,")")?;
             out
         },
-        x => Type::Base(BaseType::IdentifiedType(x.to_string()))
+        x => Type::Base(id_to_type(x,lexer,defstore)?)
     })
 }
 
-pub fn parse_typesig(lexer: &mut Lexer) -> Result<TypeSig,ParseError> {
-    Ok(TypeSig::Right(parse_typesigexpr(lexer)?))
+pub fn parse_typesig(lexer: &mut Lexer, defstore: &DefStore) -> Result<TypeSig,ParseError> {
+    Ok(TypeSig::Right(parse_typesigexpr(lexer,defstore)?))
 }
 
-pub fn parse_typesigexpr(lexer: &mut Lexer) -> Result<TypeSigExpr,ParseError> {
+pub fn parse_typesigexpr(lexer: &mut Lexer, defstore: &DefStore) -> Result<TypeSigExpr,ParseError> {
     Ok(match &get_identifier(lexer)?[..] {
         "boolean" => TypeSigExpr::Base(BaseType::BooleanType),
         "number" => TypeSigExpr::Base(BaseType::NumberType),
@@ -117,7 +128,7 @@ pub fn parse_typesigexpr(lexer: &mut Lexer) -> Result<TypeSigExpr,ParseError> {
         "bytes" => TypeSigExpr::Base(BaseType::BytesType),
         "vec" => {
             get_other(lexer,"(")?;
-            let out =  TypeSigExpr::Vector(Box::new(parse_typesigexpr(lexer)?));
+            let out =  TypeSigExpr::Vector(Box::new(parse_typesigexpr(lexer,defstore)?));
             get_other(lexer,")")?;
             out
         },
@@ -125,16 +136,16 @@ pub fn parse_typesigexpr(lexer: &mut Lexer) -> Result<TypeSigExpr,ParseError> {
             if x.starts_with("_") {
                 TypeSigExpr::Placeholder(x.to_string())
             } else {
-                TypeSigExpr::Base(BaseType::IdentifiedType(x.to_string()))
+                TypeSigExpr::Base(id_to_type(x,lexer,defstore)?)
             }
         }
     })
 }
 
-fn parse_struct_short(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),ParseError> {
+fn parse_struct_short(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<Type>,Vec<String>),ParseError> {
     let mut out = Vec::new();
     loop {
-        out.push(parse_type(lexer)?);
+        out.push(parse_type(lexer,defstore)?);
         match lexer.get() {
             Token::Other(',') => (),
             Token::Other('}') => break,
@@ -145,7 +156,7 @@ fn parse_struct_short(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),Parse
     Ok((out,(0..len).into_iter().map(|x| (x.to_string())).collect()))
 }
 
-fn parse_struct_enum_full(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),ParseError> {
+fn parse_struct_enum_full(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<Type>,Vec<String>),ParseError> {
     let mut out = Vec::new();
     let mut names = Vec::new();
     if let Token::Other('}') = lexer.peek() {
@@ -155,7 +166,7 @@ fn parse_struct_enum_full(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),P
     loop {
         names.push(get_identifier(lexer)?);
         get_other(lexer,":")?;
-        out.push(parse_type(lexer)?);        
+        out.push(parse_type(lexer,defstore)?);        
         match lexer.get() {
             Token::Other(',') => (),
             Token::Other('}') => break,
@@ -165,15 +176,15 @@ fn parse_struct_enum_full(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),P
     Ok((out,names))
 }
 
-fn parse_struct_contents(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),ParseError> {
+fn parse_struct_contents(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<Type>,Vec<String>),ParseError> {
     let start = lexer.pos();
     Ok(match lexer.get() {
         Token::Identifier(_) => {
             let next = lexer.peek().clone();
             lexer.back_to(start);
             match next {
-                Token::Other(':') => parse_struct_enum_full(lexer)?,
-                _ => parse_struct_short(lexer)?
+                Token::Other(':') => parse_struct_enum_full(lexer,defstore)?,
+                _ => parse_struct_short(lexer,defstore)?
             }
         },
         Token::Other('}') => {
@@ -183,18 +194,18 @@ fn parse_struct_contents(lexer: &mut Lexer) -> Result<(Vec<Type>,Vec<String>),Pa
     })
 }
 
-pub(in super) fn parse_struct(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_struct(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let name = get_identifier(lexer)?;
     get_other(lexer, "{")?;
-    let (types,names) = parse_struct_contents(lexer)?;
+    let (types,names) = parse_struct_contents(lexer,defstore)?;
     Ok(ParserStatement::StructDef(name.to_string(),types,names))
 }
 
-pub(in super) fn parse_enum(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_enum(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let name = get_identifier(lexer)?;
     get_other(lexer, "{")?;
-    let (types,names) = parse_struct_enum_full(lexer)?;
+    let (types,names) = parse_struct_enum_full(lexer,defstore)?;
     Ok(ParserStatement::EnumDef(name.to_string(),types,names))
 }

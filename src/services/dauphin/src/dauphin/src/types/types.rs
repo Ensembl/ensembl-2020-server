@@ -8,7 +8,8 @@ pub enum BaseType {
     BytesType,
     NumberType,
     BooleanType,
-    IdentifiedType(String),
+    StructType(String),
+    EnumType(String),
     Invalid
 }
 impl fmt::Debug for BaseType {
@@ -19,17 +20,36 @@ impl fmt::Debug for BaseType {
             BaseType::NumberType => "number",
             BaseType::BooleanType => "boolean",
             BaseType::Invalid => "***INVALID***",
-            BaseType::IdentifiedType(t) => t
+            BaseType::StructType(t) => t,
+            BaseType::EnumType(t) => t
         };
         write!(f,"{}",v)?;
         Ok(())
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq,Clone)]
 pub enum Type {
     Base(BaseType),
     Vector(Box<Type>)
+}
+
+impl Type {
+    pub fn to_typesigexpr(&self) -> TypeSigExpr {
+        match self {
+            Type::Base(v) => TypeSigExpr::Base(v.clone()),
+            Type::Vector(v) => TypeSigExpr::Vector(Box::new(v.to_typesigexpr()))
+        }
+    }
+}
+
+impl fmt::Debug for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Type::Base(t) => write!(f,"{:?}",t),
+            Type::Vector(v) => write!(f,"vec({:?})",v)
+        }
+    }
 }
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]

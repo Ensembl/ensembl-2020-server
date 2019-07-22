@@ -294,12 +294,13 @@ mod test {
     use super::*;
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ parse_typesig };
+    use crate::codegen::DefStore;
 
-    fn typesig_gen(sig: &str) -> TypeSig {
+    fn typesig_gen(sig: &str, defstore: &DefStore) -> TypeSig {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import(&format!("data: {}",sig)).ok();
-        parse_typesig(&mut lexer).expect("bad typesig")
+        parse_typesig(&mut lexer,defstore).expect("bad typesig")
     }
 
     fn render(ts: &TypeSig) -> String {
@@ -311,8 +312,9 @@ mod test {
         let mut ti = TypeInf::new();
         let a = ti.new_temp();
         let b = ti.new_temp();
-        ti.add(&a,&typesig_gen("string"));
-        ti.add(&b,&typesig_gen("number"));
+        let ds = DefStore::new();
+        ti.add(&a,&typesig_gen("string",&ds));
+        ti.add(&b,&typesig_gen("number",&ds));
         ti.unify(&a,&b).expect_err("failed_unify");
     }
 
@@ -321,8 +323,9 @@ mod test {
         let mut ti = TypeInf::new();
         let a = ti.new_temp();
         let b = ti.new_temp();
-        ti.add(&a,&typesig_gen("vec(_A)"));
-        ti.add(&b,&typesig_gen("_A"));
+        let ds = DefStore::new();
+        ti.add(&a,&typesig_gen("vec(_A)",&ds));
+        ti.add(&b,&typesig_gen("_A",&ds));
         ti.unify(&a,&b).expect_err("recursive");
     }
 
@@ -331,20 +334,22 @@ mod test {
         let mut ti = TypeInf::new();
         let a = ti.new_temp();
         let b = ti.new_temp();
-        ti.add(&a,&typesig_gen("_A"));
-        ti.add(&b,&typesig_gen("_A"));
+        let ds = DefStore::new();
+        ti.add(&a,&typesig_gen("_A",&ds));
+        ti.add(&b,&typesig_gen("_A",&ds));
         ti.unify(&a,&b).expect("identity");
     }
 
     #[test]
     fn typeinf_smoke() {
         let mut ti = TypeInf::new();
+        let ds = DefStore::new();
         let a = ti.new_register(&Register::Temporary(1));
         let b = ti.new_register(&Register::Temporary(2));
         let c = ti.new_register(&Register::Temporary(3));
-        ti.add(&a,&typesig_gen("vec(_A)"));
-        ti.add(&b,&typesig_gen("vec(vec(string))"));
-        ti.add(&c,&typesig_gen("_A"));
+        ti.add(&a,&typesig_gen("vec(_A)",&ds));
+        ti.add(&b,&typesig_gen("vec(vec(string))",&ds));
+        ti.add(&c,&typesig_gen("_A",&ds));
         ti.unify(&a,&b).expect("smoke");
         assert_eq!("vec(vec(string))",render(ti.get_sig(&a)));
         assert_eq!("vec(vec(string))",render(ti.get_sig(&b)));
@@ -361,9 +366,10 @@ mod test {
         let a = ti.new_register(&Register::Temporary(1));
         let b = ti.new_register(&Register::Temporary(2));
         let c = ti.new_register(&Register::Temporary(3));
-        ti.add(&a,&typesig_gen("vec(_A)"));
-        ti.add(&b,&typesig_gen("vec(vec(string))"));
-        ti.add(&c,&typesig_gen("_A"));
+        let ds = DefStore::new();
+        ti.add(&a,&typesig_gen("vec(_A)",&ds));
+        ti.add(&b,&typesig_gen("vec(vec(string))",&ds));
+        ti.add(&c,&typesig_gen("_A",&ds));
         ti.commit();
         ti.unify(&a,&b).expect("smoke");
         assert_eq!("vec(vec(string))",render(ti.get_sig(&a)));

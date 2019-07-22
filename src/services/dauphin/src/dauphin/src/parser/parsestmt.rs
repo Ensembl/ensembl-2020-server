@@ -67,10 +67,10 @@ pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore) -> Resu
                 "inline" => parse_inline(lexer),
                 "expr" => parse_exprdecl(lexer),
                 "stmt" => parse_stmtdecl(lexer),
-                "func" => parse_func(lexer),
-                "proc" => parse_proc(lexer),
-                "struct" => parse_struct(lexer),
-                "enum" => parse_enum(lexer),
+                "func" => parse_func(lexer,defstore),
+                "proc" => parse_proc(lexer,defstore),
+                "struct" => parse_struct(lexer,defstore),
+                "enum" => parse_enum(lexer,defstore),
                 x => {
                     not_reserved(&x.to_string(),lexer)?;
                     parse_regular(lexer,defstore)

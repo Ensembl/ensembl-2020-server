@@ -82,7 +82,7 @@ impl Generator {
                 let r = self.regalloc.allocate();
                 let x = self.build_lvalue(defstore,x)?;
                 let stype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
-                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = stype.expr() {
+                if let TypeSigExpr::Base(BaseType::StructType(name)) = stype.expr() {
                     self.add_instr(Instruction::RefSValue(f.clone(),name.to_string(),r.clone(),x),defstore)?;
                 } else {
                     return Err("Can only take \"dot\" of structs".to_string());
@@ -93,7 +93,7 @@ impl Generator {
                 let r = self.regalloc.allocate();
                 let x = self.build_lvalue(defstore,x)?;
                 let etype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
-                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = etype.expr() {
+                if let TypeSigExpr::Base(BaseType::EnumType(name)) = etype.expr() {
                     self.add_instr(Instruction::RefEValue(f.clone(),name.to_string(),r.clone(),x),defstore)?;
                 } else {
                     return Err("Can only take \"pling\" of enums".to_string());
@@ -173,7 +173,7 @@ impl Generator {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
                 let stype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
-                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = stype.expr() {
+                if let TypeSigExpr::Base(BaseType::StructType(name)) = stype.expr() {
                     self.add_instr(Instruction::SValue(f.clone(),name.to_string(),r.clone(),x),defstore)?;
                 } else {
                     return Err("Can only take \"dot\" of structs".to_string());
@@ -184,7 +184,7 @@ impl Generator {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
                 let etype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
-                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = etype.expr() {
+                if let TypeSigExpr::Base(BaseType::EnumType(name)) = etype.expr() {
                     self.add_instr(Instruction::ETest(f.clone(),name.to_string(),r.clone(),x),defstore)?;
                 } else {
                     return Err("Can only take \"query\" of enums".to_string());
@@ -195,7 +195,7 @@ impl Generator {
                 let r = self.regalloc.allocate();
                 let x = self.build_rvalue(defstore,x,dollar)?;
                 let etype = self.types.get_typeinf().get_sig(&Referrer::Register(x.clone())).clone();
-                if let TypeSigExpr::Base(BaseType::IdentifiedType(name)) = etype.expr() {
+                if let TypeSigExpr::Base(BaseType::EnumType(name)) = etype.expr() {
                     self.add_instr(Instruction::EValue(f.clone(),name.to_string(),r.clone(),x),defstore)?;
                 } else {
                     return Err("Can only take \"pling\" of enums".to_string());

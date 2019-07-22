@@ -46,7 +46,7 @@ fn run_func(name: &str, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>, defstore: &m
 
 fn run_struct(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    let def = StructDef::new(name,types,names,defstore).map_err(|e| ParseError::new(&e,lexer) )?;
+    let def = StructDef::new(name,types,names).map_err(|e| ParseError::new(&e,lexer) )?;
     defstore.add_struct(def,lexer)?;
     Ok(())
 }
@@ -54,7 +54,7 @@ fn run_struct(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut
 // TODO allow one operator as prefix of another
 fn run_enum(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    let def = EnumDef::new(name,types,names,defstore).map_err(|e| ParseError::new(&e,lexer) )?;
+    let def = EnumDef::new(name,types,names).map_err(|e| ParseError::new(&e,lexer) )?;
     defstore.add_enum(def,lexer)?;
     Ok(())
 }
