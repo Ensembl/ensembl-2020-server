@@ -132,7 +132,7 @@ gene: |
     const #25, [4]
     shape #10, #1, #2, #60, #25, #15
     ; gene zmenus: transcript data
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
     const #99, {"transcript"}
     ztmplspec #99, #98
     ztmpl #9, #99
@@ -151,7 +151,7 @@ gene: |
     zmenu #9, #98, #8
     zassoc #5, #9
     ; gene zmenus: gene data
-    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
     ztmpl #5, #99
@@ -367,7 +367,7 @@ transcript: |
     ; TMP: #70 #97 #98 #99
     ;
     ; zmenus: transcript data
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
     const #99, {"transcript"}
     ztmplspec #99, #98
     ztmpl #14, #99
@@ -386,7 +386,7 @@ transcript: |
     zmenu #14, #98, #13
     zassoc #7, #14
     ; zmenus: gene data
-    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
     ztmpl #7, #99
@@ -603,7 +603,7 @@ gene-empty-box: |
     ; TMP: #70 #97 #98 #99
     ;   
     ; zmenus: transcript data
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
     const #99, {"transcript"}
     ztmplspec #99, #98
     ztmpl #7, #99
@@ -622,7 +622,7 @@ gene-empty-box: |
     zmenu #7, #98, #13
     zassoc #7, #14
     ; zmenus: gene data
-    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
     ztmpl #7, #99
@@ -798,7 +798,7 @@ gene-letterbox: |
     ; TMP: #70 #97 #98 #99
     ;   
     ; zmenus: transcript data
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>]"}
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
     const #99, {"transcript"}
     ztmplspec #99, #98
     ztmpl #7, #99
@@ -817,7 +817,7 @@ gene-letterbox: |
     zmenu #7, #98, #13
     zassoc #7, #14
     ; zmenus: gene data
-    const #98, {"[<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
     ztmpl #7, #99
@@ -882,7 +882,7 @@ gene-letterbox: |
     ; USES: #1 #7 #9 #11 #12 #13 #14 #60
     ; TMP: #97 #98 #99
     ;   
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light>{tr_id}</light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light>{id}</light>]"}
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
     const #98, {"gene"}
