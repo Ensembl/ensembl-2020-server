@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::parser::{ Sig, TypeSig, TypeSigExpr };
+use super::types::{ Sig, TypeSig, TypeSigExpr };
 use crate::codegen::Register;
 
 #[derive(Clone)]

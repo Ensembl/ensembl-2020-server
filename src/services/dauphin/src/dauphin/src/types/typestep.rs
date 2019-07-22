@@ -1,6 +1,6 @@
 use super::typeinf::{ Referrer, TypeInf };
 use crate::codegen::Register;
-use crate::parser::{ TypeSig, Sig };
+use super::types::{ TypeSig, Sig };
 
 pub fn try_apply_command(typeinf: &mut TypeInf, typesig: &Vec<(Sig,Register)>) -> Result<(),String> {
     let mut unifies = Vec::new();

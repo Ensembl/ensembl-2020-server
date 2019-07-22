@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::parser::{ Type, BaseType, Sig, TypeSigExpr };
+use crate::types::{ Type, BaseType, Sig, TypeSigExpr };
 use super::definitionstore::DefStore;
 
 #[derive(Debug,PartialEq,Clone,Copy)]

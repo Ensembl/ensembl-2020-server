@@ -1,6 +1,6 @@
 use std::collections::{ HashMap, HashSet };
 use std::fmt;
-use crate::parser::{ TypeSig, BaseType, TypeSigExpr };
+use crate::types::{ TypeSig, BaseType, TypeSigExpr };
 use crate::codegen::Register;
 
 #[derive(Clone,Hash,PartialEq,Eq,PartialOrd,Ord)]

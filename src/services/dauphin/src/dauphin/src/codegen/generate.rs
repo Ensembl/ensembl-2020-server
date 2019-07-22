@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use super::instruction::Instruction;
 use super::register::{ Register, RegisterAllocator };
 use super::definitionstore::DefStore;
-use crate::parser::{ Statement, Expression, TypeSigExpr, BaseType };
-use crate::types::{ TypePass, Referrer };
+use crate::parser::{ Statement, Expression };
+use crate::types::{ TypePass, Referrer, TypeSigExpr, BaseType };
 
 pub struct Generator {
     types: TypePass,

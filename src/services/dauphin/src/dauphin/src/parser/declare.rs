@@ -1,4 +1,5 @@
-use super::node::{ ParserStatement, ParseError, Type, Sig, TypeSigExpr };
+use super::node::{ ParserStatement, ParseError };
+use crate::types::{ Type, Sig, TypeSigExpr };
 use super::lexutil::not_reserved;
 use crate::codegen::{
     InlineMode, Inline, DefStore, ExprMacro, StmtMacro, FuncDecl, ProcDecl,

@@ -1,5 +1,6 @@
 use crate::lexer::{ Lexer, Token };
-use super::node::{ ParserStatement, ParseError, Type, BaseType, TypeSig, Sig, TypeSigExpr };
+use super::node::{ ParserStatement, ParseError };
+use crate::types::{ Type, BaseType, TypeSig, Sig, TypeSigExpr };
 use super::lexutil::{ get_other, get_identifier };
 
 pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {

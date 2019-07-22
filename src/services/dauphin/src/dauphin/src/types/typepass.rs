@@ -5,7 +5,8 @@ use crate::codegen::Register;
 use crate::codegen::DefStore;
 use super::uniquifier::Uniquifier;
 use crate::lexer::{ FileResolver, Lexer };
-use crate::parser::{ Sig, TypeSig, TypeSigExpr, parse_signature, BaseType };
+use crate::parser::parse_signature;
+use super::types::{ Sig, TypeSig, TypeSigExpr, BaseType };
 
 fn sig_gen(sig: &str) -> Result<Sig,String> {
     let resolver = FileResolver::new();
