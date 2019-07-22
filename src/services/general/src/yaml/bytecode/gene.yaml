@@ -123,23 +123,21 @@ gene: |
     const #62, [-2]
     add #60, #60, #62
     ; draw genes
-    const #10, [1,1]
     const #15, [183,192,200,   111,129,144,   0,153,255]
     const #16, [3]
     const #97, [0]
     get #97, #4, #97
     pick #15, #97, #15, #16
     const #25, [4]
-    shape #10, #1, #2, #60, #25, #15
+    const #46, [1,1]
+    shape #46, #1, #2, #60, #25, #15
     ; gene zmenus: transcript data
     const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
     const #99, {"transcript"}
     ztmplspec #99, #98
     ztmpl #9, #99
-    const #98, {"id"}
-    zmenu #9, #98, #5
     const #98, {"tr_id"}
-    zmenu #9, #98, #9
+    zmenu #9, #98, #11
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]
@@ -158,16 +156,15 @@ gene: |
     const #98, {"symbol"}
     zmenu #5, #98, #3
     const #98, {"id"}
-    zmenu #5, #98, #5
+    zmenu #5, #98, #10
     ; gene zmenus: draw
-    const #10, [1,2]
-    shape #10, #1, #2, #60, #25, #9
+    const #46, [1,2]
+    shape #46, #1, #2, #60, #25, #9
     ; draw feature line
     const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
     const #12, [1.0]
     const #13, [17]
     const #14, [0]
-    const #11, [173,37,0]
     const #201, {"dotted-line"}
     const #202, [0]
     asset #203, #201, #202
@@ -371,10 +368,8 @@ transcript: |
     const #99, {"transcript"}
     ztmplspec #99, #98
     ztmpl #14, #99
-    const #98, {"id"}
-    zmenu #14, #98, #7
     const #98, {"tr_id"}
-    zmenu #14, #98, #14
+    zmenu #14, #98, #16
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]
@@ -384,16 +379,16 @@ transcript: |
     zmenu #14, #98, #12
     const #98, {"prestige"}
     zmenu #14, #98, #13
-    zassoc #7, #14
+    zassoc #10, #14
     ; zmenus: gene data
     const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
-    ztmpl #7, #99
+    ztmpl #10, #99
     const #98, {"symbol"}
-    zmenu #7, #98, #7
+    zmenu #10, #98, #7
     const #98, {"id"}
-    zmenu #7, #98, #10
+    zmenu #10, #98, #15
     ; zmenus: draw
     const #70, [1,2]
     const #97, [7]
@@ -433,55 +428,55 @@ transcript: |
     ; *** DRAW UTR ***
     ; 
     ; USES: #3 #31 #60 #74 #74
-    ; TMP: #76 #17 #29 #30 #70
+    ; TMP: #76 #29 #30 #56 #70
     ; OUT: #72 #73
     ;
     const #30, [2,1]
     move #72, #60
-    const #17, [-4]
-    add #72, #72, #17
+    const #56, [-4]
+    add #72, #72, #56
     const #73, [7]
     const #76, [0]
     eq #76, #3, #76
     move #29, #74
-    const #17, [1]
-    elide #29, #76, #17
+    const #56, [1]
+    elide #29, #76, #56
     move #70, #31
-    elide #70, #76, #17
+    elide #70, #76, #56
     shape #30, #29, #70, #72, #73, #75
     ;
     ; *** DRAW EXON ***
     ; 
     ; USES: #3 #31 #60 #72 #73 #74 #75
-    ; TMP: #17 #29 #30 #70 #76
+    ; TMP: #29 #30 #56 #70 #76
     ;
     const #30, [1,1]
     const #76, [1]
     eq #76, #3, #76
     move #29, #74
-    const #17, [1]
-    elide #29, #76, #17
+    const #56, [1]
+    elide #29, #76, #56
     move #70, #31
-    elide #70, #76, #17
+    elide #70, #76, #56
     shape #30, #29, #70, #72, #73, #75
     ;
     ; *** DRAW INTRON ***
     ; 
     ; USES: #3 #31 #60 #74 #75
-    ; TMP: #17 #29 #30 #70 #72 #73 #76
+    ; TMP: #29 #30 #56 #70 #72 #73 #76
     ;
     const #30, [1,1]
     const #76, [2]
     move #72, #60
-    const #17, [-1]
-    add #72, #72, #17
+    const #56, [-1]
+    add #72, #72, #56
     const #73, [1]
     eq #76, #3, #76
     move #29, #74
-    const #17, [1]
-    elide #29, #76, #17
+    const #56, [1]
+    elide #29, #76, #56
     move #70, #31
-    elide #70, #76, #17
+    elide #70, #76, #56
     shape #30, #29, #70, #72, #73, #75
     ;
     ; *** DRAW LABEL ***
@@ -606,34 +601,32 @@ gene-empty-box: |
     const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
     const #99, {"transcript"}
     ztmplspec #99, #98
-    ztmpl #7, #99
-    const #98, {"id"}
-    zmenu #7, #98, #7
+    ztmpl #14, #99
     const #98, {"tr_id"}
-    zmenu #7, #98, #14
+    zmenu #14, #98, #16
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]
     picks #99, #11, #99, #97
-    zmenu #7, #98, #99
+    zmenu #14, #98, #99
     const #98, {"biotype"}
-    zmenu #7, #98, #12
+    zmenu #14, #98, #12
     const #98, {"prestige"}
-    zmenu #7, #98, #13
-    zassoc #7, #14
+    zmenu #14, #98, #13
+    zassoc #10, #14
     ; zmenus: gene data
     const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
-    ztmpl #7, #99
+    ztmpl #10, #99
     const #98, {"symbol"}
-    zmenu #7, #98, #7
+    zmenu #10, #98, #7
     const #98, {"id"}
-    zmenu #7, #98, #10
+    zmenu #10, #98, #15
     ; zmenus: draw
     const #70, [1,2]
     const #97, [7]
-    shape #70, #1, #9, #60, #97, #7
+    shape #70, #1, #9, #60, #97, #14
     ;
     ; *** CALCULATE COLOUR ***
     ; based on track (#8)
@@ -651,7 +644,7 @@ gene-empty-box: |
     ; *** DRAW INTRONS/UTRS ***
     ; 
     ; USES: #3 #31 #60 #71 #74 #75
-    ; TMP: #1 #2 #7 #17 #29 #30 #70 #73 #76 #88
+    ; TMP: #1 #2 #7 #29 #30 #56 #70 #73 #76 #88
     ; OUT: #72
     ;
     ; #76 := (#3 == 0|2) ie intron/utr
@@ -661,10 +654,10 @@ gene-empty-box: |
     eq #76, #3, #76
     or #76, #76, #29
     move #7, #74
-    const #17, [1]
-    elide #7, #76, #17
+    const #56, [1]
+    elide #7, #76, #56
     move #88, #71
-    elide #88, #76, #17
+    elide #88, #76, #56
     runs #29, #7, #88
     const #1, [-0.45]
     add #29, #29, #1
@@ -677,7 +670,7 @@ gene-empty-box: |
     ; *** DRAW EXONS ***
     ; 
     ; USES: #3 #8 #75 #31 #60 #71 #72 #74
-    ; TMP: #1 #2 #7 #17 #29 #30 #70 #73 #76 #88 #100
+    ; TMP: #1 #2 #7 #29 #30 #56 #70 #73 #76 #88 #100
     ; DESTROYS: #2 #8 #75
     ;
     ; colours based on track type
@@ -690,10 +683,10 @@ gene-empty-box: |
     const #76, [1]
     eq #76, #3, #76
     move #7, #74
-    const #17, [1]
-    elide #7, #76, #17
+    const #56, [1]
+    elide #7, #76, #56
     move #8, #71
-    elide #8, #76, #17
+    elide #8, #76, #56
     runs #29, #7, #8
     const #1, [-0.45]
     add #29, #29, #1
@@ -732,22 +725,22 @@ gene-letterbox: |
     ;  #7 gene names
     ;  #8 [colour, direction]
     ;  #9 transcript length
-    ; #15 sequence text
-    ; #16 sequence starts
+    ; #17 sequence text
+    ; #18 sequence starts
     ;
     ; *** ESTABLISH Y-SCALE ***
     ; so boxes grow
     ;
     ; USES:
-    ; TMP: #17 #18 #19
+    ; TMP: #19 #55 #56
     ; OUT: #53
-    const #17, [
+    const #56, [
          12, 24, 24, 24, 24, 24, 24, 24, 24, 24
     ]
-    scale #18
+    scale #55
     const #19, [-16]
-    add #18, #18, #19
-    get #53, #17, #18
+    add #55, #55, #19
+    get #53, #56, #55
     ; *** ESTABLISH Y-POSITION ***
     ; USES: #53
     ; OUT: #22 #60
@@ -801,34 +794,32 @@ gene-letterbox: |
     const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
     const #99, {"transcript"}
     ztmplspec #99, #98
-    ztmpl #7, #99
-    const #98, {"id"}
-    zmenu #7, #98, #7
+    ztmpl #14, #99
     const #98, {"tr_id"}
-    zmenu #7, #98, #14
+    zmenu #14, #98, #16
     const #98, {"strand"}
     const #99, {"reverse strand", "forward strand"}
     const #97, [1]
     picks #99, #11, #99, #97
-    zmenu #7, #98, #99
+    zmenu #14, #98, #99
     const #98, {"biotype"}
-    zmenu #7, #98, #12
+    zmenu #14, #98, #12
     const #98, {"prestige"}
-    zmenu #7, #98, #13
-    zassoc #7, #14
+    zmenu #14, #98, #13
+    zassoc #10, #14
     ; zmenus: gene data
     const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
     const #99, {"gene"}
     ztmplspec #99, #98
-    ztmpl #7, #99
+    ztmpl #10, #99
     const #98, {"symbol"}
-    zmenu #7, #98, #7
+    zmenu #10, #98, #7
     const #98, {"id"}
-    zmenu #7, #98, #10
+    zmenu #10, #98, #15
     ; zmenus: draw
     const #70, [1,2]
     const #97, [7]
-    shape #70, #1, #9, #60, #97, #7
+    shape #70, #1, #9, #60, #97, #14
     ;
     ; *** BURST X START POSITIONS ***
     ; Use input data to generate list of start positions. Accumulate lengths
@@ -878,41 +869,10 @@ gene-letterbox: |
     get #100, #8, #100        
     pick #42, #100, #42, #76
     ;
-    ; *** DRAW ZMENUS ***
-    ; USES: #1 #7 #9 #11 #12 #13 #14 #60
-    ; TMP: #97 #98 #99
-    ;   
-    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>] / [<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
-    const #99, {"gene"}
-    ztmplspec #99, #98
-    const #98, {"gene"}
-    ztmpl #7, #98
-    const #98, {"symbol"}
-    zmenu #7, #98, #7
-    const #98, {"id"}
-    zmenu #7, #98, #7
-    const #98, {"tr_id"}
-    zmenu #7, #98, #14
-    const #98, {"strand"}
-    const #99, {"reverse strand", "forward strand"}
-    const #97, [1]
-    picks #99, #11, #99, #97
-    zmenu #7, #98, #99
-    const #98, {"biotype"}
-    zmenu #7, #98, #12
-    const #98, {"prestige"}
-    zmenu #7, #98, #13
-    const #70, [1,2]
-    const #97, [7]
-    shape #70, #1, #9, #60, #97, #7
-    const #200, [1,2]
-    const #97, [7]
-    shape #200, #1, #9, #60, #97, #7
-    ;
     ; *** DRAW INTRONS/UTRS ***
     ; 
     ; USES: #3 #22 #31 #53 #60 #74 #75
-    ; TMP: #1 #2 #18 #17 #19 #20 #30 #76
+    ; TMP: #1 #2 #19 #20 #30 #55 #56 #76
     ;
     ; #76 := (#3 == 0|2) ie intron/utr
     const #30, [2,1]
@@ -921,12 +881,12 @@ gene-letterbox: |
     const #76, [2]
     eq #76, #3, #76
     or #76, #76, #20
-    move #18, #74
-    const #17, [1]
-    elide #18, #76, #17
+    move #55, #74
+    const #56, [1]
+    elide #55, #76, #56
     move #19, #31
-    elide #19, #76, #17
-    runs #20, #18, #19
+    elide #19, #76, #56
+    runs #20, #55, #19
     const #1, [-0.45]
     add #20, #20, #1
     move #36, #20
@@ -936,18 +896,18 @@ gene-letterbox: |
     ; *** DRAW EXON BOXES ***
     ; 
     ; USES: #3 #22 #31 #53 #74
-    ; TMP: #1 #2 #17 #18 #19 #20 #30 #76
+    ; TMP: #1 #2 #19 #20 #30 #55 #56 #76
     ; OUT: #35
     ; DESTROYS: #1 #2
     ;
     const #76, [1]
     eq #76, #3, #76
-    move #18, #74
-    const #17, [1]
-    elide #18, #76, #17
+    move #55, #74
+    const #56, [1]
+    elide #55, #76, #56
     move #19, #31
-    elide #19, #76, #17
-    runs #20, #18, #19
+    elide #19, #76, #56
+    runs #20, #55, #19
     const #1, [-0.45]
     add #20, #20, #1
     move #35, #20
@@ -965,23 +925,23 @@ gene-letterbox: |
     text2 #29, #40, #41, #27
     ;
     ; *** SEPARATE STRINGS INTO CHARS ***
-    ; USES: #15
-    ; OUT: #15 #72
-    ; DESTROYS: #15
+    ; USES: #17
+    ; OUT: #17 #72
+    ; DESTROYS: #17
     ;
-    lengths #72, #15
-    burst #15, #15
+    lengths #72, #17
+    burst #17, #17
     ;
     ; *** EXON TEXT ***
-    ; USES: #15 #16 #22 #27 #29 #35 #53 #72
+    ; USES: #17 #18 #22 #27 #29 #35 #53 #72
     ; TMP: #27 #29 #30 #31 #33 #34 #50 #57 #63 #64
     ; DESTROYS: #27
     ;
-    index #57, #15, #27
+    index #57, #17, #27
     const #30, [1]
     pick #29, #57, #29, #30
     const #31, [3,0,0,1,0,1,1,0,1,0,0]
-    runs #27, #16, #72
+    runs #27, #18, #72
     member #34, #27, #35
     elide #27, #34, #30
     elide #29, #34, #30
@@ -1004,15 +964,15 @@ gene-letterbox: |
     text2 #29, #40, #42, #27
     ;
     ; *** INTRON TEXT ***
-    ; USES: #15 #16 #22 #27 #29 #53
+    ; USES: #17 #18 #22 #27 #29 #53
     ; TMP: #29 #30 #31 #33 #34 #50 #57 #63 #64
     ; DESTROYS: #27
     ;
-    index #57, #15, #27
+    index #57, #17, #27
     const #30, [1]
     pick #29, #57, #29, #30
     const #31, [3,0,0,1,0,1,1,0,1,0,0]
-    runs #27, #16, #72
+    runs #27, #18, #72
     member #34, #27, #36
     elide #27, #34, #30
     elide #29, #34, #30

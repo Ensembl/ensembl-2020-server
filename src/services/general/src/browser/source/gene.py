@@ -6,6 +6,11 @@ from ..shimmer import shimmer
 FEATURED=set(["BRCA2","TraesCS3D02G273600","PF3D7_1143500","grpE","SFA1","sms-2"])
 MIN_WIDTH = 1000
 
+# HACK Strip versions from IDs. We have discussed but noy yet agreed on whether versions 
+# should be in IDs or not. For now it's simplest to strip them (as most places they are
+# already missing) until we have a decision. -- Jul2019
+id_strip = re.compile(r'\.\d+$')
+
 # HACK should use correct codes in the first place
 def munge_code(s):
     s = re.sub(r'_',' ',s)
@@ -61,10 +66,12 @@ class BAISGeneTranscript(object):
         out_lens = []
         names = []
         ids = []
+        ids_disp = []
         strands = []
         biotypes = []
         prestiges = []
         trans_ids = []
+        trans_ids_disp = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
@@ -75,6 +82,8 @@ class BAISGeneTranscript(object):
             ) = (
                 parts[16],parts[15],parts[2],parts[14],parts[18],parts[0]
             )
+            disp_id = gene_id
+            gene_id = id_strip.sub('',gene_id)
             if gene_name == "none":
                 gene_name = parts[14]
             if type_ == 'feat':
@@ -93,19 +102,25 @@ class BAISGeneTranscript(object):
             out_lens.append(gene_end-gene_start)
             if get_names:
                 names.append(gene_name)
-                ids.append(gene_id)
+                ids.append("{0}:gene:{1}".format(chrom.species.wire_genome_id,gene_id))
+                ids_disp.append(disp_id)
                 strands.append(strand == '+')
                 biotypes.append(munge_code(biotype))
                 prestiges.append(munge_code(prestige))
-                trans_ids.append(trans_id)
+                 # TODO transcript should have trans id but not supported yet
+                trans_ids.append("{0}:transcript:{1}".format(chrom.species.wire_genome_id,gene_id))
+                trans_ids_disp.append(disp_id)
         if dir_ == 'fwd':
             dir_ = 1
         elif dir_ == 'rev':
             dir_ = 0
         else:
             dir_ = 2
-        return ([out_starts,out_lens,{ "string": names },[colour,dir_], 
-            { "string": ids },strands,{ "string": biotypes },{ "string": prestiges},{ "string": trans_ids }],leaf)
+        return ([
+                out_starts,out_lens,{ "string": names },[colour,dir_], # 1-4
+                { "string": ids },strands,{ "string": biotypes },{ "string": prestiges}, #5-8
+                { "string": trans_ids }, { "string": ids_disp }, { "string": trans_ids_disp }], #9-11
+                leaf)
 
     def transcript(self,chrom,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
@@ -121,10 +136,12 @@ class BAISGeneTranscript(object):
         seq_req = []
         names = []
         ids = []
+        ids_disp = []
         strands = []
         biotypes = []
         prestiges = []
         trans_ids = []
+        trans_ids_disp = []
         colour = 1 if type_ == 'pc' else 0
         for line in data:
             gene_start = int(line[0])
@@ -137,6 +154,9 @@ class BAISGeneTranscript(object):
                 parts[16],parts[15],parts[8],parts[7],parts[3],parts[4],
                 parts[2],parts[14],parts[18],parts[0]
             )
+            gene_id = id_strip.sub('',gene_id)
+            trans_id = id_strip.sub('',trans_id)
+            print("trans_id",trans_id)
             if gene_name == "none":
                 gene_name = parts[14]
             if type_ == 'feat':
@@ -153,11 +173,13 @@ class BAISGeneTranscript(object):
                     continue
             seq_req.append((max(gene_start,leaf.start),min(gene_end,leaf.end)))
             names.append(gene_name)
-            ids.append(gene_id)
+            ids_disp.append(gene_id)
+            ids.append("{0}:gene:{1}".format(chrom.species.wire_genome_id,gene_id))
             strands.append(strand == '+')
             biotypes.append(munge_code(biotype))
             prestiges.append(munge_code(prestige))
-            trans_ids.append(trans_id)
+            trans_ids_disp.append(trans_id)
+            trans_ids.append("{0}:transcript:{1}".format(chrom.species.wire_genome_id,gene_id))
             if part_starts.endswith(","): part_starts = part_starts[:-1]
             if part_lens.endswith(","): part_lens = part_lens[:-1]
             part_starts = [int(x) for x in part_starts.split(",")]
@@ -215,10 +237,13 @@ class BAISGeneTranscript(object):
             dir_ = 0
         else:
             dir_ = 2
-        data = [out_starts,out_nump,out_pattern,out_utrs,out_exons,
-                out_introns,{ "string": names },[colour,dir_],out_lens,
-                { "string": ids },strands,{ "string": biotypes },{ "string": prestiges},{ "string": trans_ids }] # #10-14
+        data = [out_starts,out_nump,out_pattern, #1-3
+                out_utrs,out_exons,out_introns,  #4-6
+                { "string": names },[colour,dir_],out_lens, #7-9
+                { "string": ids },strands,{ "string": biotypes }, #10-12
+                { "string": prestiges},{ "string": trans_ids }, #13-14
+                { "string": ids_disp},{"string": trans_ids_disp}] #15-16
         if seq:
             (seq_text,seq_starts) = self.seqcache.get(chrom,seq_req)
-            data += [{ "string": seq_text },seq_starts]
+            data += [{ "string": seq_text },seq_starts] #17-18
         return (data,leaf)
