@@ -156,7 +156,6 @@ class BAISGeneTranscript(object):
             )
             gene_id = id_strip.sub('',gene_id)
             trans_id = id_strip.sub('',trans_id)
-            print("trans_id",trans_id)
             if gene_name == "none":
                 gene_name = parts[14]
             if type_ == 'feat':

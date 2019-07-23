@@ -115,12 +115,12 @@ def make_asset(value):
             data += row
         return [[w,h],base64.b64encode(data).decode("ascii")]
 
-@bp.route("/browser/config")
-def browser_config():
+@bp.route("/browser/config/<version>")
+def browser_config(version):
     with open(config.config_path) as f:
         data = yaml.load(f)
         data['sticks'] = universe.get_sticks()
-        data['bytecodes'] = config.bytecodes
+        data['bytecodes'] = config.get_bytecode(version)
         data['data'] = {}
         for (name,v) in list(data['assets'].items()):
             data['data'][name] = []

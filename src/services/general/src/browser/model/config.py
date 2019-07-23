@@ -1,11 +1,26 @@
 import yaml, os.path
 
+class BAIAPIConfig(object):
+    def __init__(self,apifile_path):
+        self.apifile_path = apifile_path
+        self._load()
+
+    def _load(self):
+        self.bytecodes = {}
+        with open(self.apifile_path) as f:
+            api = yaml.load(f)
+            for subfile in api["bytecode"]:
+                with open(os.path.join(os.path.dirname(self.apifile_path),subfile)) as f2:
+                    codes = yaml.load(f2)
+                    for (k,v) in codes.items():
+                        self.bytecodes[k] = v
+
 class BAIConfig(object):
     def __init__(self,config_path,assets_path):
         self.config_path = config_path
         self.assets_path = assets_path
         self._endpoints = {}
-        self.bytecodes = {}
+        self._bytecodes = {}
         self.tracks = {}
         self._load()
         
@@ -17,12 +32,7 @@ class BAIConfig(object):
             bc_map = {}
             choices = {}
             bc = yaml.load(f)
-            for bc_cfg_path in bc['bytecode']:
-                bc_cfg_path = os.path.join(dir_,bc_cfg_path)
-                with open(bc_cfg_path) as f_bc:
-                    codes = yaml.load(f_bc)
-                    for (k,v) in codes.items():
-                        self.bytecodes[k] = v
+            self._api = bc["api"]
             ep_cfg_path = bc['endpoints']
             ep_cfg_path = os.path.join(dir_,ep_cfg_path)
             with open(ep_cfg_path) as f_ep:
@@ -47,3 +57,9 @@ class BAIConfig(object):
             if (check,track_name,scale) in self._endpoints:
                 return self._endpoints[(check,track_name,scale)]
         return ("","")
+
+    def get_bytecode(self,version):
+        dir_ = os.path.dirname(self.config_path)
+        bytecode_file = os.path.join(dir_,self._api[int(version)])
+        bcf = BAIAPIConfig(bytecode_file)
+        return bcf.bytecodes

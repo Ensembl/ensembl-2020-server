@@ -1,10 +1,7 @@
 endpoints: endpoints.yaml
-bytecode:
-    - bytecode/variant.yaml
-    - bytecode/framework.yaml
-    - bytecode/contig.yaml
-    - bytecode/gc.yaml
-    - bytecode/gene.yaml
+
+api:
+    1: api/1/api.yaml
 
 data-url: ./data/1
 debug-url: ./debug
