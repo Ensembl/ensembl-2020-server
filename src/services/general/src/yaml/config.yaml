@@ -2,6 +2,7 @@ endpoints: endpoints.yaml
 
 api:
     1: api/1/api.yaml
+    2: api/2/api.yaml
 
 data-url: ./data/1
 debug-url: ./debug

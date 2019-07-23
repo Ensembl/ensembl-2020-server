@@ -1,0 +1,6 @@
+bytecode:
+    - bytecode/variant.yaml
+    - bytecode/framework.yaml
+    - bytecode/contig.yaml
+    - bytecode/gc.yaml
+    - bytecode/gene.yaml
