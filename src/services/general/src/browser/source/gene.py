@@ -1,6 +1,6 @@
 import re
 
-from ..data import get_bigbed_data
+from ..data import get_bigbed_data, get_chrom_length
 from ..shimmer import shimmer
 
 FEATURED=set(["BRCA2","TraesCS3D02G273600","PF3D7_1143500","grpE","SFA1","sms-2"])
@@ -246,3 +246,12 @@ class BAISGeneTranscript(object):
             (seq_text,seq_starts) = self.seqcache.get(chrom,seq_req)
             data += [{ "string": seq_text },seq_starts] #17-18
         return (data,leaf)
+
+    def add_locales(self,chrom,locales):
+        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        chr_len = get_chrom_length(path,chrom.name)
+        for (start,end,extra) in get_bigbed_data(path,chrom.name,0,chr_len):
+            extra = extra.split("\t")
+            id_ = id_strip.sub('',extra[14])
+            id_ = "{0}:gene:{1}".format(chrom.species.wire_genome_id,id_)
+            locales.add_locale(id_,chrom.species.wire_genome_id,start,end)

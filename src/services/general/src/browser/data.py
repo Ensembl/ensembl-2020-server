@@ -10,6 +10,15 @@ def get_bigbed_data(path,chromosome,start,end):
     bb.close()
     return out
 
+def get_chrom_length(path,chrom):
+    bb = pyBigWig.open(path)
+    try:
+        return bb.chroms(chrom) or None
+    except (RuntimeError,OverflowError):
+        return []
+    finally:
+        bb.close()
+
 def get_bigwig_data(path,chrom,start,end,points):
     if os.path.exists(path):
         try:

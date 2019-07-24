@@ -26,3 +26,4 @@ class Chromosome(object):
         if not os.path.exists(path):
             logging.warn("Missing file {0}".format(path))
         return path
+    

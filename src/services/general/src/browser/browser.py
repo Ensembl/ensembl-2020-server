@@ -40,9 +40,13 @@ def browser_setup(yaml_path,data_path,assets_path):
     gc_file = os.path.join(data_path,"e2020-vcf/gc.all.bw")
     refget_hashes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.hashes")
     variant_files = os.path.join(data_path,"e2020-vcf/bigbeds")
-    config = BAIConfig(config_path,assets_path)    
+    config = BAIConfig(config_path,assets_path)
     seqcache = SequenceCache(refget_hashes)
     sources = BAISources(variant_files,variant_pattern,gc_file,seqcache)
+    print("building locales")
+    for chrom in universe.all_chroms():
+        sources.add_locales(chrom,universe.locale)
+    print("done")
     debug_endpoint(bp,os.path.join(yaml_path,"debug_mode.yaml"))
     return bp
 
@@ -128,3 +132,23 @@ def browser_config(version):
                 data['data'][name].append(v)
         return jsonify(data)
 
+@bp.route("/browser/locale/<id_>")
+def browser_locale(id_):
+    resp = universe.locale.get_locale(id_)
+    if resp:
+        (stick,start,end) = resp
+        return jsonify({
+            "id": id_,
+            "stick": stick,
+            "start": start,
+            "end": end,
+            "found": True
+        })
+    else:
+        return jsonify({
+            "id": id_,
+            "found": False
+        })
+
+def add_locales(chrom,locale):
+    sources.add_locales(chrom,locale)
