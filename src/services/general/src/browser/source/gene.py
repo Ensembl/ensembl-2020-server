@@ -88,12 +88,8 @@ class BAISGeneTranscript(object):
                 gene_name = parts[14]
             if type_ == 'feat':
                 colour = 2
-                if gene_name not in FEATURED:
-                    continue
                 dir_ = ("fwd" if strand == '+' else "rev")
             else:
-                if gene_name in FEATURED:
-                    continue
                 if (strand == '+') != (dir_ == 'fwd'):
                     continue
                 if (biotype == 'protein_coding') != (type_ == 'pc'):
