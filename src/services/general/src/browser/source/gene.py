@@ -225,7 +225,10 @@ class BAISGeneTranscript(object):
                     out_exons.append(b[2])
                 else:
                     out_utrs.append(b[2])
-        if dir_ == 'fwd':
+        if type_ == 'feat':
+            colour = 2
+            dir_ = 2
+        elif dir_ == 'fwd':
             dir_ = 1
         elif dir_ == 'rev':
             dir_ = 0

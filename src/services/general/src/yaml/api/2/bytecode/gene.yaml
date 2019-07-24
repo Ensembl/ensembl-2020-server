@@ -363,7 +363,6 @@ transcript: |
     elidestr #14, #104, #103
     elidestr #15, #104, #103
     elidestr #16, #104, #103
-
     ; chevron dir
     ; a. if not feat track set to dir
     const #107, [1]
@@ -373,8 +372,9 @@ transcript: |
     mul #107, #107, #108
     add #96, #107, #96
     ; b. if feat track set to feat strand
-    ;mul #109, #97, #11
-    ;add #96, #109, #96
+    mul #109, #11, #97
+    add #96, #109, #96
+    ;
     ;
     ; *** RED DOTTED LINES ***
     ; Draws red dotted line as textured shape for now (HACK)
