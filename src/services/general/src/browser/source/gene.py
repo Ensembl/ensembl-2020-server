@@ -106,7 +106,10 @@ class BAISGeneTranscript(object):
                  # TODO transcript should have trans id but not supported yet
                 trans_ids.append("{0}:transcript:{1}".format(chrom.species.wire_genome_id,gene_id))
                 trans_ids_disp.append(disp_id)
-        if dir_ == 'fwd':
+        if type_ == 'feat':
+            colour = 2
+            dir_ = 2
+        elif dir_ == 'fwd':
             dir_ = 1
         elif dir_ == 'rev':
             dir_ = 0
