@@ -1,4 +1,10 @@
 gene-shimmer: |
+    ; are we the focus track?
+    const #97, [0]
+    get #97, #4, #97
+    const #98, [2]
+    eq #97, #97, #98
+    ;
     plot #62, #0
     const #63, [1]
     get #61, #62, #63
@@ -9,27 +15,27 @@ gene-shimmer: |
     add #60, #60, #61
     const #62, [-3]
     add #44, #60, #62
-    const #15, [183,192,200,   111,129,144,   0,153,255]
+    const #15, [183,192,200,   111,129,144,     0,153,255]
     const #16, [3]
-    const #97, [0]
-    get #97, #4, #97
-    pick #15, #97, #15, #16
+    const #96, [0]
+    get #96, #4, #96
+    pick #15, #96, #15, #16
     const #5, [6]
     const #10, [1,1]
     shape #10, #1, #2, #44, #5, #15
     ; draw chevrons
-    const #97, {"chevron-left"}
+    const #96, {"chevron-left"}
     const #98, [0]
-    asset #90, #97, #98
+    asset #90, #96, #98
     const #98, [1]
-    asset #91, #97, #98
-    image #90, #90, #91, #97
-    const #97, {"chevron-right"}
+    asset #91, #96, #98
+    image #90, #90, #91, #96
+    const #96, {"chevron-right"}
     const #98, [0]
-    asset #92, #97, #98
+    asset #92, #96, #98
     const #98, [1]
-    asset #91, #97, #98
-    image #98, #92, #91, #97
+    asset #91, #96, #98
+    image #98, #92, #91, #96
     const #6, [0]
     const #7, [14]
     const #8, [0]
@@ -73,14 +79,14 @@ gene-shimmer: |
     const #101, [2]
     eq #102, #4, #101
     const #101, [1]
-    elide #100, #102, #101
+    elide #100, #97, #101
     const #12, [2]
     const #14, [0]
     shape #45, #100, #12, #13, #14, #200
     move #100, #1
     add #100, #100, #2
     const #101, [2]
-    eq #102, #4, #101
+    eq #102, #97, #101
     const #101, [1]
     elide #100, #102, #101
     shape #45, #100, #12, #13, #14, #200
@@ -145,7 +151,9 @@ gene: |
     add #12, #107, #12
     ; b. if feat track set to feat strand
     mul #109, #6, #97
-    add #12, #109, #12
+    const #110, [0]
+    add #110, #110, #109
+    add #12, #110, #12
     ;
     plot #62, #0
     const #63, [1]
@@ -160,9 +168,9 @@ gene: |
     ; draw genes
     const #15, [183,192,200,   111,129,144,   0,153,255]
     const #16, [3]
-    const #97, [0]
-    get #97, #4, #97
-    pick #15, #97, #15, #16
+    const #94, [0]
+    get #94, #4, #94
+    pick #15, #94, #15, #16
     const #25, [4]
     const #46, [1,1]
     shape #46, #1, #2, #60, #25, #15
@@ -174,9 +182,9 @@ gene: |
     const #98, {"tr_id"}
     zmenu #9, #98, #11
     const #98, {"strand"}
-    const #99, {"reverse strand", "forward strand"}
-    const #97, [1]
-    picks #99, #6, #99, #97
+    const #99, {"","reverse strand", "forward strand"}
+    const #94, [1]
+    picks #99, #6, #99, #94
     zmenu #9, #98, #99
     const #98, {"biotype"}
     zmenu #9, #98, #7
@@ -207,19 +215,19 @@ gene: |
     asset #204, #201, #202
     image #200, #203, #204, #201
     move #100, #1
-    const #101, [2]
+    const #101, [0]
     eq #102, #4, #101
     const #101, [1]
-    elide #100, #102, #101
+    elide #100, #97, #101
     const #43, [2]
     const #14, [0]
     shape #45, #100, #43, #13, #14, #200
     move #100, #1
     add #100, #100, #2
-    const #101, [2]
+    const #101, [0]
     eq #102, #4, #101
     const #101, [1]
-    elide #100, #102, #101
+    elide #100, #97, #101
     shape #45, #100, #43, #13, #14, #200
     ; draw chevrons
     const #97, {"chevron-left"}
@@ -240,7 +248,7 @@ gene: |
     const #100, [1]
     const #101, [0]
     const #102, [60]
-    const #100, [1]
+    const #100, [2]
     eq #107, #12, #100
     const #100, [1]
     elide #101, #107, #100
@@ -249,7 +257,7 @@ gene: |
     mul #100, #100, #101
     const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
     shape #41, #100, #8, #60, #7, #98
-    const #100, [0]
+    const #100, [1]
     eq #107, #12, #100
     const #101, [1]
     elide #101, #107, #101
@@ -373,7 +381,9 @@ transcript: |
     add #96, #107, #96
     ; b. if feat track set to feat strand
     mul #109, #11, #97
-    add #96, #109, #96
+    const #110, [0]
+    add #110, #110, #109
+    add #96, #110, #96
     ;
     ;
     ; *** RED DOTTED LINES ***
@@ -393,7 +403,7 @@ transcript: |
     const #101, [2]
     eq #102, #8, #101
     const #101, [1]
-    elide #100, #102, #101
+    elide #100, #97, #101
     ; (draw lhs)
     const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
     const #72, [2]
@@ -406,26 +416,26 @@ transcript: |
     ;
     ; *** CHEVRONS ***
     ; USES: #8 #60
-    ; TMP: #41 #90 #91 #92 #97 #98 #100 #101 #102 #107 #117 #118
+    ; TMP: #41 #90 #91 #92 #93 #98 #100 #101 #102 #107 #117 #118
     ;
     ; (load left chevron asset)
-    const #97, {"chevron-left"}
+    const #93, {"chevron-left"}
     const #98, [0]
-    asset #90, #97, #98
+    asset #90, #93, #98
     const #98, [1]
-    asset #91, #97, #98
-    image #90, #90, #91, #97
+    asset #91, #93, #98
+    image #90, #90, #91, #93
     ; (load right chevron asset)
-    const #97, {"chevron-right"}
+    const #93, {"chevron-right"}
     const #98, [0]
-    asset #92, #97, #98
+    asset #92, #93, #98
     const #98, [1]
-    asset #91, #97, #98
-    image #98, #92, #91, #97
+    asset #91, #93, #98
+    image #98, #92, #91, #93
     ; (if right [#8==1], draw right chevrons)
     const #101, [0]
     const #102, [60]
-    const #100, [1]
+    const #100, [2]
     eq #107, #96, #100
     elide #101, #107, #100
     runs #100, #101, #102
@@ -436,7 +446,7 @@ transcript: |
     const #118, [0]
     shape #41, #100, #118, #60, #117, #98
     ; (if left [#8==0], draw left chevrons)
-    const #100, [0]
+    const #100, [1]
     eq #107, #96, #100
     const #101, [1]
     elide #101, #107, #101
@@ -447,7 +457,7 @@ transcript: |
     ;
     ; *** DRAW ZMENUS ***
     ; USES: #1 #7 #9 #11 #12 #13 #14 #60
-    ; TMP: #70 #97 #98 #99
+    ; TMP: #70 #93 #98 #99
     ;
     ; zmenus: transcript data
     const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
@@ -457,9 +467,9 @@ transcript: |
     const #98, {"tr_id"}
     zmenu #14, #98, #16
     const #98, {"strand"}
-    const #99, {"reverse strand", "forward strand"}
-    const #97, [1]
-    picks #99, #11, #99, #97
+    const #99, {"","reverse strand", "forward strand"}
+    const #93, [1]
+    picks #99, #11, #99, #93
     zmenu #14, #98, #99
     const #98, {"biotype"}
     zmenu #14, #98, #12
@@ -477,8 +487,8 @@ transcript: |
     zmenu #10, #98, #15
     ; zmenus: draw
     const #70, [1,2]
-    const #97, [7]
-    shape #70, #1, #9, #60, #97, #14
+    const #93, [7]
+    shape #70, #1, #9, #60, #93, #14
     ;
     ; *** BURST X START POSITIONS ***
     ; Use input data to generate list of start positions. Accumulate lengths
@@ -736,7 +746,7 @@ gene-empty-box: |
     const #98, {"tr_id"}
     zmenu #14, #98, #16
     const #98, {"strand"}
-    const #99, {"reverse strand", "forward strand"}
+    const #99, {"","reverse strand", "forward strand"}
     const #97, [1]
     picks #99, #11, #99, #97
     zmenu #14, #98, #99
@@ -985,7 +995,7 @@ gene-letterbox: |
     const #98, {"tr_id"}
     zmenu #14, #98, #16
     const #98, {"strand"}
-    const #99, {"reverse strand", "forward strand"}
+    const #99, {"","reverse strand", "forward strand"}
     const #97, [1]
     picks #99, #11, #99, #97
     zmenu #14, #98, #99

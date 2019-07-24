@@ -38,8 +38,7 @@ class BAISGeneTranscript(object):
             if gene_name == "none":
                 gene_name = parts[14]
             if type_ == 'feat':
-                if gene_name not in FEATURED:
-                    continue
+                colour = 2
                 dir_ = ("fwd" if strand == '+' else "rev")
             else:
                 if gene_name in FEATURED:
@@ -51,12 +50,15 @@ class BAISGeneTranscript(object):
             starts.append(gene_start)
             lens.append(gene_end-gene_start)
         (starts, lens, senses) = shimmer(starts,lens,True,leaf.start,leaf.end)
-        if dir_ == 'fwd':
-            dir_ = 1
-        elif dir_ == 'rev':
+        if type_ == 'feat':
+            colour = 2
             dir_ = 0
-        else:
+        elif dir_ == 'fwd':
             dir_ = 2
+        elif dir_ == 'rev':
+            dir_ = 1
+        else:
+            dir_ = 0
         return ([starts,lens,senses,[colour,dir_]],leaf)
 
     def gene(self,chrom,leaf,type_,dir_,get_names):        
@@ -96,11 +98,11 @@ class BAISGeneTranscript(object):
                     continue
             out_starts.append(gene_start)
             out_lens.append(gene_end-gene_start)
+            ids.append("{0}:gene:{1}".format(chrom.species.wire_genome_id,gene_id))
+            strands.append(1+(strand == '+'))
             if get_names:
                 names.append(gene_name)
-                ids.append("{0}:gene:{1}".format(chrom.species.wire_genome_id,gene_id))
                 ids_disp.append(disp_id)
-                strands.append(strand == '+')
                 biotypes.append(munge_code(biotype))
                 prestiges.append(munge_code(prestige))
                  # TODO transcript should have trans id but not supported yet
@@ -108,13 +110,13 @@ class BAISGeneTranscript(object):
                 trans_ids_disp.append(disp_id)
         if type_ == 'feat':
             colour = 2
-            dir_ = 2
-        elif dir_ == 'fwd':
-            dir_ = 1
-        elif dir_ == 'rev':
             dir_ = 0
-        else:
+        elif dir_ == 'fwd':
             dir_ = 2
+        elif dir_ == 'rev':
+            dir_ = 1
+        else:
+            dir_ = 0
         return ([
                 out_starts,out_lens,{ "string": names },[colour,dir_], # 1-4
                 { "string": ids },strands,{ "string": biotypes },{ "string": prestiges}, #5-8
@@ -169,7 +171,7 @@ class BAISGeneTranscript(object):
             names.append(gene_name)
             ids_disp.append(gene_id)
             ids.append("{0}:gene:{1}".format(chrom.species.wire_genome_id,gene_id))
-            strands.append(strand == '+')
+            strands.append((strand == '+')+1)
             biotypes.append(munge_code(biotype))
             prestiges.append(munge_code(prestige))
             trans_ids_disp.append(trans_id)
@@ -227,11 +229,11 @@ class BAISGeneTranscript(object):
                     out_utrs.append(b[2])
         if type_ == 'feat':
             colour = 2
-            dir_ = 2
-        elif dir_ == 'fwd':
-            dir_ = 1
-        elif dir_ == 'rev':
             dir_ = 0
+        elif dir_ == 'fwd':
+            dir_ = 2
+        elif dir_ == 'rev':
+            dir_ = 1
         else:
             dir_ = 2
         data = [out_starts,out_nump,out_pattern, #1-3
