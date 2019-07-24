@@ -617,6 +617,51 @@ gene-empty-box: |
     ; #13 prestiges
     ; #14 trans ids
     ;
+    ;
+    ; *** FEATURE OBJECTS ***
+    ;
+    ; are we the focus track?
+    const #97, [0]
+    get #97, #8, #97
+    const #98, [2]
+    eq #97, #97, #98
+    ; build bool for objects
+    getfocus #103
+    streq #104, #10, #103
+    ; flip if not focus
+    eq #104, #104, #97
+    ; build part pattern bool
+    runsof #105, #2, #104
+    ; filter
+    const #103, [1]
+    elide #1, #104, #103
+    elide #2, #104, #103
+    ; part pattern for UTRs (#108), exons (#109), introns (#110)
+    const #106, [0]
+    eq #107, #3, #106
+    move #108, #105
+    elide #108, #107, #103
+    const #106, [1]
+    eq #107, #3, #106
+    move #109, #105
+    elide #109, #107, #103
+    const #106, [2]
+    eq #107, #3, #106
+    move #110, #105
+    elide #110, #107, #103
+    elide #3, #105, #103
+    elide #4, #108, #103
+    elide #5, #109, #103
+    elide #6, #110, #103
+    elidestr #7, #104, #103
+    elide #9, #104, #103
+    elidestr #10, #104, #103
+    elide #11, #104, #103
+    elidestr #12, #104, #103
+    elidestr #13, #104, #103
+    elidestr #14, #104, #103
+    elidestr #15, #104, #103
+    elidestr #16, #104, #103
     ; *** ESTABLISH Y-POSITION ***
     ; USES: none
     ; OUT: #60 y-position
@@ -814,6 +859,62 @@ gene-letterbox: |
     ; #17 sequence text
     ; #18 sequence starts
     ;
+    ;
+    ; *** FEATURE OBJECTS ***
+    ;
+    ; are we the focus track?
+    const #97, [0]
+    get #97, #8, #97
+    const #98, [2]
+    eq #97, #97, #98
+    ; build bool for objects
+    getfocus #103
+    streq #104, #10, #103
+    ; flip if not focus
+    eq #104, #104, #97
+    ; build part pattern bool
+    runsof #105, #2, #104
+    ; filter
+    const #103, [1]
+    elide #1, #104, #103
+    elide #2, #104, #103
+    ; part pattern for UTRs (#108), exons (#109), introns (#110)
+    const #106, [0]
+    eq #107, #3, #106
+    move #108, #105
+    elide #108, #107, #103
+    const #106, [1]
+    eq #107, #3, #106
+    move #109, #105
+    elide #109, #107, #103
+    const #106, [2]
+    eq #107, #3, #106
+    move #110, #105
+    elide #110, #107, #103
+    elide #3, #105, #103
+    elide #4, #108, #103
+    elide #5, #109, #103
+    elide #6, #110, #103
+    elidestr #7, #104, #103
+    elide #9, #104, #103
+    elidestr #10, #104, #103
+    elide #11, #104, #103
+    elidestr #12, #104, #103
+    elidestr #13, #104, #103
+    elidestr #14, #104, #103
+    elidestr #15, #104, #103
+    elidestr #16, #104, #103
+    ; chevron dir
+    ; a. if not feat track set to dir
+    const #107, [1]
+    get #107, #8, #107
+    const #108, [0]
+    eq #108, #97, #108
+    mul #107, #107, #108
+    add #96, #107, #96
+    ; b. if feat track set to feat strand
+    mul #109, #11, #97
+    add #96, #109, #96
     ; *** ESTABLISH Y-SCALE ***
     ; so boxes grow
     ;
