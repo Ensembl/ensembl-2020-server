@@ -85,7 +85,9 @@ class BAISGeneTranscript(object):
                 parts[16],parts[15],parts[2],parts[14],parts[18],parts[0]
             )
             disp_id = gene_id
+            disp_trans_id = trans_id
             gene_id = id_strip.sub('',gene_id)
+            trans_id = id_strip.sub('',trans_id)
             if gene_name == "none":
                 gene_name = parts[14]
             if type_ == 'feat':
@@ -106,8 +108,8 @@ class BAISGeneTranscript(object):
                 biotypes.append(munge_code(biotype))
                 prestiges.append(munge_code(prestige))
                  # TODO transcript should have trans id but not supported yet
-                trans_ids.append("{0}:transcript:{1}".format(chrom.species.wire_genome_id,gene_id))
-                trans_ids_disp.append(disp_id)
+                trans_ids.append("{0}:transcript:{1}".format(chrom.species.wire_genome_id,trans_id))
+                trans_ids_disp.append(disp_trans_id)
         if type_ == 'feat':
             colour = 2
             dir_ = 0

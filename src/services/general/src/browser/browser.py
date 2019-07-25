@@ -52,15 +52,19 @@ def browser_setup(yaml_path,data_path,assets_path):
 
 pattern = re.compile(r'[A-Z]-?[0-9]+')
 def break_up(spec):
-    for stick in spec.split('+'):
-        parts = stick.rsplit(':',1)
+    for supersection in spec.split('+'):
+        parts = supersection.rsplit(':',1)
+        island = parts[0].rsplit('~',1)
+        if len(island) == 1:
+            island = (None,island[0])
+        (focus,stick) = island
         for section in parts[1].split(';'):
             (tracks,leafs) = section.split('=')
             tracks = tracks.split(',')
             leafs = [x.group(0) for x in pattern.finditer(leafs)]
             for track in tracks:
                 for leaf in leafs:
-                    yield (track,parts[0],leaf)
+                    yield (track,focus,stick,leaf)
 
 test_sticks = set(["text2"])
 
@@ -70,7 +74,7 @@ def test_data(stick,compo):
 @bp.route("/browser/data/1/<spec>")
 def bulk_data(spec):
     out = []
-    for (compo_in,stick,pane) in break_up(spec):
+    for (compo_in,focus,stick,pane) in break_up(spec):
         if stick in test_sticks:
             out.append([stick,pane,compo_in,test_data(stick,compo_in)])
         else:
@@ -102,7 +106,7 @@ def bulk_data(spec):
                     (data,got_leaf) = sources.gene.gene_shimmer(chrom,leaf,parts[1],parts[2])
             elif parts[0] == 'gc':
                 (data,got_leaf) = sources.percgc.gc(chrom,leaf)
-            out.append([stick,pane,compo_in,bytecode,data,str(got_leaf)])
+            out.append([stick,pane,compo_in,bytecode,focus,data,str(got_leaf)])
     resp = jsonify(out)
     resp.cache_control.max_age = 86400
     resp.cache_control.public = True
@@ -149,6 +153,7 @@ def browser_locale(id_):
                     "",
                     "ff",
                     "focus",
+                    None,
                     [[start,end]]
                 ]
             ]
