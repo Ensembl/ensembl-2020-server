@@ -142,7 +142,16 @@ def browser_locale(id_):
             "stick": stick,
             "start": start,
             "end": end,
-            "found": True
+            "found": True,
+            "payload": [
+                [
+                    stick,
+                    "",
+                    "ff",
+                    "focus",
+                    [[start,end]]
+                ]
+            ]
         })
     else:
         return jsonify({
