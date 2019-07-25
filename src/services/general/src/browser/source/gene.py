@@ -254,4 +254,6 @@ class BAISGeneTranscript(object):
             extra = extra.split("\t")
             id_ = id_strip.sub('',extra[14])
             id_ = "{0}:gene:{1}".format(chrom.species.wire_genome_id,id_)
-            locales.add_locale(id_,chrom.species.wire_genome_id,start,end)
+            middle = int((start+end)/2)
+            size = end-start
+            locales.add_locale(id_,chrom.stick_name,middle-size,middle+size)

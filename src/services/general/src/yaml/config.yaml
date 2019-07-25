@@ -6,6 +6,7 @@ api:
 
 data-url: ./data/1
 debug-url: ./debug
+jumper-url: ./locale
 
 tracks:
     contig:
