@@ -1,6 +1,6 @@
 from flask import jsonify, Blueprint, request
 import yaml, re, time, os.path, string, base64, math, tzlocal, logging
-import collections, datetime
+import collections, datetime, copy
 import pyBigWig, bbi, png, pytz
 
 from seqcache import SequenceCache
@@ -57,6 +57,9 @@ class CatalogueCode(object):
         self.pane = pane
         self.focus = focus
 
+    def make_summary(self):
+        return [self.wire,self.stick,self.pane,self.focus]
+
 pattern = re.compile(r'[A-Z]-?[0-9]+')
 def make_catalogue_codes(spec):
     for supersection in spec.split('+'):
@@ -72,6 +75,14 @@ def make_catalogue_codes(spec):
             for track in tracks:
                 for leaf in leafs:
                     yield CatalogueCode(track,stick,leaf,focus)
+
+class DeliveryNote(object):
+    def __init__(self,catcode,got_leaf):
+        self.code = copy.deepcopy(catcode)
+        self.pane = got_leaf.pane
+
+    def make_summary(self):
+        self.code.make_summary()
 
 test_sticks = set(["text2"])
 
@@ -121,7 +132,42 @@ def bulk_data(spec):
 
 @bp.route("/browser/data/3/<spec>")
 def bulk_data3(spec):
-    return bulk_data(spec)
+    out = []
+    for code in make_catalogue_codes(spec):
+        compo = config.tracks[code.wire]
+        chrom = universe.get_from_stick(code.stick)
+        leaf = Leaf(universe,code.stick,code.pane)
+        (endpoint,bytecode) = config.get_endpoint(chrom,compo,code.pane[0])
+        start = time.time()
+        parts_in = endpoint.split("-")
+        parts = [""] * (len(breakdown)+1)
+        for (i,flag) in enumerate(parts_in[1:]):
+            for (j,b) in enumerate(breakdown):
+                if flag in b:
+                    parts[j+1] = flag
+        parts[0] = parts_in[0]
+        (data,got_leaf) = ([],leaf)
+        if parts[0] == "contignormal":
+            (data,got_leaf) = sources.contig.contig_normal(chrom,leaf,parts[3]=="seq")
+        elif parts[0] == "contigshimmer":
+            (data,got_leaf) = sources.contig.contig_shimmer(chrom,leaf)
+        elif parts[0] == "variant":
+            (data,got_leaf) = sources.variant.variant(chrom,leaf,parts[1])
+        elif parts[0] == 'transcript':
+            (data,got_leaf) = sources.gene.transcript(chrom,leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
+        elif parts[0] == 'gene':
+            if parts[4] == 'names' or parts[1] == 'feat':
+                (data,got_leaf) = sources.gene.gene(chrom,leaf,parts[1],parts[2],parts[4] == 'names')
+            else:
+                (data,got_leaf) = sources.gene.gene_shimmer(chrom,leaf,parts[1],parts[2])
+        elif parts[0] == 'gc':
+            (data,got_leaf) = sources.percgc.gc(chrom,leaf)
+        delivery_note = DeliveryNote(code,got_leaf)
+        out.append([code.make_summary(),delivery_note.make_summary(),bytecode,data,str(got_leaf)])
+    resp = jsonify(out)
+    resp.cache_control.max_age = 86400
+    resp.cache_control.public = True
+    return resp
 
 def make_asset(value):
     filter_ = value["filter"]
@@ -162,11 +208,9 @@ def browser_locale(id_):
             "found": True,
             "payload": [
                 [
-                    stick,
-                    "",
-                    "ff",
+                    ["ff",stick,"","focus"],
+                    ["ff",stick,"","focus"],
                     "focus",
-                    None,
                     [[start,end]]
                 ]
             ]
