@@ -17,7 +17,8 @@ pub struct DefStore {
     structs: HashMap<String,StructDef>,
     enums: HashMap<String,EnumDef>,
     inlines_binary: HashMap<String,Inline>,
-    inlines_unary: HashMap<String,Inline>
+    inlines_unary: HashMap<String,Inline>,
+    structenum_order: Vec<String>
 }
 
 impl DefStore {
@@ -32,6 +33,7 @@ impl DefStore {
             enums: HashMap::new(),
             inlines_binary: HashMap::new(),
             inlines_unary: HashMap::new(),
+            structenum_order: Vec::new()
         }
     }
 
@@ -77,6 +79,7 @@ impl DefStore {
 
     pub fn add_struct(&mut self, struct_: StructDef, lexer: &Lexer) -> Result<(),ParseError> {
         self.detect_clash(struct_.name(),lexer)?;
+        self.structenum_order.push(struct_.name().to_string());
         self.structs.insert(struct_.name().to_string(),struct_);
         Ok(())
     }
@@ -91,6 +94,7 @@ impl DefStore {
 
     pub fn add_enum(&mut self, enum_: EnumDef, lexer: &Lexer) -> Result<(),ParseError> {
         self.detect_clash(enum_.name(),lexer)?;
+        self.structenum_order.push(enum_.name().to_string());
         self.enums.insert(enum_.name().to_string(),enum_);
         Ok(())
     }
@@ -132,5 +136,9 @@ impl DefStore {
 
     pub fn get_proc(&self, name: &str) -> Option<&ProcDecl> {
         self.procs.get(name)
+    }
+
+    pub fn get_structenum_order(&self) -> impl DoubleEndedIterator<Item=&str> {
+        self.structenum_order.iter().map(|s| &**s)
     }
 }

@@ -13,10 +13,10 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new() -> Generator {
+    pub fn new(regalloc: &RegisterAllocator) -> Generator {
         Generator {
             types: TypePass::new(),
-            regalloc: RegisterAllocator::new(),
+            regalloc: regalloc.clone(),
             instrs: Vec::new()
         }
     }
@@ -291,7 +291,8 @@ mod test {
         lexer.import("test:codegen/generate-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let gen = Generator::new();
+        let regalloc = RegisterAllocator::new();
+        let gen = Generator::new(&regalloc);
         let cmds : Vec<String> = gen.go(&defstore,stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
         let outdata = load_testdata(&["codegen","generate-smoke.out"]).ok().unwrap();
         assert_eq!(outdata,cmds.join(""));

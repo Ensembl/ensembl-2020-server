@@ -11,7 +11,7 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
-use crate::codegen::Generator;
+use crate::codegen::{ Generator, RegisterAllocator, simplify };
 use crate::types::TypePass;
 use crate::testsuite::load_testdata;
 
@@ -26,8 +26,10 @@ fn main() {
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
     //
-    let gen = Generator::new();
+    let regalloc = RegisterAllocator::new();
+    let gen = Generator::new(&regalloc);
     let instrs = gen.go(&defstore,stmts).expect("codegen");
+    let _outstrs = simplify(&regalloc,&defstore,&instrs);
     let mut tp = TypePass::new();
     for instr in &instrs {
         print!("=== {:?}",instr);

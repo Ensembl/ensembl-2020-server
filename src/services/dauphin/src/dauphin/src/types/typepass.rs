@@ -239,7 +239,7 @@ mod test {
     use super::*;
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };
-    use crate::codegen::Generator;
+    use crate::codegen::{ Generator, RegisterAllocator };
 
     #[test]
     fn typepeass_smoke() {
@@ -248,7 +248,8 @@ mod test {
         lexer.import("test:codegen/typepass-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let gen = Generator::new();
+        let regalloc = RegisterAllocator::new();
+        let gen = Generator::new(&regalloc);
         let instrs : Vec<Instruction> = gen.go(&defstore,stmts).expect("codegen");
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));

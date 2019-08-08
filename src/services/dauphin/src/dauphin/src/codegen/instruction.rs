@@ -2,21 +2,28 @@ use std::fmt;
 
 use super::register::Register;
 
+#[derive(Clone)]
 pub enum Instruction {
-    NumberConst(Register,f64),
-    BooleanConst(Register,bool),
-    StringConst(Register,String),
-    BytesConst(Register,Vec<u8>),
+    /* generate to simplify */
     CtorStruct(String,Register,Vec<Register>),
     CtorEnum(String,String,Register,Register),
-    List(Register),
-    Push(Register,Register),
-    Proc(String,Vec<Register>),
     SValue(String,String,Register,Register),
     EValue(String,String,Register,Register),
     ETest(String,String,Register,Register),
     RefSValue(String,String,Register,Register),
     RefEValue(String,String,Register,Register),
+
+    /* simplify to ??? */
+    Copy(Register,Register),
+
+    /* ??? */
+    NumberConst(Register,f64),
+    BooleanConst(Register,bool),
+    StringConst(Register,String),
+    BytesConst(Register,Vec<u8>),
+    List(Register),
+    Push(Register,Register),
+    Proc(String,Vec<Register>),
     Square(Register,Register),
     RefSquare(Register,Register),
     Star(Register,Register),
@@ -99,7 +106,10 @@ impl fmt::Debug for Instruction {
             },
             Instruction::RefFilter(dst,src,filter) => {
                 fmt_instr(f,"reffilter",&vec![dst,src,filter],&vec![])?
-            }
+            },
+            Instruction::Copy(dst,src) => {
+                fmt_instr(f,"copy",&vec![dst,src],&vec![])?
+            },
         }
         Ok(())
     }
