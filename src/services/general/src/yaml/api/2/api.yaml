@@ -4,3 +4,5 @@ bytecode:
     - bytecode/contig.yaml
     - bytecode/gc.yaml
     - bytecode/gene.yaml
+
+data-url: ./data/1

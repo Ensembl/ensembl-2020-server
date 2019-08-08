@@ -128,7 +128,9 @@ def browser_config(version):
     with open(config.config_path) as f:
         data = yaml.load(f)
         data['sticks'] = universe.get_sticks()
-        data['bytecodes'] = config.get_bytecode(version)
+        api = config.get_api_config(version)
+        data['bytecodes'] = api.bytecodes
+        data['data-url'] = api.data_url
         data['data'] = {}
         for (name,v) in list(data['assets'].items()):
             data['data'][name] = []

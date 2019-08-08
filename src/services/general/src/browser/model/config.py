@@ -14,6 +14,7 @@ class BAIAPIConfig(object):
                     codes = yaml.load(f2)
                     for (k,v) in codes.items():
                         self.bytecodes[k] = v
+            self.data_url = api["data-url"]
 
 class BAIConfig(object):
     def __init__(self,config_path,assets_path):
@@ -58,8 +59,8 @@ class BAIConfig(object):
                 return self._endpoints[(check,track_name,scale)]
         return ("","")
 
-    def get_bytecode(self,version):
+    def get_api_config(self,version):
         dir_ = os.path.dirname(self.config_path)
         bytecode_file = os.path.join(dir_,self._api[int(version)])
-        bcf = BAIAPIConfig(bytecode_file)
-        return bcf.bytecodes
+        return BAIAPIConfig(bytecode_file)
+

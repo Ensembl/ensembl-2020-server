@@ -5,4 +5,4 @@ bytecode:
     - bytecode/gc.yaml
     - bytecode/gene.yaml
 
-data-url: ./data/1
+data-url: ./data/3
