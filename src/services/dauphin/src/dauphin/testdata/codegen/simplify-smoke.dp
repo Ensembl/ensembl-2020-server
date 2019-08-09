@@ -1,8 +1,9 @@
 struct A { a: number, b: boolean };
+struct B { x: A, y: A };
 
 proc assign(out _A, _A);
 func eq(number,number) becomes boolean;
 inline ":=" assign left 14;
 inline "==" eq left 5;
 
-x := A { a: 1, b: true };
+x := B { x: A { a: 1, b: true }, y: A { a: 2, b: false }};

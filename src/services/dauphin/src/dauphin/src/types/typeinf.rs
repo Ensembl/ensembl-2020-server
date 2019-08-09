@@ -72,7 +72,6 @@ impl TypeInfStore {
         out
     }
 
-    #[cfg(test)]
     fn make_diff(&self, other: &TypeInfStore) -> String {
         let self_list: HashSet<(&Referrer,&TypeSig)> =
             self.compile_ordered_list().drain(..).collect();

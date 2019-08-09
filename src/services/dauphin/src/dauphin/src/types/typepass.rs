@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::codegen::Instruction;
 use super::typeinf::{ TypeInf, Referrer };
 use super::typestep::try_apply_command;
@@ -201,7 +203,11 @@ impl TypePass {
                 out.push((dst_sig,dst.clone()));
                 Ok(out)
             },
-            _ => Err(format!("no signature for {:?}",instr))
+            Instruction::Copy(dst,src) => Ok(vec![
+                (sig_gen("out _A",defstore)?,dst.clone()),
+                (sig_gen("_A",defstore)?,src.clone())
+            ]),
+            Instruction::Ref(_,_) => Ok(vec![])
         }
     }
 
@@ -233,6 +239,13 @@ impl TypePass {
         x
     }
 }
+
+impl fmt::Debug for TypePass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{:?}",self.typeinf)
+    }
+}
+
 
 #[cfg(test)]
 mod test {
