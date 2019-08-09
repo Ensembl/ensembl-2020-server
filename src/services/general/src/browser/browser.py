@@ -208,8 +208,8 @@ def browser_locale(id_):
             "found": True,
             "payload": [
                 [
-                    ["ff",stick,"","focus"],
-                    ["ff",stick,"","focus"],
+                    ["ff",stick,"X0","focus"],
+                    ["ff",stick,"X0","focus"],
                     "focus",
                     [[start,end]]
                 ]
