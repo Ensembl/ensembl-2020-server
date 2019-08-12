@@ -23,6 +23,7 @@ tracks:
             - lhs
 
     gene-feat:
+        focus: true
         wire: ff
         letter: G
         position: 0

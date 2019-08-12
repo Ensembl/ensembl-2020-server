@@ -82,7 +82,7 @@ class DeliveryNote(object):
         self.pane = got_leaf.pane
 
     def make_summary(self):
-        self.code.make_summary()
+        return self.code.make_summary()
 
 test_sticks = set(["text2"])
 
@@ -163,7 +163,7 @@ def bulk_data3(spec):
         elif parts[0] == 'gc':
             (data,got_leaf) = sources.percgc.gc(chrom,leaf)
         delivery_note = DeliveryNote(code,got_leaf)
-        out.append([code.make_summary(),delivery_note.make_summary(),bytecode,data,str(got_leaf)])
+        out.append([delivery_note.make_summary(),bytecode,data,str(got_leaf)])
     resp = jsonify(out)
     resp.cache_control.max_age = 86400
     resp.cache_control.public = True
