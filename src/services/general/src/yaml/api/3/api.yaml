@@ -3,6 +3,6 @@ bytecode:
     - bytecode/framework.yaml
     - bytecode/contig.yaml
     - bytecode/gc.yaml
-    - bytecode/gene.yaml
+    - bytecode/gene.yaml    
 
 data-url: ./data/3

@@ -57,8 +57,8 @@ class CatalogueCode(object):
         self.pane = pane
         self.focus = focus
 
-    def make_summary(self):
-        return [self.wire,self.stick,self.pane,self.focus]
+    def make_summary(self, focus_specific=False):
+        return [self.wire,self.stick,self.pane,self.focus,focus_specific]
 
 pattern = re.compile(r'[A-Z]-?[0-9]+')
 def make_catalogue_codes(spec):
@@ -77,12 +77,13 @@ def make_catalogue_codes(spec):
                     yield CatalogueCode(track,stick,leaf,focus)
 
 class DeliveryNote(object):
-    def __init__(self,catcode,got_leaf):
+    def __init__(self,catcode,got_leaf,focus_specific):
         self.code = copy.deepcopy(catcode)
         self.pane = got_leaf.pane
+        self.focus_specific = focus_specific
 
     def make_summary(self):
-        return self.code.make_summary()
+        return self.code.make_summary(self.focus_specific)
 
 test_sticks = set(["text2"])
 
@@ -162,7 +163,7 @@ def bulk_data3(spec):
                 (data,got_leaf) = sources.gene.gene_shimmer(chrom,leaf,parts[1],parts[2])
         elif parts[0] == 'gc':
             (data,got_leaf) = sources.percgc.gc(chrom,leaf)
-        delivery_note = DeliveryNote(code,got_leaf)
+        delivery_note = DeliveryNote(code,got_leaf,config.focus_specific[code.wire])
         out.append([delivery_note.make_summary(),bytecode,data,str(got_leaf)])
     resp = jsonify(out)
     resp.cache_control.max_age = 86400
