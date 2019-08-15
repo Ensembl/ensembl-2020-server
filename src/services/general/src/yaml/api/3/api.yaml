@@ -1,4 +1,5 @@
 bytecode:
+    - bytecode/bytecode.yaml
     - bytecode/variant.yaml
     - bytecode/framework.yaml
     - bytecode/contig.yaml
@@ -6,3 +7,4 @@ bytecode:
     - bytecode/gene.yaml    
 
 data-url: ./data/3
+endpoints: ./endpoints.yaml

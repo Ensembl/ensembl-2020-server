@@ -77,6 +77,14 @@ tracks:
         parts:
             - label
 
+    none:
+        wire: nn
+        letter: " "
+        porition: 0
+        parts:
+            - label
+            - names
+
 assets:
     chevron-left:
         filter: png

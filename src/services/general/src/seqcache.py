@@ -30,7 +30,7 @@ class SequenceCache(object):
             self.misses += 1
             block = self.refget(*k)
             self.cache[k] = block
-        print("seq cache hit rate",(self.hits*100)/(self.hits+self.misses))
+        #print("seq cache hit rate",(self.hits*100)/(self.hits+self.misses))
         if len(self.cache) > MAX_BLOCKS:
             self.decimate()
         return block[(start-bstart):(end-bstart)]
@@ -49,7 +49,7 @@ class SequenceCache(object):
             return ""
         
     def get(self,chrom,requests):
-        print("get",chrom.seq_hash)
+        #print("get",chrom.seq_hash)
         seq_text = []
         seq_starts = []
         for (start,end) in requests:

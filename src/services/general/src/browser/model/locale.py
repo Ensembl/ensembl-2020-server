@@ -19,4 +19,11 @@ class Locale(object):
         self._data[id_.encode("utf8")] = ":".join([stick,str(start),str(end)])
 
     def get_locale(self,id_):
-        return self._data.get(id_.encode("utf8")).decode("utf8").rsplit(':',2)
+        parts = id_.split(':',2)
+        if parts[1] == 'region':
+            region = parts[2].split(':')
+            (start,end) = region[1].split('-')
+            return (parts[0]+":"+region[0],int(start),int(end))
+        else:
+            out = self._data.get(id_.encode("utf8")).decode("utf8").rsplit(':',2)
+            return [out[0],int(out[1]),int(out[2])]

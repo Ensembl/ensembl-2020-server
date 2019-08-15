@@ -1,6 +1,6 @@
 from flask import jsonify, Blueprint, request
 import yaml, re, time, os.path, string, base64, math, tzlocal, logging
-import collections, datetime, copy
+import collections, datetime, copy, time
 import pyBigWig, bbi, png, pytz
 
 from seqcache import SequenceCache
@@ -100,8 +100,8 @@ def bulk_data(spec):
             compo = config.tracks[code.wire]
             chrom = universe.get_from_stick(code.stick)
             leaf = Leaf(universe,code.stick,code.pane)
-            (endpoint,bytecode) = config.get_endpoint(chrom,compo,code.pane[0])
-            start = time.time()
+            api = config.get_api_config(1)
+            (endpoint,bytecode) = api.get_endpoint(chrom,compo,code.pane[0])
             parts_in = endpoint.split("-")
             parts = [""] * (len(breakdown)+1)
             for (i,flag) in enumerate(parts_in[1:]):
@@ -131,6 +131,16 @@ def bulk_data(spec):
     resp.cache_control.public = True
     return resp
 
+def split_ep(ep):
+    parts_in = ep.split("-")
+    parts = [""] * (len(breakdown)+1)
+    for (i,flag) in enumerate(parts_in[1:]):
+        for (j,b) in enumerate(breakdown):
+            if flag in b:
+                parts[j+1] = flag
+    parts[0] = parts_in[0]
+    return parts
+
 @bp.route("/browser/data/3/<spec>")
 def bulk_data3(spec):
     out = []
@@ -138,16 +148,25 @@ def bulk_data3(spec):
         compo = config.tracks[code.wire]
         chrom = universe.get_from_stick(code.stick)
         leaf = Leaf(universe,code.stick,code.pane)
-        (endpoint,bytecode) = config.get_endpoint(chrom,compo,code.pane[0])
-        start = time.time()
-        parts_in = endpoint.split("-")
-        parts = [""] * (len(breakdown)+1)
-        for (i,flag) in enumerate(parts_in[1:]):
-            for (j,b) in enumerate(breakdown):
-                if flag in b:
-                    parts[j+1] = flag
-        parts[0] = parts_in[0]
+        api = config.get_api_config(3)
+        (endpoint,bytecode) = api.get_endpoint(chrom,compo,code.pane[0],code.focus)
+        parts = split_ep(endpoint)
         (data,got_leaf) = ([],leaf)
+        if parts[1] == 'feat':
+            if code.focus:
+                focus_type = code.focus.split(':')[1]
+                if focus_type == "region":
+                    (start,end) = code.focus.split(':')[3].split('-')
+                    (start,end) = (int(start),int(end))
+                    data = [[start],[end-start+1]]
+                elif focus_type == "gene":
+                    (endpoint,bytecode) = api.get_endpoint(chrom,"gene-pc-fwd",code.pane[0],code.focus)
+                    parts = split_ep(endpoint)
+                    parts[1] = "feat"
+                else:
+                    bytecode = "none"    
+            else:
+                bytecode = "none"
         if parts[0] == "contignormal":
             (data,got_leaf) = sources.contig.contig_normal(chrom,leaf,parts[3]=="seq")
         elif parts[0] == "contigshimmer":
@@ -163,6 +182,10 @@ def bulk_data3(spec):
                 (data,got_leaf) = sources.gene.gene_shimmer(chrom,leaf,parts[1],parts[2])
         elif parts[0] == 'gc':
             (data,got_leaf) = sources.percgc.gc(chrom,leaf)
+        elif parts[0] == 'region' and code.focus:
+            (start,end) = code.focus.split(':')[3].split('-')
+            (start,end) = (int(start),int(end))
+            data = [[start],[end-start+1]]
         delivery_note = DeliveryNote(code,got_leaf,config.focus_specific[code.wire])
         out.append([delivery_note.make_summary(),bytecode,data,str(got_leaf)])
     resp = jsonify(out)
@@ -201,6 +224,7 @@ def browser_locale(id_):
     resp = universe.locale.get_locale(id_)
     if resp:
         (stick,start,end) = resp
+        xxx = (end-start)/40
         return jsonify({
             "id": id_,
             "stick": stick,
@@ -212,7 +236,7 @@ def browser_locale(id_):
                     ["ff",stick,"X0","focus"],
                     ["ff",stick,"X0","focus"],
                     "focus",
-                    [[start,end]]
+                    [[start-xxx,end+xxx]]
                 ]
             ]
         })

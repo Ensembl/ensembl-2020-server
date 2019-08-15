@@ -6,3 +6,4 @@ bytecode:
     - bytecode/gene.yaml
 
 data-url: ./data/1
+endpoints: ./endpoints.yaml
