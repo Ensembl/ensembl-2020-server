@@ -224,21 +224,13 @@ def browser_locale(id_):
     resp = universe.locale.get_locale(id_)
     if resp:
         (stick,start,end) = resp
-        xxx = (end-start)/40
+        xxx = (end-start)/10
         return jsonify({
             "id": id_,
             "stick": stick,
-            "start": start,
-            "end": end,
+            "start": start-xxx,
+            "end": end+xxx,
             "found": True,
-            "payload": [
-                [
-                    ["ff",stick,"X0","focus"],
-                    ["ff",stick,"X0","focus"],
-                    "focus",
-                    [[start-xxx,end+xxx]]
-                ]
-            ]
         })
     else:
         return jsonify({
