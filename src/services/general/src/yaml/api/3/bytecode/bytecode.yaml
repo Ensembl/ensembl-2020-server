@@ -1,7 +1,5 @@
 none: ""
 region: |
-    cprint #1
-    cprint #2
     ; *** RED DOTTED LINES ***
     ; (load dotted line asset)
     const #201, {"dotted-line"}

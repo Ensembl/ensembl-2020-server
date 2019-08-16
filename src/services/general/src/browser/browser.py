@@ -152,17 +152,17 @@ def bulk_data3(spec):
         (endpoint,bytecode) = api.get_endpoint(chrom,compo,code.pane[0],code.focus)
         parts = split_ep(endpoint)
         (data,got_leaf) = ([],leaf)
+        focus_id = None
         if parts[1] == 'feat':
             if code.focus:
                 focus_type = code.focus.split(':')[1]
+                focus_id = code.focus.split(':')[2]
                 if focus_type == "region":
                     (start,end) = code.focus.split(':')[3].split('-')
                     (start,end) = (int(start),int(end))
                     data = [[start],[end-start+1]]
                 elif focus_type == "gene":
-                    (endpoint,bytecode) = api.get_endpoint(chrom,"gene-pc-fwd",code.pane[0],code.focus)
-                    parts = split_ep(endpoint)
-                    parts[1] = "feat"
+                    pass
                 else:
                     bytecode = "none"    
             else:
@@ -176,7 +176,9 @@ def bulk_data3(spec):
         elif parts[0] == 'transcript':
             (data,got_leaf) = sources.gene.transcript(chrom,leaf,parts[1],parts[2],parts[3]=='seq',parts[4]=='names')
         elif parts[0] == 'gene':
-            if parts[4] == 'names' or parts[1] == 'feat':
+            if parts[1] == 'feat':
+                (data,got_leaf) = sources.gene.gene(chrom,leaf,parts[1],parts[2],parts[4] == 'names',focus_id)
+            elif parts[4] == 'names':
                 (data,got_leaf) = sources.gene.gene(chrom,leaf,parts[1],parts[2],parts[4] == 'names')
             else:
                 (data,got_leaf) = sources.gene.gene_shimmer(chrom,leaf,parts[1],parts[2])

@@ -1,10 +1,4 @@
 gene-shimmer: |
-    ; are we the focus track?
-    const #97, [0]
-    get #97, #4, #97
-    const #98, [2]
-    eq #97, #97, #98
-    ;
     plot #62, #0
     const #63, [1]
     get #61, #62, #63
@@ -214,6 +208,8 @@ gene: |
     const #202, [1]
     asset #204, #201, #202
     image #200, #203, #204, #201
+    cprint #1
+    cprint #2
     move #100, #1
     const #101, [0]
     eq #102, #4, #101

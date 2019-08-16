@@ -61,7 +61,7 @@ class BAISGeneTranscript(object):
             dir_ = 0
         return ([starts,lens,senses,[colour,dir_]],leaf)
 
-    def gene(self,chrom,leaf,type_,dir_,get_names):        
+    def gene(self,chrom,leaf,type_,dir_,get_names,focus=None):        
         path = chrom.file_path("genes_and_transcripts","canonical.bb")
         data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         out_starts = []
@@ -93,6 +93,8 @@ class BAISGeneTranscript(object):
             if type_ == 'feat':
                 colour = 2
                 dir_ = ("fwd" if strand == '+' else "rev")
+                if focus != gene_id:
+                    continue
             else:
                 if (strand == '+') != (dir_ == 'fwd'):
                     continue
@@ -119,6 +121,12 @@ class BAISGeneTranscript(object):
             dir_ = 1
         else:
             dir_ = 0
+        if focus != None:
+            print([
+                out_starts,out_lens,{ "string": names },[colour,dir_], # 1-4
+                { "string": ids },strands,{ "string": biotypes },{ "string": prestiges}, #5-8
+                { "string": trans_ids }, { "string": ids_disp }, { "string": trans_ids_disp }], #9-11
+                leaf)
         return ([
                 out_starts,out_lens,{ "string": names },[colour,dir_], # 1-4
                 { "string": ids },strands,{ "string": biotypes },{ "string": prestiges}, #5-8
