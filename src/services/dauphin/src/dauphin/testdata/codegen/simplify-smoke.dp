@@ -6,4 +6,4 @@ func eq(number,number) becomes boolean;
 inline ":=" assign left 14;
 inline "==" eq left 5;
 
-x := B { x: A { a: 1, b: true }, y: A { a: 2, b: false }};
+x := B { x: A { a: 1, b: true }, y: A { a: 2, b: false }}.x;

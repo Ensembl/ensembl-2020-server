@@ -61,6 +61,12 @@ impl Simplify {
                 self.types.apply_command(input,ds)?;
                 self.ctor_struct(ds,out,ins)
             },
+            Instruction::SValue(field,name,out,in_) if *name == self.name => {
+                let struct_ = ds.get_struct(&name).unwrap();
+                let pos = struct_.get_names().iter().position(|v| v == field).unwrap();
+                let inreg = self.get_regs(ds,in_).iter().enumerate().find(|(i,_)| *i==pos).map(|(_,v)| v).unwrap().clone();
+                vec![Instruction::Copy(out.clone(),inreg)]
+            },
             Instruction::Proc(name,ref regs) => {
                 // XXX to avoid type checking of instruction revealing longer arg list
                 let instr = Instruction::Proc(name.to_string(),self.horizontal(regs)).clone();
