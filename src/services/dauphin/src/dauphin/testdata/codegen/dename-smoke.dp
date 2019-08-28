@@ -1,0 +1,8 @@
+proc assign(out _A, _A);
+inline ":=" assign left 14;
+
+x := 1;
+y := true;
+x := true;
+y := 0;
+y := x;

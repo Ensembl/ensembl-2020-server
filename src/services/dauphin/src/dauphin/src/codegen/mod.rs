@@ -1,5 +1,6 @@
 mod definition;
 mod definitionstore;
+mod dename;
 mod destructure;
 mod generate;
 mod instruction;

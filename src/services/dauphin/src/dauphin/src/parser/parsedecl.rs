@@ -76,12 +76,7 @@ pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Sig,Par
         }
     }
     let fromsig = parse_typesig(lexer,defstore)?;
-    let (fromsig,lvalue) = if lvalue {
-        if get_identifier(lexer)? != "becomes" {
-            return Err(ParseError::new("missing 'becomes'",lexer));
-        }
-        (fromsig,Some(parse_typesigexpr(lexer,defstore)?))
-    } else if out {
+    let (fromsig,lvalue) = if out {
         (TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())),Some(fromsig.expr().clone()))
     } else {
         (fromsig,None)

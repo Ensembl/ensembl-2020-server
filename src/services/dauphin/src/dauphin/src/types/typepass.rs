@@ -55,7 +55,7 @@ impl TypePass {
         }
     }
 
-    fn extract_sig_regs(&mut self,instr: &Instruction, defstore: &DefStore) -> Result<Vec<(Sig,Register)>,String> {
+    pub fn extract_sig_regs(&mut self,instr: &Instruction, defstore: &DefStore) -> Result<Vec<(Sig,Register)>,String> {
         match instr {
             Instruction::Proc(name,regs) => TypePass::extract_proc_sig_regs(name,defstore,regs),
             Instruction::NumberConst(reg,_) => Ok(vec![(sig_gen("out number",defstore)?,reg.clone())]),
@@ -105,10 +105,10 @@ impl TypePass {
                 if srcs.len() != intypes.len() {
                     return Err("Incorrect number of arguments".to_string());
                 }
+                out.push((dst_sig,dst.clone()));
                 for (i,intype) in intypes.iter().enumerate() {
                     out.push((Sig::new_right_in(intype),srcs.get(i).unwrap().clone()));
                 }
-                out.push((dst_sig,dst.clone()));
                 Ok(out)
             },
             Instruction::SValue(field,stype,dst,src) => {
@@ -191,6 +191,7 @@ impl TypePass {
                 if srcs.len() != intypes.len() {
                     return Err("Incorrect number of arguments".to_string());
                 }
+                out.push((dst_sig,dst.clone()));
                 for (i,intype) in intypes.iter().enumerate() {
                     out.push((
                         Sig {
@@ -200,14 +201,16 @@ impl TypePass {
                         srcs.get(i).unwrap().clone()
                     ));
                 }
-                out.push((dst_sig,dst.clone()));
                 Ok(out)
             },
             Instruction::Copy(dst,src) => Ok(vec![
                 (sig_gen("out _A",defstore)?,dst.clone()),
                 (sig_gen("_A",defstore)?,src.clone())
             ]),
-            Instruction::Ref(_,_) => Ok(vec![])
+            Instruction::Ref(dst,src) => Ok(vec![
+                (sig_gen("out lvalue _ becomes _A",defstore)?,dst.clone()),
+                (sig_gen("_A",defstore)?,src.clone())
+            ])
         }
     }
 
