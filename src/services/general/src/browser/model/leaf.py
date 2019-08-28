@@ -3,6 +3,7 @@ import math
 class Leaf(object):
     def __init__(self,universe,stick,pane):
         self.sticks = universe.get_sticks()
+        self.pane = pane
         self._calc_bp_px(pane[0])
         self.leaf_range = self._calc_leaf_range(stick,pane)
         self._burst_leaf()

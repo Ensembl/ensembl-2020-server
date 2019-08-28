@@ -1,0 +1,1203 @@
+gene-shimmer: |
+    ; are we the focus track?
+    const #97, [0]
+    get #97, #4, #97
+    const #98, [2]
+    eq #97, #97, #98
+    ;
+    plot #62, #0
+    const #63, [1]
+    get #61, #62, #63
+    const #60, [0.5]
+    mul #61, #61, #60
+    const #63, [0]
+    get #60, #62, #63
+    add #60, #60, #61
+    const #62, [-3]
+    add #44, #60, #62
+    const #15, [183,192,200,   111,129,144,     0,153,255]
+    const #16, [3]
+    const #96, [0]
+    get #96, #4, #96
+    pick #15, #96, #15, #16
+    const #5, [6]
+    const #10, [1,1]
+    shape #10, #1, #2, #44, #5, #15
+    ; draw chevrons
+    const #96, {"chevron-left"}
+    const #98, [0]
+    asset #90, #96, #98
+    const #98, [1]
+    asset #91, #96, #98
+    image #90, #90, #91, #96
+    const #96, {"chevron-right"}
+    const #98, [0]
+    asset #92, #96, #98
+    const #98, [1]
+    asset #91, #96, #98
+    image #98, #92, #91, #96
+    const #6, [0]
+    const #7, [14]
+    const #8, [0]
+    const #100, [1]
+    const #101, [0]
+    const #102, [60]
+    const #107, [1]
+    get #107, #4, #107
+    const #100, [1]
+    eq #107, #107, #100
+    const #100, [1]
+    elide #101, #107, #100
+    runs #100, #101, #102
+    const #101, [50]
+    mul #100, #100, #101
+    const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
+    shape #41, #100, #8, #60, #7, #98
+    const #107, [1]
+    get #107, #4, #107
+    const #100, [0]
+    eq #107, #107, #100
+    const #101, [1]
+    elide #101, #107, #101
+    runs #100, #101, #102
+    const #101, [50]
+    mul #100, #100, #101
+    shape #41, #100, #8, #60, #7, #90
+    ; draw feature line
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
+    const #12, [1.0]
+    const #13, [17]
+    const #14, [0]
+    const #11, [173,37,0]
+    const #201, {"dotted-line"}
+    const #202, [0]
+    asset #203, #201, #202
+    const #202, [1]
+    asset #204, #201, #202
+    image #200, #203, #204, #201
+    move #100, #1
+    const #101, [2]
+    eq #102, #4, #101
+    const #101, [1]
+    elide #100, #97, #101
+    const #12, [2]
+    const #14, [0]
+    shape #45, #100, #12, #13, #14, #200
+    move #100, #1
+    add #100, #100, #2
+    const #101, [2]
+    eq #102, #97, #101
+    const #101, [1]
+    elide #100, #102, #101
+    shape #45, #100, #12, #13, #14, #200
+    ; track zmenu
+    const #98, {"[Genes]"}
+    const #99, {"genes"}
+    ztmplspec #99, #98
+    const #98, {"genes"}
+    const #99, {"internal:track:gene"}
+    ztmpl #99, #98
+    const #100, [0,2, 1,2,0,0, 0,0,2,2, 3]
+    const #101, [0]
+    const #105, {"internal:track:gene"}
+    shape #100, #101, #101, #4, #5, #105        
+    ; draw track label
+    const #99, {"label"}
+    setpart #99
+    const #20, {"Lato"}
+    const #44, {"Contigs"}
+    const #21, [10,0,111,129,144,255,255,255]
+    text2 #12, #20, #21, #44
+    plot #62, #0
+    const #63, [0]
+    get #60, #62, #63
+    const #5, [3,0,1,1,0,1,0,0,1,0,0]
+    const #6, [0]
+    const #7, [2]
+    const #8, [30]
+    shape #5, #6, #8, #60, #7, #12
+
+gene: |
+    ;;; focus gene filter
+    ; are we the focus track?
+    const #97, [0]
+    get #97, #4, #97
+    const #98, [2]
+    eq #97, #97, #98
+    ; build bool for objects
+    getfocus #103
+    streq #104, #5, #103
+    ; flip if not focus
+    eq #104, #104, #97
+    ; filter
+    const #103, [1]
+    elide #1, #104, #103
+    elide #2, #104, #103
+    elidestr #3, #104, #103
+    elidestr #5, #104, #103
+    elide #6, #104, #103
+    elidestr #7, #104, #103
+    elidestr #8, #104, #103
+    elidestr #9, #104, #103
+    elidestr #10, #104, #103
+    elidestr #11, #104, #103
+    ; chevron dir
+    ; a. if not feat track set to dir
+    const #107, [1]
+    get #107, #4, #107
+    const #108, [0]
+    eq #108, #97, #108
+    mul #107, #107, #108
+    add #12, #107, #12
+    ; b. if feat track set to feat strand
+    mul #109, #6, #97
+    const #110, [0]
+    add #110, #110, #109
+    add #12, #110, #12
+    ;
+    plot #62, #0
+    const #63, [1]
+    get #61, #62, #63
+    const #60, [0.5]
+    mul #61, #61, #60
+    const #63, [0]
+    get #60, #62, #63
+    add #60, #60, #61
+    const #62, [-2]
+    add #60, #60, #62
+    ; draw genes
+    const #15, [183,192,200,   111,129,144,   0,153,255]
+    const #16, [3]
+    const #94, [0]
+    get #94, #4, #94
+    pick #15, #94, #15, #16
+    const #25, [4]
+    const #46, [1,1]
+    shape #46, #1, #2, #60, #25, #15
+    ; gene zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
+    ztmplspec #99, #98
+    ztmpl #9, #99
+    const #98, {"tr_id"}
+    zmenu #9, #98, #11
+    const #98, {"strand"}
+    const #99, {"","reverse strand", "forward strand"}
+    const #94, [1]
+    picks #99, #6, #99, #94
+    zmenu #9, #98, #99
+    const #98, {"biotype"}
+    zmenu #9, #98, #7
+    const #98, {"prestige"}
+    zmenu #9, #98, #8
+    zassoc #5, #9
+    ; gene zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #5, #99
+    const #98, {"symbol"}
+    zmenu #5, #98, #3
+    const #98, {"id"}
+    zmenu #5, #98, #10
+    ; gene zmenus: draw
+    const #46, [1,2]
+    shape #46, #1, #2, #60, #25, #9
+    ; draw feature line
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
+    const #43, [1.0]
+    const #13, [17]
+    const #14, [0]
+    const #201, {"dotted-line"}
+    const #202, [0]
+    asset #203, #201, #202
+    const #202, [1]
+    asset #204, #201, #202
+    image #200, #203, #204, #201
+    move #100, #1
+    const #101, [0]
+    eq #102, #4, #101
+    const #101, [1]
+    elide #100, #97, #101
+    const #43, [2]
+    const #14, [0]
+    shape #45, #100, #43, #13, #14, #200
+    move #100, #1
+    add #100, #100, #2
+    const #101, [0]
+    eq #102, #4, #101
+    const #101, [1]
+    elide #100, #97, #101
+    shape #45, #100, #43, #13, #14, #200
+    ; draw chevrons
+    const #97, {"chevron-left"}
+    const #98, [0]
+    asset #90, #97, #98
+    const #98, [1]
+    asset #91, #97, #98
+    image #90, #90, #91, #97
+    const #97, {"chevron-right"}
+    const #98, [0]
+    asset #92, #97, #98
+    const #98, [1]
+    asset #91, #97, #98
+    image #98, #92, #91, #97
+    const #6, [0]
+    const #7, [14]
+    const #8, [0]
+    const #100, [1]
+    const #101, [0]
+    const #102, [60]
+    const #100, [2]
+    eq #107, #12, #100
+    const #100, [1]
+    elide #101, #107, #100
+    runs #100, #101, #102
+    const #101, [50]
+    mul #100, #100, #101
+    const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
+    shape #41, #100, #8, #60, #7, #98
+    const #100, [1]
+    eq #107, #12, #100
+    const #101, [1]
+    elide #101, #107, #101
+    runs #100, #101, #102
+    const #101, [50]
+    mul #100, #100, #101
+    shape #41, #100, #8, #60, #7, #90
+    ; draw gene names
+    const #99, {"names"}
+    setpart #99
+    const #20, {"Lato"}
+    const #21, [10,0,111,129,144,255,255,255]
+    text2 #40, #20, #21, #3
+    const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
+    const #6, [0]
+    const #7, [14]
+    const #8, [0]
+    shape #41, #1, #8, #60, #7, #40
+    ; draw track label
+    const #99, {"label"}
+    setpart #99
+    const #20, {"Lato"}
+    const #44, {"Genes"}
+    const #21, [10,0,111,129,144,255,255,255]
+    text2 #43, #20, #21, #44
+    plot #62, #0
+    const #63, [0]
+    get #60, #62, #63
+    const #25, [3,0,1,1,0,1,0,0,1,0,0]
+    const #6, [0]
+    const #7, [2]
+    const #8, [30]
+    shape #25, #6, #8, #60, #7, #43
+
+transcript: |
+    ; *** FROM SERVER ***
+    ;  #1 starts
+    ;  #2 number of parts
+    ;  #3 part pattern
+    ;  #4 UTR lengths
+    ;  #5 exon lengths
+    ;  #6 intron lengths
+    ;  #7 gene names
+    ;  #8 [colour, direction]
+    ;  #9 transcript length
+    ; #10 ids
+    ; #11 strands
+    ; #12 biotypes
+    ; #13 prestiges
+    ; #14 trans ids
+    ; #15 display ids
+    ; #16 display transcript ids
+    ;
+    ; *** ESTABLISH Y-POSITION ***
+    ; USES: none
+    ; OUT: #60
+    ; TMP: #61, #62, #63
+    ;
+    plot #62, #0
+    const #63, [1]
+    get #61, #62, #63
+    const #60, [0.5]
+    mul #61, #61, #60
+    const #63, [0]
+    get #60, #62, #63
+    add #60, #60, #61
+    const #62, [0]
+    add #60, #60, #62
+    ;
+    ; *** FEATURE OBJECTS ***
+    ;
+    ; are we the focus track?
+    const #97, [0]
+    get #97, #8, #97
+    const #98, [2]
+    eq #97, #97, #98
+    ; build bool for objects
+    getfocus #103
+    streq #104, #10, #103
+    ; flip if not focus
+    eq #104, #104, #97
+    ; build part pattern bool
+    runsof #105, #2, #104
+    ; filter
+    const #103, [1]
+    elide #1, #104, #103
+    elide #2, #104, #103
+    ; part pattern for UTRs (#108), exons (#109), introns (#110)
+    const #106, [0]
+    eq #107, #3, #106
+    move #108, #105
+    elide #108, #107, #103
+    const #106, [1]
+    eq #107, #3, #106
+    move #109, #105
+    elide #109, #107, #103
+    const #106, [2]
+    eq #107, #3, #106
+    move #110, #105
+    elide #110, #107, #103
+    elide #3, #105, #103
+    elide #4, #108, #103
+    elide #5, #109, #103
+    elide #6, #110, #103
+    elidestr #7, #104, #103
+    elide #9, #104, #103
+    elidestr #10, #104, #103
+    elide #11, #104, #103
+    elidestr #12, #104, #103
+    elidestr #13, #104, #103
+    elidestr #14, #104, #103
+    elidestr #15, #104, #103
+    elidestr #16, #104, #103
+    ; chevron dir
+    ; a. if not feat track set to dir
+    const #107, [1]
+    get #107, #8, #107
+    const #108, [0]
+    eq #108, #97, #108
+    mul #107, #107, #108
+    add #96, #107, #96
+    ; b. if feat track set to feat strand
+    mul #109, #11, #97
+    const #110, [0]
+    add #110, #110, #109
+    add #96, #110, #96
+    ;
+    ;
+    ; *** RED DOTTED LINES ***
+    ; Draws red dotted line as textured shape for now (HACK)
+    ; USES: #1 #8 #9
+    ; TMP: #45 #72 #73 #74 #100 #101 #200 #201 #202 #203 #204
+    ;
+    ; (load dotted line asset)
+    const #201, {"dotted-line"}
+    const #202, [0]
+    asset #203, #201, #202
+    const #202, [1]
+    asset #204, #201, #202
+    image #200, #203, #204, #201
+    ; (#100 is #1 if feature track [#8==2] otherwise empty)
+    move #100, #1
+    const #101, [2]
+    eq #102, #8, #101
+    const #101, [1]
+    elide #100, #97, #101
+    ; (draw lhs)
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
+    const #72, [2]
+    const #73, [17]
+    const #74, [0]
+    shape #45, #100, #72, #73, #74, #200
+    ; (draw rhs)
+    add #100, #100, #9
+    shape #45, #100, #72, #73, #74, #200
+    ;
+    ; *** CHEVRONS ***
+    ; USES: #8 #60
+    ; TMP: #41 #90 #91 #92 #93 #98 #100 #101 #102 #107 #117 #118
+    ;
+    ; (load left chevron asset)
+    const #93, {"chevron-left"}
+    const #98, [0]
+    asset #90, #93, #98
+    const #98, [1]
+    asset #91, #93, #98
+    image #90, #90, #91, #93
+    ; (load right chevron asset)
+    const #93, {"chevron-right"}
+    const #98, [0]
+    asset #92, #93, #98
+    const #98, [1]
+    asset #91, #93, #98
+    image #98, #92, #91, #93
+    ; (if right [#8==1], draw right chevrons)
+    const #101, [0]
+    const #102, [60]
+    const #100, [2]
+    eq #107, #96, #100
+    elide #101, #107, #100
+    runs #100, #101, #102
+    const #101, [50]
+    mul #100, #100, #101
+    const #41, [3,0, 1,1,0,1, 0,0,1,11, 3]
+    const #117, [14]
+    const #118, [0]
+    shape #41, #100, #118, #60, #117, #98
+    ; (if left [#8==0], draw left chevrons)
+    const #100, [1]
+    eq #107, #96, #100
+    const #101, [1]
+    elide #101, #107, #101
+    runs #100, #101, #102
+    const #101, [50]
+    mul #100, #100, #101
+    shape #41, #100, #118, #60, #117, #90
+    ;
+    ; *** DRAW ZMENUS ***
+    ; USES: #1 #7 #9 #11 #12 #13 #14 #60
+    ; TMP: #70 #93 #98 #99
+    ;
+    ; zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
+    ztmplspec #99, #98
+    ztmpl #14, #99
+    const #98, {"tr_id"}
+    zmenu #14, #98, #16
+    const #98, {"strand"}
+    const #99, {"","reverse strand", "forward strand"}
+    const #93, [1]
+    picks #99, #11, #99, #93
+    zmenu #14, #98, #99
+    const #98, {"biotype"}
+    zmenu #14, #98, #12
+    const #98, {"prestige"}
+    zmenu #14, #98, #13
+    zassoc #10, #14
+    ; zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #10, #99
+    const #98, {"symbol"}
+    zmenu #10, #98, #7
+    const #98, {"id"}
+    zmenu #10, #98, #15
+    ; zmenus: draw
+    const #70, [1,2]
+    const #93, [7]
+    shape #70, #1, #9, #60, #93, #14
+    ;
+    ; *** BURST X START POSITIONS ***
+    ; Use input data to generate list of start positions. Accumulate lengths
+    ; so that 1st = len(1st), 2nd = len(1st)+len(2nd), 3rd=len(1st)+len(2nd)+len(3rd),.... 
+    ; Then subtract from self so that 1st = 0, 2nd = len(1st), 3rd=len(1st)+len(2nd),....
+    ; Then add in global start
+    ; 
+    ; USES: #1 #2 #3 #4 #5 #6
+    ; TMP: #30 #72 #73
+    ; OUT: #31 #74
+    ;
+    runsof #30, #2, #1
+    merge #31, #3, #4, #5, #6
+    accn #72, #31, #2
+    add #73, #30, #72
+    const #74, [-1]
+    mul #74, #31, #74
+    add #74, #73, #74
+    ;
+    ; *** CALCULATE COLOUR ***
+    ; based on track (#8)
+    ;
+    ; USES: #8
+    ; TMP: #76 #100
+    ; OUT: #75
+    ;
+    const #75, [183,192,200,   111,129,144,   0,153,255]
+    const #76, [3]
+    const #100, [0]
+    get #100, #8, #100
+    pick #75, #100, #75, #76
+    ;
+    ; *** DRAW UTR ***
+    ; 
+    ; USES: #3 #31 #60 #74 #74
+    ; TMP: #76 #29 #30 #56 #70
+    ; OUT: #72 #73
+    ;
+    const #30, [2,1]
+    move #72, #60
+    const #56, [-4]
+    add #72, #72, #56
+    const #73, [7]
+    const #76, [0]
+    eq #76, #3, #76
+    move #29, #74
+    const #56, [1]
+    elide #29, #76, #56
+    move #70, #31
+    elide #70, #76, #56
+    shape #30, #29, #70, #72, #73, #75
+    ;
+    ; *** DRAW EXON ***
+    ; 
+    ; USES: #3 #31 #60 #72 #73 #74 #75
+    ; TMP: #29 #30 #56 #70 #76
+    ;
+    const #30, [1,1]
+    const #76, [1]
+    eq #76, #3, #76
+    move #29, #74
+    const #56, [1]
+    elide #29, #76, #56
+    move #70, #31
+    elide #70, #76, #56
+    shape #30, #29, #70, #72, #73, #75
+    ;
+    ; *** DRAW INTRON ***
+    ; 
+    ; USES: #3 #31 #60 #74 #75
+    ; TMP: #29 #30 #56 #70 #72 #73 #76
+    ;
+    const #30, [1,1]
+    const #76, [2]
+    move #72, #60
+    const #56, [-1]
+    add #72, #72, #56
+    const #73, [1]
+    eq #76, #3, #76
+    move #29, #74
+    const #56, [1]
+    elide #29, #76, #56
+    move #70, #31
+    elide #70, #76, #56
+    shape #30, #29, #70, #72, #73, #75
+    ;
+    ; *** DRAW LABEL ***
+    ;
+    ; USES: #1 #7 #60
+    ; TMP: #20 #21 #40 #41 #47 #48 #99
+    ;
+    const #99, {"names"}
+    setpart #99
+    const #20, {"Lato"}
+    const #21, [10,0,96,96,96,255,255,255]
+    text2 #40, #20, #21, #7
+    const #41, [3,0, 0,1,0,1, 0,0,1,0, 0]
+    const #47, [14]
+    const #48, [0]
+    shape #41, #1, #48, #60, #47, #40        
+    ;
+    ; *** DRAW TRACK LABEL ***
+    ;
+    ; USES: none
+    ; TMP: #5 #6 #20 #21 #29 #44 #60 #62 #63 #70 #72 #99
+    ;
+    const #99, {"label"}
+    setpart #99
+    const #20, {"Lato"}
+    const #44, {"Transcripts"}
+    const #21, [10,0,111,129,144,255,255,255]
+    text2 #72, #20, #21, #44
+    plot #62, #0
+    const #63, [0]
+    get #60, #62, #63
+    const #5, [3,0,1,1,0,1,0,0,1,0,0]
+    const #6, [0]
+    const #29, [2]
+    const #70, [30]
+    shape #5, #6, #70, #60, #29, #72
+
+gene-empty-box: |
+    ; *** FROM SERVER ***
+    ;  #1 starts
+    ;  #2 number of parts
+    ;  #3 part pattern
+    ;  #4 UTR lengths
+    ;  #5 exon lengths
+    ;  #6 intron lengths
+    ;  #7 gene names
+    ;  #8 [colour, direction]
+    ;  #9 transcript length
+    ; #10 ids
+    ; #11 strands
+    ; #12 biotypes
+    ; #13 prestiges
+    ; #14 trans ids
+    ;
+    ;
+    ; *** FEATURE OBJECTS ***
+    ;
+    ; are we the focus track?
+    const #97, [0]
+    get #97, #8, #97
+    const #98, [2]
+    eq #97, #97, #98
+    ; build bool for objects
+    getfocus #103
+    streq #104, #10, #103
+    ; flip if not focus
+    eq #104, #104, #97
+    ; build part pattern bool
+    runsof #105, #2, #104
+    ; filter
+    const #103, [1]
+    elide #1, #104, #103
+    elide #2, #104, #103
+    ; part pattern for UTRs (#108), exons (#109), introns (#110)
+    const #106, [0]
+    eq #107, #3, #106
+    move #108, #105
+    elide #108, #107, #103
+    const #106, [1]
+    eq #107, #3, #106
+    move #109, #105
+    elide #109, #107, #103
+    const #106, [2]
+    eq #107, #3, #106
+    move #110, #105
+    elide #110, #107, #103
+    elide #3, #105, #103
+    elide #4, #108, #103
+    elide #5, #109, #103
+    elide #6, #110, #103
+    elidestr #7, #104, #103
+    elide #9, #104, #103
+    elidestr #10, #104, #103
+    elide #11, #104, #103
+    elidestr #12, #104, #103
+    elidestr #13, #104, #103
+    elidestr #14, #104, #103
+    elidestr #15, #104, #103
+    elidestr #16, #104, #103
+    ; *** ESTABLISH Y-POSITION ***
+    ; USES: none
+    ; OUT: #60 y-position
+    ; TMP: #61, #62, #63
+    ;
+    plot #62, #0
+    const #63, [1]
+    get #61, #62, #63
+    const #60, [0.5]
+    mul #61, #61, #60
+    const #63, [0]
+    get #60, #62, #63
+    add #60, #60, #61
+    const #62, [-3]
+    add #60, #60, #62
+    ;
+    ; *** RED DOTTED LINES ***
+    ; Draws red dotted line as textured shape for now (HACK)
+    ; USES: #1 #8 #9
+    ; TMP: #45 #72 #73 #74 #100 #101 #200 #201 #202 #203 #204
+    ;
+    ; (load dotted line asset)
+    const #201, {"dotted-line"}
+    const #202, [0]
+    asset #203, #201, #202
+    const #202, [1]
+    asset #204, #201, #202
+    image #200, #203, #204, #201
+    ; (#100 is #1 if feature track [#8==2] otherwise empty)
+    move #100, #1
+    const #101, [2]
+    eq #102, #8, #101
+    const #101, [1]
+    elide #100, #102, #101
+    ; (draw lhs)
+    const #72, [2]
+    const #73, [17]
+    const #74, [0]
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
+    shape #45, #100, #72, #73, #74, #200
+    ; (draw rhs)
+    add #100, #100, #9
+    shape #45, #100, #72, #73, #74, #200
+    ;
+    ; *** BURST X START POSITIONS ***
+    ; Use input data to generate list of start positions. Accumulate lengths
+    ; so that 1st = len(1st), 2nd = len(1st)+len(2nd), 3rd=len(1st)+len(2nd)+len(3rd),.... 
+    ; Then subtract from self so that 1st = 0, 2nd = len(1st), 3rd=len(1st)+len(2nd),....
+    ; Then add in global start
+    ; 
+    ; USES: #1 #2 #3 #4 #5 #6
+    ; TMP: #70 #72 #73
+    ; OUT: #74 #71
+    ;
+    runsof #70, #2, #1
+    merge #71, #3, #4, #5, #6
+    accn #72, #71, #2
+    add #73, #70, #72
+    const #74, [-1]
+    mul #74, #71, #74
+    add #74, #73, #74
+    ;
+    ; *** DRAW ZMENUS ***
+    ; USES: #1 #7 #9 #11 #12 #13 #14 #60
+    ; TMP: #70 #97 #98 #99
+    ;   
+    ; zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
+    ztmplspec #99, #98
+    ztmpl #14, #99
+    const #98, {"tr_id"}
+    zmenu #14, #98, #16
+    const #98, {"strand"}
+    const #99, {"","reverse strand", "forward strand"}
+    const #97, [1]
+    picks #99, #11, #99, #97
+    zmenu #14, #98, #99
+    const #98, {"biotype"}
+    zmenu #14, #98, #12
+    const #98, {"prestige"}
+    zmenu #14, #98, #13
+    zassoc #10, #14
+    ; zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #10, #99
+    const #98, {"symbol"}
+    zmenu #10, #98, #7
+    const #98, {"id"}
+    zmenu #10, #98, #15
+    ; zmenus: draw
+    const #70, [1,2]
+    const #97, [7]
+    shape #70, #1, #9, #60, #97, #14
+    ;
+    ; *** CALCULATE COLOUR ***
+    ; based on track (#8)
+    ;
+    ; USES: #8
+    ; TMP: #76 #100
+    ; OUT: #75
+    ;
+    const #75, [212,217,222,   157,169,180, 112,198,255]
+    const #76, [3]
+    const #100, [0]
+    get #100, #8, #100        
+    pick #75, #100, #75, #76
+    ;
+    ; *** DRAW INTRONS/UTRS ***
+    ; 
+    ; USES: #3 #31 #60 #71 #74 #75
+    ; TMP: #1 #2 #7 #29 #30 #56 #70 #73 #76 #88
+    ; OUT: #72
+    ;
+    ; #76 := (#3 == 0|2) ie intron/utr
+    const #76, [0]
+    eq #29, #3, #76
+    const #76, [2]
+    eq #76, #3, #76
+    or #76, #76, #29
+    move #7, #74
+    const #56, [1]
+    elide #7, #76, #56
+    move #88, #71
+    elide #88, #76, #56
+    runs #29, #7, #88
+    const #1, [-0.45]
+    add #29, #29, #1
+    const #2, [0.9]
+    const #70, [2,1]
+    move #72, #60
+    const #73, [6]
+    shape #70, #29, #2, #72, #73, #75
+    ;
+    ; *** DRAW EXONS ***
+    ; 
+    ; USES: #3 #8 #75 #31 #60 #71 #72 #74
+    ; TMP: #1 #2 #7 #29 #30 #56 #70 #73 #76 #88 #100
+    ; DESTROYS: #2 #8 #75
+    ;
+    ; colours based on track type
+    const #75, [183,192,200,   111,129,144,  0,153,255]
+    const #76, [3]
+    const #100, [0]
+    get #100, #8, #100
+    pick #75, #100, #75, #76
+    ; #76 := (#3 == 1) ie exon
+    const #76, [1]
+    eq #76, #3, #76
+    move #7, #74
+    const #56, [1]
+    elide #7, #76, #56
+    move #8, #71
+    elide #8, #76, #56
+    runs #29, #7, #8
+    const #1, [-0.45]
+    add #29, #29, #1
+    const #2, [0.9]
+    const #70, [1,1]
+    shape #70, #29, #2, #72, #73, #75
+    ;
+    ; *** DRAW TRACK LABEL ***
+    ;
+    ; USES: none
+    ; TMP: #5 #6 #7 #8 #20 #21 #44 #60 #62 #63 #72 #99
+    ;
+    const #99, {"label"}
+    setpart #99
+    const #20, {"Lato"}
+    const #44, {"Transcripts and Sequence"}
+    const #21, [10,0,111,129,144,255,255,255]
+    text2 #72, #20, #21, #44
+    plot #62, #0
+    const #63, [0]
+    get #60, #62, #63
+    const #5, [3,0,1,1,0,1,0,0,1,0,0]
+    const #6, [0]
+    const #7, [2]
+    const #8, [30]
+    shape #5, #6, #8, #60, #7, #72
+
+gene-letterbox: |
+    ; *** FROM SERVER ***
+    ;  #1 starts
+    ;  #2 number of parts
+    ;  #3 part pattern
+    ;  #4 UTR lengths
+    ;  #5 exon lengths
+    ;  #6 intron lengths
+    ;  #7 gene names
+    ;  #8 [colour, direction]
+    ;  #9 transcript length
+    ; #17 sequence text
+    ; #18 sequence starts
+    ;
+    ;
+    ; *** FEATURE OBJECTS ***
+    ;
+    ; are we the focus track?
+    const #97, [0]
+    get #97, #8, #97
+    const #98, [2]
+    eq #97, #97, #98
+    ; build bool for objects
+    getfocus #103
+    streq #104, #10, #103
+    ; flip if not focus
+    eq #104, #104, #97
+    ; build part pattern bool
+    runsof #105, #2, #104
+    ; filter
+    const #103, [1]
+    elide #1, #104, #103
+    elide #2, #104, #103
+    ; part pattern for UTRs (#108), exons (#109), introns (#110)
+    const #106, [0]
+    eq #107, #3, #106
+    move #108, #105
+    elide #108, #107, #103
+    const #106, [1]
+    eq #107, #3, #106
+    move #109, #105
+    elide #109, #107, #103
+    const #106, [2]
+    eq #107, #3, #106
+    move #110, #105
+    elide #110, #107, #103
+    elide #3, #105, #103
+    elide #4, #108, #103
+    elide #5, #109, #103
+    elide #6, #110, #103
+    elidestr #7, #104, #103
+    elide #9, #104, #103
+    elidestr #10, #104, #103
+    elide #11, #104, #103
+    elidestr #12, #104, #103
+    elidestr #13, #104, #103
+    elidestr #14, #104, #103
+    elidestr #15, #104, #103
+    elidestr #16, #104, #103
+    ; chevron dir
+    ; a. if not feat track set to dir
+    const #107, [1]
+    get #107, #8, #107
+    const #108, [0]
+    eq #108, #97, #108
+    mul #107, #107, #108
+    add #96, #107, #96
+    ; b. if feat track set to feat strand
+    mul #109, #11, #97
+    add #96, #109, #96
+    ; *** ESTABLISH Y-SCALE ***
+    ; so boxes grow
+    ;
+    ; USES:
+    ; TMP: #19 #55 #56
+    ; OUT: #53
+    const #56, [
+         12, 24, 24, 24, 24, 24, 24, 24, 24, 24
+    ]
+    scale #55
+    const #19, [-16]
+    add #55, #55, #19
+    get #53, #56, #55
+    ; *** ESTABLISH Y-POSITION ***
+    ; USES: #53
+    ; OUT: #22 #60
+    ; TMP: #61 #62 #63
+    ;
+    plot #62, #0
+    const #63, [1]
+    get #61, #62, #63
+    const #60, [0.5]
+    mul #61, #61, #60
+    const #63, [0]
+    get #60, #62, #63
+    add #60, #60, #61
+    const #22, [-0.5]
+    mul #62, #53, #22
+    add #22, #60, #62
+    ;
+    ; *** RED DOTTED LINES ***
+    ; Draws red dotted line as textured shape for now (HACK)
+    ; USES: #1 #8 9#
+    ; TMP: #45 #100 #101 #112 #113 #114 #200 #201 #202 #203 #204
+    ;
+    ; (load dotted line asset)
+    const #201, {"dotted-line"}
+    const #202, [0]
+    asset #203, #201, #202
+    const #202, [1]
+    asset #204, #201, #202
+    image #200, #203, #204, #201
+    ; (#100 is #1 if feature track [#8==2] otherwise empty)
+    move #100, #1
+    const #101, [2]
+    eq #102, #8, #101
+    const #101, [1]
+    elide #100, #102, #101
+    ; (draw lhs)
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
+    const #112, [1.0]
+    const #113, [17]
+    const #114, [0]
+    shape #45, #100, #112, #113, #114, #200
+    ; (draw rhs)
+    add #100, #100, #9
+    shape #45, #100, #112, #113, #114, #200
+    ;
+    ; *** DRAW ZMENUS ***
+    ; USES: #1 #7 #9 #11 #12 #13 #14 #60
+    ; TMP: #70 #97 #98 #99
+    ;   
+    ; zmenus: transcript data
+    const #98, {"[<light>Transcript</light> <strong>{tr_id}</strong>] [<light>{biotype}</light>] [<light>{strand}</light>] / [<light><focus>{tr_id}</focus></light>] [<light>{prestige}</light>]"}
+    const #99, {"transcript"}
+    ztmplspec #99, #98
+    ztmpl #14, #99
+    const #98, {"tr_id"}
+    zmenu #14, #98, #16
+    const #98, {"strand"}
+    const #99, {"","reverse strand", "forward strand"}
+    const #97, [1]
+    picks #99, #11, #99, #97
+    zmenu #14, #98, #99
+    const #98, {"biotype"}
+    zmenu #14, #98, #12
+    const #98, {"prestige"}
+    zmenu #14, #98, #13
+    zassoc #10, #14
+    ; zmenus: gene data
+    const #98, {"[<light>Gene</light> {symbol}] [<light><focus>{id}</focus></light>]"}
+    const #99, {"gene"}
+    ztmplspec #99, #98
+    ztmpl #10, #99
+    const #98, {"symbol"}
+    zmenu #10, #98, #7
+    const #98, {"id"}
+    zmenu #10, #98, #15
+    ; zmenus: draw
+    const #70, [1,2]
+    const #97, [7]
+    shape #70, #1, #9, #60, #97, #14
+    ;
+    ; *** BURST X START POSITIONS ***
+    ; Use input data to generate list of start positions. Accumulate lengths
+    ; so that 1st = len(1st), 2nd = len(1st)+len(2nd), 3rd=len(1st)+len(2nd)+len(3rd),.... 
+    ; Then subtract from self so that 1st = 0, 2nd = len(1st), 3rd=len(1st)+len(2nd),....
+    ; Then add in global start
+    ; 
+    ; USES: #1 #2 #3 #4 #5 #6
+    ; TMP: #20 #30
+    ; OUT: #74 #31
+    ;
+    runsof #30, #2, #1
+    merge #31, #3, #4, #5, #6
+    accn #74, #31, #2
+    add #20, #30, #74
+    const #74, [-1]
+    mul #74, #31, #74
+    add #74, #20, #74
+    ;
+    ; *** CALCULATE COLOUR ***
+    ; 1. of boxes based on track (#8)
+    ; 2. of exon text
+    ; 3. of intron/utr text
+    ;
+    ; USES: #8
+    ; TMP: #76 #100
+    ; OUT: #41 #42 #75
+    ;
+    ; (1. of boxes based on track)
+    const #75, [183,192,200,   111,129,144,   0,153,255]
+    const #76, [3]
+    const #100, [0]
+    get #100, #8, #100        
+    pick #75, #100, #75, #76
+    ; (2. of exon text)
+    const #41, [12,1,255,255,255,183,192,200,
+                12,1,255,255,255,111,129,144,
+                12,1,255,255,255,0,153,255]
+    const #76, [8]
+    pick #41, #8, #41, #76
+    ; (3. of intron/utr text)
+    const #42, [12,1,183,192,200,255,255,255,
+                12,1,111,129,144,255,255,255,
+                12,1,0,153,255,255,255,255]
+    const #76, [8]
+    const #100, [0]
+    get #100, #8, #100        
+    pick #42, #100, #42, #76
+    ;
+    ; *** DRAW INTRONS/UTRS ***
+    ; 
+    ; USES: #3 #22 #31 #53 #60 #74 #75
+    ; TMP: #1 #2 #19 #20 #30 #55 #56 #76
+    ;
+    ; #76 := (#3 == 0|2) ie intron/utr
+    const #30, [2,1]
+    const #76, [0]
+    eq #20, #3, #76
+    const #76, [2]
+    eq #76, #3, #76
+    or #76, #76, #20
+    move #55, #74
+    const #56, [1]
+    elide #55, #76, #56
+    move #19, #31
+    elide #19, #76, #56
+    runs #20, #55, #19
+    const #1, [-0.45]
+    add #20, #20, #1
+    move #36, #20
+    const #2, [0.9]
+    shape #30, #20, #2, #22, #53, #75
+    ;
+    ; *** DRAW EXON BOXES ***
+    ; 
+    ; USES: #3 #22 #31 #53 #74
+    ; TMP: #1 #2 #19 #20 #30 #55 #56 #76
+    ; OUT: #35
+    ; DESTROYS: #1 #2
+    ;
+    const #76, [1]
+    eq #76, #3, #76
+    move #55, #74
+    const #56, [1]
+    elide #55, #76, #56
+    move #19, #31
+    elide #19, #76, #56
+    runs #20, #55, #19
+    const #1, [-0.45]
+    add #20, #20, #1
+    move #35, #20
+    const #2, [0.9]
+    const #30, [1,1]
+    shape #30, #20, #2, #22, #53, #75
+    ;
+    ; *** EXON TEXTURES ***
+    ; USES: #41
+    ; TMP: #27 #40
+    ; OUT: #29
+    ;
+    const #27, {"A","C","G","T","N"}
+    const #40, {"Lato"}
+    text2 #29, #40, #41, #27
+    ;
+    ; *** SEPARATE STRINGS INTO CHARS ***
+    ; USES: #17
+    ; OUT: #17 #72
+    ; DESTROYS: #17
+    ;
+    lengths #72, #17
+    burst #17, #17
+    ;
+    ; *** EXON TEXT ***
+    ; USES: #17 #18 #22 #27 #29 #35 #53 #72
+    ; TMP: #27 #29 #30 #31 #33 #34 #50 #57 #63 #64
+    ; DESTROYS: #27
+    ;
+    index #57, #17, #27
+    const #30, [1]
+    pick #29, #57, #29, #30
+    const #31, [3,0,0,1,0,1,1,0,1,0,0]
+    runs #27, #18, #72
+    member #34, #27, #35
+    elide #27, #34, #30
+    elide #29, #34, #30
+    move #33, #22
+    const #50, [0.5]
+    mul #63, #53, #50
+    const #50, [2]
+    add #63, #63, #50
+    add #33, #33, #63
+    const #64, [0]
+    shape #31, #27, #64, #33, #64, #29
+    ;
+    ; *** INTRON TEXTURES ***
+    ; USES: #42
+    ; TMP: #27 #40
+    ; OUT: #27 #29
+    ;
+    const #27, {"A","C","G","T","N"}
+    const #40, {"Lato"}
+    text2 #29, #40, #42, #27
+    ;
+    ; *** INTRON TEXT ***
+    ; USES: #17 #18 #22 #27 #29 #53
+    ; TMP: #29 #30 #31 #33 #34 #50 #57 #63 #64
+    ; DESTROYS: #27
+    ;
+    index #57, #17, #27
+    const #30, [1]
+    pick #29, #57, #29, #30
+    const #31, [3,0,0,1,0,1,1,0,1,0,0]
+    runs #27, #18, #72
+    member #34, #27, #36
+    elide #27, #34, #30
+    elide #29, #34, #30
+    move #33, #22
+    const #50, [0.5]
+    mul #63, #53, #50
+    const #50, [2]
+    add #63, #63, #50
+    add #33, #33, #63
+    const #64, [0]
+    shape #31, #27, #64, #33, #64, #29
+     ;
+    ; *** DRAW TRACK LABEL ***
+    ;
+    ; USES: none
+    ; TMP: #5 #6 #7 #8 #20 #21 #44 #60 #62 #63 #99
+    ;   
+    const #99, {"label"}
+    setpart #99
+    const #20, {"Lato"}
+    const #44, {"Transcripts and Sequence"}
+    const #21, [10,0,111,129,144,255,255,255]
+    text2 #22, #20, #21, #44
+    plot #62, #0
+    const #63, [0]
+    get #60, #62, #63
+    const #5, [3,0,1,1,0,1,0,0,1,0,0]
+    const #6, [0]
+    const #7, [2]
+    const #8, [30]
+    shape #5, #6, #8, #60, #7, #22

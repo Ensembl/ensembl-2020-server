@@ -1,7 +1,9 @@
 enabled:
     - main
     - debug
-    - zmenu
+    - trainmanager
+    - train
+#    - cursor
 
 # temporary comments denote work done so far. needs moving to docs when
 # they exist.

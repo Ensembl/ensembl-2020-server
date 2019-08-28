@@ -10,3 +10,5 @@ class BAISources(object):
        self.variant = BAISVariant(variant_files,variant_pattern)
        self.gene = BAISGeneTranscript(seqcache)
 
+    def add_locales(self,chrom,locales):
+        self.gene.add_locales(chrom,locales)

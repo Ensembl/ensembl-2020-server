@@ -7,6 +7,7 @@ variables:
   CONTAINER_IMAGE: $GITLAB_REGISTRY_URL/$GITLAB_REGISTRY_NAMESPACE/ensembl-2020-server:${CI_COMMIT_SHORT_SHA}
   KUBECONFIG: /etc/deploy/config
   DEPLOYENV: dev
+  DOCKER_TLS_CERTDIR: ""
 
 Build e!-Server:
   stage: build_flask
@@ -28,6 +29,28 @@ Build e!-Server:
   only:
   - dev
   - master
+
+Build e!-Server:feature:
+  stage: build_flask
+
+  image: docker
+
+  services:
+    - docker:dind
+
+  script:
+  - feature_branch=${CI_COMMIT_REF_NAME}
+  - feature_tag=${feature_branch#"feature/"}
+  - docker build -t ${CONTAINER_IMAGE}-$feature_tag --no-cache .
+  - docker images
+  - echo "$GITLAB_REGISTRY_TOKEN" | docker login -u "$GITLAB_REGISTRY_USER" --password-stdin https://"$GITLAB_REGISTRY_URL"
+  - cat ~/.docker/config.json
+  - docker push ${CONTAINER_IMAGE}-$feature_tag
+  - docker rmi ${CONTAINER_IMAGE}-$feature_tag
+  - docker logout $GITLAB_REGISTRY_URL
+
+  only:
+  - /^feature\/.*$/
 
 # Deploy Stage 
 Staging:
@@ -97,6 +120,31 @@ Internal:
   - cd ..
   - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
   - sed -i "s/<DEPLOYMNET_ENV>/internal/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - kubectl config view
+  - kubectl config use-context ens-dev-ctx
+  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+
+Feature:
+  stage: deploy
+  image: alpine
+  only:
+  - /^feature\/.*$/
+  before_script:
+  - mkdir -p /etc/deploy
+  - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
+  script:
+  - apk update && apk add --no-cache curl git
+  - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+  - chmod +x ./kubectl
+  - mv ./kubectl /usr/local/bin/kubectl  
+  - feature_branch=${CI_COMMIT_REF_NAME}
+  - feature_tag=${feature_branch#"feature/"}
+  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
+  - cd ensembl-client-caas-deploy
+  - git checkout refactor-manifest
+  - cd ..
+  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}-$feature_tag/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - sed -i "s/<DEPLOYMNET_ENV>/$feature_tag/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
   - kubectl config view
   - kubectl config use-context ens-dev-ctx
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml

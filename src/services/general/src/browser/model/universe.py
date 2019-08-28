@@ -1,12 +1,15 @@
 import os.path, logging, yaml
 
 from .species import Species
+from .locale import Locale
 
 class Universe(object):
     def __init__(self,config_path):
         self.config_path = config_path
         self.species = {}
         self.sticks = {}
+        self.chroms = []
+        self.locale = Locale()
         self.logging = logging.getLogger("general")
         self._load()
         
@@ -19,6 +22,7 @@ class Universe(object):
                 
     def _add_chrom(self,chrom):
         self.sticks[chrom.stick_name] = chrom
+        self.chroms.append(chrom)
         for alias in chrom.aliases:
             self.sticks[alias] = chrom
 
@@ -27,3 +31,6 @@ class Universe(object):
         
     def get_from_stick(self,stick):
         return self.sticks[stick]
+
+    def all_chroms(self):
+        return self.chroms

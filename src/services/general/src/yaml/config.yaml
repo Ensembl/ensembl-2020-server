@@ -1,13 +1,12 @@
 endpoints: endpoints.yaml
-bytecode:
-    - bytecode/variant.yaml
-    - bytecode/framework.yaml
-    - bytecode/contig.yaml
-    - bytecode/gc.yaml
-    - bytecode/gene.yaml
 
-data-url: ./data/1
+api:
+    1: api/1/api.yaml
+    2: api/2/api.yaml
+    3: api/3/api.yaml
+
 debug-url: ./debug
+jumper-url: ./locale
 
 tracks:
     contig:
@@ -24,6 +23,7 @@ tracks:
             - lhs
 
     gene-feat:
+        focus: true
         wire: ff
         letter: G
         position: 0
@@ -76,6 +76,14 @@ tracks:
         position: 7
         parts:
             - label
+
+    none:
+        wire: nn
+        letter: " "
+        porition: 0
+        parts:
+            - label
+            - names
 
 assets:
     chevron-left:

@@ -11,6 +11,7 @@ class Chromosome(object):
         self.stick_name = "{0}:{1}".format(
             species.wire_genome_id,self.name
         )
+        self.species = species
         self.genome_path = species.genome_id
         self.aliases = []
         # HACK for June
@@ -25,3 +26,4 @@ class Chromosome(object):
         if not os.path.exists(path):
             logging.warn("Missing file {0}".format(path))
         return path
+    

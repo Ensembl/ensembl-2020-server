@@ -1,0 +1,19 @@
+none: ""
+region: |
+    ; *** RED DOTTED LINES ***
+    ; (load dotted line asset)
+    const #201, {"dotted-line"}
+    const #202, [0]
+    asset #203, #201, #202
+    const #202, [1]
+    asset #204, #201, #202
+    image #200, #203, #204, #201
+    ; (draw lhs)
+    const #45, [3,0, 0,1,0,1, 1,1,0,2, 0]
+    const #72, [2]
+    const #73, [17]
+    const #74, [0]
+    shape #45, #1, #72, #73, #74, #200
+    ; (draw rhs)
+    add #1, #1, #2
+    shape #45, #1, #72, #73, #74, #200
