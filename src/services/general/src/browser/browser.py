@@ -221,6 +221,10 @@ def browser_config(version):
                 data['data'][name].append(v)
         return jsonify(data)
 
+@bp.route("/browser/config")
+def browser_config_old():
+    return browser_config(1)
+
 @bp.route("/browser/locale/<id_>")
 def browser_locale(id_):
     resp = universe.locale.get_locale(id_)
