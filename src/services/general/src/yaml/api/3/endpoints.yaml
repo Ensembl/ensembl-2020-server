@@ -205,7 +205,8 @@ choice:
                 PP: geneeb-other-rev
                 QZ: genesb-other-rev
 
-        variant:
+    variant:
+        _default:
             _default:
                 PZ: variant-z
                 "NO": variant-y
@@ -217,7 +218,8 @@ choice:
                 EE: variant-s
                 BD: variant-r
 
-        gc:
+    gc:
+        _default:
             _default:
                 AZ: gc
 
