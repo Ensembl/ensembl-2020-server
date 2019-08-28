@@ -101,7 +101,7 @@ def bulk_data(spec):
             chrom = universe.get_from_stick(code.stick)
             leaf = Leaf(universe,code.stick,code.pane)
             api = config.get_api_config(1)
-            (endpoint,bytecode) = api.get_endpoint(chrom,compo,code.pane[0])
+            (endpoint,bytecode) = api.get_endpoint(chrom,compo,code.pane[0],None)
             parts_in = endpoint.split("-")
             parts = [""] * (len(breakdown)+1)
             for (i,flag) in enumerate(parts_in[1:]):
