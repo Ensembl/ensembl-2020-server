@@ -165,22 +165,22 @@ impl TypePass {
             Instruction::RefSquare(dst,src) => {
                 let upstream = self.get_upstream(src)?;
                 let newreg = Register::Left(Box::new(upstream.clone()),"+".to_string());
-                let newtype = ArgumentType::new_left_writeonly(&sig_gen("_A",defstore)?.get_intype().expr(),&newreg);
-                self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype.get_intype());
+                let newtype = ArgumentType::new_left_writeonly(&sig_gen("_A",defstore)?.get_type().expr(),&newreg);
+                self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype.get_type());
                 Ok(vec![
-                    (ArgumentType::new_left_writeonly(&sig_gen("_A",defstore)?.get_intype().expr(),&newreg),dst.clone()),
-                    (ArgumentType::new_left(&sig_gen("vec(_A)",defstore)?.get_intype().expr(),&upstream),src.clone())
+                    (ArgumentType::new_left_writeonly(&sig_gen("_A",defstore)?.get_type().expr(),&newreg),dst.clone()),
+                    (ArgumentType::new_left(&sig_gen("vec(_A)",defstore)?.get_type().expr(),&upstream),src.clone())
                 ])
             },
             Instruction::RefFilter(dst,src,filter) => {
                 let upstream = self.get_upstream(src)?;
                 let newreg = Register::Left(Box::new(upstream.clone()),"f".to_string());
-                let newtype = ArgumentType::new_left_writeonly(&sig_gen("_A",defstore)?.get_intype().expr(),&newreg);
-                self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype.get_intype());
+                let newtype = ArgumentType::new_left_writeonly(&sig_gen("_A",defstore)?.get_type().expr(),&newreg);
+                self.typeinf.add(&Referrer::Register(newreg.clone()),&newtype.get_type());
                 Ok(vec![
-                    (ArgumentType::new_left_writeonly(&sig_gen("_A",defstore)?.get_intype().expr(),&newreg),dst.clone()),
-                    (ArgumentType::new_left(&sig_gen("_A",defstore)?.get_intype().expr(),&upstream),upstream.clone()),
-                    (ArgumentType::new_right(&sig_gen("boolean",defstore)?.get_intype().expr()),filter.clone())
+                    (ArgumentType::new_left_writeonly(&sig_gen("_A",defstore)?.get_type().expr(),&newreg),dst.clone()),
+                    (ArgumentType::new_left(&sig_gen("_A",defstore)?.get_type().expr(),&upstream),upstream.clone()),
+                    (ArgumentType::new_right(&sig_gen("boolean",defstore)?.get_type().expr()),filter.clone())
                 ])
             },
             Instruction::Operator(name,dst,srcs) => {

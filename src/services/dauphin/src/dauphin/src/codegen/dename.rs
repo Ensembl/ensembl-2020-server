@@ -17,7 +17,7 @@ fn find_pure(input: &Vec<Instruction>) -> Result<HashSet<Register>,String> {
     Ok(pures)
 }
 
-/* A write-only register is a pure register used in an out context */
+/* A write-only register is a pure register used in a writeonly context */
 fn find_writeonly(ds: &DefStore, input: &Vec<Instruction>, pures: &HashSet<Register>) -> Result<HashSet<Register>,String> {
     let mut types = TypePass::new(true);
     let mut writeonly = HashSet::new();
@@ -25,10 +25,8 @@ fn find_writeonly(ds: &DefStore, input: &Vec<Instruction>, pures: &HashSet<Regis
         types.apply_command(instr,ds)?;
         print!("{:?} -> {:?}\n",instr,types.extract_sig_regs(instr,ds)?);
         for arg in types.extract_sig_regs(instr,ds)?.each_argument() {
-            if arg.get_type().writeonly {
-                if pures.contains(arg.get_register()) {
-                    writeonly.insert(arg.get_register().clone());
-                }
+            if arg.get_type().get_writeonly() && pures.contains(arg.get_register()) {
+                writeonly.insert(arg.get_register().clone());
             }
         }
     }

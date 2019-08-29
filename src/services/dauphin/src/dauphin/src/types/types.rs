@@ -155,52 +155,47 @@ impl fmt::Debug for TypeSig {
 // TODO fix sig junk
 #[derive(PartialEq, Debug, Clone)]
 pub struct ArgumentType {
-    pub lvalue: Option<TypeSig>,
-    pub writeonly: bool,
-    pub typesig: TypeSig
+    writeonly: bool,
+    sig: TypeSig
 }
 
 impl ArgumentType {
     pub fn new(typesig: &TypeSig) -> ArgumentType {
         ArgumentType {
-            lvalue: None, writeonly: false, typesig: typesig.clone()
+            writeonly: false, sig: typesig.clone()
         }
     }
 
     pub fn new_writeonly(typesig: &TypeSig) -> ArgumentType {
         ArgumentType {
-            lvalue: Some(typesig.clone()), writeonly: true,
-            typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+            writeonly: true, sig: typesig.clone()
         }
     }
 
     pub fn new_left(typesig: &TypeSigExpr, reg: &Register) -> ArgumentType {
         ArgumentType {
-            lvalue: None, writeonly: false,
-            typesig: TypeSig::Left(typesig.clone(),reg.clone())
+            writeonly: false, sig: TypeSig::Left(typesig.clone(),reg.clone())
         }
     }
 
     pub fn new_right(typesig: &TypeSigExpr) -> ArgumentType {
         ArgumentType {
-            lvalue: None, writeonly: false,
-            typesig: TypeSig::Right(typesig.clone())
+            writeonly: false, sig: TypeSig::Right(typesig.clone())
         }
     }
 
     pub fn new_left_writeonly(typesig: &TypeSigExpr, reg: &Register) -> ArgumentType {
         ArgumentType {
-            lvalue: Some(TypeSig::Left(typesig.clone(),reg.clone())), writeonly: true,
-            typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+            sig: TypeSig::Left(typesig.clone(),reg.clone()), writeonly: true
         }
     }
 
     pub fn new_right_writeonly(typesig: &TypeSigExpr) -> ArgumentType {
         ArgumentType {
-            lvalue: Some(TypeSig::Right(typesig.clone())), writeonly: true,
-            typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+            sig: TypeSig::Right(typesig.clone()), writeonly: true
         }
     }
 
-    pub fn get_intype(&self) -> &TypeSig { &self.typesig }
+    pub fn get_type(&self) -> &TypeSig { &self.sig }
+    pub fn get_writeonly(&self) -> bool { self.writeonly }
 }

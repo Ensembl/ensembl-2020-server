@@ -193,9 +193,11 @@ impl TypeInf {
         Referrer::Register(reg.clone())
     }
 
-    pub fn new_temp(&mut self) -> Referrer {
+    pub fn new_temp(&mut self, typesig: &TypeSig) -> Referrer {
         self.next_temp += 1;
-        Referrer::Temporary(self.next_temp)
+        let out = Referrer::Temporary(self.next_temp);
+        self.add(&out,typesig);
+        out
     }
 
     pub fn add(&mut self, reg: &Referrer, typesig: &TypeSig) {
@@ -317,33 +319,27 @@ mod test {
     #[test]
     fn failed_unify() {
         let mut ti = TypeInf::new();
-        let a = ti.new_temp();
-        let b = ti.new_temp();
         let ds = DefStore::new();
-        ti.add(&a,&typesig_gen("string",&ds));
-        ti.add(&b,&typesig_gen("number",&ds));
+        let a = ti.new_temp(&typesig_gen("string",&ds));
+        let b = ti.new_temp(&typesig_gen("number",&ds));
         ti.unify(&a,&b).expect_err("failed_unify");
     }
 
     #[test]
     fn recursive() {
         let mut ti = TypeInf::new();
-        let a = ti.new_temp();
-        let b = ti.new_temp();
         let ds = DefStore::new();
-        ti.add(&a,&typesig_gen("vec(_A)",&ds));
-        ti.add(&b,&typesig_gen("_A",&ds));
+        let a = ti.new_temp(&typesig_gen("vec(_A)",&ds));
+        let b = ti.new_temp(&typesig_gen("_A",&ds));
         ti.unify(&a,&b).expect_err("recursive");
     }
 
     #[test]
     fn identity() {
         let mut ti = TypeInf::new();
-        let a = ti.new_temp();
-        let b = ti.new_temp();
         let ds = DefStore::new();
-        ti.add(&a,&typesig_gen("_A",&ds));
-        ti.add(&b,&typesig_gen("_A",&ds));
+        let a = ti.new_temp(&typesig_gen("_A",&ds));
+        let b = ti.new_temp(&typesig_gen("_A",&ds));
         ti.unify(&a,&b).expect("identity");
     }
 

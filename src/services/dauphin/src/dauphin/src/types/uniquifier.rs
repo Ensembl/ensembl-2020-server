@@ -43,10 +43,13 @@ impl Uniquifier {
         }
     }
 
-    fn unique_member_sig(&mut self, names: &mut HashMap<String,String>, sig: &ArgumentType) -> ArgumentType {
-        let typesig = self.unique_member_typesig(names,&sig.get_intype());
-        let lvalue = sig.lvalue.as_ref().map(|lvalue| self.unique_member_typesig(names,&lvalue));
-        ArgumentType { lvalue, writeonly: sig.writeonly, typesig }
+    fn unique_member_sig(&mut self, names: &mut HashMap<String,String>, in_: &ArgumentType) -> ArgumentType {
+        let sig = self.unique_member_typesig(names,&in_.get_type());
+        if in_.get_writeonly() {
+            ArgumentType::new_writeonly(&sig)
+        } else {
+            ArgumentType::new(&sig)
+        }
     }
 
     pub fn uniquify_sig(&mut self, sig: &SignatureMatch) -> SignatureMatch {
