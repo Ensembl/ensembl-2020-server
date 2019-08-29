@@ -25,12 +25,14 @@ pub fn replace_regs(instr: &Instruction, new: &Vec<Register>) -> Result<Instruct
         Instruction::EValue(field,etype,_,_) => Ok(Instruction::EValue(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
         Instruction::ETest(field,etype,_,_) => Ok(Instruction::ETest(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
         Instruction::RefSValue(field,stype,_,_) => Ok(Instruction::RefSValue(field.to_string(),stype.to_string(),new[0].clone(),new[1].clone())),
+        Instruction::RefSValue2(field,stype,_,_) => Ok(Instruction::RefSValue2(field.to_string(),stype.to_string(),new[0].clone(),new[1].clone())),
         Instruction::RefEValue(field,etype,_,_) => Ok(Instruction::RefEValue(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
         Instruction::RefSquare(_,_) => Ok(Instruction::RefSquare(new[0].clone(),new[1].clone())),
         Instruction::RefFilter(_,_,_) => Ok(Instruction::RefFilter(new[0].clone(),new[1].clone(),new[2].clone())),
         Instruction::Operator(name,_,_) => Ok(Instruction::Operator(name.to_string(),new[0].clone(),new[1..].to_vec())),
         Instruction::Copy(_,_) => Ok(Instruction::Copy(new[0].clone(),new[1].clone())),
         Instruction::Ref(_,_) => Ok(Instruction::Ref(new[0].clone(),new[1].clone())),
+        Instruction::Set(_,_) => Ok(Instruction::Set(new[0].clone(),new[1].clone())),
     }
 }
 

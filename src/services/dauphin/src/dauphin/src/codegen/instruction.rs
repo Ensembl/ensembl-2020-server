@@ -10,7 +10,7 @@ pub enum Instruction {
     SValue(String,String,Register,Register),
     EValue(String,String,Register,Register),
     ETest(String,String,Register,Register),
-    RefSValue(String,String,Register,Register),
+    RefSValue2(String,String,Register,Register),
     RefEValue(String,String,Register,Register),
 
     /* simplify to ??? */
@@ -31,7 +31,12 @@ pub enum Instruction {
     RefFilter(Register,Register,Register),
     At(Register,Register),
     Operator(String,Register,Vec<Register>),
-    Ref(Register,Register)
+
+    Set(Register,Register),
+
+    /* to go */
+    Ref(Register,Register),
+    RefSValue(String,String,Register,Register),
 }
 
 fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {
@@ -83,6 +88,9 @@ impl fmt::Debug for Instruction {
             Instruction::RefSValue(field,name,dst,src) => {
                 fmt_instr(f,&format!("refsvalue:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
+            Instruction::RefSValue2(field,name,dst,src) => {
+                fmt_instr(f,&format!("refsvalue:{}:{}",name,field),&vec![dst,src],&vec![])?
+            },
             Instruction::RefEValue(field,name,dst,src) => {
                 fmt_instr(f,&format!("refevalue:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
@@ -110,6 +118,9 @@ impl fmt::Debug for Instruction {
             Instruction::Copy(dst,src) => {
                 fmt_instr(f,"copy",&vec![dst,src],&vec![])?
             },
+            Instruction::Set(dst,src) => {
+                fmt_instr(f,"set",&vec![dst,src],&vec![])?
+            }
         }
         Ok(())
     }

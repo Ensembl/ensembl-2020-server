@@ -7,8 +7,8 @@ pub struct LexerGetting {
     error: Option<String>
 }
 
-fn identifier_stuff(c: char) -> bool {
-    c.is_alphanumeric() && !c.is_ascii_digit() || c == '_'
+fn identifier_stuff(c: char,initial: bool) -> bool {
+    c.is_alphanumeric() && (!c.is_ascii_digit() || !initial) || c == '_'
 }
 
 impl LexerGetting {
@@ -36,20 +36,22 @@ impl LexerGetting {
         }
     }
 
-    fn advance_char<F>(&mut self, cb: F, allow_bs : bool, stream: &mut dyn CharSource) -> String where F: Fn(char) -> bool {
+    fn advance_char<F>(&mut self, cb: F, allow_bs : bool, stream: &mut dyn CharSource) -> String where F: Fn(char,bool) -> bool {
         let mut out = String::new();
         let mut bs = false;
+        let mut first = true;
         while let Some(c) = stream.peek(1).chars().next() {
             if bs {
                 out.push(c);
                 bs = false;
             } else if allow_bs && c == '\\' {
                 bs = true;
-            } else if cb(c) {
+            } else if cb(c,first) {
                 out.push(c);
             } else {
                 break;
             }
+            first = false;
             stream.advance(1);
         }
         if bs {
@@ -59,12 +61,12 @@ impl LexerGetting {
     }
 
     fn get_identifier(&mut self, stream: &mut dyn CharSource) {
-        let out = self.advance_char(|c| identifier_stuff(c),false,stream);
+        let out = self.advance_char(|c,first| identifier_stuff(c,first),false,stream);
         self.set_token(Token::Identifier(out));
     }
 
     fn get_number(&mut self, stream: &mut dyn CharSource) {
-        let out = self.advance_char(|c| c.is_ascii_digit() || c == '.',false,stream);
+        let out = self.advance_char(|c,_| c.is_ascii_digit() || c == '.',false,stream);
         if let Some(num) = out.parse::<f64>().ok() {
             self.set_token(Token::Number(num,out));
         } else if let Some(num) = out.parse::<i64>().ok() {
@@ -77,7 +79,7 @@ impl LexerGetting {
     fn consume_comment(&mut self, stream: &mut dyn CharSource) {
         stream.advance(2);
         loop {
-            self.advance_char(|c| c != '*',false,stream);
+            self.advance_char(|c,_| c != '*',false,stream);
             let peek = stream.peek(2);
             if peek == "*/" || peek == "*" || peek == "" { break; }
             stream.advance(1);
@@ -88,12 +90,12 @@ impl LexerGetting {
     }
 
     fn consume_to_eol(&mut self, stream: &mut dyn CharSource) {
-        self.advance_char(|c| c != '\n',false,stream);
+        self.advance_char(|c,_| c != '\n',false,stream);
     }
 
     fn consume_string(&mut self, stream: &mut dyn CharSource) {
         stream.advance(1);
-        let out = self.advance_char(|c| c != '"',true,stream);
+        let out = self.advance_char(|c,_| c != '"',true,stream);
         if stream.advance(1) != "\"" {
             self.set_error("Unterminated string literal");
         }
@@ -102,7 +104,7 @@ impl LexerGetting {
 
     fn consume_bytes(&mut self, stream: &mut dyn CharSource) {
         stream.advance(1);
-        let out = self.advance_char(|c| c != '\'',true,stream);
+        let out = self.advance_char(|c,_| c != '\'',true,stream);
         if stream.advance(1) != "'" {
             self.set_error("Unterminated bytes literal");
         }
@@ -123,14 +125,14 @@ impl LexerGetting {
 
     pub fn go(&mut self, stream: &mut dyn CharSource, ops: &InlineTokens, mode: Option<bool>) {
         if let Some(c) = stream.peek(1).chars().next() {
-            if identifier_stuff(c) {
+            if identifier_stuff(c,true) {
                 self.get_identifier(stream);
             } else if c.is_ascii_digit() {
                 self.get_number(stream);
             } else if let Some(op) = self.ops_test(stream,ops,mode) {
                 self.set_token(Token::Operator(op));
             } else if c.is_whitespace() {
-                self.advance_char(|c| c.is_whitespace(),false,stream);
+                self.advance_char(|c,_| c.is_whitespace(),false,stream);
             } else if c == '/' && stream.peek(2) == "/*" {
                 self.consume_comment(stream);
             } else if c == '/' && stream.peek(2) == "//" {

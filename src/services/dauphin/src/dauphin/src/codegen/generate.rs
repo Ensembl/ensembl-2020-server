@@ -45,12 +45,22 @@ impl Generator {
         let mut out = Vec::new();
         for (i,e) in x.iter().enumerate() {
             out.push(if lvalues[i] {
-                self.build_lvalue(defstore,e)?
+                //self.build_lvalue(defstore,e)?
+                self.regalloc.allocate()
             } else {
                 self.build_rvalue(defstore,e,&None)?
             });
         }
         Ok(out)
+    }
+
+    fn map_lvalues_top(&mut self, defstore: &DefStore, x: &Vec<Expression>, regs: &Vec<Register>, lvalues: &Vec<bool>) -> Result<(),String> {
+        for (i,e) in x.iter().enumerate() {
+            if lvalues[i] {
+                self.build_lvalue2(defstore,e,&regs[i])?;
+            }
+        }
+        Ok(())
     }
 
     fn struct_rearrange(&mut self, defstore: &DefStore, s: &str, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
@@ -68,6 +78,48 @@ impl Generator {
         } else {
             Err(format!("no such struct '{}'",s))
         }
+    }
+
+    fn type_of(&mut self, defstore: &DefStore, expr: &Expression) -> Result<TypeSigExpr,String> {
+        Ok(match expr {
+            Expression::Identifier(id) => {
+                self.types.get_typeinf().get_sig(&Referrer::Register(Register::Named(id.to_string()))).expr().clone()
+            },
+            Expression::Dot(x,f) => {
+                if let TypeSigExpr::Base(BaseType::StructType(name)) = self.type_of(defstore,x)? {
+                    if let Some(struct_) = defstore.get_struct(&name) {
+                        if let Some(type_) = struct_.get_member_type(f) {
+                            type_.to_typesigexpr()
+                        } else {
+                            return Err(format!("no such field {:?}",f));
+                        }
+                    } else {
+                        return Err(format!("{:?} is not a structure",expr));
+                    }
+                } else {
+                    return Err(format!("{:?} is not a structure",expr));
+                }
+            },
+            _ => return Err(format!("Cannot type {:?}",expr))
+        })
+    }
+
+    fn build_lvalue2(&mut self, defstore: &DefStore, expr: &Expression, r: &Register) -> Result<(),String> {
+        match expr {
+            Expression::Identifier(id) => {
+                let a = Register::Named(id.to_string());
+                self.add_instr(Instruction::Set(a,r.clone()),defstore)?;
+            },
+            Expression::Dot(x,f) => {
+                if let TypeSigExpr::Base(BaseType::StructType(struct_name)) = self.type_of(defstore,x)? {
+                    let tmp = self.regalloc.allocate();
+                    self.add_instr(Instruction::RefSValue2(f.clone(),struct_name.to_string(),tmp.clone(),r.clone()),defstore)?;
+                    self.build_lvalue2(defstore,x,&tmp)?;
+                }
+            },
+            _ => return Err("Invalid lvalue".to_string())
+        };
+        Ok(())
     }
 
     fn build_lvalue(&mut self, defstore: &DefStore, expr: &Expression) -> Result<Register,String> {
@@ -257,7 +309,8 @@ impl Generator {
         }
         let lvalues : Vec<bool> = procdecl.unwrap().sigs().iter().map(|x| x.lvalue.is_some()).collect();
         let regs : Vec<Register> = self.map_expressions_top(defstore,&stmt.1,&lvalues)?;
-        self.add_instr(Instruction::Proc(stmt.0.to_string(),regs),defstore)?;
+        self.add_instr(Instruction::Proc(stmt.0.to_string(),regs.clone()),defstore)?;
+        self.map_lvalues_top(defstore,&stmt.1,&regs,&lvalues)?;
         Ok(())
     }
 
@@ -288,13 +341,13 @@ mod test {
     fn generate_smoke() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
-        lexer.import("test:codegen/generate-smoke.dp").expect("cannot load file");
+        lexer.import("test:codegen/generate-smoke2.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let regalloc = RegisterAllocator::new();
         let gen = Generator::new(&regalloc);
         let cmds : Vec<String> = gen.go(&defstore,stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
-        let outdata = load_testdata(&["codegen","generate-smoke.out"]).ok().unwrap();
+        let outdata = load_testdata(&["codegen","generate-smoke2.out"]).ok().unwrap();
         assert_eq!(outdata,cmds.join(""));
     }
 }

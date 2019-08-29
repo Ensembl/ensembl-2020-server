@@ -4,7 +4,6 @@ use crate::types::TypePass;
 
 struct Simplify {
     name: String,
-    types: TypePass,
     regalloc: RegisterAllocator,
     regmap: HashMap<Register,Vec<Register>>,
     output: Vec<Instruction>
@@ -17,7 +16,6 @@ impl Simplify {
             regalloc: regalloc.clone(),
             regmap: HashMap::new(),
             output: Vec::new(),
-            types: TypePass::new(false)
         }
     }
 
@@ -55,10 +53,10 @@ impl Simplify {
         output
     }
 
-    fn add(&mut self, ds: &DefStore, input: &Instruction) -> Result<(),String> {
+    fn add(&mut self, ds: &DefStore, typepass: &mut TypePass, input: &Instruction) -> Result<(),String> {
         let mut instrs = match input {
             Instruction::CtorStruct(name,out,ins) if name == &self.name => {
-                self.types.apply_command(input,ds)?;
+                typepass.apply_command(input,ds)?;
                 self.ctor_struct(ds,out,ins)
             },
             Instruction::SValue(field,name,out,in_) if *name == self.name => {
@@ -83,20 +81,20 @@ impl Simplify {
                     }
                     out
                 } else {
-                    self.types.apply_command(input,ds)?;
+                    typepass.apply_command(input,ds)?;
                     vec![Instruction::Copy(dest.clone(),src.clone())]
                 }
             },
             default => {
-                self.types.apply_command(input,ds)?;
+                typepass.apply_command(input,ds)?;
                 vec![default.clone()]
             }
         };
         for instr in &instrs {
-            self.types.apply_command(instr,ds)?;
+            typepass.apply_command(instr,ds)?;
         }
         self.output.extend(instrs.drain(..));
-        print!("\n{:?}\n{:?}\n",self.types,self.output);
+        print!("\n{:?}\n{:?}\n",typepass,self.output);
         Ok(())
     }
 
@@ -104,11 +102,12 @@ impl Simplify {
 }
 
 pub fn simplify(regalloc: &RegisterAllocator, ds: &DefStore, input: &Vec<Instruction>) -> Result<Vec<Instruction>,String> {
+    let mut typepass = TypePass::new(false);
     let mut val = input.to_vec();
     for elim in ds.get_structenum_order().rev() {
         let mut s = Simplify::new(regalloc,elim);
         for instr in val {
-            s.add(ds,&instr)?;
+            s.add(ds,&mut typepass,&instr)?;
         }
         val = s.output();
     }
@@ -121,6 +120,7 @@ mod test {
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };
     use crate::codegen::{ Generator, RegisterAllocator };
+    use super::super::dename;
 
     #[test]
     fn simplify_smoke() {
@@ -132,6 +132,7 @@ mod test {
         let regalloc = RegisterAllocator::new();
         let gen = Generator::new(&regalloc);
         let instrs : Vec<Instruction> = gen.go(&defstore,stmts).expect("codegen");
+        let instrs = dename(&regalloc,&defstore,&instrs).expect("dename");
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));
         let outstrs = simplify(&regalloc,&defstore,&instrs).expect("ok");

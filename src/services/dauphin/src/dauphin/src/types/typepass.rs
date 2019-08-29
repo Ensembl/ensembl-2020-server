@@ -134,6 +134,15 @@ impl TypePass {
                 Ok(vec![(sig_gen("out boolean",defstore)?,dst.clone()),
                         (Sig::new_right_in(&etype),src.clone())])
             },
+            Instruction::RefSValue2(field,stype,dst,src) => {
+                let exprdecl = defstore.get_struct(stype).ok_or_else(|| format!("No such struct {:?}",stype))?;
+                let dtype = exprdecl.get_member_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
+                let stypesig = TypeSigExpr::Base(BaseType::StructType(stype.to_string()));
+                Ok(vec![
+                    (Sig::new_right_in(&dtype.to_typesigexpr()),src.clone()),
+                    (Sig::new_right_out(&stypesig),dst.clone())
+                ])
+            },
             Instruction::RefSValue(field,stype,dst,src) => {
                 let exprdecl = defstore.get_struct(stype).ok_or_else(|| format!("No such struct {:?}",stype))?;
                 let dtype = exprdecl.get_member_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
@@ -212,7 +221,11 @@ impl TypePass {
             Instruction::Ref(dst,src) => Ok(vec![
                 (sig_gen("lvalue _ becomes _A",defstore)?,dst.clone()),
                 (sig_gen("_A",defstore)?,src.clone())
-            ])
+            ]),
+            Instruction::Set(dst,src) => Ok(vec![
+                (sig_gen("out _A",defstore)?,dst.clone()),
+                (sig_gen("_A",defstore)?,src.clone())
+            ]),
         }
     }
 
