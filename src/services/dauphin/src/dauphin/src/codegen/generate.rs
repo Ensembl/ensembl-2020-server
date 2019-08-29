@@ -15,7 +15,7 @@ pub struct Generator {
 impl Generator {
     pub fn new(regalloc: &RegisterAllocator) -> Generator {
         Generator {
-            types: TypePass::new(),
+            types: TypePass::new(true),
             regalloc: regalloc.clone(),
             instrs: Vec::new()
         }

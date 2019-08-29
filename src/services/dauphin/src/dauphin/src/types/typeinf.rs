@@ -195,6 +195,7 @@ impl TypeInf {
     }
 
     pub fn add(&mut self, reg: &Referrer, typesig: &TypeSig) {
+        //print!("ADD {:?} := {:?}\n",reg,typesig);
         self.store.add(reg,typesig);
     }
 
@@ -258,6 +259,7 @@ impl TypeInf {
     }
 
     pub fn unify(&mut self, a_reg: &Referrer, b_reg: &Referrer) -> Result<(),String> {
+        //print!("UNIFY {:?} = {:?}\n",a_reg,b_reg);
         let a_sig = self.get_sig(a_reg).clone();
         let b_sig = self.get_sig(b_reg).clone();
         if let Some((ph,val)) = self.extract_equiv(&a_sig,&b_sig).map_err(|_|

@@ -17,7 +17,7 @@ impl Simplify {
             regalloc: regalloc.clone(),
             regmap: HashMap::new(),
             output: Vec::new(),
-            types: TypePass::new()
+            types: TypePass::new(false)
         }
     }
 

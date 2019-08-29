@@ -15,3 +15,4 @@ pub use self::register::{ Register, RegisterAllocator };
 pub use self::instruction::Instruction;
 pub use self::structenum::{ StructDef, EnumDef };
 pub use self::simplify::simplify; // TODO remove
+pub use self::dename::dename; // TODO remove

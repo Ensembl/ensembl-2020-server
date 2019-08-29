@@ -20,14 +20,16 @@ fn sig_gen(sig: &str,defstore: &DefStore) -> Result<Sig,String> {
 #[derive(Clone)]
 pub struct TypePass {
     uniquifier: Uniquifier,
-    typeinf: TypeInf
+    typeinf: TypeInf,
+    allow_typechange: bool
 }
 
 impl TypePass {
-    pub fn new() -> TypePass {
+    pub fn new(allow_typechange: bool) -> TypePass {
         TypePass {
             uniquifier: Uniquifier::new(),
-            typeinf: TypeInf::new()
+            typeinf: TypeInf::new(),
+            allow_typechange
         }
     }
 
@@ -208,7 +210,7 @@ impl TypePass {
                 (sig_gen("_A",defstore)?,src.clone())
             ]),
             Instruction::Ref(dst,src) => Ok(vec![
-                (sig_gen("out lvalue _ becomes _A",defstore)?,dst.clone()),
+                (sig_gen("lvalue _ becomes _A",defstore)?,dst.clone()),
                 (sig_gen("_A",defstore)?,src.clone())
             ])
         }
@@ -227,10 +229,11 @@ impl TypePass {
     pub fn try_apply_command(&mut self, instr: &Instruction, defstore: &DefStore) -> Result<(),String> {
         let sig_regs = self.extract_sig_regs(instr,defstore)?;
         let typesig = self.uniquifier.uniquify_sig(&sig_regs);
-        try_apply_command(&mut self.typeinf, &typesig)
+        try_apply_command(&mut self.typeinf,&typesig,self.allow_typechange)
     }
 
     pub fn apply_command(&mut self, instr: &Instruction, defstore: &DefStore) -> Result<(),String> {
+        //print!("ac {:?}",instr);
         let x = match instr {
             Instruction::Ref(dst,src) => self.try_apply_ref(dst,src),
             instr => self.try_apply_command(instr,defstore)
@@ -257,6 +260,22 @@ mod test {
     use crate::parser::{ Parser };
     use crate::codegen::{ Generator, RegisterAllocator };
 
+    fn run_pass(filename: &str, allow_typechange: bool) -> Result<(),Vec<String>> {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import(&format!("test:codegen/{}",filename)).expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let regalloc = RegisterAllocator::new();
+        let gen = Generator::new(&regalloc);
+        let instrs : Vec<Instruction> = gen.go(&defstore,stmts)?;
+        let mut tp = TypePass::new(allow_typechange);
+        for instr in &instrs {
+            tp.apply_command(instr,&defstore).map_err(|e| vec![e])?;
+        }
+        Ok(())
+    }
+
     #[test]
     fn typepeass_smoke() {
         let resolver = FileResolver::new();
@@ -269,12 +288,20 @@ mod test {
         let instrs : Vec<Instruction> = gen.go(&defstore,stmts).expect("codegen");
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));
-        let mut tp = TypePass::new();
+        let mut tp = TypePass::new(true);
         for instr in &instrs {
             print!("=== {:?}",instr);
             let before = tp.clone();
             tp.apply_command(instr,&defstore).expect("ok");
             print!("{}",tp.typeinf.make_diff(&before.typeinf));
         }
+    }
+
+    #[test]
+    fn typepass_lvalue_checks() {
+        run_pass("typepass-reassignok.dp",true).expect("A");
+        run_pass("typepass-reassignok.dp",false).expect_err("B");
+        run_pass("typepass-reassignbad.dp",true).expect_err("C");
+        run_pass("typepass-reassignbad.dp",false).expect_err("D");
     }
 }
