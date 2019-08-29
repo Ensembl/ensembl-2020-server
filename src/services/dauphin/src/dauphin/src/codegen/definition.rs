@@ -1,4 +1,4 @@
-use crate::types::{ Sig, TypeSigExpr };
+use crate::types::{ ArgumentType, TypeSigExpr };
 
 #[derive(Debug,PartialEq,Clone,Copy)]
 pub enum InlineMode {
@@ -78,14 +78,14 @@ impl FuncDecl {
 #[derive(Debug)]
 pub struct ProcDecl {
     name: String,
-    sigs: Vec<Sig>
+    sigs: Vec<ArgumentType>
 }
 
 impl ProcDecl {
-    pub fn new(name: &str, sigs: &Vec<Sig>) -> ProcDecl {
+    pub fn new(name: &str, sigs: &Vec<ArgumentType>) -> ProcDecl {
         ProcDecl { name: name.to_string(), sigs: sigs.to_vec() }
     }
 
     pub fn name(&self) -> &str { &self.name }
-    pub fn sigs(&self) -> &Vec<Sig> { &self.sigs }
+    pub fn sigs(&self) -> &Vec<ArgumentType> { &self.sigs }
 }

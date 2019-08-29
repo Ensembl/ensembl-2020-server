@@ -1,5 +1,5 @@
 use super::node::{ ParserStatement, ParseError };
-use crate::types::{ Type, Sig, TypeSigExpr };
+use crate::types::{ Type, TypeSigExpr, ArgumentType };
 use super::lexutil::not_reserved;
 use crate::codegen::{
     InlineMode, Inline, DefStore, ExprMacro, StmtMacro, FuncDecl, ProcDecl,
@@ -32,7 +32,7 @@ fn run_stmt(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<()
     Ok(())
 }
 
-fn run_proc(name: &str, sigs: &Vec<Sig>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_proc(name: &str, sigs: &Vec<ArgumentType>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
     defstore.add_proc(ProcDecl::new(name,sigs),lexer)?;
     Ok(())

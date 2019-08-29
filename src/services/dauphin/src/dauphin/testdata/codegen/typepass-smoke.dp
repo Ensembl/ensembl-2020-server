@@ -1,8 +1,8 @@
 enum etest { X: string, Y: boolean };
 struct stest { A: vec(number), B: etest };
 
-proc assign(out _A, _A);
-proc incr(lvalue number, number);
+proc assign(writeonly _A, _A);
+proc incr(ref(number), number);
 inline ":=" assign left 14;
 inline "(+=)" incr left 14;
 

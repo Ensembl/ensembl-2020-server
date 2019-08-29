@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use super::types::{ Sig, TypeSig, TypeSigExpr };
-use crate::codegen::Register;
+use super::argumentmatch::ArgumentMatch;
+use super::types::{ ArgumentType, TypeSig, TypeSigExpr };
 
 #[derive(Clone)]
 pub struct Uniquifier {
@@ -42,16 +42,16 @@ impl Uniquifier {
         }
     }
 
-    fn unique_member_sig(&mut self, names: &mut HashMap<String,String>, sig: &Sig) -> Sig {
-        let typesig = self.unique_member_typesig(names,&sig.typesig);
+    fn unique_member_sig(&mut self, names: &mut HashMap<String,String>, sig: &ArgumentType) -> ArgumentType {
+        let typesig = self.unique_member_typesig(names,&sig.get_intype());
         let lvalue = sig.lvalue.as_ref().map(|lvalue| self.unique_member_typesig(names,&lvalue));
-        Sig { lvalue, out: sig.out, typesig }
+        ArgumentType { lvalue, writeonly: sig.writeonly, typesig }
     }
 
-    pub fn uniquify_sig(&mut self, sig: &Vec<(Sig,Register)>) -> Vec<(Sig,Register)> {
+    pub fn uniquify_sig(&mut self, sig: &Vec<ArgumentMatch>) -> Vec<ArgumentMatch> {
         let mut names = HashMap::new();
-        sig.iter().map(|(s,r)| {
-            (self.unique_member_sig(&mut names,&s),r.clone())
+        sig.iter().map(|m| {
+            ArgumentMatch::new(&self.unique_member_sig(&mut names,m.get_type()),m.get_register())
         }).collect()
     }
 }

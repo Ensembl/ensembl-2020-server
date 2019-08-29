@@ -1,7 +1,7 @@
 use crate::lexer::{ Lexer, Token };
 use super::node::{ ParserStatement, ParseError };
 use crate::codegen::DefStore;
-use crate::types::{ Type, BaseType, TypeSig, Sig, TypeSigExpr };
+use crate::types::{ Type, BaseType, TypeSig, ArgumentType, TypeSigExpr };
 use super::lexutil::{ get_other, get_identifier };
 
 pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
@@ -54,19 +54,14 @@ pub(in super) fn parse_proc(lexer: &mut Lexer,defstore: &DefStore) -> Result<Par
     Ok(ParserStatement::ProcDecl(name.to_string(),sigs))
 }
 
-pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Sig,ParseError> {
-    let mut lvalue = false;
-    let mut out = false;
+pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<ArgumentType,ParseError> {
+    let mut writeonly = false;
     loop {
         match lexer.peek() {
             Token::Identifier(name) => {
                 match &name[..] {
-                    "lvalue" => {
-                        lvalue = true;
-                        lexer.get();
-                    },
-                    "out" => {
-                        out = true;
+                    "writeonly" => {
+                        writeonly = true;
                         lexer.get();
                     },
                     _ => break
@@ -75,14 +70,14 @@ pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Sig,Par
             _ => ()
         }
     }
-    let fromsig = parse_typesig(lexer,defstore)?;
-    let (fromsig,lvalue) = if out {
-        (TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())),Some(fromsig.expr().clone()))
+    if writeonly {
+        let fromsig = parse_typesig(lexer,defstore)?;
+        let lvalue = TypeSig::Right(fromsig.expr().clone());
+        Ok(ArgumentType::new_writeonly(&lvalue))
     } else {
-        (fromsig,None)
-    };
-    let lvalue = lvalue.map(|x| TypeSig::Right(x));
-    Ok(Sig { lvalue, out, typesig: fromsig })
+        let typesig = parse_typesig(lexer,defstore)?;
+        Ok(ArgumentType::new(&typesig))
+    }
 }
 
 fn id_to_type(id: &str, lexer: &Lexer, defstore: &DefStore) -> Result<BaseType,ParseError> {
@@ -112,6 +107,15 @@ fn parse_type(lexer: &mut Lexer, defstore: &DefStore) -> Result<Type,ParseError>
 }
 
 pub fn parse_typesig(lexer: &mut Lexer, defstore: &DefStore) -> Result<TypeSig,ParseError> {
+    if let Token::Identifier(t) = lexer.peek() {
+        if &t == "ref" {
+            get_identifier(lexer)?;
+            get_other(lexer,"(")?;
+            let out = TypeSig::Right(parse_typesigexpr(lexer,defstore)?);
+            get_other(lexer,")")?;
+            return Ok(out)
+        }
+    }
     Ok(TypeSig::Right(parse_typesigexpr(lexer,defstore)?))
 }
 

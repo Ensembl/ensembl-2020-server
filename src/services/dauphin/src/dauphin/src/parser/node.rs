@@ -3,7 +3,7 @@ use hex;
 
 use crate::codegen::InlineMode;
 use crate::lexer::Lexer;
-use crate::types::{ TypeSigExpr, Type, Sig };
+use crate::types::{ TypeSigExpr, Type, ArgumentType };
 
 #[derive(PartialEq)]
 pub enum Expression {
@@ -117,7 +117,7 @@ pub enum ParserStatement {
     ExprMacro(String),
     StmtMacro(String),
     FuncDecl(String,TypeSigExpr,Vec<TypeSigExpr>),
-    ProcDecl(String,Vec<Sig>),
+    ProcDecl(String,Vec<ArgumentType>),
     Regular(Statement),
     StructDef(String,Vec<Type>,Vec<String>),
     EnumDef(String,Vec<Type>,Vec<String>),

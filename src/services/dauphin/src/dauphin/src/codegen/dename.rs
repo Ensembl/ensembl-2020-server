@@ -6,34 +6,6 @@ use crate::types::TypePass;
  * simplifies the type handling in the simplification steps.
  */
 
-pub fn replace_regs(instr: &Instruction, new: &Vec<Register>) -> Result<Instruction,String> {
-    match instr {
-        Instruction::Proc(name,_) => Ok(Instruction::Proc(name.to_string(),new.clone())),
-        Instruction::NumberConst(_,c) => Ok(Instruction::NumberConst(new[0].clone().clone(),*c)),
-        Instruction::BooleanConst(_,c) => Ok(Instruction::BooleanConst(new[0].clone(),*c)),
-        Instruction::StringConst(_,c) => Ok(Instruction::StringConst(new[0].clone(),c.clone())),
-        Instruction::BytesConst(_,c) => Ok(Instruction::BytesConst(new[0].clone(),c.clone())),
-        Instruction::List(_) => Ok(Instruction::List(new[0].clone())),
-        Instruction::Star(_,_) => Ok(Instruction::Star(new[0].clone(),new[1].clone())),
-        Instruction::Square(_,_) => Ok(Instruction::Square(new[0].clone(),new[1].clone())),
-        Instruction::At(_,_) => Ok(Instruction::At(new[0].clone(),new[1].clone())),
-        Instruction::Filter(_,_,_) => Ok(Instruction::Filter(new[0].clone(),new[1].clone(),new[2].clone())),
-        Instruction::Push(_,_) => Ok(Instruction::Push(new[0].clone(),new[1].clone())),
-        Instruction::CtorEnum(name,branch,_,_) => Ok(Instruction::CtorEnum(name.to_string(),branch.to_string(),new[0].clone(),new[1].clone())),
-        Instruction::CtorStruct(name,_,_) => Ok(Instruction::CtorStruct(name.to_string(),new[0].clone(),new[1..].to_vec())),
-        Instruction::SValue(field,stype,_,_) => Ok(Instruction::SValue(field.to_string(),stype.to_string(),new[0].clone(),new[1].clone())),
-        Instruction::EValue(field,etype,_,_) => Ok(Instruction::EValue(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
-        Instruction::ETest(field,etype,_,_) => Ok(Instruction::ETest(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
-        Instruction::RefSValue(field,stype,_,_) => Ok(Instruction::RefSValue(field.to_string(),stype.to_string(),new[0].clone(),new[1].clone())),
-        Instruction::RefEValue(field,etype,_,_) => Ok(Instruction::RefEValue(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
-        Instruction::RefSquare(_,_) => Ok(Instruction::RefSquare(new[0].clone(),new[1].clone())),
-        Instruction::RefFilter(_,_,_) => Ok(Instruction::RefFilter(new[0].clone(),new[1].clone(),new[2].clone())),
-        Instruction::Operator(name,_,_) => Ok(Instruction::Operator(name.to_string(),new[0].clone(),new[1..].to_vec())),
-        Instruction::Copy(_,_) => Ok(Instruction::Copy(new[0].clone(),new[1].clone())),
-        Instruction::Ref(_,_) => Ok(Instruction::Ref(new[0].clone(),new[1].clone())),
-    }
-}
-
 /* A pure register is a direct reference to a named variable */
 fn find_pure(input: &Vec<Instruction>) -> Result<HashSet<Register>,String> {
     let mut pures = HashSet::new();
@@ -52,10 +24,10 @@ fn find_writeonly(ds: &DefStore, input: &Vec<Instruction>, pures: &HashSet<Regis
     for instr in input {
         types.apply_command(instr,ds)?;
         print!("{:?} -> {:?}\n",instr,types.extract_sig_regs(instr,ds)?);
-        for (sig,reg) in types.extract_sig_regs(instr,ds)?.iter() {
-            if sig.out {
-                if pures.contains(reg) {
-                    writeonly.insert(reg.clone());
+        for arg in types.extract_sig_regs(instr,ds)?.iter() {
+            if arg.get_type().writeonly {
+                if pures.contains(arg.get_register()) {
+                    writeonly.insert(arg.get_register().clone());
                 }
             }
         }
@@ -71,25 +43,25 @@ fn rename(ds: &DefStore, regalloc: &RegisterAllocator, input: &Vec<Instruction>,
     for instr in input {
         types.apply_command(instr,ds)?;
         let mut new_regs = Vec::new();
-        for (_,reg) in types.extract_sig_regs(instr,ds)?.iter() {
+        for arg in types.extract_sig_regs(instr,ds)?.iter() {
             if let Instruction::Ref(referer,referee) = instr {
                 if writeonly.contains(referer) {
                     mapping.remove(referee);
                 }
             }
-            if let Some(new) = mapping.get(reg) {
+            if let Some(new) = mapping.get(arg.get_register()) {
                 new_regs.push(new.clone());
             } else {
-                if let Register::Named(_) = reg {
+                if let Register::Named(_) = arg.get_register() {
                     let new_reg = regalloc.allocate();
-                    mapping.insert(reg.clone(),new_reg.clone());
+                    mapping.insert(arg.get_register().clone(),new_reg.clone());
                     new_regs.push(new_reg);
                 } else {
-                    new_regs.push(reg.clone());
+                    new_regs.push(arg.get_register().clone());
                 }
             }
         }
-        out.push(replace_regs(instr,&new_regs)?);
+        out.push(instr.replace_regs(&new_regs)?);
     }
     Ok(out)
 }

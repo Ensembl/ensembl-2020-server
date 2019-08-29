@@ -1,25 +1,26 @@
+use super::argumentmatch::ArgumentMatch;
 use super::typeinf::{ Referrer, TypeInf };
 use crate::codegen::Register;
-use super::types::{ TypeSig, Sig };
+use super::types::{ TypeSig, ArgumentType };
 
-pub fn try_apply_command(typeinf: &mut TypeInf, typesig: &Vec<(Sig,Register)>, allow_typechange: bool) -> Result<(),String> {
+pub fn type_step(typeinf: &mut TypeInf, typesig: &Vec<ArgumentMatch>, allow_typechange: bool) -> Result<(),String> {
     let mut unifies = Vec::new();
     let mut check_valid = Vec::new();
     let mut xform = Vec::new();
     //print!("tac {:?}\n",typesig);
-    for (sig,reg) in typesig {
-        let reg = typeinf.new_register(reg);
-        if !sig.out {
+    for arg in typesig {
+        let reg = typeinf.new_register(arg.get_register());
+        if !arg.get_type().writeonly {
             check_valid.push(reg.clone());
         }
         let tmp = typeinf.new_temp().clone();
         //print!("allocated {:?} for incoming type of arg ({:?},{:?}) and unifying {:?}={:?}\n",tmp,sig,reg,reg,tmp);
-        typeinf.add(&tmp,&sig.typesig);
+        typeinf.add(&tmp,&arg.get_type().get_intype());
         unifies.push((reg.clone(),tmp.clone()));
-        if sig.lvalue.is_some() {
+        if arg.get_type().lvalue.is_some() {
             let ltmp = typeinf.new_temp();
             //print!("allocated {:?} for outgoing type of arg ({:?},{:?})\n",ltmp,sig,reg);
-            typeinf.add(&ltmp,sig.lvalue.as_ref().unwrap());
+            typeinf.add(&ltmp,arg.get_type().lvalue.as_ref().unwrap());
             xform.push((reg.clone(),ltmp,tmp));
         }
     }
@@ -27,7 +28,7 @@ pub fn try_apply_command(typeinf: &mut TypeInf, typesig: &Vec<(Sig,Register)>, a
         typeinf.unify(&reg,&tmp)?;
     }
     for reg in &check_valid {
-        let sig = typeinf.get_sig(reg);
+        let sig = typeinf.get_typepattern(reg);
         if sig.is_invalid() {
             return Err(format!("Use of invalid value from {:?}",reg));
         }

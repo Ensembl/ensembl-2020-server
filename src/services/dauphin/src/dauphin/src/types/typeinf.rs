@@ -1,6 +1,6 @@
 use std::collections::{ HashMap, HashSet };
 use std::fmt;
-use crate::types::{ TypeSig, BaseType, TypeSigExpr };
+use crate::types::{ TypeSig, BaseType, TypeSigExpr, TypePattern };
 use crate::codegen::Register;
 
 #[derive(Clone,Hash,PartialEq,Eq,PartialOrd,Ord)]
@@ -183,6 +183,10 @@ impl TypeInf {
             self.store.add(reg,&self.invalid);
         }
         self.store.get_sig(reg).unwrap()
+    }
+
+    pub fn get_typepattern(&mut self, reg: &Referrer) -> TypePattern {
+        self.get_sig(reg).to_typepattern()
     }
 
     pub fn new_register(&mut self, reg: &Register) -> Referrer {

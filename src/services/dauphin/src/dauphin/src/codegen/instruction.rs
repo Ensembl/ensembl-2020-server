@@ -41,6 +41,36 @@ fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, mor
     Ok(())
 }
 
+impl Instruction {
+    pub fn replace_regs(&self, new: &Vec<Register>) -> Result<Instruction,String> {
+        match self {
+            Instruction::Proc(name,_) => Ok(Instruction::Proc(name.to_string(),new.clone())),
+            Instruction::NumberConst(_,c) => Ok(Instruction::NumberConst(new[0].clone().clone(),*c)),
+            Instruction::BooleanConst(_,c) => Ok(Instruction::BooleanConst(new[0].clone(),*c)),
+            Instruction::StringConst(_,c) => Ok(Instruction::StringConst(new[0].clone(),c.clone())),
+            Instruction::BytesConst(_,c) => Ok(Instruction::BytesConst(new[0].clone(),c.clone())),
+            Instruction::List(_) => Ok(Instruction::List(new[0].clone())),
+            Instruction::Star(_,_) => Ok(Instruction::Star(new[0].clone(),new[1].clone())),
+            Instruction::Square(_,_) => Ok(Instruction::Square(new[0].clone(),new[1].clone())),
+            Instruction::At(_,_) => Ok(Instruction::At(new[0].clone(),new[1].clone())),
+            Instruction::Filter(_,_,_) => Ok(Instruction::Filter(new[0].clone(),new[1].clone(),new[2].clone())),
+            Instruction::Push(_,_) => Ok(Instruction::Push(new[0].clone(),new[1].clone())),
+            Instruction::CtorEnum(name,branch,_,_) => Ok(Instruction::CtorEnum(name.to_string(),branch.to_string(),new[0].clone(),new[1].clone())),
+            Instruction::CtorStruct(name,_,_) => Ok(Instruction::CtorStruct(name.to_string(),new[0].clone(),new[1..].to_vec())),
+            Instruction::SValue(field,stype,_,_) => Ok(Instruction::SValue(field.to_string(),stype.to_string(),new[0].clone(),new[1].clone())),
+            Instruction::EValue(field,etype,_,_) => Ok(Instruction::EValue(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
+            Instruction::ETest(field,etype,_,_) => Ok(Instruction::ETest(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
+            Instruction::RefSValue(field,stype,_,_) => Ok(Instruction::RefSValue(field.to_string(),stype.to_string(),new[0].clone(),new[1].clone())),
+            Instruction::RefEValue(field,etype,_,_) => Ok(Instruction::RefEValue(field.to_string(),etype.to_string(),new[0].clone(),new[1].clone())),
+            Instruction::RefSquare(_,_) => Ok(Instruction::RefSquare(new[0].clone(),new[1].clone())),
+            Instruction::RefFilter(_,_,_) => Ok(Instruction::RefFilter(new[0].clone(),new[1].clone(),new[2].clone())),
+            Instruction::Operator(name,_,_) => Ok(Instruction::Operator(name.to_string(),new[0].clone(),new[1..].to_vec())),
+            Instruction::Copy(_,_) => Ok(Instruction::Copy(new[0].clone(),new[1].clone())),
+            Instruction::Ref(_,_) => Ok(Instruction::Ref(new[0].clone(),new[1].clone())),
+        }
+    }
+}
+
 impl fmt::Debug for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

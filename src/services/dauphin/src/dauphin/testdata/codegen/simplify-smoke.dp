@@ -1,7 +1,7 @@
 struct A { a: number, b: boolean };
 struct B { x: A, y: A };
 
-proc assign(out _A, _A);
+proc assign(writeonly _A, _A);
 func eq(number,number) becomes boolean;
 inline ":=" assign left 14;
 inline "==" eq left 5;

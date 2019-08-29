@@ -76,6 +76,14 @@ impl TypeSigExpr {
             TypeSigExpr::Placeholder(_) => false
         }
     }
+
+    pub fn to_typepattern(&self) -> TypePattern {
+        match self {
+            TypeSigExpr::Base(t) => TypePattern::Base(t.clone()),
+            TypeSigExpr::Vector(t) => TypePattern::Vector(Box::new(t.to_typepattern())),
+            TypeSigExpr::Placeholder(_) => TypePattern::Any
+        }
+    }
 }
 
 impl fmt::Debug for TypeSigExpr {
@@ -84,6 +92,23 @@ impl fmt::Debug for TypeSigExpr {
             TypeSigExpr::Base(v) => write!(f,"{:?}",v),
             TypeSigExpr::Vector(v) => write!(f,"vec({:?})",v),
             TypeSigExpr::Placeholder(p) => write!(f,"{}",p)
+        }
+    }
+}
+
+#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
+pub enum TypePattern {
+    Base(BaseType),
+    Vector(Box<TypePattern>),
+    Any
+}
+
+impl TypePattern {
+    pub fn is_invalid(&self) -> bool {
+        match self {
+            TypePattern::Base(BaseType::Invalid) => true,
+            TypePattern::Vector(v) => v.is_invalid(),
+            _ => false
         }
     }
 }
@@ -109,6 +134,13 @@ impl TypeSig {
             TypeSig::Left(x,_) => x
         }
     }
+
+    pub fn to_typepattern(&self) -> TypePattern {
+        match self {
+            TypeSig::Right(x) => x.to_typepattern(),
+            TypeSig::Left(x,_) => x.to_typepattern()
+        }
+    }
 }
 
 impl fmt::Debug for TypeSig {
@@ -122,38 +154,53 @@ impl fmt::Debug for TypeSig {
 
 // TODO fix sig junk
 #[derive(PartialEq, Debug, Clone)]
-pub struct Sig {
+pub struct ArgumentType {
     pub lvalue: Option<TypeSig>,
-    pub out: bool,
+    pub writeonly: bool,
     pub typesig: TypeSig
 }
 
-impl Sig {
-    pub fn new_left_in(typesig: &TypeSigExpr, reg: &Register) -> Sig {
-        Sig {
-            lvalue: None, out: false,
+impl ArgumentType {
+    pub fn new(typesig: &TypeSig) -> ArgumentType {
+        ArgumentType {
+            lvalue: None, writeonly: false, typesig: typesig.clone()
+        }
+    }
+
+    pub fn new_writeonly(typesig: &TypeSig) -> ArgumentType {
+        ArgumentType {
+            lvalue: Some(typesig.clone()), writeonly: true,
+            typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
+        }
+    }
+
+    pub fn new_left(typesig: &TypeSigExpr, reg: &Register) -> ArgumentType {
+        ArgumentType {
+            lvalue: None, writeonly: false,
             typesig: TypeSig::Left(typesig.clone(),reg.clone())
         }
     }
 
-    pub fn new_right_in(typesig: &TypeSigExpr) -> Sig {
-        Sig {
-            lvalue: None, out: false,
+    pub fn new_right(typesig: &TypeSigExpr) -> ArgumentType {
+        ArgumentType {
+            lvalue: None, writeonly: false,
             typesig: TypeSig::Right(typesig.clone())
         }
     }
 
-    pub fn new_left_out(typesig: &TypeSigExpr, reg: &Register) -> Sig {
-        Sig {
-            lvalue: Some(TypeSig::Left(typesig.clone(),reg.clone())), out: true,
+    pub fn new_left_writeonly(typesig: &TypeSigExpr, reg: &Register) -> ArgumentType {
+        ArgumentType {
+            lvalue: Some(TypeSig::Left(typesig.clone(),reg.clone())), writeonly: true,
             typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
         }
     }
 
-    pub fn new_right_out(typesig: &TypeSigExpr) -> Sig {
-        Sig {
-            lvalue: Some(TypeSig::Right(typesig.clone())), out: true,
+    pub fn new_right_writeonly(typesig: &TypeSigExpr) -> ArgumentType {
+        ArgumentType {
+            lvalue: Some(TypeSig::Right(typesig.clone())), writeonly: true,
             typesig: TypeSig::Right(TypeSigExpr::Placeholder("_".to_string()))
         }
     }
+
+    pub fn get_intype(&self) -> &TypeSig { &self.typesig }
 }

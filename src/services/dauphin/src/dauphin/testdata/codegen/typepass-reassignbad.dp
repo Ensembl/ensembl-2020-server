@@ -1,5 +1,5 @@
 struct A { x: boolean, y: boolean };
-proc assign(out _A, _A);
+proc assign(writeonly _A, _A);
 inline ":=" assign left 14;
 
 x := A { x: true, y: true };
