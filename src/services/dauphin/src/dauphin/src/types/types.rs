@@ -59,6 +59,11 @@ pub enum TypeSigExpr {
     Placeholder(String)
 }
 
+#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
+pub enum TypeSigFilter {
+    Field(String)
+}
+
 impl TypeSigExpr {
     pub fn get_placeholder(&self) -> Option<&str> {
         match self {
@@ -91,7 +96,8 @@ impl fmt::Debug for TypeSigExpr {
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum TypeSig {
     Right(TypeSigExpr),
-    Left(TypeSigExpr,Register)
+    Left(TypeSigExpr,Register),
+    //Holey(TypeSigExpr,TypeSigExpr,Vec<TypeSigFilter>)
 }
 
 impl TypeSig {
