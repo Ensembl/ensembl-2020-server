@@ -1,6 +1,7 @@
 use std::fmt;
 
 use super::argumentmatch::ArgumentMatch;
+use super::signaturematch::SignatureMatch;
 use crate::codegen::Instruction;
 use super::typeinf::{ TypeInf, Referrer };
 use super::typestep::type_step;
@@ -58,7 +59,7 @@ impl TypePass {
         }
     }
 
-    pub fn extract_sig_regs(&mut self,instr: &Instruction, defstore: &DefStore) -> Result<Vec<ArgumentMatch>,String> {
+    pub fn extract_sig_regs(&mut self,instr: &Instruction, defstore: &DefStore) -> Result<SignatureMatch,String> {
         let out = match instr {
             Instruction::Proc(name,regs) => TypePass::extract_proc_sig_regs(name,defstore,regs),
             Instruction::NumberConst(reg,_) => Ok(vec![(sig_gen("writeonly number",defstore)?,reg.clone())]),
@@ -205,7 +206,7 @@ impl TypePass {
                 (sig_gen("_A",defstore)?,src.clone())
             ])
         }?;
-        Ok(out.iter().map(|(a,b)| ArgumentMatch::new(a,b)).collect())
+        Ok(SignatureMatch::new(&out.iter().map(|(a,b)| ArgumentMatch::new(a,b)).collect()))
     }
 
     // TODO ref invalidation

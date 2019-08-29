@@ -24,7 +24,7 @@ fn find_writeonly(ds: &DefStore, input: &Vec<Instruction>, pures: &HashSet<Regis
     for instr in input {
         types.apply_command(instr,ds)?;
         print!("{:?} -> {:?}\n",instr,types.extract_sig_regs(instr,ds)?);
-        for arg in types.extract_sig_regs(instr,ds)?.iter() {
+        for arg in types.extract_sig_regs(instr,ds)?.each_argument() {
             if arg.get_type().writeonly {
                 if pures.contains(arg.get_register()) {
                     writeonly.insert(arg.get_register().clone());
@@ -43,7 +43,7 @@ fn rename(ds: &DefStore, regalloc: &RegisterAllocator, input: &Vec<Instruction>,
     for instr in input {
         types.apply_command(instr,ds)?;
         let mut new_regs = Vec::new();
-        for arg in types.extract_sig_regs(instr,ds)?.iter() {
+        for arg in types.extract_sig_regs(instr,ds)?.each_argument() {
             if let Instruction::Ref(referer,referee) = instr {
                 if writeonly.contains(referer) {
                     mapping.remove(referee);

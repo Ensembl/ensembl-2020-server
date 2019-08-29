@@ -1,7 +1,7 @@
 use super::types::ArgumentType;
 use crate::codegen::Register;
 
-#[derive(Debug)]
+#[derive(Clone,Debug)]
 pub struct ArgumentMatch {
     type_: ArgumentType,
     register: Register

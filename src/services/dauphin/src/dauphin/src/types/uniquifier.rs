@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use super::argumentmatch::ArgumentMatch;
+use super::signaturematch::SignatureMatch;
 use super::types::{ ArgumentType, TypeSig, TypeSigExpr };
 
 #[derive(Clone)]
@@ -48,10 +49,10 @@ impl Uniquifier {
         ArgumentType { lvalue, writeonly: sig.writeonly, typesig }
     }
 
-    pub fn uniquify_sig(&mut self, sig: &Vec<ArgumentMatch>) -> Vec<ArgumentMatch> {
+    pub fn uniquify_sig(&mut self, sig: &SignatureMatch) -> SignatureMatch {
         let mut names = HashMap::new();
-        sig.iter().map(|m| {
+        SignatureMatch::new(&sig.each_argument().map(|m| {
             ArgumentMatch::new(&self.unique_member_sig(&mut names,m.get_type()),m.get_register())
-        }).collect()
+        }).collect())
     }
 }

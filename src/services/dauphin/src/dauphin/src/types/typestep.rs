@@ -1,14 +1,15 @@
 use super::argumentmatch::ArgumentMatch;
+use super::signaturematch::SignatureMatch;
 use super::typeinf::{ Referrer, TypeInf };
 use crate::codegen::Register;
 use super::types::{ TypeSig, ArgumentType };
 
-pub fn type_step(typeinf: &mut TypeInf, typesig: &Vec<ArgumentMatch>, allow_typechange: bool) -> Result<(),String> {
+pub fn type_step(typeinf: &mut TypeInf, typesig: &SignatureMatch, allow_typechange: bool) -> Result<(),String> {
     let mut unifies = Vec::new();
     let mut check_valid = Vec::new();
     let mut xform = Vec::new();
     //print!("tac {:?}\n",typesig);
-    for arg in typesig {
+    for arg in typesig.each_argument() {
         let reg = typeinf.new_register(arg.get_register());
         if !arg.get_type().writeonly {
             check_valid.push(reg.clone());
