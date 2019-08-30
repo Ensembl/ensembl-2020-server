@@ -1,8 +1,10 @@
 mod codegen;
+mod generate;
 mod lexer;
 mod parser;
 mod testsuite;
 mod types;
+mod typeinf;
 
 #[macro_use]
 extern crate lazy_static;

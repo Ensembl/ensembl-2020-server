@@ -1,6 +1,5 @@
 enum etest { X: string, Y: boolean };
 struct stest { A: vec(number), B: etest };
-struct zstest2 { M: stest };
 proc assign(out _A, _A);
 func gt(number,number) becomes boolean;
 func lt(number,number) becomes boolean;
@@ -18,8 +17,5 @@ c := z.B!X;
 y := *x[];
 x := [[1,2],[3,4]];
 y := x[@>0][$<3];
-
-z.A := [];
-w := zstest2 { M: z };
-w.M.A := [0];
-w := 14;
+z.B!X := "1";
+x[@==0][$==4] := 44;

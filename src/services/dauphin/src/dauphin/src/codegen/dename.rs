@@ -120,7 +120,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    //#[test]
     fn dename_smoke() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);

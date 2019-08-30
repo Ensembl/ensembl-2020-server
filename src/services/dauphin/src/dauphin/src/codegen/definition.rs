@@ -1,4 +1,5 @@
 use crate::types::{ Sig, TypeSigExpr };
+use crate::typeinf::SignatureConstraint;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
 pub enum InlineMode {
@@ -78,14 +79,16 @@ impl FuncDecl {
 #[derive(Debug)]
 pub struct ProcDecl {
     name: String,
-    sigs: Vec<Sig>
+    sigs: Vec<Sig>,
+    signature: SignatureConstraint
 }
 
 impl ProcDecl {
-    pub fn new(name: &str, sigs: &Vec<Sig>) -> ProcDecl {
-        ProcDecl { name: name.to_string(), sigs: sigs.to_vec() }
+    pub fn new(name: &str, sigs: &Vec<Sig>, signature: &SignatureConstraint) -> ProcDecl {
+        ProcDecl { name: name.to_string(), sigs: sigs.to_vec(), signature: signature.clone() }
     }
 
     pub fn name(&self) -> &str { &self.name }
     pub fn sigs(&self) -> &Vec<Sig> { &self.sigs }
+    pub fn get_signature(&self) -> &SignatureConstraint { &self.signature }
 }

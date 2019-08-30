@@ -122,7 +122,7 @@ mod test {
     use crate::codegen::{ Generator, RegisterAllocator };
     use super::super::dename;
 
-    #[test]
+    //#[test]
     fn simplify_smoke() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);

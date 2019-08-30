@@ -20,6 +20,11 @@ impl fmt::Debug for Register {
     }
 }
 
+#[derive(Clone,Debug,Hash,PartialEq,Eq,PartialOrd,Ord)]
+pub enum Register2 {
+    Temporary(usize)
+}
+
 struct RegisterAllocatorImpl {
     index: usize
 }
@@ -35,6 +40,11 @@ impl RegisterAllocatorImpl {
         self.index += 1;
         Register::Temporary(self.index)
     }
+
+    fn allocate2(&mut self) -> Register2 {
+        self.index += 1;
+        Register2::Temporary(self.index)
+    }
 }
 
 #[derive(Clone)]
@@ -47,5 +57,9 @@ impl RegisterAllocator {
 
     pub fn allocate(&self) -> Register {
         self.0.borrow_mut().allocate().clone()
+    }
+
+    pub fn allocate2(&self) -> Register2 {
+        self.0.borrow_mut().allocate2().clone()
     }
 }

@@ -2,6 +2,8 @@ use crate::lexer::{ Lexer, Token };
 use super::node::{ ParserStatement, ParseError };
 use crate::codegen::DefStore;
 use crate::types::{ Type, BaseType, TypeSig, Sig, TypeSigExpr };
+use crate::typeinf::{ ArgumentExpressionConstraint, SignatureConstraint, SignatureMemberConstraint };
+use crate::typeinf::BaseType as BaseType2;
 use super::lexutil::{ get_other, get_identifier };
 
 pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
@@ -23,7 +25,7 @@ pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<Pa
     get_other(lexer,"(")?;
     loop {
         if lexer.peek() == Token::Other(')') { lexer.get(); break; }
-        srcs.push(parse_typesigexpr(lexer,defstore)?);
+        srcs.push(parse_typesigexpr(lexer,defstore)?.0);
         match lexer.get() {
             Token::Other(',') => (),
             Token::Other(')') => break,
@@ -33,7 +35,7 @@ pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<Pa
     if get_identifier(lexer)? != "becomes" {
         return Err(ParseError::new("missing 'becomes'",lexer));
     }
-    let dst = parse_typesigexpr(lexer,defstore)?;
+    let dst = parse_typesigexpr(lexer,defstore)?.0;
     Ok(ParserStatement::FuncDecl(name.to_string(),dst,srcs))
 }
 
@@ -41,20 +43,23 @@ pub(in super) fn parse_proc(lexer: &mut Lexer,defstore: &DefStore) -> Result<Par
     lexer.get();
     let name = get_identifier(lexer)?;
     let mut sigs = Vec::new();
+    let mut members = Vec::new();
     get_other(lexer,"(")?;
     loop {
         if lexer.peek() == Token::Other(')') { break; }
-        sigs.push(parse_signature(lexer,defstore)?);
+        let (sig,member) = parse_signature(lexer,defstore)?;
+        sigs.push(sig);
+        members.push(member);
         match lexer.get() {
             Token::Other(',') => (),
             Token::Other(')') => break,
             _ => return Err(ParseError::new("Unexpected token (expected ) or ,)",lexer))
         };
     }
-    Ok(ParserStatement::ProcDecl(name.to_string(),sigs))
+    Ok(ParserStatement::ProcDecl(name.to_string(),sigs,SignatureConstraint::new(&members)))
 }
 
-pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Sig,ParseError> {
+pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Sig,SignatureMemberConstraint),ParseError> {
     let mut lvalue = false;
     let mut out = false;
     loop {
@@ -75,21 +80,26 @@ pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Sig,Par
             _ => ()
         }
     }
-    let fromsig = parse_typesig(lexer,defstore)?;
+    let (fromsig,argtype) = parse_typesig(lexer,defstore)?;
+    let member = if out {
+        SignatureMemberConstraint::LValue(argtype)
+    } else {
+        SignatureMemberConstraint::RValue(argtype)
+    };
     let (fromsig,lvalue) = if out {
         (TypeSig::Right(TypeSigExpr::Placeholder("_".to_string())),Some(fromsig.expr().clone()))
     } else {
         (fromsig,None)
     };
     let lvalue = lvalue.map(|x| TypeSig::Right(x));
-    Ok(Sig { lvalue, out, typesig: fromsig })
+    Ok((Sig { lvalue, out, typesig: fromsig },member))
 }
 
-fn id_to_type(id: &str, lexer: &Lexer, defstore: &DefStore) -> Result<BaseType,ParseError> {
+fn id_to_type(id: &str, lexer: &Lexer, defstore: &DefStore) -> Result<(BaseType,BaseType2),ParseError> {
     if defstore.get_struct(id).is_some() {
-        Ok(BaseType::StructType(id.to_string()))
+        Ok((BaseType::StructType(id.to_string()),BaseType2::StructType(id.to_string())))
     } else if defstore.get_enum(id).is_some() {
-        Ok(BaseType::EnumType(id.to_string()))
+        Ok((BaseType::EnumType(id.to_string()),BaseType2::EnumType(id.to_string())))
     } else {
         Err(ParseError::new(&format!("No such struct/enum '{}'",id),lexer))
     }
@@ -107,23 +117,25 @@ fn parse_type(lexer: &mut Lexer, defstore: &DefStore) -> Result<Type,ParseError>
             get_other(lexer,")")?;
             out
         },
-        x => Type::Base(id_to_type(x,lexer,defstore)?)
+        x => Type::Base(id_to_type(x,lexer,defstore)?.0)
     })
 }
 
-pub fn parse_typesig(lexer: &mut Lexer, defstore: &DefStore) -> Result<TypeSig,ParseError> {
-    Ok(TypeSig::Right(parse_typesigexpr(lexer,defstore)?))
+pub fn parse_typesig(lexer: &mut Lexer, defstore: &DefStore) -> Result<(TypeSig,ArgumentExpressionConstraint),ParseError> {
+    let (sig,expr_constr) = parse_typesigexpr(lexer,defstore)?;
+    Ok((TypeSig::Right(sig),expr_constr))
 }
 
-pub fn parse_typesigexpr(lexer: &mut Lexer, defstore: &DefStore) -> Result<TypeSigExpr,ParseError> {
-    Ok(match &get_identifier(lexer)?[..] {
+pub fn parse_typesigexpr(lexer: &mut Lexer, defstore: &DefStore) -> Result<(TypeSigExpr,ArgumentExpressionConstraint),ParseError> {
+    let id = get_identifier(lexer)?;
+    let sig = match &id[..] {
         "boolean" => TypeSigExpr::Base(BaseType::BooleanType),
         "number" => TypeSigExpr::Base(BaseType::NumberType),
         "string" => TypeSigExpr::Base(BaseType::StringType),
         "bytes" => TypeSigExpr::Base(BaseType::BytesType),
         "vec" => {
             get_other(lexer,"(")?;
-            let out =  TypeSigExpr::Vector(Box::new(parse_typesigexpr(lexer,defstore)?));
+            let out =  TypeSigExpr::Vector(Box::new(parse_typesigexpr(lexer,defstore)?.0));
             get_other(lexer,")")?;
             out
         },
@@ -131,10 +143,30 @@ pub fn parse_typesigexpr(lexer: &mut Lexer, defstore: &DefStore) -> Result<TypeS
             if x.starts_with("_") {
                 TypeSigExpr::Placeholder(x.to_string())
             } else {
-                TypeSigExpr::Base(id_to_type(x,lexer,defstore)?)
+                TypeSigExpr::Base(id_to_type(x,lexer,defstore)?.0)
             }
         }
-    })
+    };
+    let constraint = match &id[..] {
+        "boolean" => ArgumentExpressionConstraint::Base(BaseType2::BooleanType),
+        "number" => ArgumentExpressionConstraint::Base(BaseType2::NumberType),
+        "string" => ArgumentExpressionConstraint::Base(BaseType2::StringType),
+        "bytes" => ArgumentExpressionConstraint::Base(BaseType2::BytesType),
+        "vec" => {
+            get_other(lexer,"(")?;
+            let out =  ArgumentExpressionConstraint::Vec(Box::new(parse_typesigexpr(lexer,defstore)?.1));
+            get_other(lexer,")")?;
+            out
+        },
+        x => {
+            if x.starts_with("_") {
+                ArgumentExpressionConstraint::Placeholder(x.to_string())
+            } else {
+                ArgumentExpressionConstraint::Base(id_to_type(x,lexer,defstore)?.1)
+            }
+        }
+    };
+    Ok((sig,constraint))
 }
 
 fn parse_struct_short(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<Type>,Vec<String>),ParseError> {

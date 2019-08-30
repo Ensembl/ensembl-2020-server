@@ -303,7 +303,7 @@ mod test {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import(&format!("data: {}",sig)).ok();
-        parse_typesig(&mut lexer,defstore).expect("bad typesig")
+        parse_typesig(&mut lexer,defstore).expect("bad typesig").0
     }
 
     fn render(ts: &TypeSig) -> String {

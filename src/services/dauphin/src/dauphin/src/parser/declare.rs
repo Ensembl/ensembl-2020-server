@@ -6,6 +6,7 @@ use crate::codegen::{
     StructDef, EnumDef
 };
 use crate::lexer::Lexer;
+use crate::typeinf::SignatureConstraint;
 
 fn run_import(path: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
     lexer.import(path).map_err(|s| ParseError::new(&format!("import failed: {}",s),lexer))
@@ -32,9 +33,9 @@ fn run_stmt(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<()
     Ok(())
 }
 
-fn run_proc(name: &str, sigs: &Vec<Sig>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_proc(name: &str, sigs: &Vec<Sig>, signature: &SignatureConstraint, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    defstore.add_proc(ProcDecl::new(name,sigs),lexer)?;
+    defstore.add_proc(ProcDecl::new(name,sigs,signature),lexer)?;
     Ok(())
 }
 
@@ -69,8 +70,8 @@ pub fn declare(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStor
             run_expr(&name,defstore,lexer).map(|_| true),
         ParserStatement::StmtMacro(name) =>
             run_stmt(&name,defstore,lexer).map(|_| true),
-        ParserStatement::ProcDecl(name,sigs) =>
-            run_proc(&name,sigs,defstore,lexer).map(|_| true),
+        ParserStatement::ProcDecl(name,sigs,signature) =>
+            run_proc(&name,sigs,&signature,defstore,lexer).map(|_| true),
         ParserStatement::FuncDecl(name,dst,srcs) =>
             run_func(&name,dst,srcs,defstore,lexer).map(|_| true),
         ParserStatement::StructDef(name,types,names) =>
