@@ -1,2 +1,5 @@
 mod codegen;
-mod intstruction2;
+mod intstruction;
+
+pub use self::codegen::CodeGen;
+pub use self::intstruction::Instruction;

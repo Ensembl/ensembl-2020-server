@@ -1,5 +1,5 @@
 use crate::lexer::{ Lexer, Token };
-use crate::codegen::DefStore;
+use crate::model::DefStore;
 
 use super::node::{ Statement, ParserStatement, ParseError };
 use super::declare::declare;

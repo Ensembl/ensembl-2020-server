@@ -1,5 +1,5 @@
 use crate::lexer::{ Lexer, Token };
-use crate::codegen::{ DefStore, InlineMode };
+use crate::model::{ DefStore, InlineMode };
 use super::node::{ ParseError, Expression };
 use super::lexutil::{get_other, get_identifier };
 

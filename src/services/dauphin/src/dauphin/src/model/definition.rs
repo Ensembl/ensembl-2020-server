@@ -1,4 +1,3 @@
-use crate::types::{ Sig, TypeSigExpr };
 use crate::typeinf::SignatureConstraint;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
@@ -62,40 +61,32 @@ impl StmtMacro {
 #[derive(Debug)]
 pub struct FuncDecl {
     name: String,
-    dst: TypeSigExpr,
-    srcs: Vec<TypeSigExpr>,
     signature: SignatureConstraint
 }
 
 impl FuncDecl {
-    pub fn new(name: &str, signature: &SignatureConstraint, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>) -> FuncDecl {
+    pub fn new(name: &str, signature: &SignatureConstraint) -> FuncDecl {
         FuncDecl {
             name: name.to_string(),
-            srcs: srcs.to_vec(),
-            dst: dst.clone(),
             signature: signature.clone()
         }
     }
 
     pub fn name(&self) -> &str { &self.name }
-    pub fn get_srcs(&self) -> &Vec<TypeSigExpr> { &self.srcs }
-    pub fn get_dst(&self) -> &TypeSigExpr { &self.dst }
     pub fn get_signature(&self) -> &SignatureConstraint { &self.signature }
 }
 
 #[derive(Debug)]
 pub struct ProcDecl {
     name: String,
-    sigs: Vec<Sig>,
     signature: SignatureConstraint
 }
 
 impl ProcDecl {
-    pub fn new(name: &str, sigs: &Vec<Sig>, signature: &SignatureConstraint) -> ProcDecl {
-        ProcDecl { name: name.to_string(), sigs: sigs.to_vec(), signature: signature.clone() }
+    pub fn new(name: &str,signature: &SignatureConstraint) -> ProcDecl {
+        ProcDecl { name: name.to_string(), signature: signature.clone() }
     }
 
     pub fn name(&self) -> &str { &self.name }
-    pub fn sigs(&self) -> &Vec<Sig> { &self.sigs }
     pub fn get_signature(&self) -> &SignatureConstraint { &self.signature }
 }

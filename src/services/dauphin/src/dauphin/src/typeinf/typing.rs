@@ -2,21 +2,21 @@ use std::fmt;
 
 use std::collections::{ HashMap, HashSet };
 
-use crate::codegen::Register2;
-use super::types::{ ArgumentConstraint, RegisterType, InstructionConstraint, ExpressionType, BaseType };
+use crate::model::Register;
+use super::types::{ InstructionConstraint, ExpressionType, BaseType };
 use super::typesinternal::{ Key, TypeConstraint };
 use super::typestore::TypeStore;
 
 pub struct Typing {
     next: usize,
     store: TypeStore,
-    regmap: HashMap<Register2,usize>,
-    reg_isref: HashSet<Register2>
+    regmap: HashMap<Register,usize>,
+    reg_isref: HashSet<Register>
 }
 
 impl fmt::Debug for Typing {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut map : Vec<(Register2,usize)> = self.regmap.iter().map(|(k,v)| (k.clone(),v.clone())).collect();
+        let mut map : Vec<(Register,usize)> = self.regmap.iter().map(|(k,v)| (k.clone(),v.clone())).collect();
         map.sort();
         for (reg,reg_id) in &map {
             write!(f,"{:?} = ",reg)?;
@@ -41,7 +41,7 @@ impl Typing {
         }
     }
 
-    fn extract(&mut self, in_: &InstructionConstraint) -> Vec<(TypeConstraint,Register2)> {
+    fn extract(&mut self, in_: &InstructionConstraint) -> Vec<(TypeConstraint,Register)> {
         let mut out = Vec::new();
         let mut name = HashMap::new();
         for (argument_constraint,register) in in_.each_member() {
@@ -79,7 +79,7 @@ impl Typing {
         Ok(())
     }
 
-    pub fn get(&self, reg: &Register2) -> ExpressionType {
+    pub fn get(&self, reg: &Register) -> ExpressionType {
         if let Some(reg_id) = self.regmap.get(reg) {
             if let Some(out) = self.store.get(&Key::External(*reg_id)) {
                 return out;
@@ -87,4 +87,51 @@ impl Typing {
         }
         ExpressionType::Base(BaseType::Invalid)
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::lexer::{ FileResolver, Lexer };
+    use crate::parser::{ Parser };
+    use crate::model::RegisterAllocator;
+    use crate::generate::{ CodeGen, Instruction };
+    use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint };
+
+    fn x_ph(num: usize) -> ArgumentExpressionConstraint {
+        ArgumentExpressionConstraint::Placeholder(format!("{}",num))
+    }
+
+    #[test]
+    fn typepeass_smoke() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/typepass-smoke.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let gen = CodeGen::new();
+        let instrs : Vec<Instruction> = gen.go(&defstore,stmts).expect("codegen");
+        let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
+        print!("{}\n",instrs_str.join(""));
+        let mut tp = Typing::new();
+        for instr in &instrs {
+            print!("=== {:?}",instr);
+            tp.add(&instr.get_constraint(&defstore).expect("A")).expect("ok");
+            print!("{:?}\n",tp);
+        }
+    }
+
+    #[test]
+    fn typestore_refnonref() {
+        let mut ts = Typing::new();
+        let reg = RegisterAllocator::new().allocate();
+        let constraint = InstructionConstraint::new(
+            &vec![
+                (ArgumentConstraint::NonReference(x_ph(1)),reg.clone()),
+                (ArgumentConstraint::Reference(x_ph(1)),reg.clone())
+            ]
+        );
+        ts.add(&constraint).expect_err("O");
+    }
+
 }

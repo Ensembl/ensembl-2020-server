@@ -1,7 +1,7 @@
 use crate::lexer::{ Lexer, Token };
 use super::node::{ Statement, ParserStatement, ParseError };
 use super::lexutil::{ get_string, get_other, not_reserved, get_identifier, get_number, get_operator };
-use crate::codegen::{ DefStore, InlineMode };
+use crate::model::{ DefStore, InlineMode };
 use super::parsedecl::{ 
     parse_proc, parse_exprdecl, parse_stmtdecl, parse_func, parse_struct,
     parse_enum

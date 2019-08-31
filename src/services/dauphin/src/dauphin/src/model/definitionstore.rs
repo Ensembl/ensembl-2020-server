@@ -137,8 +137,4 @@ impl DefStore {
     pub fn get_proc(&self, name: &str) -> Option<&ProcDecl> {
         self.procs.get(name)
     }
-
-    pub fn get_structenum_order(&self) -> impl DoubleEndedIterator<Item=&str> {
-        self.structenum_order.iter().map(|s| &**s)
-    }
 }

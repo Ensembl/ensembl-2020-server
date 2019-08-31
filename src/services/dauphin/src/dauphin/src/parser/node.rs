@@ -1,9 +1,8 @@
 use std::fmt;
 use hex;
 
-use crate::codegen::InlineMode;
+use crate::model::InlineMode;
 use crate::lexer::Lexer;
-use crate::types::{ TypeSigExpr, Type, Sig };
 use crate::typeinf::{ MemberType, SignatureConstraint };
 
 #[derive(PartialEq)]
@@ -117,11 +116,11 @@ pub enum ParserStatement {
     Inline(String,String,InlineMode,f64),
     ExprMacro(String),
     StmtMacro(String),
-    FuncDecl(String,SignatureConstraint,TypeSigExpr,Vec<TypeSigExpr>),
-    ProcDecl(String,Vec<Sig>,SignatureConstraint),
+    FuncDecl(String,SignatureConstraint),
+    ProcDecl(String,SignatureConstraint),
     Regular(Statement),
-    StructDef(String,Vec<MemberType>,Vec<Type>,Vec<String>),
-    EnumDef(String,Vec<MemberType>,Vec<Type>,Vec<String>),
+    StructDef(String,Vec<MemberType>,Vec<String>),
+    EnumDef(String,Vec<MemberType>,Vec<String>),
     EndOfParse
 }
 

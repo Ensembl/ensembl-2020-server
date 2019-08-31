@@ -1,7 +1,7 @@
 use std::collections::{ HashMap, HashSet };
 
 use super::types::ExpressionType;
-use super::typesinternal::{ ExpressionConstraint, Key, TypeConstraint };
+use super::typesinternal::{ ExpressionConstraint, Key };
 
 /* Invariant: a Key is never both a key in self.values and at the same time used as a placeholder in
  * a value stored in self.values. As this invariant holds, we guarantee ourselves to be non-recursive.
@@ -174,12 +174,5 @@ mod test {
         assert_eq!(ExpressionType::Vec(Box::new(ExpressionType::Any)),ts.get(&Key::External(1)).expect("K"));
         assert_eq!(ExpressionType::Vec(Box::new(ExpressionType::Vec(Box::new(ExpressionType::Any)))),ts.get(&Key::External(2)).expect("L"));
         assert_eq!(ExpressionType::Any,ts.get(&Key::External(3)).expect("M"));
-    }
-
-    #[test]
-    fn typestore_refnonref() {
-        let mut ts = TypeStore::new();
-        ts.add(&Key::External(0),&x_ph(1)).expect("N");
-        ts.add(&Key::External(0),&x_ph(1)).expect_err("O");
     }
 }

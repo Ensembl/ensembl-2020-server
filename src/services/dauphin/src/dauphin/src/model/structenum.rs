@@ -1,13 +1,11 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::types::Type;
 use crate::typeinf::{ MemberType };
 
 pub struct StructEnumDef {
     type_: String,
     name: String,
-    types: Vec<Type>,
     names: Vec<String>,
     member_types: Vec<MemberType>
 }
@@ -15,7 +13,7 @@ pub struct StructEnumDef {
 impl fmt::Debug for StructEnumDef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f,"{} {} {{ ",self.type_,self.name)?;
-        for (i,t) in self.types.iter().enumerate() {
+        for (i,t) in self.member_types.iter().enumerate() {
             if i > 0 { write!(f,", ")?; }
             write!(f,"{}: ",self.names[i])?;
             write!(f,"{:?}",t)?;
@@ -37,12 +35,11 @@ fn no_duplicates(input: &Vec<String>) -> Result<(),String> { // TODO test
 }
 
 impl StructEnumDef {
-    pub fn new(type_: &str, name: &str, member_types: &Vec<MemberType>, types: &Vec<Type>, names: &Vec<String>) -> Result<StructEnumDef,String> {
+    pub fn new(type_: &str, name: &str, member_types: &Vec<MemberType>, names: &Vec<String>) -> Result<StructEnumDef,String> {
         no_duplicates(names)?;
         Ok(StructEnumDef {
             type_: type_.to_string(),
             name: name.to_string(),
-            types: types.to_vec(),
             names: names.clone(),
             member_types: member_types.clone()
         })
@@ -50,16 +47,6 @@ impl StructEnumDef {
 
     pub fn name(&self) -> &str { &self.name }
     pub fn get_names(&self) -> &Vec<String> { &self.names }
-    pub fn get_types(&self) -> &Vec<Type> { &self.types }
-
-    pub fn type_from_name(&self, name: &str) -> Option<&Type> {
-        for (i,this_name) in self.names.iter().enumerate() {
-            if this_name == name {
-                return Some(&self.types[i]);
-            }
-        }
-        None
-    }
 
     pub fn type_from_name2(&self, name: &str) -> Option<MemberType> {
         for (i,this_name) in self.names.iter().enumerate() {
@@ -80,28 +67,20 @@ pub struct StructDef {
 }
 
 impl StructDef {
-    pub fn new(name: &str, member_types: &Vec<MemberType>, types: &Vec<Type>, names: &Vec<String>) -> Result<StructDef,String> {
+    pub fn new(name: &str, member_types: &Vec<MemberType>, names: &Vec<String>) -> Result<StructDef,String> {
         Ok(StructDef {
-            common: StructEnumDef::new("struct",name,member_types,types,names)?
+            common: StructEnumDef::new("struct",name,member_types,names)?
         })
     }
 
     pub fn name(&self) -> &str { &self.common.name() }
     pub fn get_names(&self) -> &Vec<String> { &self.common.get_names() }
 
-    pub fn get_member_types(&self) -> &Vec<Type> {
-        self.common.get_types()
-    }
-
-    pub fn get_member_type(&self, name: &str) -> Option<&Type> {
-        self.common.type_from_name(name)
-    }
-
-    pub fn get_member_type2(&self, name: &str) -> Option<MemberType> {
+    pub fn get_member_type(&self, name: &str) -> Option<MemberType> {
         self.common.type_from_name2(name)
     }
 
-    pub fn get_member_types2(&self) -> &Vec<MemberType> {
+    pub fn get_member_types(&self) -> &Vec<MemberType> {
         self.common.get_types2()
     }
 }
@@ -117,19 +96,15 @@ pub struct EnumDef {
 }
 
 impl EnumDef {
-    pub fn new(name: &str, member_types: &Vec<MemberType>, types: &Vec<Type>, names: &Vec<String>) -> Result<EnumDef,String> {
+    pub fn new(name: &str, member_types: &Vec<MemberType>, names: &Vec<String>) -> Result<EnumDef,String> {
         Ok(EnumDef {
-            common: StructEnumDef::new("enum",name,member_types,types,names)?
+            common: StructEnumDef::new("enum",name,member_types,names)?
         })
     }
 
     pub fn name(&self) -> &str { &self.common.name() }
 
-    pub fn get_branch_type(&self, name: &str) -> Option<&Type> {
-        self.common.type_from_name(name)
-    }
-
-    pub fn get_branch_type2(&self, name: &str) -> Option<MemberType> {
+    pub fn get_branch_type(&self, name: &str) -> Option<MemberType> {
         self.common.type_from_name2(name)
     }
 }

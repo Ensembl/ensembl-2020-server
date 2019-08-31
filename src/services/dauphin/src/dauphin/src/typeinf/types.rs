@@ -1,6 +1,7 @@
-use crate::codegen::Register2;
+use std::fmt;
+use crate::model::Register;
 
-#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
+#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum BaseType {
     StringType,
     BytesType,
@@ -11,6 +12,22 @@ pub enum BaseType {
     Invalid
 }
 
+impl fmt::Debug for BaseType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let v = match self {
+            BaseType::StringType => "string",
+            BaseType::BytesType => "bytes",
+            BaseType::NumberType => "number",
+            BaseType::BooleanType => "boolean",
+            BaseType::Invalid => "***INVALID***",
+            BaseType::StructType(t) => t,
+            BaseType::EnumType(t) => t
+        };
+        write!(f,"{}",v)?;
+        Ok(())
+    }
+}
+
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
 pub enum ExpressionType {
     Base(BaseType),
@@ -18,10 +35,20 @@ pub enum ExpressionType {
     Any
 }
 
-#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
+#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum MemberType {
     Base(BaseType),
     Vec(Box<MemberType>),
+}
+
+impl fmt::Debug for MemberType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MemberType::Base(b) => write!(f,"{:?}",b)?,
+            MemberType::Vec(b) => write!(f,"vec({:?})",b)?
+        }
+        Ok(())
+    }
 }
 
 impl MemberType {
@@ -43,12 +70,6 @@ impl MemberType {
 }
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
-pub enum RegisterType {
-    Reference(ExpressionType),
-    NonReference(ExpressionType)
-}
-
-#[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
 pub enum ArgumentExpressionConstraint {
     Base(BaseType),
     Vec(Box<ArgumentExpressionConstraint>),
@@ -63,17 +84,17 @@ pub enum ArgumentConstraint {
 
 #[derive(Clone,Debug)]
 pub struct InstructionConstraint {
-    constraints: Vec<(ArgumentConstraint,Register2)>
+    constraints: Vec<(ArgumentConstraint,Register)>
 }
 
 impl InstructionConstraint {
-    pub fn new(members: &Vec<(ArgumentConstraint,Register2)>) -> InstructionConstraint {
+    pub fn new(members: &Vec<(ArgumentConstraint,Register)>) -> InstructionConstraint {
         InstructionConstraint {
             constraints: members.clone()
         }
     }
 
-    pub fn each_member(&self) -> impl Iterator<Item=&(ArgumentConstraint,Register2)> {
+    pub fn each_member(&self) -> impl Iterator<Item=&(ArgumentConstraint,Register)> {
         self.constraints.iter()
     }
 }

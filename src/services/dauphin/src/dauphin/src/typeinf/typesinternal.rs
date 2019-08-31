@@ -1,6 +1,5 @@
 use super::types::{
-    ArgumentExpressionConstraint, ArgumentConstraint, BaseType, ExpressionType,
-    RegisterType
+    ArgumentExpressionConstraint, ArgumentConstraint, BaseType, ExpressionType
 };
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
@@ -41,7 +40,7 @@ impl ExpressionConstraint {
         match self {
             ExpressionConstraint::Base(b) => ExpressionConstraint::Base(b.clone()),
             ExpressionConstraint::Vec(v) => ExpressionConstraint::Vec(Box::new(v.substitute(value))),
-            ExpressionConstraint::Placeholder(k) => value.clone()
+            ExpressionConstraint::Placeholder(_) => value.clone()
         }
     }
 
@@ -61,7 +60,7 @@ pub(super) enum TypeConstraint {
 }
 
 impl TypeConstraint {
-    pub(super) fn from_argumentconstraint<F>(ac: &ArgumentConstraint, mut cb: F)
+    pub(super) fn from_argumentconstraint<F>(ac: &ArgumentConstraint, cb: F)
                     -> TypeConstraint where F: FnMut(&str) -> usize {
         match ac {
             ArgumentConstraint::Reference(aec) =>
@@ -75,31 +74,6 @@ impl TypeConstraint {
         match self {
             TypeConstraint::Reference(e) => e,
             TypeConstraint::NonReference(e) => e
-        }
-    }
-
-    pub(super) fn is_reference(&self) -> bool {
-        match self {
-            TypeConstraint::Reference(_) => true,
-            TypeConstraint::NonReference(_) => false
-        }
-    }
-
-    pub(super) fn get_placeholder(&self) -> Option<&Key> {
-        self.get_expressionconstraint().get_placeholder()
-    }
-
-    pub(super) fn substitute(&self, value: &ExpressionConstraint) -> TypeConstraint {
-        match self {
-            TypeConstraint::Reference(e) => TypeConstraint::Reference(e.substitute(value)),
-            TypeConstraint::NonReference(e) => TypeConstraint::NonReference(e.substitute(value))
-        }        
-    }
-
-    pub(super) fn to_registertype(&self) -> RegisterType {
-        match self {
-            TypeConstraint::Reference(e) => RegisterType::Reference(e.to_expressiontype()),
-            TypeConstraint::NonReference(e) => RegisterType::NonReference(e.to_expressiontype())
         }
     }
 }

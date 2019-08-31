@@ -1,9 +1,8 @@
-mod codegen;
 mod generate;
 mod lexer;
+mod model;
 mod parser;
 mod testsuite;
-mod types;
 mod typeinf;
 
 #[macro_use]
@@ -13,8 +12,8 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
-use crate::codegen::{ Generator, RegisterAllocator, simplify, dename };
-use crate::types::TypePass;
+use crate::model::{ RegisterAllocator };
+use crate::generate::CodeGen;
 use crate::testsuite::load_testdata;
 
 fn main() {
@@ -28,15 +27,7 @@ fn main() {
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
     //
-    let regalloc = RegisterAllocator::new();
-    let gen = Generator::new(&regalloc);
-    let instrs = gen.go(&defstore,stmts).expect("codegen");
-    let instrs = dename(&regalloc,&defstore,&instrs).expect("dename");
-    let _outstrs = simplify(&regalloc,&defstore,&instrs);
-    let mut tp = TypePass::new(true);
-    for instr in &instrs {
-        print!("=== {:?}",instr);
-        tp.apply_command(instr,&defstore).expect("ok");
-        //print!("finish {:?}\n",tp.typeinf);
-    }
+    let _regalloc = RegisterAllocator::new();
+    let gen = CodeGen::new();
+    let _instrs = gen.go(&defstore,stmts).expect("codegen");
 }
