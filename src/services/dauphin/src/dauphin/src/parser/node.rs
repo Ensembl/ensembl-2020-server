@@ -4,7 +4,7 @@ use hex;
 use crate::codegen::InlineMode;
 use crate::lexer::Lexer;
 use crate::types::{ TypeSigExpr, Type, Sig };
-use crate::typeinf::SignatureConstraint;
+use crate::typeinf::{ MemberType, SignatureConstraint };
 
 #[derive(PartialEq)]
 pub enum Expression {
@@ -120,8 +120,8 @@ pub enum ParserStatement {
     FuncDecl(String,TypeSigExpr,Vec<TypeSigExpr>),
     ProcDecl(String,Vec<Sig>,SignatureConstraint),
     Regular(Statement),
-    StructDef(String,Vec<Type>,Vec<String>),
-    EnumDef(String,Vec<Type>,Vec<String>),
+    StructDef(String,Vec<MemberType>,Vec<Type>,Vec<String>),
+    EnumDef(String,Vec<MemberType>,Vec<Type>,Vec<String>),
     EndOfParse
 }
 

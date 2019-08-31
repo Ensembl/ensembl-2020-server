@@ -1,4 +1,7 @@
-use super::types::{ BaseType, ExpressionType, RegisterType };
+use super::types::{
+    ArgumentExpressionConstraint, ArgumentConstraint, BaseType, ExpressionType,
+    RegisterType
+};
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
 pub(super) enum Key {
@@ -14,6 +17,18 @@ pub(super) enum ExpressionConstraint {
 }
 
 impl ExpressionConstraint {
+    pub(super) fn from_argumentexpressionconstraint<F>(aec: &ArgumentExpressionConstraint, mut cb: F) 
+                -> ExpressionConstraint where F: FnMut(&str) -> usize {
+        match aec {
+            ArgumentExpressionConstraint::Base(b) => 
+                ExpressionConstraint::Base(b.clone()),
+            ArgumentExpressionConstraint::Vec(v) =>
+                ExpressionConstraint::Vec(Box::new(ExpressionConstraint::from_argumentexpressionconstraint(v,cb))),
+            ArgumentExpressionConstraint::Placeholder(s) =>
+                ExpressionConstraint::Placeholder(Key::Internal(cb(&s)))
+        }
+    }
+
     pub(super) fn get_placeholder(&self) -> Option<&Key> {
         match self {
             ExpressionConstraint::Base(_) => None,
@@ -46,6 +61,16 @@ pub(super) enum TypeConstraint {
 }
 
 impl TypeConstraint {
+    pub(super) fn from_argumentconstraint<F>(ac: &ArgumentConstraint, mut cb: F)
+                    -> TypeConstraint where F: FnMut(&str) -> usize {
+        match ac {
+            ArgumentConstraint::Reference(aec) =>
+                TypeConstraint::Reference(ExpressionConstraint::from_argumentexpressionconstraint(aec,cb)),
+            ArgumentConstraint::NonReference(aec) =>
+                TypeConstraint::NonReference(ExpressionConstraint::from_argumentexpressionconstraint(aec,cb)),
+        }
+    }
+
     pub(super) fn get_expressionconstraint(&self) -> &ExpressionConstraint {
         match self {
             TypeConstraint::Reference(e) => e,

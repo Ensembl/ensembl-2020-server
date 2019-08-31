@@ -6,7 +6,7 @@ use crate::codegen::{
     StructDef, EnumDef
 };
 use crate::lexer::Lexer;
-use crate::typeinf::SignatureConstraint;
+use crate::typeinf::{ SignatureConstraint, MemberType };
 
 fn run_import(path: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
     lexer.import(path).map_err(|s| ParseError::new(&format!("import failed: {}",s),lexer))
@@ -45,17 +45,17 @@ fn run_func(name: &str, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>, defstore: &m
     Ok(())
 }
 
-fn run_struct(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_struct(name: &str, member_types: &Vec<MemberType>, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    let def = StructDef::new(name,types,names).map_err(|e| ParseError::new(&e,lexer) )?;
+    let def = StructDef::new(name,member_types,types,names).map_err(|e| ParseError::new(&e,lexer) )?;
     defstore.add_struct(def,lexer)?;
     Ok(())
 }
 
 // TODO allow one operator as prefix of another
-fn run_enum(name: &str, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_enum(name: &str, member_types: &Vec<MemberType>, types: &Vec<Type>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    let def = EnumDef::new(name,types,names).map_err(|e| ParseError::new(&e,lexer) )?;
+    let def = EnumDef::new(name,member_types,types,names).map_err(|e| ParseError::new(&e,lexer) )?;
     defstore.add_enum(def,lexer)?;
     Ok(())
 }
@@ -74,10 +74,10 @@ pub fn declare(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStor
             run_proc(&name,sigs,&signature,defstore,lexer).map(|_| true),
         ParserStatement::FuncDecl(name,dst,srcs) =>
             run_func(&name,dst,srcs,defstore,lexer).map(|_| true),
-        ParserStatement::StructDef(name,types,names) =>
-            run_struct(&name,&types,&names,defstore,lexer).map(|_| true),
-        ParserStatement::EnumDef(name,types,names) =>
-            run_enum(&name,types,names,defstore,lexer).map(|_| true),
+        ParserStatement::StructDef(name,member_types,types,names) =>
+            run_struct(&name,&member_types,&types,&names,defstore,lexer).map(|_| true),
+        ParserStatement::EnumDef(name,member_types,types,names) =>
+            run_enum(&name,&member_types,types,names,defstore,lexer).map(|_| true),
         _ => { return Ok(false); }
     }
 }

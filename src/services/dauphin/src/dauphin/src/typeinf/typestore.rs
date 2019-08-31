@@ -1,6 +1,6 @@
 use std::collections::{ HashMap, HashSet };
 
-use super::types::RegisterType;
+use super::types::ExpressionType;
 use super::typesinternal::{ ExpressionConstraint, Key, TypeConstraint };
 
 /* Invariant: a Key is never both a key in self.values and at the same time used as a placeholder in
@@ -29,7 +29,7 @@ use super::typesinternal::{ ExpressionConstraint, Key, TypeConstraint };
  */
 
 pub(super) struct TypeStore {
-    values: HashMap<Key,TypeConstraint>,
+    values: HashMap<Key,ExpressionConstraint>,
     uses_placeholder: HashMap<Key,HashSet<Key>>
 }
 
@@ -50,7 +50,7 @@ impl TypeStore {
         return Ok(())
     }
 
-    fn set(&mut self, key: &Key, constraint: &TypeConstraint) {
+    fn set(&mut self, key: &Key, constraint: &ExpressionConstraint) {
         if let Some(old_value) = self.values.get(key) {
             if let Some(placeholder) = old_value.get_placeholder() {
                 self.uses_placeholder.get_mut(placeholder).unwrap().remove(key);
@@ -77,53 +77,42 @@ impl TypeStore {
         self.unify(a,b).map_err(|_| format!("Cannout unify {:?} and {:?}",a,b))
     }
 
-    fn replace_placeholder(&mut self, key: &Key, constraint: &TypeConstraint) -> Result<(),String> {
+    fn replace_placeholder(&mut self, key: &Key, constraint: &ExpressionConstraint) -> Result<(),String> {
         if let Some(targets) = self.uses_placeholder.get(key) {
             for target in targets.clone().iter() {
                 let old_value = self.values.get(target).unwrap();
-                if old_value.is_reference() != constraint.is_reference() {
-                    return Err(format!("Cannot unify reference and non-reference"));
-                }
-                let new_value = old_value.substitute(constraint.get_expressionconstraint());
+                let new_value = old_value.substitute(constraint);
                 self.set(target,&new_value);
             }
         }
         Ok(())
     }
 
-    fn apply_unification(&mut self, a: &TypeConstraint, b: &TypeConstraint) -> Result<(),String> {
-        if a.is_reference() != b.is_reference() {
-            return Err(format!("Cannot unify reference and non-reference"));
-        }
-        if let Some((key,constraint)) = self.try_unify(a.get_expressionconstraint(),b.get_expressionconstraint())? {
-            if a.is_reference() {
-                self.replace_placeholder(&key,&TypeConstraint::Reference(constraint))?;
-            } else {
-                self.replace_placeholder(&key,&TypeConstraint::NonReference(constraint))?;
-            }
+    fn apply_unification(&mut self, a: &ExpressionConstraint, b: &ExpressionConstraint) -> Result<(),String> {
+        if let Some((key,constraint)) = self.try_unify(a,b)? {
+            self.replace_placeholder(&key,&constraint)?;
+            self.set(&key,&constraint);
+            print!("UNIFIED {:?} and {:?} using {:?} = {:?}\n{:?}\n",a,b,key,constraint,self.values);
         }
         Ok(())
     }
 
-    pub(super) fn add(&mut self, key: &Key, constraint: &TypeConstraint) -> Result<(),String> {
-        print!("trying to add {:?} as {:?}\n",key,constraint);
+    pub(super) fn add(&mut self, key: &Key, constraint: &ExpressionConstraint) -> Result<(),String> {
+        //print!("trying to add {:?} as {:?}\n",key,constraint);
         let mut constraint = constraint.clone();
         /* substitute expression to ensure store is naive to our placeholder as a key */
         if let Some(placeholder) = constraint.get_placeholder() {
             if let Some(expression) = self.values.get(placeholder).cloned() {
-                if constraint.is_reference() != expression.is_reference() {
-                    return Err(format!("Cannot unify reference and non-reference"));
-                }
-                constraint = constraint.substitute(&expression.get_expressionconstraint());
+                constraint = constraint.substitute(&expression);
             }
         }
-        print!("after applying existing rules, trying to add {:?} as {:?}\n",key,constraint);
+        //print!("after applying existing rules, trying to add {:?} as {:?}\n",key,constraint);
         if let Some(existing) = self.values.get(key).cloned() {
             /* key present, unify */
-            print!("Already exists so trying to unify with present value of {:?}\n",existing);
+            //print!("Already exists so trying to unify with present value of {:?}\n",existing);
             self.apply_unification(&existing.clone(),&constraint)?;
         } else {
-            self.ensure_not_recursive(key,&constraint.get_expressionconstraint())?;
+            self.ensure_not_recursive(key,&constraint)?;
             /* new key: substitute current uses of placeholder with new value */
             self.replace_placeholder(key,&constraint)?;
             /* add */
@@ -132,8 +121,8 @@ impl TypeStore {
         Ok(())
     }
 
-    pub(super) fn get(&mut self, key: &Key) -> Option<RegisterType> {
-        self.values.get(key).map(|t| t.to_registertype())
+    pub(super) fn get(&self, key: &Key) -> Option<ExpressionType> {
+        self.values.get(key).map(|t| t.to_expressiontype())
     }
 }
 
@@ -157,41 +146,40 @@ mod test {
     #[test]
     fn failed_unify() {
         let mut ts = TypeStore::new();
-        ts.add(&Key::External(0),&TypeConstraint::NonReference(x_base(BaseType::NumberType))).expect("A");
-        ts.add(&Key::External(0),&TypeConstraint::NonReference(x_base(BaseType::BooleanType))).expect_err("B");
+        ts.add(&Key::External(0),&x_base(BaseType::NumberType)).expect("A");
+        ts.add(&Key::External(0),&x_base(BaseType::BooleanType)).expect_err("B");
     }
 
     #[test]
     fn recursive() {
         let mut ts = TypeStore::new();
-        ts.add(&Key::External(0),&TypeConstraint::NonReference(x_ph(1))).expect("C");
-        ts.add(&Key::External(1),&TypeConstraint::NonReference(x_ph(0))).expect_err("D");
-        ts.add(&Key::External(1),&TypeConstraint::NonReference(x_vec(x_ph(0)))).expect_err("E");
+        ts.add(&Key::External(0),&x_ph(1)).expect("C");
+        ts.add(&Key::External(1),&x_ph(0)).expect_err("D");
+        ts.add(&Key::External(1),&x_vec(x_ph(0))).expect_err("E");
     }
 
     #[test]
     fn identity() {
         let mut ts = TypeStore::new();
-        ts.add(&Key::External(0),&TypeConstraint::NonReference(x_ph(1))).expect("F");
-        ts.add(&Key::External(0),&TypeConstraint::NonReference(x_ph(1))).expect("G");
+        ts.add(&Key::External(0),&x_ph(1)).expect("F");
+        ts.add(&Key::External(0),&x_ph(1)).expect("G");
     }
 
     #[test]
     fn typestore_smoke() {
         let mut ts = TypeStore::new();
-        ts.add(&Key::External(1),&TypeConstraint::NonReference(x_vec(x_ph(0)))).expect("H");
-        ts.add(&Key::External(2),&TypeConstraint::NonReference(x_vec(x_vec(x_ph(0))))).expect("I");
-        ts.add(&Key::External(3),&TypeConstraint::NonReference(x_ph(0))).expect("J");
-        assert_eq!(RegisterType::NonReference(ExpressionType::Vec(Box::new(ExpressionType::Any))),ts.get(&Key::External(1)).expect("K"));
-        assert_eq!(RegisterType::NonReference(ExpressionType::Vec(Box::new(ExpressionType::Vec(Box::new(ExpressionType::Any))))),ts.get(&Key::External(2)).expect("L"));
-        assert_eq!(RegisterType::NonReference(ExpressionType::Any),ts.get(&Key::External(3)).expect("M"));
+        ts.add(&Key::External(1),&x_vec(x_ph(0))).expect("H");
+        ts.add(&Key::External(2),&x_vec(x_vec(x_ph(0)))).expect("I");
+        ts.add(&Key::External(3),&x_ph(0)).expect("J");
+        assert_eq!(ExpressionType::Vec(Box::new(ExpressionType::Any)),ts.get(&Key::External(1)).expect("K"));
+        assert_eq!(ExpressionType::Vec(Box::new(ExpressionType::Vec(Box::new(ExpressionType::Any)))),ts.get(&Key::External(2)).expect("L"));
+        assert_eq!(ExpressionType::Any,ts.get(&Key::External(3)).expect("M"));
     }
 
     #[test]
     fn typestore_refnonref() {
         let mut ts = TypeStore::new();
-        ts.add(&Key::External(0),&TypeConstraint::NonReference(x_ph(1))).expect("N");
-        ts.add(&Key::External(0),&TypeConstraint::Reference(x_ph(1))).expect_err("O");
-
+        ts.add(&Key::External(0),&x_ph(1)).expect("N");
+        ts.add(&Key::External(0),&x_ph(1)).expect_err("O");
     }
 }
