@@ -20,12 +20,12 @@ pub(in super) fn parse_stmtdecl(lexer: &mut Lexer) -> Result<ParserStatement,Par
 
 pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
+    let mut members = Vec::new();
     let name = get_identifier(lexer)?;
-    let mut srcs = Vec::new();
     get_other(lexer,"(")?;
     loop {
         if lexer.peek() == Token::Other(')') { lexer.get(); break; }
-        srcs.push(parse_typesigexpr(lexer,defstore)?.0);
+        members.push(SignatureMemberConstraint::RValue(parse_typesigexpr(lexer,defstore)?.1));
         match lexer.get() {
             Token::Other(',') => (),
             Token::Other(')') => break,
@@ -35,8 +35,8 @@ pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<Pa
     if get_identifier(lexer)? != "becomes" {
         return Err(ParseError::new("missing 'becomes'",lexer));
     }
-    let dst = parse_typesigexpr(lexer,defstore)?.0;
-    Ok(ParserStatement::FuncDecl(name.to_string(),dst,srcs))
+    members.insert(0,SignatureMemberConstraint::RValue(parse_typesigexpr(lexer,defstore)?.1));
+    Ok(ParserStatement::FuncDecl(name.to_string(),SignatureConstraint::new(&members),TypeSigExpr::Base(BaseType::Invalid),vec![]))
 }
 
 pub(in super) fn parse_proc(lexer: &mut Lexer,defstore: &DefStore) -> Result<ParserStatement,ParseError> {

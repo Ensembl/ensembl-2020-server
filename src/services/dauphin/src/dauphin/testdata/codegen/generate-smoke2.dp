@@ -1,4 +1,5 @@
 enum etest { X: string, Y: boolean };
+enum etest2 { Z: etest, W: boolean };
 struct stest { A: vec(number), B: etest };
 struct zstest2 { M: stest };
 proc assign(out _A, _A);
@@ -24,3 +25,15 @@ z.A := [];
 w := zstest2 { M: z };
 w.M.A := [0];
 w := 14;
+w := 15 > 12;
+
+y := "boo";
+m := etest2:Z etest:X y;
+m!Z!X := "hi";
+x[] := [0,0];
+
+x[@>0] := [1,1];
+x := [[1,2],[3,4]];
+x[@>0][$>0] := 2;
+z.A := x[@==0];
+z.A[@==0] := 4;

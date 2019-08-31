@@ -92,7 +92,7 @@ impl TypeStore {
         if let Some((key,constraint)) = self.try_unify(a,b)? {
             self.replace_placeholder(&key,&constraint)?;
             self.set(&key,&constraint);
-            print!("UNIFIED {:?} and {:?} using {:?} = {:?}\n{:?}\n",a,b,key,constraint,self.values);
+            //print!("UNIFIED {:?} and {:?} using {:?} = {:?}\n{:?}\n",a,b,key,constraint,self.values);
         }
         Ok(())
     }

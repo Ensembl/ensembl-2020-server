@@ -20,9 +20,14 @@ impl fmt::Debug for Register {
     }
 }
 
-#[derive(Clone,Debug,Hash,PartialEq,Eq,PartialOrd,Ord)]
-pub enum Register2 {
-    Temporary(usize)
+#[derive(Clone,Hash,PartialEq,Eq,PartialOrd,Ord)]
+pub struct Register2(usize);
+
+impl fmt::Debug for Register2 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"%{}",self.0)?;
+        Ok(())
+    }
 }
 
 struct RegisterAllocatorImpl {
@@ -43,7 +48,7 @@ impl RegisterAllocatorImpl {
 
     fn allocate2(&mut self) -> Register2 {
         self.index += 1;
-        Register2::Temporary(self.index)
+        Register2(self.index)
     }
 }
 

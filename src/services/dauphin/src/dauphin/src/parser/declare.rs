@@ -39,9 +39,9 @@ fn run_proc(name: &str, sigs: &Vec<Sig>, signature: &SignatureConstraint, defsto
     Ok(())
 }
 
-fn run_func(name: &str, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_func(name: &str, signature: &SignatureConstraint, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    defstore.add_func(FuncDecl::new(name,dst,srcs),lexer)?;
+    defstore.add_func(FuncDecl::new(name,signature,dst,srcs),lexer)?;
     Ok(())
 }
 
@@ -72,8 +72,8 @@ pub fn declare(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStor
             run_stmt(&name,defstore,lexer).map(|_| true),
         ParserStatement::ProcDecl(name,sigs,signature) =>
             run_proc(&name,sigs,&signature,defstore,lexer).map(|_| true),
-        ParserStatement::FuncDecl(name,dst,srcs) =>
-            run_func(&name,dst,srcs,defstore,lexer).map(|_| true),
+        ParserStatement::FuncDecl(name,signature,dst,srcs) =>
+            run_func(&name,signature,dst,srcs,defstore,lexer).map(|_| true),
         ParserStatement::StructDef(name,member_types,types,names) =>
             run_struct(&name,&member_types,&types,&names,defstore,lexer).map(|_| true),
         ParserStatement::EnumDef(name,member_types,types,names) =>

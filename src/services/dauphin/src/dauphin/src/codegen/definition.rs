@@ -63,17 +63,24 @@ impl StmtMacro {
 pub struct FuncDecl {
     name: String,
     dst: TypeSigExpr,
-    srcs: Vec<TypeSigExpr>
+    srcs: Vec<TypeSigExpr>,
+    signature: SignatureConstraint
 }
 
 impl FuncDecl {
-    pub fn new(name: &str, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>) -> FuncDecl {
-        FuncDecl { name: name.to_string(), srcs: srcs.to_vec(), dst: dst.clone() }
+    pub fn new(name: &str, signature: &SignatureConstraint, dst: &TypeSigExpr, srcs: &Vec<TypeSigExpr>) -> FuncDecl {
+        FuncDecl {
+            name: name.to_string(),
+            srcs: srcs.to_vec(),
+            dst: dst.clone(),
+            signature: signature.clone()
+        }
     }
 
     pub fn name(&self) -> &str { &self.name }
     pub fn get_srcs(&self) -> &Vec<TypeSigExpr> { &self.srcs }
     pub fn get_dst(&self) -> &TypeSigExpr { &self.dst }
+    pub fn get_signature(&self) -> &SignatureConstraint { &self.signature }
 }
 
 #[derive(Debug)]

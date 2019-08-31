@@ -117,7 +117,7 @@ pub enum ParserStatement {
     Inline(String,String,InlineMode,f64),
     ExprMacro(String),
     StmtMacro(String),
-    FuncDecl(String,TypeSigExpr,Vec<TypeSigExpr>),
+    FuncDecl(String,SignatureConstraint,TypeSigExpr,Vec<TypeSigExpr>),
     ProcDecl(String,Vec<Sig>,SignatureConstraint),
     Regular(Statement),
     StructDef(String,Vec<MemberType>,Vec<Type>,Vec<String>),
