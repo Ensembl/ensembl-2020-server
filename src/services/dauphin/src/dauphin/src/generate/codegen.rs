@@ -1,41 +1,57 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use super::intstruction::Instruction;
 use crate::parser::{ Expression, Statement };
 use crate::model::{ Register, RegisterAllocator };
 use crate::model::DefStore;
-use crate::typeinf::{ BaseType, ExpressionType, Route, RouteExpr, SignatureMemberConstraint, Typing };
+use crate::typeinf::{ BaseType, ExpressionType, Route, RouteExpr, SignatureMemberConstraint, TypeModel, Typing };
+
+pub struct GenContext {
+    pub instrs: Vec<Instruction>,
+    pub regalloc: RegisterAllocator,
+    pub route: Route,
+    pub types: TypeModel
+}
+
+impl fmt::Debug for GenContext {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let instr_str : Vec<String> = self.instrs.iter().map(|v| format!("{:?}",v)).collect();
+        write!(f,"{:?}\n{:?}{}\n",self.types,self.route,instr_str.join(""))?;
+        Ok(())
+    }
+}
 
 pub struct CodeGen {
-    instrs: Vec<Instruction>,
-    regalloc: RegisterAllocator,
-    regnames: HashMap<String,Register>,
+    context: GenContext,
     typing: Typing,
-    route: Route
+    regnames: HashMap<String,Register>
 }
 
 impl CodeGen {
-    pub fn new() -> CodeGen {
+    fn new() -> CodeGen {
         CodeGen {
-            instrs: Vec::new(),
-            regalloc: RegisterAllocator::new(),
-            regnames: HashMap::new(),
+            context: GenContext {
+                instrs: Vec::new(),
+                regalloc: RegisterAllocator::new(),
+                route: Route::new(),
+                types: TypeModel::new()
+            },
             typing: Typing::new(),
-            route: Route::new()
+            regnames: HashMap::new()
         }
     }
 
     fn add_instr(&mut self, instr: Instruction, defstore: &DefStore) -> Result<(),String> {
-        print!("add_instr({:?})\n",instr);
         self.typing.add(&instr.get_constraint(defstore)?)?;
-        self.instrs.push(instr);
+        self.context.instrs.push(instr);
         Ok(())
     }
 
     fn build_vec(&mut self, defstore: &DefStore, values: &Vec<Expression>, reg: &Register, dollar: Option<&Register>) -> Result<(),String> {
         self.add_instr(Instruction::List(reg.clone()),defstore)?;
         for val in values {
-            let r = self.regalloc.allocate();
+            let r = self.context.regalloc.allocate();
             self.build_rvalue(defstore,val,&r,dollar)?;
             let push = Instruction::Push(reg.clone(),r.clone());
             self.add_instr(push,defstore)?;
@@ -113,10 +129,10 @@ impl CodeGen {
     }
 
     fn reg_nonref(&mut self, defstore: &DefStore, reg: &Register) -> Result<Register,String> {
-        let (origin, exprs) = self.route.get(reg).clone();
+        let (origin, exprs) = self.context.route.get(reg).ok_or_else(|| format!("cannot find register")).unwrap().clone();
         let mut reg = origin.clone();
         for expr in exprs.iter() {
-            let subreg = self.regalloc.allocate();
+            let subreg = self.context.regalloc.allocate();
             match expr {
                 RouteExpr::Filter(f) => {
                     self.add_instr(Instruction::Filter(subreg.clone(),reg.clone(),f.clone()),defstore)?;
@@ -148,18 +164,18 @@ impl CodeGen {
                     self.regnames.remove(id);
                 }
                 if !self.regnames.contains_key(id) {
-                    self.regnames.insert(id.clone(),self.regalloc.allocate());
+                    self.regnames.insert(id.clone(),self.context.regalloc.allocate());
                 }
                 let real_reg = self.regnames[id].clone();
                 self.add_instr(Instruction::Ref(reg.clone(),real_reg.clone()),defstore)?;
-                self.route.set_empty(&reg,&real_reg);
+                self.context.route.set_empty(&reg,&real_reg);
             },
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(defstore,x)? {
-                    let subreg = self.regalloc.allocate();
+                    let subreg = self.context.regalloc.allocate();
                     self.build_lvalue(defstore,x,&subreg,false)?;
                     self.add_instr(Instruction::RefSValue(f.clone(),name.to_string(),reg.clone(),subreg.clone()),defstore)?;
-                    self.route.set_derive(&reg,&subreg,&RouteExpr::Member(f.to_string()));
+                    self.context.route.set_derive(&reg,&subreg,&RouteExpr::Member(f.to_string()));
                     
                 } else {
                     return Err("Can only take \"dot\" of structs".to_string());
@@ -167,47 +183,47 @@ impl CodeGen {
             },
             Expression::Pling(x,f) => {
                 if let ExpressionType::Base(BaseType::EnumType(name)) = self.type_of(defstore,x)? {
-                    let subreg = self.regalloc.allocate();
+                    let subreg = self.context.regalloc.allocate();
                     self.build_lvalue(defstore,x,&subreg,false)?;
                     self.add_instr(Instruction::RefEValue(f.clone(),name.to_string(),reg.clone(),subreg.clone()),defstore)?;
-                    self.route.set_derive(&reg,&subreg,&RouteExpr::Member(f.to_string()));
+                    self.context.route.set_derive(&reg,&subreg,&RouteExpr::Member(f.to_string()));
                     
                 } else {
                     return Err("Can only take \"pling\" of enums".to_string());
                 }
             },
             Expression::Square(x) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_lvalue(defstore,x,&subreg,false)?;
                 self.add_instr(Instruction::RefSquare(reg.clone(),subreg.clone()),defstore)?;
-                self.route.set_derive(&reg,&subreg,&RouteExpr::Square);                
+                self.context.route.set_derive(&reg,&subreg,&RouteExpr::Square);                
             },
             Expression::Filter(x,f) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_lvalue(defstore,x,&subreg,false)?;
-                let filterreg = self.regalloc.allocate();
+                let filterreg = self.context.regalloc.allocate();
                 let argreg = self.reg_nonref(defstore,&subreg)?;
                 self.build_rvalue(defstore,f,&filterreg,Some(&argreg))?;
                 self.add_instr(Instruction::RefFilter(reg.clone(),subreg.clone(),filterreg.clone()),defstore)?;
                 /* make permanent copy of filterreg to avoid competing updates */
-                let permreg = self.regalloc.allocate();
+                let permreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::Copy(permreg.clone(),filterreg.clone()),defstore)?;
-                self.route.set_derive(&subreg,&subreg,&RouteExpr::Filter(permreg));
+                self.context.route.set_derive(&subreg,&subreg,&RouteExpr::Filter(permreg));
             },
             Expression::Bracket(x,f) => {
-                let interreg = self.regalloc.allocate();
-                let subreg = self.regalloc.allocate();
+                let interreg = self.context.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_lvalue(defstore,x,&subreg,false)?;
                 self.add_instr(Instruction::RefSquare(interreg.clone(),subreg.clone()),defstore)?;
-                self.route.set_derive(&interreg,&subreg,&RouteExpr::Square);
-                let filterreg = self.regalloc.allocate();
+                self.context.route.set_derive(&interreg,&subreg,&RouteExpr::Square);
+                let filterreg = self.context.regalloc.allocate();
                 let argreg = self.reg_nonref(defstore,&interreg)?;
                 self.build_rvalue(defstore,f,&filterreg,Some(&argreg))?;
                 self.add_instr(Instruction::RefFilter(reg.clone(),interreg.clone(),filterreg.clone()),defstore)?;
                 /* make permanent copy of filterreg to avoid competing updates */
-                let permreg = self.regalloc.allocate();
+                let permreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::Copy(permreg.clone(),filterreg.clone()),defstore)?;
-                self.route.set_derive(&reg,&interreg,&RouteExpr::Filter(permreg));
+                self.context.route.set_derive(&reg,&interreg,&RouteExpr::Filter(permreg));
             },
             _ => return Err("Invalid lvalue".to_string())
         }
@@ -239,16 +255,16 @@ impl CodeGen {
             Expression::Operator(name,x) => {
                 let mut subregs = Vec::new();
                 for e in x {
-                    let r = self.regalloc.allocate();
+                    let r = self.context.regalloc.allocate();
                     self.build_rvalue(defstore,e,&r,dollar)?;
                     subregs.push(r);
                 }
-                self.add_instr(Instruction::Operator(name.clone(),reg.clone(),subregs),defstore)?;
+                self.add_instr(Instruction::Operator(name.clone(),vec![reg.clone()],subregs),defstore)?;
             },
             Expression::CtorStruct(s,x,n) => {
                 let mut subregs = Vec::new();
                 for e in x {
-                    let r = self.regalloc.allocate();
+                    let r = self.context.regalloc.allocate();
                     self.build_rvalue(defstore,e,&r,dollar)?;
                     subregs.push(r);
                 }
@@ -256,12 +272,12 @@ impl CodeGen {
                 self.add_instr(Instruction::CtorStruct(s.clone(),reg.clone(),x),defstore)?;
             },
             Expression::CtorEnum(e,b,x) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,x,&subreg,dollar)?;
                 self.add_instr(Instruction::CtorEnum(e.clone(),b.clone(),reg.clone(),subreg),defstore)?;
             },
             Expression::Dot(x,f) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,x,&subreg,dollar)?;
                 let stype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::StructType(name)) = stype {
@@ -271,7 +287,7 @@ impl CodeGen {
                 }
             },
             Expression::Query(x,f) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,x,&subreg,dollar)?;
                 let etype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
@@ -281,7 +297,7 @@ impl CodeGen {
                 }
             },
             Expression::Pling(x,f) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,x,&subreg,dollar)?;
                 let etype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
@@ -291,28 +307,28 @@ impl CodeGen {
                 }
             },
             Expression::Square(x) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,x,&subreg,dollar)?;
                 self.add_instr(Instruction::Square(reg.clone(),subreg),defstore)?;
             },
             Expression::Star(x) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,x,&subreg,dollar)?;
                 self.add_instr(Instruction::Star(reg.clone(),subreg),defstore)?;
             },
             Expression::Filter(x,f) => {
-                let subreg = self.regalloc.allocate();
-                let filterreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
+                let filterreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,x,&subreg,dollar)?;
                 self.build_rvalue(defstore,f,&filterreg,Some(&subreg))?;
                 self.add_instr(Instruction::Filter(reg.clone(),subreg.clone(),filterreg.clone()),defstore)?;
             },
             Expression::Bracket(x,f) => {
-                let subreg = self.regalloc.allocate();
+                let subreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,x,&subreg,dollar)?;
-                let sq_subreg = self.regalloc.allocate();
+                let sq_subreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::Square(sq_subreg.clone(),subreg.clone()),defstore)?;
-                let filterreg = self.regalloc.allocate();
+                let filterreg = self.context.regalloc.allocate();
                 self.build_rvalue(defstore,f,&filterreg,Some(&sq_subreg))?;
                 self.add_instr(Instruction::Filter(reg.clone(),sq_subreg.clone(),filterreg.clone()),defstore)?;
             },
@@ -341,7 +357,7 @@ impl CodeGen {
             return Err(format!("No such procedure '{}'",stmt.0));
         }
         for _ in procdecl.unwrap().get_signature().each_member() {
-            regs.push(self.regalloc.allocate());
+            regs.push(self.context.regalloc.allocate());
         }
         for (i,member) in procdecl.unwrap().get_signature().each_member().enumerate() {
             match member {
@@ -355,7 +371,7 @@ impl CodeGen {
         Ok(())
     }
 
-    pub fn go(mut self, defstore: &DefStore, stmts: Vec<Statement>) -> Result<Vec<Instruction>,Vec<String>> {
+    fn go(mut self, defstore: &DefStore, stmts: Vec<Statement>) -> Result<GenContext,Vec<String>> {
         let mut errors = Vec::new();
         for stmt in &stmts {
             let r = self.build_stmt(defstore,stmt);
@@ -367,9 +383,14 @@ impl CodeGen {
         if errors.len() > 0 {
             Err(errors)
         } else {
-            Ok(self.instrs)
+            self.typing.to_model(&mut self.context.types);
+            Ok(self.context)
         }
     }
+}
+
+pub fn generate_code(defstore: &DefStore, stmts: Vec<Statement>) -> Result<GenContext,Vec<String>> {
+    CodeGen::new().go(defstore,stmts)
 }
 
 #[cfg(test)]
@@ -397,8 +418,7 @@ mod test {
         lexer.import("test:codegen/generate-smoke2.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let gen = CodeGen::new();
-        let cmds : Vec<String> = gen.go(&defstore,stmts).expect("codegen").iter().map(|e| format!("{:?}",e)).collect();
+        let cmds : Vec<String> = generate_code(&defstore,stmts).expect("codegen").instrs.iter().map(|e| format!("{:?}",e)).collect();
         let outdata = load_testdata(&["codegen","generate-smoke2.out"]).ok().unwrap();
         assert_eq!(outdata,cmds.join(""));
     }

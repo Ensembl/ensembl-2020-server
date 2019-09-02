@@ -35,6 +35,16 @@ pub enum ExpressionType {
     Any
 }
 
+impl ExpressionType {
+    pub(super) fn to_membertype(&self, catchall: &BaseType) -> MemberType {
+        match self {
+            ExpressionType::Base(b) => MemberType::Base(b.clone()),
+            ExpressionType::Vec(v) => MemberType::Vec(Box::new(v.to_membertype(catchall))),
+            ExpressionType::Any => MemberType::Base(catchall.clone())
+        }
+    }
+}
+
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum MemberType {
     Base(BaseType),
@@ -65,6 +75,13 @@ impl MemberType {
             MemberType::Base(b) => ExpressionType::Base(b.clone()),
             MemberType::Vec(v) => ExpressionType::Vec(
                 Box::new(v.to_expressiontype()))
+        }
+    }
+
+    pub fn get_base(&self) -> BaseType {
+        match self {
+            MemberType::Base(b) => b.clone(),
+            MemberType::Vec(v) => v.get_base()
         }
     }
 }

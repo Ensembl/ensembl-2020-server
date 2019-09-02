@@ -1,10 +1,12 @@
 use std::fmt;
-
+use std::iter::FromIterator;
 use std::collections::{ HashMap, HashSet };
 
+use crate::generate::generate_code;
 use crate::model::Register;
 use super::types::{ InstructionConstraint, ExpressionType, BaseType };
 use super::typesinternal::{ Key, TypeConstraint };
+use super::typemodel::TypeModel;
 use super::typestore::TypeStore;
 
 pub struct Typing {
@@ -87,6 +89,18 @@ impl Typing {
         }
         ExpressionType::Base(BaseType::Invalid)
     }
+
+    pub fn to_model(&self, model: &mut TypeModel) {
+        let revmap : HashMap<usize,Register> = 
+            HashMap::from_iter(self.regmap.iter().map(|(k,v)| (v.clone(),k.clone())));
+        for (key,expression_type) in self.store.get_all() {
+            if let Key::External(id) = key {
+                if let Some(reg) = revmap.get(id) {
+                    model.add(&reg,&expression_type.to_membertype(&BaseType::BooleanType));
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -95,7 +109,7 @@ mod test {
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };
     use crate::model::RegisterAllocator;
-    use crate::generate::{ CodeGen, Instruction };
+    use crate::generate::{ generate_code };
     use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint };
 
     fn x_ph(num: usize) -> ArgumentExpressionConstraint {
@@ -103,18 +117,17 @@ mod test {
     }
 
     #[test]
-    fn typepeass_smoke() {
+    fn typing_smoke() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/typepass-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let gen = CodeGen::new();
-        let instrs : Vec<Instruction> = gen.go(&defstore,stmts).expect("codegen");
-        let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
+        let context = generate_code(&defstore,stmts).expect("codegen");
+        let instrs_str : Vec<String> = context.instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));
         let mut tp = Typing::new();
-        for instr in &instrs {
+        for instr in &context.instrs {
             print!("=== {:?}",instr);
             tp.add(&instr.get_constraint(&defstore).expect("A")).expect("ok");
             print!("{:?}\n",tp);

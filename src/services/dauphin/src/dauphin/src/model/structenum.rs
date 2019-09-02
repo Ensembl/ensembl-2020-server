@@ -103,9 +103,14 @@ impl EnumDef {
     }
 
     pub fn name(&self) -> &str { &self.common.name() }
+    pub fn get_names(&self) -> &Vec<String> { &self.common.get_names() }
 
     pub fn get_branch_type(&self, name: &str) -> Option<MemberType> {
         self.common.type_from_name2(name)
+    }
+
+    pub fn get_branch_types(&self) -> &Vec<MemberType> {
+        self.common.get_types2()
     }
 }
 

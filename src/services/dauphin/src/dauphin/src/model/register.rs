@@ -12,6 +12,7 @@ impl fmt::Debug for Register {
     }
 }
 
+#[derive(Debug)]
 struct RegisterAllocatorImpl {
     index: usize
 }
@@ -29,7 +30,7 @@ impl RegisterAllocatorImpl {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct RegisterAllocator(Rc<RefCell<RegisterAllocatorImpl>>);
 
 impl RegisterAllocator {

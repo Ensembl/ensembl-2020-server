@@ -3,30 +3,40 @@ use std::fmt;
 use crate::model::{ DefStore, Register };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint };
 
+#[derive(Clone)]
 pub enum Instruction {
-    Proc(String,Vec<Register>),
+    /* structs/enums: created at codegeneration, removed at simplification */
+    CtorStruct(String,Register,Vec<Register>),
+    CtorEnum(String,String,Register,Register),
+    SValue(String,String,Register,Register),
+    EValue(String,String,Register,Register),
+    ETest(String,String,Register,Register),
+    RefSValue(String,String,Register,Register),
+    RefEValue(String,String,Register,Register),
+
+    /* constant building */
     NumberConst(Register,f64),
     BooleanConst(Register,bool),
     StringConst(Register,String),
     BytesConst(Register,Vec<u8>),
     List(Register),
     Push(Register,Register),
-    CtorStruct(String,Register,Vec<Register>),
-    CtorEnum(String,String,Register,Register),
-    SValue(String,String,Register,Register),
+
+    /* housekeeping */
     Copy(Register,Register),
-    EValue(String,String,Register,Register),
-    ETest(String,String,Register,Register),
-    RefSValue(String,String,Register,Register),
-    RefEValue(String,String,Register,Register),
-    Operator(String,Register,Vec<Register>),
+    Ref(Register,Register),
+
+    /* calls-out */
+    Proc(String,Vec<Register>),
+    Operator(String,Vec<Register>,Vec<Register>),
+
+    /* filtering */
     Square(Register,Register),
     RefSquare(Register,Register),
     Star(Register,Register),
     Filter(Register,Register,Register),
     At(Register,Register),
     RefFilter(Register,Register,Register),
-    Ref(Register,Register)
 }
 
 fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {
@@ -53,10 +63,11 @@ impl fmt::Debug for Instruction {
                 fmt_instr(f,"push",&vec![r0,r1],&vec![])?,
             Instruction::Proc(name,regs) => 
                 fmt_instr(f,&format!("proc:{}",name),&regs.iter().map(|x| x).collect(),&vec![])?,
-            Instruction::Operator(name,dst,srcs) =>  {
-                let mut r = vec![dst];
-                r.extend(srcs.iter());
-                fmt_instr(f,&format!("oper:{}",name),&r,&vec![])?
+            Instruction::Operator(name,dsts,srcs) =>  {
+                let mut args = Vec::new();
+                args.extend(dsts.iter());
+                args.extend(srcs.iter());
+                fmt_instr(f,&format!("oper:{}",name),&args,&vec![])?
             },
             Instruction::CtorStruct(name,dest,regs) => {
                 let mut r = vec![dest];
@@ -245,11 +256,11 @@ impl Instruction {
                     ),src.clone())
                 ]
             },
-            Instruction::Operator(name,dst,srcs) => {
+            Instruction::Operator(name,dsts,srcs) => {
                 let mut out = Vec::new();
                 let exprdecl = defstore.get_func(name).ok_or_else(|| format!("No such function {:?}",name))?;
                 let signature = exprdecl.get_signature();
-                let mut regs = vec![dst.clone()];
+                let mut regs = dsts.clone();
                 regs.extend(srcs.iter().cloned());
                 for (i,member_constraint) in signature.each_member().enumerate() {
                     out.push((

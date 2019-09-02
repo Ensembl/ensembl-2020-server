@@ -13,7 +13,7 @@ extern crate lazy_static;
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
 use crate::model::{ RegisterAllocator };
-use crate::generate::CodeGen;
+use crate::generate::generate_code;
 use crate::testsuite::load_testdata;
 
 fn main() {
@@ -26,8 +26,5 @@ fn main() {
     out.push("".to_string()); /* For trailing \n */
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
-    //
-    let _regalloc = RegisterAllocator::new();
-    let gen = CodeGen::new();
-    let _instrs = gen.go(&defstore,stmts).expect("codegen");
+    let _instrs = generate_code(&defstore,stmts).expect("codegen");
 }

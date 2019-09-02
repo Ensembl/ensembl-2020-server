@@ -124,6 +124,10 @@ impl TypeStore {
     pub(super) fn get(&self, key: &Key) -> Option<ExpressionType> {
         self.values.get(key).map(|t| t.to_expressiontype())
     }
+
+    pub(super) fn get_all(&self) -> impl Iterator<Item=(&Key,ExpressionType)> {
+        self.values.iter().map(|(k,v)| (k,v.to_expressiontype()))
+    }
 }
 
 #[cfg(test)]
