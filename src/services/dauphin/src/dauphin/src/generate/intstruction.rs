@@ -38,7 +38,7 @@ pub enum Instruction {
     At(Register,Register),
     RefFilter(Register,Register,Register),
 
-    /* opers that are used internally */
+    /* opers that are promoted to here because used internally */
     NumEq(Register,Register,Register)
 }
 

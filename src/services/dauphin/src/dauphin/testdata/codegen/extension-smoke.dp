@@ -29,11 +29,17 @@ func oper_test(stest) becomes stest;
 
 //a := etest3:C true;
 //b := a!C;
-a := [etest:Y true, etest:Y false, etest:X "hi"];
+//a := [etest:Y true, etest:Y false, etest:X "hi"];
 //c := a?A;
 //f := a[]?Y;
 //f := *(a[$?Y]);
-g := a[@==0];
+//g := a[@==0];
 
 //d := etest3:D [[1,2],[3],[]];
 //e := d!D[];
+
+//a[@==0] := etest:X "lo";
+//a[]!X := "boo";
+
+g := etest:Y true;
+g!Y := false;
