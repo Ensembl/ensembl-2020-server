@@ -37,6 +37,9 @@ pub enum Instruction {
     Filter(Register,Register,Register),
     At(Register,Register),
     RefFilter(Register,Register,Register),
+
+    /* opers that are used internally */
+    NumEq(Register,Register,Register)
 }
 
 fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {
@@ -115,6 +118,9 @@ impl fmt::Debug for Instruction {
             },
             Instruction::Copy(dst,src) => {
                 fmt_instr(f,"copy",&vec![dst,src],&vec![])?
+            },
+            Instruction::NumEq(out,a,b) => {
+                fmt_instr(f,"numeq",&vec![out,a,b],&vec![])?
             },
         }
         Ok(())
@@ -404,7 +410,8 @@ impl Instruction {
                         ArgumentExpressionConstraint::Placeholder(String::new())
                     ),src.clone()),
                 ]
-            }
+            },
+            other => return Err(format!("Cannot deduce type of {:?} instructions",other))
         }))
     }
 }

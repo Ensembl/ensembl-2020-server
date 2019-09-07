@@ -3,7 +3,7 @@ enum etest2 { Z: etest, W: boolean };
 
 struct stest { A: vec(number), B: etest };
 struct zstest2 { M: stest };
-enum etest3 { A: stest, B: etest, C: boolean, D: number };
+enum etest3 { A: stest, B: etest, C: boolean, D: vec(vec(number)) };
 proc assign(out _A, _A);
 func gt(number,number) becomes boolean;
 func lt(number,number) becomes boolean;
@@ -27,5 +27,13 @@ func oper_test(stest) becomes stest;
 //z := [ stest { A: [1,2,3], B: etest:Y true },
 //       stest { A: [4,5,6], B: etest:Y false } ];
 
-a := etest3:C true;
+//a := etest3:C true;
+//b := a!C;
+a := [etest:Y true, etest:Y false, etest:X "hi"];
+//c := a?A;
+//f := a[]?Y;
+//f := *(a[$?Y]);
+g := a[@==0];
 
+//d := etest3:D [[1,2],[3],[]];
+//e := d!D[];

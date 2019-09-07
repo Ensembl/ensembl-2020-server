@@ -48,6 +48,7 @@ impl Route {
 
     pub fn split_origin(&mut self, target: &Register, new_origin: &Register, source: &Register) {
         if let Some((_,expr)) = self.get(source) {
+            let expr = expr.clone();
             self.route.insert(target.clone(),(new_origin.clone(),expr.clone()));
         }
     }

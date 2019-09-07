@@ -2,7 +2,6 @@ use std::fmt;
 use std::iter::FromIterator;
 use std::collections::{ HashMap, HashSet };
 
-use crate::generate::generate_code;
 use crate::model::Register;
 use super::types::{ InstructionConstraint, ExpressionType, BaseType };
 use super::typesinternal::{ Key, TypeConstraint };

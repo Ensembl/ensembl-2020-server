@@ -4,8 +4,6 @@ use crate::model::{ DefStore, Register, StructDef, EnumDef };
 use crate::typeinf::{ BaseType, MemberType };
 use super::codegen::GenContext;
 
-pub struct Extension(Vec<(Register,MemberType)>);
-
 pub struct Extender {
 }
 
@@ -15,8 +13,13 @@ impl Extender {
         }
     }
 
-    fn allocate_registers(&mut self, context: &mut GenContext, register: &Register, member_types: &Vec<MemberType>, with_index: bool) -> Vec<Register> {
+    fn allocate_registers(&mut self, context: &mut GenContext, member_types: &Vec<MemberType>, with_index: bool) -> Vec<Register> {
         let mut out = Vec::new();
+        if with_index {
+            let reg = context.regalloc.allocate();
+            context.types.add(&reg,&MemberType::Base(BaseType::NumberType));
+            out.push(reg);
+        }
         for member_type in member_types.iter() {
             let reg = context.regalloc.allocate();
             context.types.add(&reg,member_type);
@@ -50,7 +53,7 @@ impl Extender {
                 self.extend_vertical(vec![dst,src],mapping,|regs| {
                     Instruction::Ref(regs[0].clone(),regs[1].clone())
                 })?
-            },  
+            },
             Instruction::Copy(dst,src) => {
                 self.extend_vertical(vec![dst,src],mapping,|regs| {
                     Instruction::Copy(regs[0].clone(),regs[1].clone())
@@ -66,6 +69,28 @@ impl Extender {
                     Instruction::List(regs[0].clone())
                 })?
             },  
+            Instruction::Square(dst,src) => {
+                self.extend_vertical(vec![dst,src],mapping,|regs| {
+                    Instruction::Square(regs[0].clone(),regs[1].clone())
+                })?
+            },
+            Instruction::Star(dst,src) => {
+                self.extend_vertical(vec![dst,src],mapping,|regs| {
+                    Instruction::Star(regs[0].clone(),regs[1].clone())
+                })?
+            },
+            Instruction::Filter(dst,src,filter) => {
+                self.extend_vertical(vec![dst,src],mapping,|regs| {
+                    Instruction::Filter(regs[0].clone(),regs[1].clone(),filter.clone())
+                })?
+            },
+            Instruction::At(dst,src) => {
+                if let Some(srcs) = mapping.get(&src) {
+                    vec![Instruction::At(dst.clone(),srcs[0].clone())]
+                } else {
+                    vec![Instruction::At(dst.clone(),src.clone())]
+                }
+            },
             Instruction::Proc(name,regs) => {
                 let mut new_regs = Vec::new();
                 for reg in regs {
@@ -148,9 +173,8 @@ impl Extender {
 
     fn build_nil(&mut self, context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<Vec<Instruction>,()> {
         let mut out = Vec::new();
-        print!("nil for {:?} (type {:?})\n",reg,type_);
         match type_ {
-            MemberType::Vec(v) => out.push(Instruction::List(reg.clone())),
+            MemberType::Vec(_) => out.push(Instruction::List(reg.clone())),
             MemberType::Base(b) => match b {
                 BaseType::BooleanType => out.push(Instruction::BooleanConst(reg.clone(),false)),
                 BaseType::StringType => out.push(Instruction::StringConst(reg.clone(),String::new())),
@@ -169,9 +193,7 @@ impl Extender {
                     out.push(Instruction::CtorStruct(name.to_string(),reg.clone(),subregs));
                 },
                 BaseType::EnumType(name) => {
-                    // XXX index reg
                     let decl = defstore.get_enum(name).ok_or_else(|| ())?;
-                    /* TODO choose best */
                     let branch_type = decl.get_branch_types().get(0).ok_or_else(|| ())?;
                     let field_name = decl.get_names().get(0).ok_or_else(|| ())?;
                     let subreg = context.regalloc.allocate();
@@ -189,14 +211,18 @@ impl Extender {
         if let Some(instrs) = self.extend_common(instr,mapping)? {
             Ok(instrs)
         } else {
+            /* because types topologically ordered and non-recursive we know
+             * there's nothing to expand in the args
+             */
             Ok(match instr {
                 Instruction::CtorEnum(name,field,dst,src) => {
                     if name == obj_name {
                         let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
                         let dests = mapping.get(dst).ok_or_else(|| ())?;
                         let mut out = Vec::new();
-                        for i in 0..dests.len() {
-                            if i == pos {
+                        for i in 1..dests.len() {
+                            if i-1 == pos {
+                                out.push(Instruction::NumberConst(dests[0].clone(),i as f64));
                                 out.push(Instruction::Copy(dests[i].clone(),src.clone()));
                             } else {
                                 let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
@@ -205,9 +231,35 @@ impl Extender {
                         }
                         out
                     } else {
-                        /* because types topologically ordered and non-recursive
-                        * we know there's nothing to expand in the args
-                        */
+                        vec![instr.clone()]
+                    }
+                },
+                Instruction::EValue(field,name,dst,src) => {
+                    if name == obj_name {
+                        let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
+                        let srcs = mapping.get(src).ok_or_else(|| ())?;
+                        let mut out = Vec::new();
+                        let filter = context.regalloc.allocate();
+                        let posreg = context.regalloc.allocate();
+                        out.push(Instruction::NumberConst(posreg.clone(),pos as f64));
+                        context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
+                        out.push(Instruction::NumEq(filter.clone(),srcs[0].clone(),posreg));
+                        out.push(Instruction::Filter(dst.clone(),srcs[pos+1].clone(),filter));
+                        out
+                    } else {
+                        vec![instr.clone()]
+                    }
+                },
+                Instruction::ETest(field,name,dst,src) => {
+                    if name == obj_name {
+                        let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
+                        let srcs = mapping.get(src).ok_or_else(|| ())?;
+                        let mut out = Vec::new();
+                        let posreg = context.regalloc.allocate();
+                        out.push(Instruction::NumberConst(posreg.clone(),pos as f64));
+                        out.push(Instruction::NumEq(dst.clone(),srcs[0].clone(),posreg));
+                        out
+                    } else {
                         vec![instr.clone()]
                     }
                 },
@@ -227,7 +279,7 @@ impl Extender {
         /* create some new subregisters for them */
         let mut new_registers = HashMap::new();
         for reg in &target_registers {
-            new_registers.insert(reg.clone(),self.allocate_registers(context,reg,member_types,with_index));
+            new_registers.insert(reg.clone(),self.allocate_registers(context,member_types,with_index));
         }
         /* make sure all the ref registers we're splitting get updated to use the split non-ref targets */
         for ref_reg in &target_registers {
@@ -243,6 +295,7 @@ impl Extender {
             }
         }
         /* move any refs which include our member forward to new origin */
+        // XXX index
         for ref_reg in &target_registers {
             let ref_subregs = &new_registers[ref_reg];
             for i in 0..names.len() {
@@ -279,7 +332,7 @@ impl Extender {
         Ok(())
     }
 
-    fn extend(&mut self, defstore: &DefStore, context: &mut GenContext) -> Result<(),()> {
+    pub fn extend(&mut self, defstore: &DefStore, context: &mut GenContext) -> Result<(),()> {
         for name in defstore.get_structenum_order().rev() {
             print!("extend {:?}\n",name);
             self.extend_one(defstore,context,name)?;
