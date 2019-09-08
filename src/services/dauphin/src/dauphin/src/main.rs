@@ -12,7 +12,7 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
-use crate::generate::{ generate_code, Extender };
+use crate::generate::{ generate_code, simplify };
 use crate::testsuite::load_testdata;
 
 fn main() {
@@ -26,6 +26,5 @@ fn main() {
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
     let mut context = generate_code(&defstore,stmts).expect("codegen");
-    let mut xt = Extender::new();
-    xt.extend(&defstore,&mut context).expect("k");
+    simplify(&defstore,&mut context).expect("k");
 }

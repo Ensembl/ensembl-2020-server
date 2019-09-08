@@ -113,8 +113,8 @@
 #at %100 %99;
 #number %101 0;
 #oper:gt %98 %100 %101;
-#reffilter %94 %96 %98;
 #copy %102 %98;
+#reffilter %94 %96 %102;
 #list %95;
 #number %103 1;
 #push %95 %103;
@@ -142,8 +142,8 @@
 #at %122 %121;
 #number %123 0;
 #oper:gt %120 %122 %123;
-#reffilter %117 %118 %120;
 #copy %124 %120;
+#reffilter %117 %118 %124;
 #refsquare %116 %117;
 #square %126 %107;
 #filter %127 %126 %124;
@@ -151,8 +151,8 @@
 #copy %129 %128;
 #number %130 0;
 #oper:gt %125 %129 %130;
-#reffilter %114 %116 %125;
 #copy %131 %125;
+#reffilter %114 %116 %131;
 #number %115 2;
 #proc:assign %114 %115;
 #ref %134 %12;
@@ -172,7 +172,7 @@
 #at %148 %147;
 #number %149 0;
 #oper:eq %145 %148 %149;
-#reffilter %140 %142 %145;
 #copy %150 %145;
+#reffilter %140 %142 %150;
 #number %141 4;
 #proc:assign %140 %141;

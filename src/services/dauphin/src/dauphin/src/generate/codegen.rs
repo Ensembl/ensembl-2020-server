@@ -219,10 +219,10 @@ impl CodeGen {
                 let filterreg = self.context.regalloc.allocate();
                 let argreg = self.reg_nonref(defstore,&interreg)?;
                 self.build_rvalue(defstore,f,&filterreg,Some(&argreg))?;
-                self.add_instr(Instruction::RefFilter(reg.clone(),interreg.clone(),filterreg.clone()),defstore)?;
                 /* make permanent copy of filterreg to avoid competing updates */
                 let permreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::Copy(permreg.clone(),filterreg.clone()),defstore)?;
+                self.add_instr(Instruction::RefFilter(reg.clone(),interreg.clone(),permreg.clone()),defstore)?;
                 self.context.route.set_derive(&reg,&interreg,&RouteExpr::Filter(permreg));
             },
             _ => return Err("Invalid lvalue".to_string())

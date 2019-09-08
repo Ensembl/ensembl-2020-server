@@ -139,6 +139,7 @@ impl DefStore {
     }
 
     pub fn get_structenum_order(&self) -> impl DoubleEndedIterator<Item=&String> {
+        print!("structenumorder = {:?}\n",self.structenum_order);
         self.structenum_order.iter()
     }
 }
