@@ -57,6 +57,10 @@ impl Route {
         self.route.get(reg)
     }
 
+    pub fn remove(&mut self, reg: &Register) {
+        self.route.remove(reg);
+    }
+
     fn remove_member(&self, expr: &Vec<RouteExpr>, name: &str) -> Option<Vec<RouteExpr>> {
         let mut out = Vec::new();
         let mut seen = false;

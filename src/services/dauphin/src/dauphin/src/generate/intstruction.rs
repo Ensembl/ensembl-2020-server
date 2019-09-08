@@ -25,6 +25,7 @@ pub enum Instruction {
     /* housekeeping */
     Copy(Register,Register),
     Ref(Register,Register),
+    Nil(Register),
 
     /* calls-out */
     Proc(String,Vec<Register>),
@@ -52,6 +53,8 @@ fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, mor
 impl fmt::Debug for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Instruction::Nil(r) =>
+                fmt_instr(f,"nil",&vec![r],&vec![])?,
             Instruction::NumberConst(r0,num) =>
                 fmt_instr(f,"number",&vec![r0],&vec![num.to_string()])?,
             Instruction::BooleanConst(r0,b) => 
@@ -128,6 +131,36 @@ impl fmt::Debug for Instruction {
 }
 
 impl Instruction {
+    pub fn get_registers(&self) -> Vec<Register> {
+        match self {
+            Instruction::CtorStruct(_,a,bb) => { let mut out = bb.to_vec(); out.push(a.clone()); out },
+            Instruction::CtorEnum(_,_,a,b) => vec![a.clone(),b.clone()],
+            Instruction::SValue(_,_,a,b) => vec![a.clone(),b.clone()],
+            Instruction::EValue(_,_,a,b) => vec![a.clone(),b.clone()],
+            Instruction::ETest(_,_,a,b) => vec![a.clone(),b.clone()],
+            Instruction::RefSValue(_,_,a,b) => vec![a.clone(),b.clone()],
+            Instruction::RefEValue(_,_,a,b) => vec![a.clone(),b.clone()],
+            Instruction::NumberConst(a,_) => vec![a.clone()],
+            Instruction::BooleanConst(a,_) => vec![a.clone()],
+            Instruction::StringConst(a,_) => vec![a.clone()],
+            Instruction::BytesConst(a,_) => vec![a.clone()],
+            Instruction::List(a) => vec![a.clone()],
+            Instruction::Push(a,b) => vec![a.clone(),b.clone()],
+            Instruction::Copy(a,b) => vec![a.clone(),b.clone()],
+            Instruction::Ref(a,b) => vec![a.clone(),b.clone()],
+            Instruction::Proc(_,aa) => aa.to_vec(),
+            Instruction::Operator(_,aa,bb) => { let mut out = aa.to_vec(); out.extend(bb.to_vec()); out },
+            Instruction::Square(a,b) => vec![a.clone(),b.clone()],
+            Instruction::RefSquare(a,b) => vec![a.clone(),b.clone()],
+            Instruction::Star(a,b) => vec![a.clone(),b.clone()],
+            Instruction::Filter(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
+            Instruction::At(a,b) => vec![a.clone(),b.clone()],
+            Instruction::RefFilter(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
+            Instruction::NumEq(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
+            Instruction::Nil(a) => vec![a.clone()],
+        }
+    }
+
     pub fn get_constraint(&self, defstore: &DefStore) -> Result<InstructionConstraint,String> {
         Ok(InstructionConstraint::new(&match self {
             Instruction::Ref(dst,src) => {

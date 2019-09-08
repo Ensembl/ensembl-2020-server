@@ -84,6 +84,13 @@ impl MemberType {
             MemberType::Vec(v) => v.get_base()
         }
     }
+
+    pub fn depth(&self) -> usize {
+        match self {
+            MemberType::Base(_) => 0,
+            MemberType::Vec(v) => 1+v.depth()
+        }
+    }
 }
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]

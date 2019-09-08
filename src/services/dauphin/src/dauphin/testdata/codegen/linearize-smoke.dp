@@ -1,0 +1,19 @@
+enum etest { X: string, Y: boolean };
+enum etest2 { Z: etest, W: boolean };
+
+struct stest { A: vec(number), B: etest };
+struct zstest2 { M: stest };
+enum etest3 { A: stest, B: etest, C: boolean, D: vec(vec(number)) };
+proc assign(out _A, _A);
+func gt(number,number) becomes boolean;
+func lt(number,number) becomes boolean;
+func eq(number,number) becomes boolean;
+inline ":=" assign left 14;
+inline ">" gt left 6;
+inline "<" lt left 6;
+inline "==" eq left 5;
+func oper_test(stest) becomes stest;
+
+a := [];
+b := [1];
+c := [[1,2],[3]];

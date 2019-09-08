@@ -75,6 +75,7 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 
 fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
+        Instruction::Nil(_) => panic!("Impossible instruction #nil!"),
         Instruction::NumberConst(_,_) |
         Instruction::BooleanConst(_,_) |
         Instruction::StringConst(_,_) |
@@ -352,7 +353,7 @@ mod test {
     use crate::testsuite::load_testdata;
 
     #[test]
-    fn typepeass_smoke() {
+    fn simplify_smoke() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/simplify-smoke.dp").expect("cannot load file");
@@ -364,6 +365,6 @@ mod test {
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
         let cmds : Vec<String> = context.instrs.iter().map(|e| format!("{:?}",e)).collect();
         assert_eq!(outdata,cmds.join(""));
-        print!("{}\n",cmds.join(""));
+        print!("{:?}\n",context);
     }
 }
