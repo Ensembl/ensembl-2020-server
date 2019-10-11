@@ -45,6 +45,18 @@ impl ExpressionType {
     }
 }
 
+pub struct ContainerType(usize);
+
+impl ContainerType {
+    pub fn construct(&self, in_: MemberType) -> MemberType {
+        let mut out = in_;
+        for _ in 0..self.0 {
+            out = MemberType::Vec(Box::new(out));
+        }
+        out
+    }
+}
+
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum MemberType {
     Base(BaseType),
@@ -83,6 +95,10 @@ impl MemberType {
             MemberType::Base(b) => b.clone(),
             MemberType::Vec(v) => v.get_base()
         }
+    }
+
+    pub fn get_container(&self) -> ContainerType {
+        ContainerType(self.depth())
     }
 
     pub fn depth(&self) -> usize {

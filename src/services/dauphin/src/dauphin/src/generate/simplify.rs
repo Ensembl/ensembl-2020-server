@@ -1,19 +1,19 @@
 use std::collections::HashMap;
 use crate::generate::Instruction;
 use crate::model::{ DefStore, Register, StructDef, EnumDef };
-use crate::typeinf::{ BaseType, MemberType, RouteExpr };
+use crate::typeinf::{ BaseType, ContainerType, MemberType, RouteExpr };
 use super::codegen::GenContext;
 
-fn allocate_registers(context: &mut GenContext, member_types: &Vec<MemberType>, with_index: bool) -> Vec<Register> {
+fn allocate_registers(context: &mut GenContext, member_types: &Vec<MemberType>, with_index: bool, container_type: ContainerType) -> Vec<Register> {
     let mut out = Vec::new();
     if with_index {
         let reg = context.regalloc.allocate();
-        context.types.add(&reg,&MemberType::Base(BaseType::NumberType));
+        context.types.add(&reg,&container_type.construct(MemberType::Base(BaseType::NumberType)));
         out.push(reg);
     }
     for member_type in member_types.iter() {
         let reg = context.regalloc.allocate();
-        context.types.add(&reg,member_type);
+        context.types.add(&reg,&container_type.construct(member_type.clone()));
         out.push(reg);
     }
     out
@@ -288,7 +288,8 @@ fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
     /* create some new subregisters for them */
     let mut new_registers = HashMap::new();
     for reg in &target_registers {
-        new_registers.insert(reg.clone(),allocate_registers(context,member_types,with_index));
+        let type_ = context.types.get(reg).ok_or_else(|| ())?.clone();
+        new_registers.insert(reg.clone(),allocate_registers(context,member_types,with_index,type_.get_container()));
     }
     /* make sure all the ref registers we're splitting get updated to use the split non-ref targets */
     for ref_reg in &target_registers {
@@ -370,6 +371,19 @@ mod test {
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
         let cmds : Vec<String> = context.instrs.iter().map(|e| format!("{:?}",e)).collect();
         assert_eq!(outdata,cmds.join(""));
+        print!("{:?}\n",context);
+    }
+
+    #[test]
+    fn simplify_enum_nest() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/simplify-enum-nest.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        print!("{:?}\n",context);
+        simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
     }
 }

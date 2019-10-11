@@ -40,7 +40,9 @@ pub enum Instruction {
     RefFilter(Register,Register,Register),
 
     /* opers that are promoted to here because used internally */
+    /* introduced in simplify */
     NumEq(Register,Register,Register),
+    /* introduced in linearize */
     Append(Register,Register),
     Length(Register,Register),
     Add(Register,Register)

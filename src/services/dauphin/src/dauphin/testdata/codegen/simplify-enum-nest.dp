@@ -1,0 +1,16 @@
+struct stest { A: vec(boolean), B: vec(boolean) };
+enum etest { X: string, Y: vec(boolean) };
+proc assign(out _A, _A);
+func eq(number,number) becomes boolean;
+proc bool_check(boolean);
+proc stest_check(stest);
+inline ":=" assign left 14;
+inline "==" eq left 5;
+
+c := [ etest:Y [false,true], etest:Y [true,false] ][$?Y];
+d := c!Y[@==1];
+bool_check(d);
+
+x := [[ stest { A: [false,true], B: [true,false] }, stest { A: [false,false], B: [true,true] } ]];
+y := x[][$.A[@==0]];
+stest_check(y);

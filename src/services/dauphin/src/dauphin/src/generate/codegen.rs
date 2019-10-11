@@ -379,7 +379,6 @@ impl CodeGen {
                 errors.push(format!("{} at {} {}",r,stmt.2,stmt.3));
             }
         }
-        print!("{:?}\n",self.typing);
         if errors.len() > 0 {
             Err(errors)
         } else {
