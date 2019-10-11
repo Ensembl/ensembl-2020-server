@@ -1,4 +1,4 @@
-enum etest { X: string, Y: boolean };
+enum etest { X: string, Y: vec(boolean) };
 enum etest2 { Z: etest, W: boolean };
 
 struct stest { A: vec(number), B: etest };
@@ -8,14 +8,16 @@ proc assign(out _A, _A);
 func gt(number,number) becomes boolean;
 func lt(number,number) becomes boolean;
 func eq(number,number) becomes boolean;
+proc bool_check(boolean);
 inline ":=" assign left 14;
 inline ">" gt left 6;
 inline "<" lt left 6;
 inline "==" eq left 5;
 func oper_test(stest) becomes stest;
 
-a := [];
-b := [[3]];
-c := [1];
-d := [[[1,2],[3]],[[4,5,6],[]]];
-e := [[]];
+//a := [[[1,2],[3]],[[4,5,6],[]]];
+//b := a;
+
+c := [ etest:Y [false,true], etest:Y [true,false] ][$?Y];
+d := c!Y[@==1];
+bool_check(d);

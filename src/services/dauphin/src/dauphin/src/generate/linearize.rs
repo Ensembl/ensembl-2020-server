@@ -77,14 +77,28 @@ fn push_top(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Line
     out.push(Instruction::Push(lin_dst.index[level].1.clone(),src_len));
 }
 
-fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: &HashMap<Register,Linearized> , instr: &Instruction) -> Result<(),()> {
+fn linear_extend<F>(subregs: &HashMap<Register,Linearized>, dst: &Register, src: &Register, mut cb: F)
+        where F: FnMut(&Register,&Register) {
+    if let Some(lin_src) = subregs.get(src) {
+        let lin_dst = subregs.get(dst).unwrap();
+        cb(&lin_dst.data,&lin_src.data);
+        for level in 0..lin_src.index.len() {
+            cb(&lin_dst.index[level].0,&lin_src.index[level].0);
+            cb(&lin_dst.index[level].1,&lin_src.index[level].1);
+        }
+    } else {
+        cb(dst,src);
+    }
+}
+
+fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: &HashMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match instr {
         Instruction::NumberConst(_,_) |
         Instruction::BooleanConst(_,_) |
         Instruction::StringConst(_,_) | 
         Instruction::BytesConst(_,_) => out.push(instr.clone()),
         Instruction::List(r) => {
-            let lin = subregs.get(r).ok_or_else(|| ())?;
+            let lin = subregs.get(r).ok_or_else(|| format!("Missing info for register {:?}",r))?;
             out.push(Instruction::Nil(lin.data.clone()));
             for (start,len) in &lin.index {
                 out.push(Instruction::Nil(start.clone()));
@@ -92,7 +106,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             }
         },
         Instruction::Push(dst,src) => {
-            let lin_dst = subregs.get(dst).ok_or_else(|| ())?;
+            let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
             if let Some(lin_src) = subregs.get(src) {
                 push_top(out,context,lin_dst,lin_src,lin_src.index.len());
                 for level in (0..lin_src.index.len()).rev() {
@@ -109,12 +123,25 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 out.push(Instruction::Push(lin_dst.index[0].1.clone(),src_len));
             }
         },
+        Instruction::Nil(_) => {
+            out.push(instr.clone());
+        },
+        Instruction::Copy(dst,src) => {
+            linear_extend(subregs,dst,src, |d,s| {
+                out.push(Instruction::Copy(d.clone(),s.clone()));
+            });
+        },
+        Instruction::Ref(dst,src) => {
+            linear_extend(subregs,dst,src, |d,s| {
+                out.push(Instruction::Ref(d.clone(),s.clone()));
+            });
+        },
         _ => {} // XXX
     };
     Ok(())
 }
 
-fn linearize_real(context: &mut GenContext) -> Result<HashMap<Register,Linearized>,()> {
+fn linearize_real(context: &mut GenContext) -> Result<HashMap<Register,Linearized>,String> {
     remove_unused_registers(context);
     let subregs = allocate_subregs(context);
     let mut instrs = Vec::new();
@@ -126,7 +153,7 @@ fn linearize_real(context: &mut GenContext) -> Result<HashMap<Register,Linearize
     Ok(subregs)
 }
 
-pub fn linearize(context: &mut GenContext) -> Result<(),()> {
+pub fn linearize(context: &mut GenContext) -> Result<(),String> {
     linearize_real(context)?;
     Ok(())
 }
@@ -180,11 +207,12 @@ mod test {
         print!("{:?}\n",context);
         linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
+        //let values = mini_interp(&mut context);
         //print!("{:?}",values);
     }
 
    #[test]
-    fn linearize_smoke_push() {
+    fn linearize_push_smoke() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/linearize-smoke-push.dp").expect("cannot load file");
@@ -192,11 +220,9 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
         simplify(&defstore,&mut context).expect("k");
-        print!("{:?}\n",context);
         let instrs = context.instrs.clone();
         let subregs = linearize_real(&mut context).expect("linearize");
         let lins = find_assigns(&instrs,&subregs);
-        //print!("{:?}\n",context);
         let values = mini_interp(&mut context);
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(Vec::<usize>::new(),values[&lins[0].index[0].0]);
