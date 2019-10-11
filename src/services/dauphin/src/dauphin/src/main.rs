@@ -12,7 +12,7 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
-use crate::generate::{ generate_code, simplify };
+use crate::generate::{ generate_code, linearize, simplify };
 use crate::testsuite::load_testdata;
 
 fn main() {
@@ -27,4 +27,5 @@ fn main() {
     assert_eq!(outdata,out.join("\n"));
     let mut context = generate_code(&defstore,stmts).expect("codegen");
     simplify(&defstore,&mut context).expect("k");
+    linearize(&mut context).expect("l");
 }

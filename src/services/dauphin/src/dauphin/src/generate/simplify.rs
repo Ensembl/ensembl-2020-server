@@ -75,7 +75,12 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 
 fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
-        Instruction::Nil(_) => panic!("Impossible instruction #nil!"),
+        Instruction::Nil(_) |
+        Instruction::Append(_,_) |
+        Instruction::Length(_,_) |
+        Instruction::Add(_,_) => {
+            panic!("Impossible instruction! {:?}",instr);
+        },
         Instruction::NumberConst(_,_) |
         Instruction::BooleanConst(_,_) |
         Instruction::StringConst(_,_) |
