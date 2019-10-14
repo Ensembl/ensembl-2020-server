@@ -49,13 +49,15 @@ impl CodeGen {
     }
 
     fn build_vec(&mut self, defstore: &DefStore, values: &Vec<Expression>, reg: &Register, dollar: Option<&Register>) -> Result<(),String> {
-        self.add_instr(Instruction::List(reg.clone()),defstore)?;
+        let tmp = self.context.regalloc.allocate();
+        self.add_instr(Instruction::Nil(tmp.clone()),defstore)?;
         for val in values {
             let r = self.context.regalloc.allocate();
             self.build_rvalue(defstore,val,&r,dollar)?;
-            let push = Instruction::Push(reg.clone(),r.clone());
+            let push = Instruction::Append(tmp.clone(),r.clone());
             self.add_instr(push,defstore)?;
         }
+        self.add_instr(Instruction::Star(reg.clone(),tmp),defstore)?;
         Ok(())
     }
 

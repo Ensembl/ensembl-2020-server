@@ -20,7 +20,7 @@ pub enum Instruction {
     StringConst(Register,String),
     BytesConst(Register,Vec<u8>),
     List(Register),
-    Push(Register,Register),
+    Append(Register,Register),
 
     /* housekeeping */
     Copy(Register,Register),
@@ -43,7 +43,6 @@ pub enum Instruction {
     /* introduced in simplify */
     NumEq(Register,Register,Register),
     /* introduced in linearize */
-    Append(Register,Register),
     Length(Register,Register),
     Add(Register,Register),
     SeqFilter(Register,Register,Register,Register)
@@ -71,11 +70,9 @@ impl fmt::Debug for Instruction {
                 fmt_instr(f,"bytes",&vec![r0],&vec![format!("\'{}\'",hex::encode(b))])?,
             Instruction::List(r0) =>
                 fmt_instr(f,"list",&vec![r0],&vec![])?,
-            Instruction::Append(r0,r1) =>
-                fmt_instr(f,"append",&vec![r0,r1],&vec![])?,
             Instruction::Length(r0,r1) =>
                 fmt_instr(f,"length",&vec![r0,r1],&vec![])?,
-            Instruction::Push(r0,r1) => 
+            Instruction::Append(r0,r1) => 
                 fmt_instr(f,"push",&vec![r0,r1],&vec![])?,
             Instruction::Add(r0,r1) => 
                 fmt_instr(f,"add",&vec![r0,r1],&vec![])?,
@@ -160,7 +157,7 @@ impl Instruction {
             Instruction::StringConst(a,_) => vec![a.clone()],
             Instruction::BytesConst(a,_) => vec![a.clone()],
             Instruction::List(a) => vec![a.clone()],
-            Instruction::Push(a,b) => vec![a.clone(),b.clone()],
+            Instruction::Append(a,b) => vec![a.clone(),b.clone()],
             Instruction::Add(a,b) => vec![a.clone(),b.clone()],
             Instruction::Copy(a,b) => vec![a.clone(),b.clone()],
             Instruction::Ref(a,b) => vec![a.clone(),b.clone()],
@@ -175,7 +172,6 @@ impl Instruction {
             Instruction::RefFilter(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
             Instruction::NumEq(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
             Instruction::Nil(a) => vec![a.clone()],
-            Instruction::Append(a,b) => vec![a.clone(),b.clone()],
             Instruction::Length(a,b) => vec![a.clone(),b.clone()],
         }
     }
@@ -373,12 +369,17 @@ impl Instruction {
                     ),r.clone())
                 ]
             },
-            Instruction::Push(r,c) => {
+            Instruction::Nil(r) => {
                 vec![
                     (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Vec(Box::new(
-                            ArgumentExpressionConstraint::Placeholder(String::new())
-                        ))
+                        ArgumentExpressionConstraint::Placeholder(String::new())
+                    ),r.clone())
+                ]
+            },
+            Instruction::Append(r,c) => {
+                vec![
+                    (ArgumentConstraint::NonReference(
+                        ArgumentExpressionConstraint::Placeholder(String::new())
                     ),r.clone()),
                     (ArgumentConstraint::NonReference(
                         ArgumentExpressionConstraint::Placeholder(String::new())

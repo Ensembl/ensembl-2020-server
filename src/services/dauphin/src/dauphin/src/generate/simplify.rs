@@ -76,8 +76,6 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
         Instruction::SeqFilter(_,_,_,_) |
-        Instruction::Nil(_) |
-        Instruction::Append(_,_) |
         Instruction::Length(_,_) |
         Instruction::Add(_,_) => {
             panic!("Impossible instruction! {:?}",instr);
@@ -96,6 +94,11 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         Instruction::NumEq(_,_,_) => {
             vec![instr.clone()]
         },
+        Instruction::Nil(r) => {
+            extend_vertical(vec![r],mapping,|regs| {
+                Instruction::Nil(regs[0].clone())
+            })?
+        },
         Instruction::Ref(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
                 Instruction::Ref(regs[0].clone(),regs[1].clone())
@@ -106,9 +109,9 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                 Instruction::Copy(regs[0].clone(),regs[1].clone())
             })?
         },  
-        Instruction::Push(dst,src) => {
+        Instruction::Append(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Push(regs[0].clone(),regs[1].clone())
+                Instruction::Append(regs[0].clone(),regs[1].clone())
             })?
         },  
         Instruction::List(reg) => {
@@ -361,6 +364,7 @@ mod test {
 
     // XXX common
     fn compare_instrs(a: &Vec<String>,b: &Vec<String>) {
+        print!("compare:\nLHS\n{:?}\n\nRHS\n{:?}\n",a.join("\n"),b.join("\n"));
         let mut a_iter = a.iter();
         for (i,b) in b.iter().enumerate() {
             if let Some(a) = a_iter.next() {
@@ -389,7 +393,6 @@ mod test {
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
         let cmds : Vec<String> = context.instrs.iter().map(|e| format!("{:?}",e)).collect();
         compare_instrs(&cmds,&outdata.split("\n").map(|x| x.to_string()).collect());
-        assert_eq!(outdata,cmds.join(""));
         print!("{:?}\n",context);
     }
 

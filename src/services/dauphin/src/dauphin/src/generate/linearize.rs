@@ -1,5 +1,5 @@
 // TODO Copy for registers
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::model::Register;
 use crate::typeinf::{ BaseType, MemberType };
@@ -33,7 +33,7 @@ impl Linearized {
     }
 }
 
-fn allocate_subregs(context: &mut GenContext) -> HashMap<Register,Linearized> {
+fn allocate_subregs(context: &mut GenContext) -> BTreeMap<Register,Linearized> {
     let mut targets = Vec::new();
     for (reg,type_) in context.types.each_register() {
         let depth = type_.depth();
@@ -41,7 +41,7 @@ fn allocate_subregs(context: &mut GenContext) -> HashMap<Register,Linearized> {
             targets.push((reg.clone(),type_.clone(),depth));
         }
     }
-    let mut out = HashMap::new();
+    let mut out = BTreeMap::new();
     for (reg,type_,depth) in &targets {
         out.insert(reg.clone(),Linearized::new(context,type_,*depth));
     }
@@ -54,13 +54,19 @@ fn tmp_number_reg(context: &mut GenContext) -> Register {
     r
 }
 
-fn push_copy_level(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Linearized, lin_src: &Linearized, level: usize) {
-    let offset = tmp_number_reg(context);
+fn lower_seq_length(out: &mut Vec<Instruction>, context: &mut GenContext, lin: &Linearized, level: usize) -> Register {
+    let reg = tmp_number_reg(context);
     if level == 0 {
-        out.push(Instruction::Length(offset.clone(),lin_dst.data.clone()));
+        out.push(Instruction::Length(reg.clone(),lin.data.clone()));
     } else {
-        out.push(Instruction::Length(offset.clone(),lin_dst.index[level-1].0.clone()));
+        out.push(Instruction::Length(reg.clone(),lin.index[level-1].0.clone()));
     }
+    reg
+}
+
+fn push_copy_level(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Linearized, lin_src: &Linearized, level: usize) {
+    /* offset is offset in next layer down (be it index or data) */
+    let offset = lower_seq_length(out,context,lin_dst,level);
     let tmp = tmp_number_reg(context);
     out.push(Instruction::Copy(tmp.clone(),lin_src.index[level].0.clone()));
     out.push(Instruction::Add(tmp.clone(),offset.clone()));
@@ -69,15 +75,17 @@ fn push_copy_level(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst
 }
 
 fn push_top(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Linearized, lin_src: &Linearized, level: usize) {
-    let dst_len = tmp_number_reg(context);
-    out.push(Instruction::Length(dst_len.clone(),lin_dst.index[level-1].0.clone()));
-    let src_len = tmp_number_reg(context);
-    out.push(Instruction::Length(src_len.clone(),lin_src.index[level-1].0.clone()));
-    out.push(Instruction::Push(lin_dst.index[level].0.clone(),dst_len));
-    out.push(Instruction::Push(lin_dst.index[level].1.clone(),src_len));
+    /* top level offset is current length of next level down plus offset in source */
+    let src_len = lower_seq_length(out,context,lin_dst,level);
+    let tmp = tmp_number_reg(context);
+    out.push(Instruction::Copy(tmp.clone(),lin_src.index[level].0.clone()));
+    out.push(Instruction::Add(tmp.clone(),src_len.clone()));
+    out.push(Instruction::Append(lin_dst.index[level].0.clone(),tmp));
+    /* top level lengths are copied over */
+    out.push(Instruction::Append(lin_dst.index[level].1.clone(),lin_src.index[level].1.clone()));
 }
 
-fn linear_extend<F>(subregs: &HashMap<Register,Linearized>, dst: &Register, src: &Register, mut cb: F)
+fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src: &Register, mut cb: F)
         where F: FnMut(&Register,&Register) {
     if let Some(lin_src) = subregs.get(src) {
         let lin_dst = subregs.get(dst).unwrap();
@@ -91,7 +99,7 @@ fn linear_extend<F>(subregs: &HashMap<Register,Linearized>, dst: &Register, src:
     }
 }
 
-fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: &HashMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
+fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: &BTreeMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match instr {
         Instruction::NumberConst(_,_) |
         Instruction::BooleanConst(_,_) |
@@ -105,22 +113,16 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 out.push(Instruction::Nil(len.clone()));
             }
         },
-        Instruction::Push(dst,src) => {
-            let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+        Instruction::Append(dst,src) => {
             if let Some(lin_src) = subregs.get(src) {
-                push_top(out,context,lin_dst,lin_src,lin_src.index.len());
-                for level in (0..lin_src.index.len()).rev() {
+                let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?} in push",dst))?;
+                push_top(out,context,lin_dst,lin_src,lin_src.index.len()-1);
+                for level in (0..lin_src.index.len()-1).rev() {
                     push_copy_level(out,context,lin_dst,lin_src,level);
                 }
                 out.push(Instruction::Append(lin_dst.data.clone(),lin_src.data.clone()));
             } else {
-                let dst_len = tmp_number_reg(context);
-                out.push(Instruction::Length(dst_len.clone(),lin_dst.data.clone()));
-                out.push(Instruction::Push(lin_dst.index[0].0.clone(),dst_len));
-                out.push(Instruction::Append(lin_dst.data.clone(),src.clone()));
-                let src_len = tmp_number_reg(context);
-                out.push(Instruction::Length(src_len.clone(),src.clone()));
-                out.push(Instruction::Push(lin_dst.index[0].1.clone(),src_len));
+                out.push(Instruction::Append(dst.clone(),src.clone()));
             }
         },
         Instruction::Nil(_) => {
@@ -185,15 +187,40 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 out.push(instr.clone());
             }
         },
-        Instruction::Append(_,_) | Instruction::Length(_,_) | Instruction::Add(_,_) => {
+        Instruction::Length(_,_) | Instruction::Add(_,_) => {
             return Err(format!("Bad instruction {:?}",instr.clone()));
-        }
+        },
+        Instruction::Star(dst,src) => {
+            let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+            let top_level = lin_dst.index.len()-1;
+            out.push(Instruction::Nil(lin_dst.index[top_level].0.clone()));
+            let src_len = if let Some(lin_src) = subregs.get(src) {
+                let src_len = lower_seq_length(out,context,lin_src,top_level);
+                if top_level > 0 {
+                    for level in 0..top_level {
+                        out.push(Instruction::Copy(lin_dst.index[level].0.clone(),lin_src.index[level].0.clone()));
+                        out.push(Instruction::Copy(lin_dst.index[level].1.clone(),lin_src.index[level].1.clone()));
+                    }
+                }
+                out.push(Instruction::Append(lin_dst.data.clone(),lin_src.data.clone()));
+                src_len
+            } else {
+                let src_len = tmp_number_reg(context);
+                out.push(Instruction::Length(src_len.clone(),src.clone()));
+                out.push(Instruction::Append(lin_dst.data.clone(),src.clone()));
+                src_len
+            };
+            let zero_reg = tmp_number_reg(context);
+            out.push(Instruction::NumberConst(zero_reg.clone(),0.));
+            out.push(Instruction::Append(lin_dst.index[top_level].0.clone(),zero_reg));
+            out.push(Instruction::Append(lin_dst.index[top_level].1.clone(),src_len.clone()));
+        },
         _ => {} // XXX
     };
     Ok(())
 }
 
-fn linearize_real(context: &mut GenContext) -> Result<HashMap<Register,Linearized>,String> {
+fn linearize_real(context: &mut GenContext) -> Result<BTreeMap<Register,Linearized>,String> {
     remove_unused_registers(context);
     let subregs = allocate_subregs(context);
     let mut instrs = Vec::new();
@@ -212,6 +239,7 @@ pub fn linearize(context: &mut GenContext) -> Result<(),String> {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
     use super::*;
     use super::super::simplify::simplify;
     use crate::lexer::{ FileResolver, Lexer };
@@ -240,7 +268,6 @@ mod test {
             print!("{:?}\n",instr);
             match instr {
                 Instruction::Nil(r) => { mi_ins(&mut values,r,vec![]); },
-                Instruction::Push(r,s) => { let x = mi_mut(&mut values,s)[0]; mi_mut(&mut values,r).push(x); },
                 Instruction::Append(r,s) => { let mut x = mi_mut(&mut values,s).to_vec(); mi_mut(&mut values,r).append(&mut x); },
                 Instruction::Add(r,v) => { let v = mi_get(&values,r).iter().map(|x| x+mi_get(&values,v)[0]).collect(); mi_ins(&mut values,&r,v); },
                 Instruction::Length(r,s) => { let v = vec![mi_get(&values,s).len()]; mi_ins(&mut values,&r,v); }
@@ -286,16 +313,21 @@ mod test {
         values.drain().filter(|(k,_)| k.is_some()).map(|(k,v)| (k.unwrap(),v)).collect()
     }
 
-    fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a HashMap<Register,Linearized>) -> Vec<&'a Linearized> {
-        let mut out = Vec::new();
+    fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a BTreeMap<Register,Linearized>) -> (Vec<&'a Linearized>,Vec<Register>) {
+        let mut lin = Vec::new();
+        let mut norm = Vec::new();
         for instr in instrs {
             if let Instruction::Proc(s,vv) = instr {
                 if s == "assign" {
-                    out.push(&subregs[&vv[1]]);
+                    if let Some(reg) = subregs.get(&vv[1]) {
+                        lin.push(reg);
+                    } else {
+                        norm.push(vv[1].clone());
+                    }
                 }
             }
         }
-        out
+        (lin,norm)
     }
 
     #[test]
@@ -312,6 +344,34 @@ mod test {
         print!("{:?}\n",context);
         let values = mini_interp(&mut context);
         print!("{:?}",values);
+    }
+
+    #[test]
+    fn linearize_filter_smoke() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/linearize-smoke-filter.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        simplify(&defstore,&mut context).expect("k");
+        let instrs = context.instrs.clone();
+        print!("{:?}\n",context);
+        let subregs = linearize_real(&mut context).expect("linearize");
+        print!("{:?}\n",context);
+        let values = mini_interp(&mut context);
+        let (lins,norms) = find_assigns(&instrs,&subregs);
+        print!("{:?}",values);
+        assert_eq!(vec![1,2],values[&lins[0].data]);
+        assert_eq!(vec![0],values[&lins[0].index[0].0]);
+        assert_eq!(vec![2],values[&lins[0].index[0].1]);
+        assert_eq!(vec![2],values[&norms[0]]);
+        assert_eq!(vec![1,2,3,4,5],values[&lins[1].data]);
+        assert_eq!(vec![2],values[&lins[1].index[0].0]);
+        assert_eq!(vec![3],values[&lins[1].index[0].1]);
+        assert_eq!(vec![3,4,5],values[&norms[1]]);
+        assert_eq!(vec![1,2,3,4,5],values[&norms[2]]);
+        assert_eq!(Vec::<usize>::new(),values[&norms[3]]);
     }
 
     fn linearize_stable_pass() -> GenContext {
@@ -344,12 +404,13 @@ mod test {
         let mut context = generate_code(&defstore,stmts).expect("codegen");
         simplify(&defstore,&mut context).expect("k");
         let instrs = context.instrs.clone();
+        print!("{:?}\n",instrs);
         let subregs = linearize_real(&mut context).expect("linearize");
-        let lins = find_assigns(&instrs,&subregs);
+        let (lins,_) = find_assigns(&instrs,&subregs);
         let values = mini_interp(&mut context);
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
-        assert_eq!(Vec::<usize>::new(),values[&lins[0].index[0].0]);
-        assert_eq!(Vec::<usize>::new(),values[&lins[0].index[0].1]);
+        assert_eq!(vec![0],values[&lins[0].index[0].0]);
+        assert_eq!(vec![0],values[&lins[0].index[0].1]);
         assert_eq!(vec![3],values[&lins[1].data]);
         assert_eq!(vec![0],values[&lins[1].index[0].0]);
         assert_eq!(vec![1],values[&lins[1].index[0].1]);
@@ -359,17 +420,17 @@ mod test {
         assert_eq!(vec![0],values[&lins[2].index[0].0]);
         assert_eq!(vec![1],values[&lins[2].index[0].1]);
         assert_eq!(vec![1,2,3,4,5,6],values[&lins[3].data]);
-        assert_eq!(vec![0,1,2,3,4,5],values[&lins[3].index[0].0]);
-        assert_eq!(vec![1,1,1,1,1,1],values[&lins[3].index[0].1]);
-        assert_eq!(vec![0,2,3,6],values[&lins[3].index[1].0]);
-        assert_eq!(vec![2,1,3,0],values[&lins[3].index[1].1]);
-        assert_eq!(vec![0,2],values[&lins[3].index[2].0]);
-        assert_eq!(vec![2,2],values[&lins[3].index[2].1]);
+        assert_eq!(vec![0,2,3,6],values[&lins[3].index[0].0]);
+        assert_eq!(vec![2,1,3,0],values[&lins[3].index[0].1]);
+        assert_eq!(vec![0,2],values[&lins[3].index[1].0]);
+        assert_eq!(vec![2,2],values[&lins[3].index[1].1]);
+        assert_eq!(vec![0],values[&lins[3].index[2].0]);
+        assert_eq!(vec![2],values[&lins[3].index[2].1]);
         assert_eq!(Vec::<usize>::new(),values[&lins[4].data]);
-        assert_eq!(Vec::<usize>::new(),values[&lins[4].index[0].0]);
-        assert_eq!(Vec::<usize>::new(),values[&lins[4].index[0].1]);
+        assert_eq!(vec![0],values[&lins[4].index[0].0]);
+        assert_eq!(vec![0],values[&lins[4].index[0].1]);
         assert_eq!(vec![0],values[&lins[4].index[1].0]);
-        assert_eq!(vec![0],values[&lins[4].index[1].1]);
+        assert_eq!(vec![1],values[&lins[4].index[1].1]);
         //print!("{:?}",values);
     }
 }
