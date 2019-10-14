@@ -45,7 +45,8 @@ pub enum Instruction {
     /* introduced in linearize */
     Length(Register,Register),
     Add(Register,Register),
-    SeqFilter(Register,Register,Register,Register)
+    SeqFilter(Register,Register,Register,Register),
+    RefSeqFilter(Register,Register,Register,Register)
 }
 
 fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {
@@ -128,6 +129,9 @@ impl fmt::Debug for Instruction {
             Instruction::SeqFilter(dst,src,start,len) => {
                 fmt_instr(f,"seqfilter",&vec![dst,src,start,len],&vec![])?
             },
+            Instruction::RefSeqFilter(dst,src,start,len) => {
+                fmt_instr(f,"refseqfilter",&vec![dst,src,start,len],&vec![])?
+            },
             Instruction::RefFilter(dst,src,filter) => {
                 fmt_instr(f,"reffilter",&vec![dst,src,filter],&vec![])?
             },
@@ -168,6 +172,7 @@ impl Instruction {
             Instruction::Star(a,b) => vec![a.clone(),b.clone()],
             Instruction::Filter(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
             Instruction::SeqFilter(a,b,c,d) => vec![a.clone(),b.clone(),c.clone(),d.clone()],
+            Instruction::RefSeqFilter(a,b,c,d) => vec![a.clone(),b.clone(),c.clone(),d.clone()],
             Instruction::At(a,b) => vec![a.clone(),b.clone()],
             Instruction::RefFilter(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
             Instruction::NumEq(a,b,c) => vec![a.clone(),b.clone(),c.clone()],

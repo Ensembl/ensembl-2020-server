@@ -135,6 +135,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         },
         Instruction::Ref(dst,src) => {
             linear_extend(subregs,dst,src, |d,s| {
+                context.route.set_empty(d,s);
                 out.push(Instruction::Ref(d.clone(),s.clone()));
             });
         },
@@ -161,6 +162,14 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             } else {
                 out.push(Instruction::SeqFilter(dst.clone(),lin_src.data.clone(),
                                                 lin_src.index[0].0.clone(),lin_src.index[0].1.clone()));
+            }
+        },
+        Instruction::RefSquare(dst,src) => {
+            let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+            if lin_src.index.len() > 1 {
+            } else {
+                out.push(Instruction::RefSeqFilter(dst.clone(),lin_src.data.clone(),
+                                                   lin_src.index[0].0.clone(),lin_src.index[0].1.clone()));
             }
         },
         Instruction::At(dst,src) => {
@@ -373,6 +382,25 @@ mod test {
         assert_eq!(vec![1,2,3,4,5],values[&norms[2]]);
         assert_eq!(Vec::<usize>::new(),values[&norms[3]]);
     }
+
+    #[test]
+    fn linearize_reffilter_smoke() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/linearize-smoke-reffilter.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        simplify(&defstore,&mut context).expect("k");
+        let instrs = context.instrs.clone();
+        print!("{:?}\n",context);
+        let subregs = linearize_real(&mut context).expect("linearize");
+        print!("{:?}\n",context);
+        let values = mini_interp(&mut context);
+        let (lins,norms) = find_assigns(&instrs,&subregs);
+        print!("{:?}",values);
+    }
+
 
     fn linearize_stable_pass() -> GenContext {
         let resolver = FileResolver::new();

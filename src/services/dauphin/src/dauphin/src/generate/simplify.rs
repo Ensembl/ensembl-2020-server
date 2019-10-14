@@ -76,6 +76,7 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
         Instruction::SeqFilter(_,_,_,_) |
+        Instruction::RefSeqFilter(_,_,_,_) |
         Instruction::Length(_,_) |
         Instruction::Add(_,_) => {
             panic!("Impossible instruction! {:?}",instr);
