@@ -91,7 +91,7 @@
 #push %40 %42;
 #number %43 6;
 #push %40 %43;
-#bool %45 true;
+#bool %45 false;
 #string %253 "";
 #number %252 1;
 #copy %254 %45;
@@ -174,7 +174,7 @@
 #push %258 %264;
 #push %259 %265;
 #push %260 %266;
-#bool %64 true;
+#bool %64 false;
 #string %268 "";
 #number %267 1;
 #copy %269 %64;
@@ -338,7 +338,7 @@
 #number %484 1;
 #numeq %483 %345 %484;
 #reffilter %121 %347 %483;
-#bool %122 true;
+#bool %122 false;
 #proc:assign %121 %122;
 #ref %348 %354;
 #ref %349 %355;
@@ -353,7 +353,7 @@
 #push %351 %357;
 #push %352 %358;
 #push %353 %359;
-#bool %130 true;
+#bool %130 false;
 #string %361 "";
 #number %360 1;
 #copy %362 %130;
@@ -377,5 +377,5 @@
 #number %486 1;
 #numeq %485 %366 %486;
 #reffilter %133 %368 %485;
-#bool %134 true;
+#bool %134 false;
 #proc:assign %133 %134;

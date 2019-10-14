@@ -359,6 +359,23 @@ mod test {
     use crate::generate::generate_code;
     use crate::testsuite::load_testdata;
 
+    // XXX common
+    fn compare_instrs(a: &Vec<String>,b: &Vec<String>) {
+        let mut a_iter = a.iter();
+        for (i,b) in b.iter().enumerate() {
+            if let Some(a) = a_iter.next() {
+                let a = a.trim();
+                let b = b.trim();
+                assert_eq!(a,b,"mismatch {:?} {:?} line {}",a,b,i);
+            } else if b != "" {
+                panic!("premature eof lhs");
+            }
+        }
+        if a_iter.next().is_some() {
+            panic!("premature eof rhs");
+        }
+    }
+
     #[test]
     fn simplify_smoke() {
         let resolver = FileResolver::new();
@@ -371,6 +388,7 @@ mod test {
         simplify(&defstore,&mut context).expect("k");
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
         let cmds : Vec<String> = context.instrs.iter().map(|e| format!("{:?}",e)).collect();
+        compare_instrs(&cmds,&outdata.split("\n").map(|x| x.to_string()).collect());
         assert_eq!(outdata,cmds.join(""));
         print!("{:?}\n",context);
     }
