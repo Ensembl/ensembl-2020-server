@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 
 use super::types::MemberType;
 use crate::model::Register;
 
 pub struct TypeModel {
-    values: HashMap<Register,MemberType>
+    values: BTreeMap<Register,MemberType>
 }
 
 impl fmt::Debug for TypeModel {
@@ -22,7 +22,7 @@ impl fmt::Debug for TypeModel {
 impl TypeModel {
     pub fn new() -> TypeModel {
         TypeModel {
-            values: HashMap::new()
+            values: BTreeMap::new()
         }
     }
 

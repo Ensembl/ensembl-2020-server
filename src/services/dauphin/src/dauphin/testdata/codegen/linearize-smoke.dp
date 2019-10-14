@@ -18,6 +18,12 @@ func oper_test(stest) becomes stest;
 //a := [[[1,2],[3]],[[4,5,6],[]]];
 //b := a;
 
-c := [ etest:Y [false,true], etest:Y [true,false] ][$?Y];
-d := c!Y[@==1];
-bool_check(d);
+//c := [ etest:Y [false,true], etest:Y [true,false] ][$?Y];
+//d := c!Y[@==1];
+//bool_check(d);
+
+//e := [1,2][[false,true][]];
+//e := [[1,2],[3,4,5]][[false,true][]];
+e := [1,2];
+//f := e[][];
+//g := e[@==0];

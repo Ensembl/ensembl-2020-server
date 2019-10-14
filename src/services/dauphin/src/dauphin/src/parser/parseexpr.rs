@@ -79,7 +79,7 @@ fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool)
     } else {
         Ok(match id {
             "true" => Expression::LiteralBool(true),
-            "false" => Expression::LiteralBool(true),
+            "false" => Expression::LiteralBool(false),
             id => Expression::Identifier(id.to_string())
         })
     }

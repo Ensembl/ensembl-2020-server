@@ -75,6 +75,7 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 
 fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
+        Instruction::SeqFilter(_,_,_,_) |
         Instruction::Nil(_) |
         Instruction::Append(_,_) |
         Instruction::Length(_,_) |

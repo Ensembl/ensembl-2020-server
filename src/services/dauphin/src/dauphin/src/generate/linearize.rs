@@ -136,6 +136,58 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 out.push(Instruction::Ref(d.clone(),s.clone()));
             });
         },
+        Instruction::NumEq(_,_,_) => {
+            out.push(instr.clone())
+        },
+        // XXX unfiltered tracking
+        Instruction::Square(dst,src) => {
+            let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+            if lin_src.index.len() > 1 {
+                let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+                out.push(Instruction::Copy(lin_dst.data.clone(),lin_src.data.clone()));
+                let top_level = lin_dst.index.len()-1;
+                if top_level > 0 {
+                    for level in 0..top_level {
+                        out.push(Instruction::Copy(lin_dst.index[level].0.clone(),lin_src.index[level].0.clone()));
+                        out.push(Instruction::Copy(lin_dst.index[level].1.clone(),lin_src.index[level].1.clone()));
+                    }
+                }
+                out.push(Instruction::SeqFilter(lin_dst.index[top_level].0.clone(),lin_src.index[top_level].0.clone(),
+                                                lin_src.index[top_level+1].0.clone(),lin_src.index[top_level+1].1.clone()));
+                out.push(Instruction::SeqFilter(lin_dst.index[top_level].1.clone(),lin_src.index[top_level].1.clone(),
+                                                lin_src.index[top_level+1].0.clone(),lin_src.index[top_level+1].1.clone()));
+            } else {
+                out.push(Instruction::SeqFilter(dst.clone(),lin_src.data.clone(),
+                                                lin_src.index[0].0.clone(),lin_src.index[0].1.clone()));
+            }
+        },
+        Instruction::At(dst,src) => {
+            if let Some(lin_src) = subregs.get(src) {
+                out.push(Instruction::At(dst.clone(),lin_src.index[0].0.clone()));
+            } else {
+                out.push(Instruction::At(dst.clone(),src.clone()));
+            }
+        },
+        Instruction::Filter(dst,src,f) => {
+            if let Some(lin_src) = subregs.get(src) {
+                let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+                let top_level = lin_dst.index.len()-1;
+                out.push(Instruction::Filter(lin_dst.index[top_level].0.clone(),lin_src.index[top_level].0.clone(),f.clone()));
+                out.push(Instruction::Filter(lin_dst.index[top_level].1.clone(),lin_src.index[top_level].1.clone(),f.clone()));
+                out.push(Instruction::Copy(lin_dst.data.clone(),lin_src.data.clone()));
+                if top_level > 0 {
+                    for level in 0..top_level {
+                        out.push(Instruction::Copy(lin_dst.index[level].0.clone(),lin_src.index[level].0.clone()));
+                        out.push(Instruction::Copy(lin_dst.index[level].1.clone(),lin_src.index[level].1.clone()));
+                    }
+                }
+            } else {
+                out.push(instr.clone());
+            }
+        },
+        Instruction::Append(_,_) | Instruction::Length(_,_) | Instruction::Add(_,_) => {
+            return Err(format!("Bad instruction {:?}",instr.clone()));
+        }
         _ => {} // XXX
     };
     Ok(())
@@ -166,21 +218,72 @@ mod test {
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
 
+    fn mi_ins(values: &mut HashMap<Option<Register>,Vec<usize>>, r: &Register, v: Vec<usize>) {
+        values.insert(Some(r.clone()),v);
+    }
+
+    fn mi_mut<'a>(values: &'a mut HashMap<Option<Register>,Vec<usize>>, r: &Register) -> &'a mut Vec<usize> {
+        values.entry(Some(r.clone())).or_insert(vec![])
+    }
+
+    fn mi_get<'a>(values: &'a HashMap<Option<Register>,Vec<usize>>, r: &Register) -> &'a Vec<usize> {
+        values.get(&Some(r.clone())).unwrap_or(values.get(&None).unwrap())
+    }
+
     fn mini_interp(context: &GenContext) -> HashMap<Register,Vec<usize>> {
-        let mut values : HashMap<Register,Vec<usize>> = HashMap::new();
+        let mut values : HashMap<Option<Register>,Vec<usize>> = HashMap::new();
+        values.insert(None,vec![]);
         for instr in &context.instrs {
+            for r in instr.get_registers() {
+                print!("{:?}={:?}\n",r,mi_get(&values,&r));
+            }
+            print!("{:?}\n",instr);
             match instr {
-                Instruction::Nil(r) => { values.insert(r.clone(),vec![]); },
-                Instruction::Push(r,s) => { let x = values[s][0]; values.get_mut(r).unwrap().push(x); },
-                Instruction::Append(r,s) => { let mut x = values[s].to_vec(); values.get_mut(r).unwrap().append(&mut x); },
-                Instruction::Add(r,v) => { values.insert(r.clone(),values[r].iter().map(|x| x+values[v][0]).collect()); },
-                Instruction::Length(r,s) => { values.insert(r.clone(),vec![values[s].len()]); }
-                Instruction::NumberConst(r,n) => { values.insert(r.clone(),vec![*n as usize]); },
-                Instruction::Copy(r,s) => { let x = values[s].to_vec(); values.insert(r.clone(),x); }
-                _ => ()
+                Instruction::Nil(r) => { mi_ins(&mut values,r,vec![]); },
+                Instruction::Push(r,s) => { let x = mi_mut(&mut values,s)[0]; mi_mut(&mut values,r).push(x); },
+                Instruction::Append(r,s) => { let mut x = mi_mut(&mut values,s).to_vec(); mi_mut(&mut values,r).append(&mut x); },
+                Instruction::Add(r,v) => { let v = mi_get(&values,r).iter().map(|x| x+mi_get(&values,v)[0]).collect(); mi_ins(&mut values,&r,v); },
+                Instruction::Length(r,s) => { let v = vec![mi_get(&values,s).len()]; mi_ins(&mut values,&r,v); }
+                Instruction::NumberConst(r,n) => { mi_ins(&mut values,&r,vec![*n as usize]); },
+                Instruction::BooleanConst(r,n) => { mi_ins(&mut values,&r,vec![if *n {1} else {0}]); },
+                Instruction::Copy(r,s) => { let x = mi_mut(&mut values,s).to_vec(); mi_ins(&mut values,&r,x); },
+                Instruction::Ref(_,_) => { /* Hmmm, ok for now */ },
+                Instruction::Filter(d,s,f) => {
+                    let mut f = mi_get(&values,f).iter();
+                    let mut v = vec![];
+                    for u in mi_get(&values,s) {
+                        if *f.next().unwrap() > 0 {
+                            v.push(*u);
+                        }
+                    }
+                    mi_ins(&mut values,d,v);
+                },
+                Instruction::SeqFilter(d,s,a,b) => {
+                    let u = mi_get(&values,s);
+                    let mut v = vec![];
+                    let mut b_iter = mi_get(&values,b).iter();
+                    for a in mi_get(&values,a).iter() {
+                        let b = b_iter.next().unwrap();
+                        for i in 0..*b {
+                            v.push(u[a+i]);
+                        }
+                    }
+                    mi_ins(&mut values,d,v);
+                },
+                Instruction::At(d,s) => {
+                    let mut v = vec![];
+                    for i in 0..mi_get(&values,s).len() {
+                        v.push(i);
+                    }
+                    mi_ins(&mut values,d,v);
+                },
+                _ => { panic!("Bad mini-interp instruction {:?}",instr); }
+            }
+            for r in instr.get_registers() {
+                print!("{:?}={:?}\n",r,mi_get(&values,&r));
             }
         }
-        values
+        values.drain().filter(|(k,_)| k.is_some()).map(|(k,v)| (k.unwrap(),v)).collect()
     }
 
     fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a HashMap<Register,Linearized>) -> Vec<&'a Linearized> {
@@ -207,8 +310,28 @@ mod test {
         print!("{:?}\n",context);
         linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        //let values = mini_interp(&mut context);
-        //print!("{:?}",values);
+        let values = mini_interp(&mut context);
+        print!("{:?}",values);
+    }
+
+    fn linearize_stable_pass() -> GenContext {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        simplify(&defstore,&mut context).expect("k");
+        linearize_real(&mut context).expect("linearize");
+        print!("{:?}\n",context);
+        context
+    }
+
+    #[test]
+    fn linearize_stable_allocs() {
+        let a = linearize_stable_pass();
+        let b = linearize_stable_pass();
+        assert_eq!(a.instrs,b.instrs);
     }
 
    #[test]
