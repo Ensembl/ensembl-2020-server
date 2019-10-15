@@ -78,7 +78,9 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         Instruction::SeqFilter(_,_,_,_) |
         Instruction::RefSeqFilter(_,_,_,_) |
         Instruction::Length(_,_) |
-        Instruction::Add(_,_) => {
+        Instruction::Add(_,_) |
+        Instruction::Operator(_,_,_) |
+        Instruction::Proc(_,_) => {
             panic!("Impossible instruction! {:?}",instr);
         },
         Instruction::NumberConst(_,_) |
@@ -152,7 +154,7 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                 vec![Instruction::At(dst.clone(),src.clone())]
             }
         },
-        Instruction::Proc(name,regs) => {
+        Instruction::Call(name,type_,regs) => {
             let mut new_regs = Vec::new();
             for reg in regs {
                 if let Some(dests) = mapping.get(reg) {
@@ -161,26 +163,7 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                     new_regs.push(reg.clone());
                 }
             }
-            vec![Instruction::Proc(name.clone(),new_regs)]
-        },
-        Instruction::Operator(name,dests,srcs) => {
-            let mut new_dests = Vec::new();
-            for reg in dests {
-                if let Some(dests) = mapping.get(reg) {
-                    new_dests.extend(dests.iter().cloned());
-                } else {
-                    new_dests.push(reg.clone());
-                }
-            }
-            let mut new_srcs = Vec::new();
-            for reg in srcs {
-                if let Some(srcs) = mapping.get(reg) {
-                    new_srcs.extend(srcs.iter().cloned());
-                } else {
-                    new_srcs.push(reg.clone());
-                }
-            }
-            vec![Instruction::Operator(name.clone(),new_dests,new_srcs)]
+            vec![Instruction::Call(name.clone(),type_.clone(),new_regs)]
         }
     })
 }
@@ -358,6 +341,7 @@ pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),()> 
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::super::call;
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
@@ -390,6 +374,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
         print!("{:?}\n",context);
+        call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
         let cmds : Vec<String> = context.instrs.iter().map(|e| format!("{:?}",e)).collect();
@@ -406,6 +391,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
         print!("{:?}\n",context);
+        call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
     }

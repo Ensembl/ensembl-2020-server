@@ -101,6 +101,20 @@ fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src
 
 fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: &BTreeMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match instr {
+        Instruction::CtorStruct(_,_,_) |
+        Instruction::CtorEnum(_,_,_,_) |
+        Instruction::SValue(_,_,_,_) |
+        Instruction::EValue(_,_,_,_) |
+        Instruction::ETest(_,_,_,_) |
+        Instruction::SeqFilter(_,_,_,_) |
+        Instruction::RefSeqFilter(_,_,_,_) |
+        Instruction::RefFilter(_,_,_) |
+        Instruction::RefSValue(_,_,_,_) |
+        Instruction::Proc(_,_) |
+        Instruction::Operator(_,_,_) |
+        Instruction::RefEValue(_,_,_,_) => {
+            panic!("unexpected instruction {:?}",instr);
+        },
         Instruction::NumberConst(_,_) |
         Instruction::BooleanConst(_,_) |
         Instruction::StringConst(_,_) | 
@@ -113,7 +127,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 out.push(Instruction::Nil(len.clone()));
             }
         },
-        Instruction::Proc(name,regs) => {
+        Instruction::Call(name,type_,regs) => {
             let mut new = Vec::new();
             for r in regs {
                 if let Some(lin_src) = subregs.get(r) {
@@ -126,7 +140,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                     new.push(r.clone());
                 }
             }
-            out.push(Instruction::Proc(name.clone(),new));
+            out.push(Instruction::Call(name.clone(),type_.clone(),new));
         },
         Instruction::Append(dst,src) => {
             if let Some(lin_src) = subregs.get(src) {
@@ -266,7 +280,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             out.push(Instruction::Append(lin_dst.index[top_level].0.clone(),zero_reg));
             out.push(Instruction::Append(lin_dst.index[top_level].1.clone(),src_len.clone()));
         },
-        _ => {} // XXX
+        //_ => {} // XXX
     };
     Ok(())
 }
@@ -292,6 +306,7 @@ pub fn linearize(context: &mut GenContext) -> Result<(),String> {
 mod test {
     use std::collections::HashMap;
     use super::*;
+    use super::super::call;
     use super::super::simplify::simplify;
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };
@@ -362,7 +377,7 @@ mod test {
                     }
                     mi_ins(&mut values,d,v);
                 },
-                Instruction::Proc(name,regs) => {
+                Instruction::Call(name,types,regs) => {
                     match &name[..] {
                         "assign" => {
                             let n = regs.len()/2;
@@ -404,7 +419,7 @@ mod test {
         let mut lin = Vec::new();
         let mut norm = Vec::new();
         for instr in instrs {
-            if let Instruction::Proc(s,vv) = instr {
+            if let Instruction::Call(s,_,vv) = instr {
                 if s == "assign" {
                     if let Some(reg) = subregs.get(&vv[1]) {
                         lin.push(reg);
@@ -425,6 +440,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
         linearize_real(&mut context).expect("linearize");
@@ -441,6 +457,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let instrs = context.instrs.clone();
         print!("{:?}\n",context);
@@ -469,6 +486,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let instrs = context.instrs.clone();
         print!("{:?}\n",context);
@@ -486,6 +504,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
@@ -507,6 +526,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let instrs = context.instrs.clone();
         print!("{:?}\n",instrs);

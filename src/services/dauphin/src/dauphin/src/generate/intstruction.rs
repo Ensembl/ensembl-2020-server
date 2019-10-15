@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::model::{ DefStore, Register };
-use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint };
+use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberType };
 
 #[derive(Clone,PartialEq)]
 pub enum Instruction {
@@ -30,6 +30,7 @@ pub enum Instruction {
     /* calls-out */
     Proc(String,Vec<Register>),
     Operator(String,Vec<Register>,Vec<Register>),
+    Call(String,Vec<MemberType>,Vec<Register>),
 
     /* filtering */
     Square(Register,Register),
@@ -84,6 +85,10 @@ impl fmt::Debug for Instruction {
                 args.extend(dsts.iter());
                 args.extend(srcs.iter());
                 fmt_instr(f,&format!("oper:{}",name),&args,&vec![])?
+            },
+            Instruction::Call(name,types,regs) => {
+                let types : Vec<String> = types.iter().map(|x| x.to_string()).collect();
+                fmt_instr(f,&format!("call:{}:{}",name,types.join(":")),&regs.iter().map(|x| x).collect(),&vec![]);
             },
             Instruction::CtorStruct(name,dest,regs) => {
                 let mut r = vec![dest];
@@ -167,6 +172,7 @@ impl Instruction {
             Instruction::Ref(a,b) => vec![a.clone(),b.clone()],
             Instruction::Proc(_,aa) => aa.to_vec(),
             Instruction::Operator(_,aa,bb) => { let mut out = aa.to_vec(); out.extend(bb.to_vec()); out },
+            Instruction::Call(_,_,aa) => aa.to_vec(),
             Instruction::Square(a,b) => vec![a.clone(),b.clone()],
             Instruction::RefSquare(a,b) => vec![a.clone(),b.clone()],
             Instruction::Star(a,b) => vec![a.clone(),b.clone()],

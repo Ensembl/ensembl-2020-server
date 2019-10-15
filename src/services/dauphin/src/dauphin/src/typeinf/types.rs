@@ -14,6 +14,12 @@ pub enum BaseType {
 
 impl fmt::Debug for BaseType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{}",self)
+    }
+}
+
+impl fmt::Display for BaseType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let v = match self {
             BaseType::StringType => "string",
             BaseType::BytesType => "bytes",
@@ -68,6 +74,16 @@ impl fmt::Debug for MemberType {
         match self {
             MemberType::Base(b) => write!(f,"{:?}",b)?,
             MemberType::Vec(b) => write!(f,"vec({:?})",b)?
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for MemberType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MemberType::Base(b) => write!(f,"{}",b)?,
+            MemberType::Vec(b) => write!(f,"vec({})",b)?
         }
         Ok(())
     }
