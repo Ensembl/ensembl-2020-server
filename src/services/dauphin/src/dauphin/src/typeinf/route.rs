@@ -7,7 +7,8 @@ use crate::model::Register;
 pub enum RouteExpr {
     Member(String),
     Square,
-    Filter(Register)
+    Filter(Register),
+    SeqFilter(Register,Register)
 }
 
 #[derive(Clone)]

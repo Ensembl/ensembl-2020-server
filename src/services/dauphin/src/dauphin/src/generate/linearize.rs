@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 use crate::model::Register;
-use crate::typeinf::{ BaseType, MemberType };
+use crate::typeinf::{ BaseType, MemberType, RouteExpr };
 use super::codegen::GenContext;
 use super::intstruction::Instruction;
 
@@ -86,16 +86,16 @@ fn push_top(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Line
 }
 
 fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src: &Register, mut cb: F)
-        where F: FnMut(&Register,&Register) {
+        where F: FnMut(&Register,&Register,bool) {
     if let Some(lin_src) = subregs.get(src) {
         let lin_dst = subregs.get(dst).unwrap();
-        cb(&lin_dst.data,&lin_src.data);
+        cb(&lin_dst.data,&lin_src.data,true);
         for level in 0..lin_src.index.len() {
-            cb(&lin_dst.index[level].0,&lin_src.index[level].0);
-            cb(&lin_dst.index[level].1,&lin_src.index[level].1);
+            cb(&lin_dst.index[level].0,&lin_src.index[level].0,false);
+            cb(&lin_dst.index[level].1,&lin_src.index[level].1,false);
         }
     } else {
-        cb(dst,src);
+        cb(dst,src,true);
     }
 }
 
@@ -113,6 +113,21 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 out.push(Instruction::Nil(len.clone()));
             }
         },
+        Instruction::Proc(name,regs) => {
+            let mut new = Vec::new();
+            for r in regs {
+                if let Some(lin_src) = subregs.get(r) {
+                    for i in 0..lin_src.index.len() {
+                        new.push(lin_src.index[i].0.clone());
+                        new.push(lin_src.index[i].1.clone());
+                    }
+                    new.push(lin_src.data.clone());
+                } else {
+                    new.push(r.clone());
+                }
+            }
+            out.push(Instruction::Proc(name.clone(),new));
+        },
         Instruction::Append(dst,src) => {
             if let Some(lin_src) = subregs.get(src) {
                 let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?} in push",dst))?;
@@ -129,14 +144,18 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             out.push(instr.clone());
         },
         Instruction::Copy(dst,src) => {
-            linear_extend(subregs,dst,src, |d,s| {
+            linear_extend(subregs,dst,src, |d,s,_| {
                 out.push(Instruction::Copy(d.clone(),s.clone()));
             });
         },
         Instruction::Ref(dst,src) => {
-            linear_extend(subregs,dst,src, |d,s| {
+            linear_extend(subregs,dst,src, |d,s,dr| {
                 context.route.set_empty(d,s);
-                out.push(Instruction::Ref(d.clone(),s.clone()));
+                if dr {
+                    out.push(Instruction::Ref(d.clone(),s.clone()));
+                } else {
+                    out.push(Instruction::Copy(d.clone(),s.clone()));
+                }
             });
         },
         Instruction::NumEq(_,_,_) => {
@@ -167,9 +186,32 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::RefSquare(dst,src) => {
             let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
             if lin_src.index.len() > 1 {
+                let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+                out.push(Instruction::Copy(lin_dst.data.clone(),lin_src.data.clone()));
+                let data_type = context.types.get(&lin_src.data).unwrap().clone();
+                context.types.add(&lin_dst.data,&data_type);
+                let top_level = lin_dst.index.len()-1;
+                if top_level > 0 {
+                    for level in 0..top_level {
+                        out.push(Instruction::Copy(lin_dst.index[level].0.clone(),lin_src.index[level].0.clone()));
+                        out.push(Instruction::Copy(lin_dst.index[level].1.clone(),lin_src.index[level].1.clone()));
+                    }
+                }
+                out.push(Instruction::SeqFilter(lin_dst.index[top_level].0.clone(),lin_src.index[top_level].0.clone(),
+                                                lin_src.index[top_level+1].0.clone(),lin_src.index[top_level+1].1.clone()));
+                out.push(Instruction::SeqFilter(lin_dst.index[top_level].1.clone(),lin_src.index[top_level].1.clone(),
+                                                lin_src.index[top_level+1].0.clone(),lin_src.index[top_level+1].1.clone()));
             } else {
-                out.push(Instruction::RefSeqFilter(dst.clone(),lin_src.data.clone(),
-                                                   lin_src.index[0].0.clone(),lin_src.index[0].1.clone()));
+                let tmp_a = context.regalloc.allocate();
+                context.types.add(&tmp_a,&MemberType::Base(BaseType::NumberType));
+                let tmp_b = context.regalloc.allocate();
+                context.types.add(&tmp_b,&MemberType::Base(BaseType::NumberType));
+                out.push(Instruction::Copy(tmp_a.clone(),lin_src.index[0].0.clone()));
+                out.push(Instruction::Copy(tmp_b.clone(),lin_src.index[0].1.clone()));
+                out.push(Instruction::RefSeqFilter(dst.clone(),lin_src.data.clone(),tmp_a.clone(),tmp_b.clone()));
+                let data_type = context.types.get(&src).unwrap().clone();
+                context.types.add(&dst,&data_type);
+                context.route.set_derive(&dst,&lin_src.data,&RouteExpr::SeqFilter(tmp_a.clone(),tmp_b.clone()));
             }
         },
         Instruction::At(dst,src) => {
@@ -267,14 +309,15 @@ mod test {
         values.get(&Some(r.clone())).unwrap_or(values.get(&None).unwrap())
     }
 
-    fn mini_interp(context: &GenContext) -> HashMap<Register,Vec<usize>> {
+    fn mini_interp(context: &GenContext) -> (Vec<Vec<Vec<usize>>>,HashMap<Register,Vec<usize>>) {
+        let mut printed = Vec::new();
         let mut values : HashMap<Option<Register>,Vec<usize>> = HashMap::new();
         values.insert(None,vec![]);
         for instr in &context.instrs {
             for r in instr.get_registers() {
-                print!("{:?}={:?}\n",r,mi_get(&values,&r));
+                //print!("{:?}={:?}\n",r,mi_get(&values,&r));
             }
-            print!("{:?}\n",instr);
+            print!("{:?}",instr);
             match instr {
                 Instruction::Nil(r) => { mi_ins(&mut values,r,vec![]); },
                 Instruction::Append(r,s) => { let mut x = mi_mut(&mut values,s).to_vec(); mi_mut(&mut values,r).append(&mut x); },
@@ -283,7 +326,13 @@ mod test {
                 Instruction::NumberConst(r,n) => { mi_ins(&mut values,&r,vec![*n as usize]); },
                 Instruction::BooleanConst(r,n) => { mi_ins(&mut values,&r,vec![if *n {1} else {0}]); },
                 Instruction::Copy(r,s) => { let x = mi_mut(&mut values,s).to_vec(); mi_ins(&mut values,&r,x); },
-                Instruction::Ref(_,_) => { /* Hmmm, ok for now */ },
+                Instruction::Ref(d,s) => {
+                    let mut v = vec![];
+                    for i in 0..mi_get(&values,s).len() {
+                        v.push(i);
+                    }
+                    mi_ins(&mut values,d,v);
+                },
                 Instruction::Filter(d,s,f) => {
                     let mut f = mi_get(&values,f).iter();
                     let mut v = vec![];
@@ -294,7 +343,7 @@ mod test {
                     }
                     mi_ins(&mut values,d,v);
                 },
-                Instruction::SeqFilter(d,s,a,b) => {
+                Instruction::SeqFilter(d,s,a,b) | Instruction::RefSeqFilter(d,s,a,b) => {
                     let u = mi_get(&values,s);
                     let mut v = vec![];
                     let mut b_iter = mi_get(&values,b).iter();
@@ -313,13 +362,42 @@ mod test {
                     }
                     mi_ins(&mut values,d,v);
                 },
+                Instruction::Proc(name,regs) => {
+                    match &name[..] {
+                        "assign" => {
+                            let n = regs.len()/2;
+                            for i in 0..n {
+                                let r = context.route.get(&regs[i]).expect(&format!("missing route for {:?}",regs[i]));
+                                let v_new = mi_get(&values,&regs[n+i]).to_vec();
+                                let x = mi_get(&values,&regs[i]).to_vec();
+                                let mut v = mi_get(&values,&r.0).to_vec();
+                                mi_ins(&mut values,&r.0,v_new.clone());
+                                print!("{:?} route {:?} indexes {:?} data {:?} was {:?}\n",regs[i],r.0,x,v_new,v);
+                                let mut v_new_iter = v_new.iter().cycle();
+                                for idx in &x {
+                                    *v.get_mut(*idx).unwrap() = *v_new_iter.next().unwrap();
+                                }
+                            }
+                        },
+                        "print_regs" => {
+                            let mut print = Vec::new();
+                            for r in regs {
+                                let v = mi_get(&values,&r).to_vec();
+                                print!("{:?} = {:?}\n",r,v);
+                                print.push(v);
+                            }
+                            printed.push(print);
+                        },
+                        _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
+                    }
+                },
                 _ => { panic!("Bad mini-interp instruction {:?}",instr); }
             }
             for r in instr.get_registers() {
-                print!("{:?}={:?}\n",r,mi_get(&values,&r));
+                //print!("{:?}={:?}\n",r,mi_get(&values,&r));
             }
         }
-        values.drain().filter(|(k,_)| k.is_some()).map(|(k,v)| (k.unwrap(),v)).collect()
+        (printed,values.drain().filter(|(k,_)| k.is_some()).map(|(k,v)| (k.unwrap(),v)).collect())
     }
 
     fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a BTreeMap<Register,Linearized>) -> (Vec<&'a Linearized>,Vec<Register>) {
@@ -368,7 +446,7 @@ mod test {
         print!("{:?}\n",context);
         let subregs = linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        let values = mini_interp(&mut context);
+        let (_,values) = mini_interp(&mut context);
         let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}",values);
         assert_eq!(vec![1,2],values[&lins[0].data]);
@@ -396,11 +474,10 @@ mod test {
         print!("{:?}\n",context);
         let subregs = linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        let values = mini_interp(&mut context);
+        let (prints,values) = mini_interp(&mut context);
         let (lins,norms) = find_assigns(&instrs,&subregs);
-        print!("{:?}",values);
+        assert_eq!(vec![vec![vec![0],vec![2],vec![3,4]]],prints);
     }
-
 
     fn linearize_stable_pass() -> GenContext {
         let resolver = FileResolver::new();
@@ -435,7 +512,7 @@ mod test {
         print!("{:?}\n",instrs);
         let subregs = linearize_real(&mut context).expect("linearize");
         let (lins,_) = find_assigns(&instrs,&subregs);
-        let values = mini_interp(&mut context);
+        let (_,values) = mini_interp(&mut context);
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(vec![0],values[&lins[0].index[0].0]);
         assert_eq!(vec![0],values[&lins[0].index[0].1]);

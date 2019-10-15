@@ -139,6 +139,9 @@ impl CodeGen {
                 RouteExpr::Filter(f) => {
                     self.add_instr(Instruction::Filter(subreg.clone(),reg.clone(),f.clone()),defstore)?;
                 },
+                RouteExpr::SeqFilter(a,b) => {
+                    self.add_instr(Instruction::SeqFilter(subreg.clone(),reg.clone(),a.clone(),b.clone()),defstore)?;
+                },
                 RouteExpr::Member(f) => {
                     let instr = match self.typing.get(&reg) {
                         ExpressionType::Base(BaseType::StructType(name)) =>
