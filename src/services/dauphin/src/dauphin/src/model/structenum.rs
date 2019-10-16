@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{ HashMap, HashSet };
 use std::fmt;
 
 use crate::typeinf::{ MemberType };
@@ -48,7 +48,7 @@ impl StructEnumDef {
     pub fn name(&self) -> &str { &self.name }
     pub fn get_names(&self) -> &Vec<String> { &self.names }
 
-    pub fn type_from_name2(&self, name: &str) -> Option<MemberType> {
+    pub fn type_from_name(&self, name: &str) -> Option<MemberType> {
         for (i,this_name) in self.names.iter().enumerate() {
             if this_name == name {
                 return Some(self.member_types[i].clone());
@@ -57,7 +57,7 @@ impl StructEnumDef {
         None
     }
 
-    pub fn get_types2(&self) -> &Vec<MemberType> {
+    pub fn get_types(&self) -> &Vec<MemberType> {
         &self.member_types
     }
 }
@@ -77,11 +77,11 @@ impl StructDef {
     pub fn get_names(&self) -> &Vec<String> { &self.common.get_names() }
 
     pub fn get_member_type(&self, name: &str) -> Option<MemberType> {
-        self.common.type_from_name2(name)
+        self.common.type_from_name(name)
     }
 
     pub fn get_member_types(&self) -> &Vec<MemberType> {
-        self.common.get_types2()
+        self.common.get_types()
     }
 }
 
@@ -106,11 +106,11 @@ impl EnumDef {
     pub fn get_names(&self) -> &Vec<String> { &self.common.get_names() }
 
     pub fn get_branch_type(&self, name: &str) -> Option<MemberType> {
-        self.common.type_from_name2(name)
+        self.common.type_from_name(name)
     }
 
     pub fn get_branch_types(&self) -> &Vec<MemberType> {
-        self.common.get_types2()
+        self.common.get_types()
     }
 }
 

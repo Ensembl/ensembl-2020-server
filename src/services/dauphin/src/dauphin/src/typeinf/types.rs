@@ -61,6 +61,18 @@ impl ContainerType {
         }
         out
     }
+
+    pub fn new_empty() -> ContainerType {
+        ContainerType(0)
+    }
+
+    pub fn depth(&self) -> usize {
+        self.0
+    }
+
+    pub fn merge(&self, other: &ContainerType) -> ContainerType {
+        ContainerType(self.0+other.0)
+    }
 }
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]

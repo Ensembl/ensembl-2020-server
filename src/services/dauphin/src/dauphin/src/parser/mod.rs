@@ -13,4 +13,4 @@ pub use parser::Parser;
 pub use parsedecl::parse_signature;
 
 #[cfg(test)]
-pub use parsedecl::parse_typesig;
+pub use parsedecl::{ parse_type, parse_typesig };

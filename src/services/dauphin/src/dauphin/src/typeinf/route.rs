@@ -62,6 +62,12 @@ impl Route {
         self.route.remove(reg);
     }
 
+    pub fn copy(&mut self, dst: &Register, src: &Register) {
+        if let Some(route) = self.route.get(src) {
+            self.route.insert(dst.clone(),route.clone());
+        }
+    }
+
     fn remove_member(&self, expr: &Vec<RouteExpr>, name: &str) -> Option<Vec<RouteExpr>> {
         let mut out = Vec::new();
         let mut seen = false;

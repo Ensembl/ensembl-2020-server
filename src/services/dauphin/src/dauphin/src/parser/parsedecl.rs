@@ -95,7 +95,7 @@ fn id_to_type(id: &str, lexer: &Lexer, defstore: &DefStore) -> Result<BaseType2,
     }
 }
 
-fn parse_type(lexer: &mut Lexer, defstore: &DefStore) -> Result<MemberType,ParseError> {
+pub fn parse_type(lexer: &mut Lexer, defstore: &DefStore) -> Result<MemberType,ParseError> {
     let id = get_identifier(lexer)?;
     let new = match &id[..] {
         "boolean" => MemberType::Base(BaseType2::BooleanType),
