@@ -1,4 +1,5 @@
 mod generate;
+mod interp;
 mod lexer;
 mod model;
 mod parser;

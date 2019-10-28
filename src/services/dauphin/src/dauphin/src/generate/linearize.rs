@@ -97,16 +97,16 @@ fn push_top(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Line
 }
 
 fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src: &Register, mut cb: F)
-        where F: FnMut(&Register,&Register,bool) {
+        where F: FnMut(&Register,&Register) {
     if let Some(lin_src) = subregs.get(src) {
         let lin_dst = subregs.get(dst).unwrap();
-        cb(&lin_dst.data,&lin_src.data,true);
+        cb(&lin_dst.data,&lin_src.data);
         for level in 0..lin_src.index.len() {
-            cb(&lin_dst.index[level].0,&lin_src.index[level].0,false);
-            cb(&lin_dst.index[level].1,&lin_src.index[level].1,false);
+            cb(&lin_dst.index[level].0,&lin_src.index[level].0);
+            cb(&lin_dst.index[level].1,&lin_src.index[level].1);
         }
     } else {
-        cb(dst,src,true);
+        cb(dst,src);
     }
 }
 
@@ -169,18 +169,15 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             out.push(instr.clone());
         },
         Instruction::Copy(dst,src) => {
-            linear_extend(subregs,dst,src, |d,s,_| {
-                add_copy(out,context,d,s);
+            linear_extend(subregs,dst,src, |d,s| {
+                context.route.set_empty(d,s);
+                add_copy(out,context,d,s); 
             });
         },
         Instruction::Ref(dst,src) => {
-            linear_extend(subregs,dst,src, |d,s,dr| {
+            linear_extend(subregs,dst,src, |d,s| {
                 context.route.set_empty(d,s);
-                if dr {
-                    out.push(Instruction::Ref(d.clone(),s.clone()));
-                } else {
-                    add_copy(out,context,d,s);
-                }
+                out.push(Instruction::Ref(d.clone(),s.clone()));
             });
         },
         Instruction::NumEq(_,_,_) => {
@@ -319,116 +316,7 @@ mod test {
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
-
-    fn mi_ins(values: &mut HashMap<Option<Register>,Vec<usize>>, r: &Register, v: Vec<usize>) {
-        values.insert(Some(r.clone()),v);
-    }
-
-    fn mi_mut<'a>(values: &'a mut HashMap<Option<Register>,Vec<usize>>, r: &Register) -> &'a mut Vec<usize> {
-        values.entry(Some(r.clone())).or_insert(vec![])
-    }
-
-    fn mi_get<'a>(values: &'a HashMap<Option<Register>,Vec<usize>>, r: &Register) -> &'a Vec<usize> {
-        values.get(&Some(r.clone())).unwrap_or(values.get(&None).unwrap())
-    }
-
-    fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<usize>>>,HashMap<Register,Vec<usize>>) {
-        let mut printed = Vec::new();
-        let mut values : HashMap<Option<Register>,Vec<usize>> = HashMap::new();
-        values.insert(None,vec![]);
-        for instr in &context.instrs {
-            for r in instr.get_registers() {
-                //print!("{:?}={:?}\n",r,mi_get(&values,&r));
-            }
-            print!("{:?}",instr);
-            match instr {
-                Instruction::Nil(r) => { mi_ins(&mut values,r,vec![]); },
-                Instruction::Append(r,s) => { let mut x = mi_mut(&mut values,s).to_vec(); mi_mut(&mut values,r).append(&mut x); },
-                Instruction::Add(r,v) => { let v = mi_get(&values,r).iter().map(|x| x+mi_get(&values,v)[0]).collect(); mi_ins(&mut values,&r,v); },
-                Instruction::Length(r,s) => { let v = vec![mi_get(&values,s).len()]; mi_ins(&mut values,&r,v); }
-                Instruction::NumberConst(r,n) => { mi_ins(&mut values,&r,vec![*n as usize]); },
-                Instruction::BooleanConst(r,n) => { mi_ins(&mut values,&r,vec![if *n {1} else {0}]); },
-                Instruction::Copy(r,s) => { let x = mi_mut(&mut values,s).to_vec(); mi_ins(&mut values,&r,x); },
-                Instruction::Ref(d,s) => {
-                    let mut v = vec![];
-                    for i in 0..mi_get(&values,s).len() {
-                        v.push(i);
-                    }
-                    mi_ins(&mut values,d,v);
-                },
-                Instruction::Filter(d,s,f) => {
-                    let mut f = mi_get(&values,f).iter();
-                    let mut v = vec![];
-                    for u in mi_get(&values,s) {
-                        if *f.next().unwrap() > 0 {
-                            v.push(*u);
-                        }
-                    }
-                    mi_ins(&mut values,d,v);
-                },
-                Instruction::SeqFilter(d,s,a,b) | Instruction::RefSeqFilter(d,s,a,b) => {
-                    let u = mi_get(&values,s);
-                    let mut v = vec![];
-                    let mut b_iter = mi_get(&values,b).iter();
-                    for a in mi_get(&values,a).iter() {
-                        let b = b_iter.next().unwrap();
-                        for i in 0..*b {
-                            v.push(u[a+i]);
-                        }
-                    }
-                    mi_ins(&mut values,d,v);
-                },
-                Instruction::At(d,s) => {
-                    let mut v = vec![];
-                    for i in 0..mi_get(&values,s).len() {
-                        v.push(i);
-                    }
-                    mi_ins(&mut values,d,v);
-                },
-                Instruction::Call(name,types,regs) => {
-                    match &name[..] {
-                        "assign" => {
-                            let mut reglist = Vec::new();
-                            for (i,type_) in types.iter().enumerate() {
-                                let offsets = offset(defstore,type_).expect("revolving to registers");
-                                for v in &offsets {
-                                    reglist.push((i,v.clone()));
-                                }
-                            }
-                            let n = regs.len()/2;
-                            for i in 0..n {                                
-                                let r = context.route.get(&regs[i]).expect(&format!("missing route for {:?}",regs[i]));
-                                let v_new = mi_get(&values,&regs[n+i]).to_vec();
-                                let x = mi_get(&values,&regs[i]).to_vec();
-                                let mut v = mi_get(&values,&r.0).to_vec();
-                                mi_ins(&mut values,&r.0,v_new.clone());
-                                print!("{:?} route {:?} indexes {:?} data {:?} was {:?} is {}\n",regs[i],r.0,x,v_new,v,reglist[i].1);
-                                let mut v_new_iter = v_new.iter().cycle();
-                                for idx in &x {
-                                    *v.get_mut(*idx).unwrap() = *v_new_iter.next().unwrap();
-                                }
-                            }
-                        },
-                        "print_regs" => {
-                            let mut print = Vec::new();
-                            for r in regs {
-                                let v = mi_get(&values,&r).to_vec();
-                                print!("{:?} = {:?}\n",r,v);
-                                print.push(v);
-                            }
-                            printed.push(print);
-                        },
-                        _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
-                    }
-                },
-                _ => { panic!("Bad mini-interp instruction {:?}",instr); }
-            }
-            for r in instr.get_registers() {
-                //print!("{:?}={:?}\n",r,mi_get(&values,&r));
-            }
-        }
-        (printed,values.drain().filter(|(k,_)| k.is_some()).map(|(k,v)| (k.unwrap(),v)).collect())
-    }
+    use crate::interp::mini_interp;
 
     fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a BTreeMap<Register,Linearized>) -> (Vec<&'a Linearized>,Vec<Register>) {
         let mut lin = Vec::new();
@@ -509,9 +397,10 @@ mod test {
         print!("{:?}\n",context);
         let (prints,values) = mini_interp(&defstore,&mut context);
         let (lins,norms) = find_assigns(&instrs,&subregs);
-        //assert_eq!(vec![vec![vec![3,4],vec![0],vec![2]],
-        //                vec![]],prints);
         print!("{:?}",values);
+        //assert_eq!(vec![vec![vec![3,3],vec![0],vec![2]],
+        //                vec![]],
+        //           prints);
     }
 
     fn linearize_stable_pass() -> GenContext {

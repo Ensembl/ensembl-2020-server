@@ -16,11 +16,13 @@ inline "<" lt left 6;
 inline "==" eq left 5;
 func oper_test(stest) becomes stest;
 
-e := [1,2];
-e[] := 3;
+//e := [1,2];
+//e[] := 3;
+//print_regs(e);
 
-//e := [[1,2]];
-//e[] := [3,4];
+e := [[1,2],[5,6]];
+e[] := [3,4];
+print_regs(e[]);
 
 //e := [1,2];
 //print_regs(e);
