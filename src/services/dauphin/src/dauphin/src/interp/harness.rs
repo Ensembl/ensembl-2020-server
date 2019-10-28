@@ -1,7 +1,7 @@
 use std::collections::{ HashMap, BTreeMap };
 use crate::generate::Instruction;
 use crate::generate::GenContext;
-use crate::model::{ offset, DefStore, Register };
+use crate::model::{ offset, DefStore, LinearPath, Register, RegisterPurpose };
 use crate::typeinf::{ BaseType, MemberType, RouteExpr };
 
 struct HarnessInterp {
@@ -34,7 +34,58 @@ impl HarnessInterp {
     }
 }
 
+fn assign_unfiltered(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp, name: &str, types: &Vec<MemberType>, regs: &Vec<Register>) {
+    let n = regs.len()/2;
+    for i in 0..n {                            
+        let r = context.route.get(&regs[i]).expect(&format!("missing route for {:?}",regs[i]));
+        harness.insert(&r.0,harness.get(&regs[i+n]).to_vec()); // XXX don't copy when we have CoW!
+    }        
+}
+
+fn append_nontop_vec(context: &GenContext, harness: &mut HarnessInterp, offsets: &Vec<RegisterPurpose>, regs: &Vec<Register>) {
+    let n = regs.len()/2;
+    for (j,purpose) in offsets.iter().enumerate() {
+        match purpose.get_linear() {
+            LinearPath::Offset(0) | LinearPath::Length(0) => {}, /* top */
+            _ => { /* non-top */
+                let r = context.route.get(&regs[j]).expect(&format!("missing route for {:?}",regs[j]));
+                let mut x = harness.get(&regs[j+n]).to_vec();
+                let v = harness.get_mut(&r.0);
+                v.append(&mut x);
+            }
+        }
+    }
+    print!("     (nontop-vec)\n");
+}
+
 fn assign(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp, name: &str, types: &Vec<MemberType>, regs: &Vec<Register>) {
+    let type_ = &types[0]; // signature ensures type match
+    let mut filtered = false;
+    /* filtered assignment or full replacement? */
+    print!("-> {} registers\n",regs.len());
+    print!("      -> {:?}\n",type_);
+    let offsets = offset(defstore,type_).expect("resolving to registers");
+    for (j,v) in offsets.iter().enumerate() {
+        print!("          {:?}\n",v);
+        if j == 0 {
+            let r = context.route.get(&regs[0]).expect(&format!("missing route for {:?}",regs[0]));
+            if r.1.len() > 0 {
+                filtered = true;
+            }
+            print!("             route path {:?}\n",r);
+        }
+    }
+    print!("     ({}filtered)\n",if !filtered { "un" } else { "" } );    
+    if !filtered {
+        assign_unfiltered(defstore,context,harness,name,types,regs);
+        return;
+    }
+    /* append non-top data */
+    if let MemberType::Vec(_) = type_ {
+        append_nontop_vec(context,harness,&offsets,regs);
+    }
+    return;
+
     let mut reglist = Vec::new();
     for (i,type_) in types.iter().enumerate() {
         let offsets = offset(defstore,type_).expect("revolving to registers");

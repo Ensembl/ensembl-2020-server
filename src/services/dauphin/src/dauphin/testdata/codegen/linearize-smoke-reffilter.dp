@@ -16,20 +16,69 @@ inline "<" lt left 6;
 inline "==" eq left 5;
 func oper_test(stest) becomes stest;
 
-//e := [1,2];
-//e[] := 3;
-//print_regs(e);
+// assign a simple non-vector quantity: smoke test.
+// properties: unfiltered
+e := 1;
+print_regs(e); // 1
 
-e := [[1,2],[5,6]];
-e[] := [3,4];
-print_regs(e[]);
+// assignments only get the first value of a multivalue.
+// properties: unfiltered
+e := [2,3][];
+print_regs(e); // 2
 
-//e := [1,2];
-//print_regs(e);
-//e[] := [3,4][];
-//print_regs(e);
-//f := [[1,2],[3,4]];
-//f[] := [7,8];
-//print_regs(f);
-//g := [[[[1,2],[3,4]],[[5,6],[7,8]]],[[[9,10],[11,12]],[[13,14],[15,16]]]];
-//h := [[[0,0]]];
+// assign a simple, one-dimensional vector quantity.
+// properties: unfiltered
+e := [4,5];
+print_regs(e); // [4,5]
+
+// reassign all values using reffilter (repeated)
+// properties: filtered
+e[] := 6;
+print_regs(e); // [6,6]
+
+// reassign all values using reffilter (iterated)
+// properties: filtered
+e[] := [7,8][];
+print_regs(e); // [7,8]
+
+// 2d to exercise non-top copying
+e := [[1,2],[3,4]];
+print_regs(e);
+
+// nontop-vec copying
+// properties: filtered nontop-vec
+e[] := [7,7];
+print_regs(e);
+
+// XXX structs & enums
+
+/* No RefFilter linearization yet
+
+// reassign some values using explicit reffitler
+e[@==1] := 9;
+print_regs(e); // [7,9]
+
+// big mutli-dimensional vector
+e := [[[111,112,113],[121,122,123],[131,132,133]],
+      [[211,212,213],[221,222,223],[231,232,233]],
+      [[311,312,313],[321,322,323],[331,332,333]]];
+print_regs(e); // ...
+
+// reassign final row
+e[@==2] := [[411,412,413],[421,422,423],[431,432,433]];
+print_regs(e); // 3xx -> 4xx
+
+// reassign middle triple
+e[][@==1] := [444];
+print_regs(e);  // [x21,x22,x23] -> [444] (x3)
+
+// reassign single value by multiple position params
+e[@==0][@==2][@==2] := 433;
+print_regs(e); // 133 -> 433
+
+// reassign by repeated filter at same level
+// XXX extend to proper $ test
+(e[@==0])[@==0][@==0] := 200;
+print_regs(e); // 211 -> 200
+
+*/

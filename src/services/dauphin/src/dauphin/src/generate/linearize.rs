@@ -142,11 +142,11 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             let mut new = Vec::new();
             for r in regs {
                 if let Some(lin_src) = subregs.get(r) {
-                    new.push(lin_src.data.clone());
                     for i in 0..lin_src.index.len() {
                         new.push(lin_src.index[i].0.clone());
                         new.push(lin_src.index[i].1.clone());
                     }
+                    new.push(lin_src.data.clone());
                 } else {
                     new.push(r.clone());
                 }
@@ -397,7 +397,10 @@ mod test {
         print!("{:?}\n",context);
         let (prints,values) = mini_interp(&defstore,&mut context);
         let (lins,norms) = find_assigns(&instrs,&subregs);
-        print!("{:?}",values);
+        print!("{:?}\n",values);
+        for p in &prints {
+            print!("{:?}\n",p);
+        }
         //assert_eq!(vec![vec![vec![3,3],vec![0],vec![2]],
         //                vec![]],
         //           prints);

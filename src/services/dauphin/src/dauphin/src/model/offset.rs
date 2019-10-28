@@ -4,7 +4,7 @@ use super::structenum::{ EnumDef, StructDef };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
 
 #[derive(Debug,Clone)]
-enum LinearPath {
+pub enum LinearPath {
     Data,
     Offset(usize),
     Length(usize)
@@ -56,11 +56,6 @@ impl RegisterPurpose {
             },
             base => {
                 let mut out = Vec::new();
-                out.push(RegisterPurpose {
-                    complex: prefix.to_vec(),
-                    linear: LinearPath::Data,
-                    base
-                });
                 for i in 0..container.depth() {
                     out.push(RegisterPurpose {
                         complex: prefix.to_vec(),
@@ -73,6 +68,11 @@ impl RegisterPurpose {
                         base: BaseType::NumberType
                     });
                 }
+                out.push(RegisterPurpose {
+                    complex: prefix.to_vec(),
+                    linear: LinearPath::Data,
+                    base
+                });
                 Ok(out)
             }
         }
@@ -99,6 +99,8 @@ impl RegisterPurpose {
         }
         Ok(out)
     }
+
+    pub fn get_linear(&self) -> &LinearPath { &self.linear }
 }
 
 pub fn offset(defstore: &DefStore, type_: &MemberType) -> Result<Vec<RegisterPurpose>,()> {
