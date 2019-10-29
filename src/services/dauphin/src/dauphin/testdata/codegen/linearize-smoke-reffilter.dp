@@ -34,7 +34,6 @@ print_vec(e);
 e := [4,5];
 print_regs(e); // [4,5]
 print_vec(e);
-
 // reassign all values using reffilter (repeated)
 // properties: filtered
 e[] := 6;
@@ -47,26 +46,14 @@ e[] := [7,8][];
 print_regs(e); // [7,8]
 print_vec(e);
 
-// 3d to exercise non-top copying
-e := [[[1,2],[3,4]],[[5,6],[7,8]]];
-print_regs(e);
-print_vec(e);
-
-// nontop-vec copying
-// properties: filtered nontop-vec
-e[] := [[0,0,0],[9,9,9],[0,0,0]];
-print_regs(e);
-print_vec(e);
-
-print_vec([[[1,2,3],[4,5],[6],[]],[[7]]]);
-
 // XXX structs & enums
-
-/* No RefFilter linearization yet
 
 // reassign some values using explicit reffitler
 e[@==1] := 9;
 print_regs(e); // [7,9]
+print_vec(e);
+
+/*
 
 // big mutli-dimensional vector
 e := [[[111,112,113],[121,122,123],[131,132,133]],
@@ -92,3 +79,17 @@ print_regs(e); // 133 -> 433
 print_regs(e); // 211 -> 200
 
 */
+
+// 3d to exercise non-top copying
+e := [[[1,2],[3,4]],[[5,6],[7,8]]];
+print_regs(e);
+print_vec(e);
+
+// nontop-vec copying
+// properties: filtered nontop-vec
+e[] := [[0,0,0],[9,9,9],[0,0,0]];
+print_regs(e);
+print_vec(e);
+
+// test print_vec
+print_vec([[[1,2,3],[4,5],[6],[]],[[7]]]);

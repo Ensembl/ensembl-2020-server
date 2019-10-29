@@ -71,8 +71,13 @@ fn add_copy(out: &mut Vec<Instruction>, context: &mut GenContext, dst: &Register
 
 fn add_refseq_filter(out: &mut Vec<Instruction>, context: &mut GenContext, dst: &Register, src: &Register, a: &Register, b: &Register) {
     out.push(Instruction::RefSeqFilter(dst.clone(),src.clone(),a.clone(),b.clone()));
-    let data_type = context.types.get(&src).unwrap().clone();
     context.route.set_derive(&dst,&src,&RouteExpr::SeqFilter(a.clone(),b.clone()));
+}
+
+fn add_ref_filter(out: &mut Vec<Instruction>, context: &mut GenContext, dst: &Register, src: &Register, f: &Register) {
+    out.push(Instruction::RefFilter(dst.clone(),src.clone(),f.clone()));
+    print!("copying {:?} <- {:?}\n",dst,src);
+    context.route.set_derive(&dst,&src,&RouteExpr::Filter(f.clone()));
 }
 
 fn push_copy_level(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Linearized, lin_src: &Linearized, level: usize) {
@@ -119,7 +124,6 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::ETest(_,_,_,_) |
         Instruction::SeqFilter(_,_,_,_) |
         Instruction::RefSeqFilter(_,_,_,_) |
-        Instruction::RefFilter(_,_,_) |
         Instruction::RefSValue(_,_,_,_) |
         Instruction::Proc(_,_) |
         Instruction::Operator(_,_,_) |
@@ -233,9 +237,26 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 add_refseq_filter(out,context,&dst,&lin_src.data,&tmp_a,&tmp_b);
             }
         },
+        Instruction::RefFilter(dst,src,f) => {
+            if let Some(lin_src) = subregs.get(src) {
+                let lin_dst = subregs.get(dst).unwrap();
+                let top_level = lin_dst.index.len()-1;
+                add_ref_filter(out,context,&lin_dst.index[top_level].0.clone(),&lin_src.index[top_level].0.clone(),&f.clone());
+                add_ref_filter(out,context,&lin_dst.index[top_level].1.clone(),&lin_src.index[top_level].1.clone(),&f.clone());
+                add_copy(out,context,&lin_dst.data,&lin_src.data);
+                if top_level > 0 {
+                    for level in 0..top_level {
+                        add_copy(out,context,&lin_dst.index[level].0,&lin_src.index[level].0);
+                        add_copy(out,context,&lin_dst.index[level].1,&lin_src.index[level].1);
+                    }
+                }
+            } else {
+                add_ref_filter(out,context,dst,src,f);
+            }
+        },
         Instruction::At(dst,src) => {
             if let Some(lin_src) = subregs.get(src) {
-                out.push(Instruction::At(dst.clone(),lin_src.index[0].0.clone()));
+                out.push(Instruction::At(dst.clone(),lin_src.index[lin_src.index.len()-1].0.clone()));
             } else {
                 out.push(Instruction::At(dst.clone(),src.clone()));
             }
@@ -285,7 +306,6 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             out.push(Instruction::Append(lin_dst.index[top_level].0.clone(),zero_reg));
             out.push(Instruction::Append(lin_dst.index[top_level].1.clone(),src_len.clone()));
         },
-        //_ => {} // XXX
     };
     Ok(())
 }
@@ -410,9 +430,10 @@ mod test {
             "[4,5]",
             "[6,6]",
             "[7,8]",
+            "[7,9]",
             "[[[1,2],[3,4]],[[5,6],[7,8]]]",
             "[[[0,0,0],[9,9,9],[0,0,0]],[[0,0,0],[9,9,9],[0,0,0]]]",
-            "[[[1,2,3],[4,5],[6],[]],[[7]]]"
+            "[[[1,2,3],[4,5],[6],[]],[[7]]]",
         ],strings);
         //assert_eq!(vec![vec![vec![3,3],vec![0],vec![2]],
         //                vec![]],

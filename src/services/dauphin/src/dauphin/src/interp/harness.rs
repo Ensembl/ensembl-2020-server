@@ -1,8 +1,8 @@
-use std::collections::{ HashMap, BTreeMap };
+use std::collections::{ HashMap };
 use crate::generate::Instruction;
 use crate::generate::GenContext;
 use crate::model::{ offset, DefStore, LinearPath, Register, RegisterPurpose };
-use crate::typeinf::{ BaseType, MemberType, RouteExpr };
+use crate::typeinf::{ MemberType, RouteExpr };
 
 struct HarnessInterp {
     values: HashMap<Option<Register>,Vec<usize>>
@@ -34,25 +34,12 @@ impl HarnessInterp {
     }
 }
 
-fn assign_unfiltered(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp, name: &str, types: &Vec<MemberType>, regs: &Vec<Register>) {
+fn assign_unfiltered(context: &GenContext, harness: &mut HarnessInterp, regs: &Vec<Register>) {
     let n = regs.len()/2;
     for i in 0..n {                            
         let r = context.route.get(&regs[i]).expect(&format!("missing route for {:?}",regs[i]));
         harness.insert(&r.0,harness.get(&regs[i+n]).to_vec()); // XXX don't copy when we have CoW!
     }        
-}
-
-fn append_nontop_vec(context: &GenContext, harness: &mut HarnessInterp, offsets: &Vec<RegisterPurpose>, regs: &Vec<Register>) {
-    let n = regs.len()/2;
-    for (j,purpose) in offsets.iter().enumerate() {
-        if !purpose.is_top() {
-            let r = context.route.get(&regs[j]).expect(&format!("missing route for {:?}",regs[j]));
-            let mut x = harness.get(&regs[j+n]).to_vec();
-            let v = harness.get_mut(&r.0);
-            v.append(&mut x);
-        }
-    }
-    print!("     (nontop-vec)\n");
 }
 
 // XXX efficiently via iterators
@@ -77,6 +64,19 @@ fn build_filter(harness: &mut HarnessInterp, seq: &Vec<RouteExpr>) -> Vec<usize>
                             for i in 0..*len {
                                 new_source.push(src[off+i]);
                             }
+                        }
+                    }
+                }
+                source = Some(new_source);
+            },
+            RouteExpr::Filter(reg) => {
+                let bools = harness.get(reg);
+                let mut new_source = Vec::new();
+                for (i,b) in bools.iter().enumerate() {
+                    if *b != 0 {
+                        match source {
+                            None => { new_source.push(i); },
+                            Some(ref mut src) => { new_source.push(src[i]); }
                         }
                     }
                 }
@@ -135,7 +135,7 @@ fn assign(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp
     }
     if filter.is_none() {
         print!("      (unfiltered)\n");
-        assign_unfiltered(defstore,context,harness,name,types,regs);
+        assign_unfiltered(context,harness,regs);
         return;
     }
     let filter = filter.unwrap();
@@ -146,7 +146,7 @@ fn assign(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp
             if let Some(r) = context.route.get(&regs[j]) {
                 let src_data_len =  harness.get(&regs[j+n]).len();
                 for (src_pos,dst_pos) in filter.iter().enumerate() {
-                    print!("      assigning to top level {:?}/{} from {:?}/{}\n",r.0,dst_pos,&regs[j+n],src_pos);
+                    print!("      assigning to top level {:?}/{} {:?} from {:?}/{}\n",r.0,dst_pos,harness.get(&r.0),&regs[j+n],src_pos);
                     let offset = match purpose.get_linear() {
                         LinearPath::Offset(_) => copy_non_top(context,harness,&offsets,regs),
                         _ => 0
@@ -217,13 +217,36 @@ fn print_vec(defstore: &DefStore, harness: &mut HarnessInterp, type_: &MemberTyp
     out
 }
 
+fn number_binop(harness: &mut HarnessInterp, name: &str, c: &Register, a: &Register, b: &Register) {
+    let a_vals = harness.get(a).clone();
+    let b_vals = harness.get(b).clone();
+    let mut c_vals = Vec::new();
+    if b_vals.len() > 0 {
+        let mut b_iter = b_vals.iter().cycle();
+        for a_val in &a_vals {
+            let b_val = b_iter.next().unwrap();
+            match name {
+                "eq" => {
+                    c_vals.push(if a_val == b_val {1} else {0});
+                },
+                _ => { panic!("Unknown binop {}",name); }
+            }
+        }
+    }
+    harness.insert(c,c_vals);
+}
+
 pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<usize>>>,HashMap<Register,Vec<usize>>,Vec<String>) {
     let mut printed = Vec::new();
     let mut strings = Vec::new();
     let mut harness = HarnessInterp::new();
     for instr in &context.instrs {
         for r in instr.get_registers() {
-            //print!("{:?}={:?}\n",r,mi_get(&values,&r));
+            print!("{:?}={:?}",r,harness.get(&r));
+            if let Some(route) = context.route.get(&r) {
+                print!(" [{:?}]",route);
+            }
+            print!("\n");
         }
         print!("{:?}",instr);
         match instr {
@@ -234,7 +257,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             Instruction::NumberConst(r,n) => { harness.insert(&r,vec![*n as usize]); },
             Instruction::BooleanConst(r,n) => { harness.insert(&r,vec![if *n {1} else {0}]); },
             Instruction::Copy(r,s) | Instruction::Ref(r,s) => { let x = harness.get_mut(s).to_vec(); harness.insert(&r,x); },
-            Instruction::Filter(d,s,f) => {
+            Instruction::Filter(d,s,f) | Instruction::RefFilter(d,s,f) => {
                 let h = &mut harness;
                 let mut f = h.get(f).iter();
                 let mut v = vec![];
@@ -284,13 +307,20 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                         print!("{}\n",s);
                         strings.push(s);
                     },
+                    "eq" => {
+                        number_binop(&mut harness,name,&regs[0],&regs[1],&regs[2]);
+                    },
                     _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
                 }
             },
             _ => { panic!("Bad mini-interp instruction {:?}",instr); }
         }
         for r in instr.get_registers() {
-            //print!("{:?}={:?}\n",r,mi_get(&values,&r));
+            print!("{:?}={:?}",r,harness.get(&r));
+            if let Some(route) = context.route.get(&r) {
+                print!(" [{:?}]",route);
+            }
+            print!("\n");
         }
     }
     (printed,harness.dump(),strings)
