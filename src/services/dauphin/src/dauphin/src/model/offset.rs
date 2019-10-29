@@ -15,7 +15,7 @@ impl fmt::Display for LinearPath {
         match self {
             LinearPath::Data => write!(f,"D"),
             LinearPath::Offset(n) => write!(f,"A{}",n),
-            LinearPath::Length(n) => write!(f,"B{}",n),
+            LinearPath::Length(n) => write!(f,"B{}",n)
         }
     }
 }
@@ -24,7 +24,8 @@ impl fmt::Display for LinearPath {
 pub struct RegisterPurpose {
     complex: Vec<String>,
     linear: LinearPath,
-    base: BaseType
+    base: BaseType,
+    top: bool
 }
 
 impl fmt::Display for RegisterPurpose {
@@ -56,23 +57,27 @@ impl RegisterPurpose {
             },
             base => {
                 let mut out = Vec::new();
+                out.push(RegisterPurpose {
+                    complex: prefix.to_vec(),
+                    linear: LinearPath::Data,
+                    base,
+                    top: container.depth() == 0
+                });
                 for i in 0..container.depth() {
+                    let top = i == container.depth()-1;
                     out.push(RegisterPurpose {
                         complex: prefix.to_vec(),
                         linear: LinearPath::Offset(i),
-                        base: BaseType::NumberType
+                        base: BaseType::NumberType,
+                        top
                     });
                     out.push(RegisterPurpose {
                         complex: prefix.to_vec(),
                         linear: LinearPath::Length(i),
-                        base: BaseType::NumberType
+                        base: BaseType::NumberType,
+                        top
                     });
                 }
-                out.push(RegisterPurpose {
-                    complex: prefix.to_vec(),
-                    linear: LinearPath::Data,
-                    base
-                });
                 Ok(out)
             }
         }
@@ -101,6 +106,7 @@ impl RegisterPurpose {
     }
 
     pub fn get_linear(&self) -> &LinearPath { &self.linear }
+    pub fn is_top(&self) -> bool { self.top }
 }
 
 pub fn offset(defstore: &DefStore, type_: &MemberType) -> Result<Vec<RegisterPurpose>,()> {

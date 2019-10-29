@@ -6,6 +6,7 @@ struct zstest2 { M: stest };
 enum etest3 { A: stest, B: etest, C: boolean, D: vec(vec(number)) };
 proc assign(out _A, _A);
 proc print_regs(_A);
+proc print_vec(_);
 func gt(number,number) becomes boolean;
 func lt(number,number) becomes boolean;
 func eq(number,number) becomes boolean;
@@ -20,35 +21,44 @@ func oper_test(stest) becomes stest;
 // properties: unfiltered
 e := 1;
 print_regs(e); // 1
+print_vec(e);
 
 // assignments only get the first value of a multivalue.
 // properties: unfiltered
 e := [2,3][];
 print_regs(e); // 2
+print_vec(e);
 
 // assign a simple, one-dimensional vector quantity.
 // properties: unfiltered
 e := [4,5];
 print_regs(e); // [4,5]
+print_vec(e);
 
 // reassign all values using reffilter (repeated)
 // properties: filtered
 e[] := 6;
 print_regs(e); // [6,6]
+print_vec(e);
 
 // reassign all values using reffilter (iterated)
 // properties: filtered
 e[] := [7,8][];
 print_regs(e); // [7,8]
+print_vec(e);
 
-// 2d to exercise non-top copying
-e := [[1,2],[3,4]];
+// 3d to exercise non-top copying
+e := [[[1,2],[3,4]],[[5,6],[7,8]]];
 print_regs(e);
+print_vec(e);
 
 // nontop-vec copying
 // properties: filtered nontop-vec
-e[] := [7,7];
+e[] := [[0,0,0],[9,9,9],[0,0,0]];
 print_regs(e);
+print_vec(e);
+
+print_vec([[[1,2,3],[4,5],[6],[]],[[7]]]);
 
 // XXX structs & enums
 

@@ -142,11 +142,11 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             let mut new = Vec::new();
             for r in regs {
                 if let Some(lin_src) = subregs.get(r) {
+                    new.push(lin_src.data.clone());
                     for i in 0..lin_src.index.len() {
                         new.push(lin_src.index[i].0.clone());
                         new.push(lin_src.index[i].1.clone());
                     }
-                    new.push(lin_src.data.clone());
                 } else {
                     new.push(r.clone());
                 }
@@ -366,7 +366,7 @@ mod test {
         print!("{:?}\n",context);
         let subregs = linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        let (_,values) = mini_interp(&defstore,&mut context);
+        let (_,values,_) = mini_interp(&defstore,&mut context);
         let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}",values);
         assert_eq!(vec![1,2],values[&lins[0].data]);
@@ -395,12 +395,25 @@ mod test {
         print!("{:?}\n",context);
         let subregs = linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        let (prints,values) = mini_interp(&defstore,&mut context);
+        let (prints,values,strings) = mini_interp(&defstore,&mut context);
         let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}\n",values);
         for p in &prints {
             print!("{:?}\n",p);
         }
+        for s in &strings {
+            print!("{}\n",s);
+        }
+        assert_eq!(vec![
+            "1",
+            "2,3",
+            "[4,5]",
+            "[6,6]",
+            "[7,8]",
+            "[[[1,2],[3,4]],[[5,6],[7,8]]]",
+            "[[[0,0,0],[9,9,9],[0,0,0]],[[0,0,0],[9,9,9],[0,0,0]]]",
+            "[[[1,2,3],[4,5],[6],[]],[[7]]]"
+        ],strings);
         //assert_eq!(vec![vec![vec![3,3],vec![0],vec![2]],
         //                vec![]],
         //           prints);
@@ -441,7 +454,7 @@ mod test {
         print!("{:?}\n",instrs);
         let subregs = linearize_real(&mut context).expect("linearize");
         let (lins,_) = find_assigns(&instrs,&subregs);
-        let (_,values) = mini_interp(&defstore,&mut context);
+        let (_,values,_) = mini_interp(&defstore,&mut context);
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(vec![0],values[&lins[0].index[0].0]);
         assert_eq!(vec![0],values[&lins[0].index[0].1]);
