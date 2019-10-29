@@ -111,7 +111,7 @@ fn copy_non_top(context: &GenContext, harness: &mut HarnessInterp, offsets: &Vec
     offset
 }
 
-fn assign(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp, name: &str, types: &Vec<MemberType>, regs: &Vec<Register>) {
+fn assign(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp, types: &Vec<MemberType>, regs: &Vec<Register>) {
     let type_ = &types[0]; // signature ensures type match
     print!("-> {} registers\n",regs.len());
     print!("      -> {:?}\n",type_);
@@ -301,7 +301,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             Instruction::Call(name,types,regs) => {
                 match &name[..] {
                     "assign" => {
-                        assign(defstore,context,&mut harness,name,types,regs);
+                        assign(defstore,context,&mut harness,types,regs);
                     },
                     "print_regs" => {
                         let mut print = Vec::new();

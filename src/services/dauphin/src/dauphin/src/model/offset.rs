@@ -149,7 +149,7 @@ mod test {
         lexer.import("test:codegen/offset-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let context = generate_code(&defstore,stmts).expect("codegen");
+        let _context = generate_code(&defstore,stmts).expect("codegen");
         let regs = offset(&defstore,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("D/boolean",format_pvec(&regs));
         let regs = offset(&defstore,&make_type(&defstore,"vec(etest3)")).expect("b");

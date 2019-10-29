@@ -102,13 +102,7 @@ mod test {
     use super::*;
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };
-    use crate::model::RegisterAllocator;
     use crate::generate::{ generate_code };
-    use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint };
-
-    fn x_ph(num: usize) -> ArgumentExpressionConstraint {
-        ArgumentExpressionConstraint::Placeholder(format!("{}",num))
-    }
 
     #[test]
     fn typing_smoke() {

@@ -89,7 +89,7 @@ impl fmt::Debug for Instruction {
             },
             Instruction::Call(name,types,regs) => {
                 let types : Vec<String> = types.iter().map(|x| x.to_string()).collect();
-                fmt_instr(f,&format!("call:{}:{}",name,types.join(":")),&regs.iter().map(|x| x).collect(),&vec![]);
+                fmt_instr(f,&format!("call:{}:{}",name,types.join(":")),&regs.iter().map(|x| x).collect(),&vec![])?;
             },
             Instruction::CtorStruct(name,dest,regs) => {
                 let mut r = vec![dest];

@@ -63,8 +63,9 @@ impl Route {
     }
 
     pub fn copy(&mut self, dst: &Register, src: &Register) {
-        if let Some(route) = self.route.get(src).clone() {
-            self.route.insert(dst.clone(),route.clone());
+        if let Some(route) = self.route.get(src) {
+            let route = route.clone();
+            self.route.insert(dst.clone(),route);
         }
     }
 

@@ -1,7 +1,7 @@
 // TODO Copy for registers
 use std::collections::BTreeMap;
 
-use crate::model::{ offset, DefStore, Register };
+use crate::model::{ Register };
 use crate::typeinf::{ BaseType, MemberType, RouteExpr };
 use super::codegen::GenContext;
 use super::intstruction::Instruction;
@@ -330,7 +330,6 @@ pub fn linearize(context: &mut GenContext) -> Result<(),String> {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
     use super::*;
     use super::super::call;
     use super::super::simplify::simplify;
@@ -412,12 +411,10 @@ mod test {
         let mut context = generate_code(&defstore,stmts).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
-        let instrs = context.instrs.clone();
         print!("{:?}\n",context);
-        let subregs = linearize_real(&mut context).expect("linearize");
+        linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         let (prints,values,strings) = mini_interp(&defstore,&mut context);
-        let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}\n",values);
         for p in &prints {
             print!("{:?}\n",p);

@@ -15,6 +15,7 @@ use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
 use crate::generate::{ call, generate_code, linearize, simplify };
 use crate::testsuite::load_testdata;
+use crate::interp::mini_interp;
 
 fn main() {
     let resolver = FileResolver::new();
@@ -30,4 +31,5 @@ fn main() {
     call(&mut context).expect("j");
     simplify(&defstore,&mut context).expect("k");
     linearize(&mut context).expect("l");
+    mini_interp(&defstore,&mut context);
 }
