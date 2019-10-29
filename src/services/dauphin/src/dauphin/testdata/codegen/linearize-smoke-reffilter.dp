@@ -53,31 +53,38 @@ e[@==1] := 9;
 print_regs(e); // [7,9]
 print_vec(e);
 
-/*
+// good smoke test of at
+e := [[1,2],[3,4]];
+print_vec(e[@<3][@==1]);
 
 // big mutli-dimensional vector
 e := [[[111,112,113],[121,122,123],[131,132,133]],
       [[211,212,213],[221,222,223],[231,232,233]],
       [[311,312,313],[321,322,323],[331,332,333]]];
 print_regs(e); // ...
+print_vec(e);
 
 // reassign final row
 e[@==2] := [[411,412,413],[421,422,423],[431,432,433]];
 print_regs(e); // 3xx -> 4xx
+print_vec(e);
 
 // reassign middle triple
 e[][@==1] := [444];
 print_regs(e);  // [x21,x22,x23] -> [444] (x3)
+print_vec(e);
 
 // reassign single value by multiple position params
 e[@==0][@==2][@==2] := 433;
 print_regs(e); // 133 -> 433
+print_vec(e);
 
+/*
 // reassign by repeated filter at same level
 // XXX extend to proper $ test
-(e[@==0])[@==0][@==0] := 200;
+e[@==0][@==0][@==0] := 200;
 print_regs(e); // 211 -> 200
-
+print_vec(e);
 */
 
 // 3d to exercise non-top copying

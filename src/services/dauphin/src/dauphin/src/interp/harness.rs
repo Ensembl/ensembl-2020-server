@@ -84,6 +84,7 @@ fn build_filter(harness: &mut HarnessInterp, seq: &Vec<RouteExpr>) -> Vec<usize>
             },
             _ => {}
         }
+        print!("      (after filter step {:?}: {:?})\n",r,source);
     }
     source.unwrap()
 }
@@ -226,9 +227,8 @@ fn number_binop(harness: &mut HarnessInterp, name: &str, c: &Register, a: &Regis
         for a_val in &a_vals {
             let b_val = b_iter.next().unwrap();
             match name {
-                "eq" => {
-                    c_vals.push(if a_val == b_val {1} else {0});
-                },
+                "eq" => { c_vals.push(if a_val == b_val {1} else {0}); },
+                "lt" => { c_vals.push(if a_val < b_val {1} else {0}); },
                 _ => { panic!("Unknown binop {}",name); }
             }
         }
@@ -288,6 +288,16 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 }
                 harness.insert(d,v);
             },
+            Instruction::SeqAt(r,b) => {
+                let mut v = vec![];
+                let b_vals = harness.get(b);
+                for b_val in b_vals {
+                    for i in 0..*b_val {
+                        v.push(i);
+                    }
+                }
+                harness.insert(r,v);
+            },
             Instruction::Call(name,types,regs) => {
                 match &name[..] {
                     "assign" => {
@@ -307,7 +317,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                         print!("{}\n",s);
                         strings.push(s);
                     },
-                    "eq" => {
+                    "eq" | "lt" => {
                         number_binop(&mut harness,name,&regs[0],&regs[1],&regs[2]);
                     },
                     _ => { panic!("Bad mini-interp instruction {:?}",instr); }        

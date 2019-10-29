@@ -64,11 +64,6 @@ impl Typing {
                 TypeConstraint::Reference(_) => true,
                 TypeConstraint::NonReference(_) => false
             };
-            if self.regmap.contains_key(&register) {
-                if self.reg_isref.contains(&register) != is_ref {
-                    return Err(format!("Cannot unify reference and non-reference"));
-                }
-            }
             if is_ref {
                 self.reg_isref.insert(register.clone());
             }
@@ -132,18 +127,4 @@ mod test {
             print!("{:?}\n",tp);
         }
     }
-
-    #[test]
-    fn typestore_refnonref() {
-        let mut ts = Typing::new();
-        let reg = RegisterAllocator::new().allocate();
-        let constraint = InstructionConstraint::new(
-            &vec![
-                (ArgumentConstraint::NonReference(x_ph(1)),reg.clone()),
-                (ArgumentConstraint::Reference(x_ph(1)),reg.clone())
-            ]
-        );
-        ts.add(&constraint).expect_err("O");
-    }
-
 }

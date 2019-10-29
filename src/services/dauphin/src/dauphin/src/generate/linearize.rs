@@ -76,7 +76,6 @@ fn add_refseq_filter(out: &mut Vec<Instruction>, context: &mut GenContext, dst: 
 
 fn add_ref_filter(out: &mut Vec<Instruction>, context: &mut GenContext, dst: &Register, src: &Register, f: &Register) {
     out.push(Instruction::RefFilter(dst.clone(),src.clone(),f.clone()));
-    print!("copying {:?} <- {:?}\n",dst,src);
     context.route.set_derive(&dst,&src,&RouteExpr::Filter(f.clone()));
 }
 
@@ -127,7 +126,8 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::RefSValue(_,_,_,_) |
         Instruction::Proc(_,_) |
         Instruction::Operator(_,_,_) |
-        Instruction::RefEValue(_,_,_,_) => {
+        Instruction::RefEValue(_,_,_,_) |
+        Instruction::SeqAt(_,_) => {
             panic!("unexpected instruction {:?}",instr);
         },
         Instruction::NumberConst(_,_) |
@@ -256,7 +256,8 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         },
         Instruction::At(dst,src) => {
             if let Some(lin_src) = subregs.get(src) {
-                out.push(Instruction::At(dst.clone(),lin_src.index[lin_src.index.len()-1].0.clone()));
+                let top_level = lin_src.index.len()-1;
+                out.push(Instruction::SeqAt(dst.clone(),lin_src.index[top_level].1.clone()));
             } else {
                 out.push(Instruction::At(dst.clone(),src.clone()));
             }
@@ -431,13 +432,15 @@ mod test {
             "[6,6]",
             "[7,8]",
             "[7,9]",
+            "2,4",
+            "[[[111,112,113],[121,122,123],[131,132,133]],[[211,212,213],[221,222,223],[231,232,233]],[[311,312,313],[321,322,323],[331,332,333]]]",
+            "[[[111,112,113],[121,122,123],[131,132,133]],[[211,212,213],[221,222,223],[231,232,233]],[[411,412,413],[421,422,423],[431,432,433]]]",
+            "[[[111,112,113],[444],[131,132,133]],[[211,212,213],[444],[231,232,233]],[[411,412,413],[444],[431,432,433]]]",
+            "[[[111,112,113],[444],[131,132,433]],[[211,212,213],[444],[231,232,233]],[[411,412,413],[444],[431,432,433]]]",
             "[[[1,2],[3,4]],[[5,6],[7,8]]]",
             "[[[0,0,0],[9,9,9],[0,0,0]],[[0,0,0],[9,9,9],[0,0,0]]]",
             "[[[1,2,3],[4,5],[6],[]],[[7]]]",
         ],strings);
-        //assert_eq!(vec![vec![vec![3,3],vec![0],vec![2]],
-        //                vec![]],
-        //           prints);
     }
 
     fn linearize_stable_pass() -> GenContext {

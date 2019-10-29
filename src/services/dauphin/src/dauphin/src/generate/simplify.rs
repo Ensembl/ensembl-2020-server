@@ -80,7 +80,8 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         Instruction::Length(_,_) |
         Instruction::Add(_,_) |
         Instruction::Operator(_,_,_) |
-        Instruction::Proc(_,_) => {
+        Instruction::Proc(_,_) |
+        Instruction::SeqAt(_,_) => {
             panic!("Impossible instruction! {:?}",instr);
         },
         Instruction::NumberConst(_,_) |
