@@ -1,0 +1,44 @@
+enum etest { X: number, Y: vec(boolean) };
+enum etest2 { Z: etest, W: boolean };
+
+struct stest { A: vec(number), B: etest };
+struct zstest2 { M: stest };
+enum etest3 { A: stest, B: etest, C: boolean, D: vec(vec(number)) };
+proc assign(out _A, _A);
+proc print_regs(_A);
+proc print_vec(_);
+func len(vec(_)) becomes number;
+func gt(number,number) becomes boolean;
+func lt(number,number) becomes boolean;
+func eq(number,number) becomes boolean;
+proc bool_check(boolean);
+inline ":=" assign left 14;
+inline ">" gt left 6;
+inline "<" lt left 6;
+inline "==" eq left 5;
+func oper_test(stest) becomes stest;
+
+/* an etest3 has register structure:
+
+ 0 A.A/D
+ 1 A.A/A0
+ 2 A.A/B0
+ 3 A.B.X/D
+ 4 A.B.Y/D
+ 5 A.B.Y/A0
+ 6 A.B.Y/B0
+ 7 B.X/D
+ 8 B.Y/D
+ 9 B.Y/A0
+10 B.Y/B0
+11 C/D
+12 D/D
+13 D/A0
+14 D/B0
+15 D/A1
+16 D/B1
+
+*/
+
+a := etest3:C true;
+print_regs(a);

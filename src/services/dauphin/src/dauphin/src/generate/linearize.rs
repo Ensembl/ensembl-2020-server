@@ -444,6 +444,31 @@ mod test {
         ],strings);
     }
 
+    #[test]
+    fn linearize_structenum_smoke() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/linearize-smoke-structenum.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
+        simplify(&defstore,&mut context).expect("k");
+        print!("{:?}\n",context);
+        linearize(&mut context).expect("linearize");
+        print!("{:?}\n",context);
+        let (prints,values,strings) = mini_interp(&defstore,&mut context);
+        print!("{:?}\n",values);
+        for p in &prints {
+            print!("{:?}\n",p);
+        }
+        for s in &strings {
+            print!("{}\n",s);
+        }
+//        assert_eq!(vec![
+//        ],strings);
+    }
+
     fn linearize_stable_pass() -> GenContext {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);

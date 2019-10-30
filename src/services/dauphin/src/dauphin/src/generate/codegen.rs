@@ -209,7 +209,7 @@ impl CodeGen {
                 let filterreg = self.context.regalloc.allocate();
                 let argreg = self.reg_nonref(defstore,&subreg)?;
                 /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
-                self.build_rvalue(defstore,f,&filterreg,Some(&argreg),None);
+                self.build_rvalue(defstore,f,&filterreg,Some(&argreg),None)?;
                 self.add_instr(Instruction::RefFilter(reg.clone(),subreg.clone(),filterreg.clone()),defstore)?;
                 /* make permanent copy of filterreg to avoid competing updates */
                 let permreg = self.context.regalloc.allocate();
