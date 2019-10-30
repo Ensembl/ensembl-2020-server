@@ -48,12 +48,12 @@ impl CodeGen {
         Ok(())
     }
 
-    fn build_vec(&mut self, defstore: &DefStore, values: &Vec<Expression>, reg: &Register, dollar: Option<(&Register,&Register)>) -> Result<(),String> {
+    fn build_vec(&mut self, defstore: &DefStore, values: &Vec<Expression>, reg: &Register, dollar: Option<&Register>, at: Option<&Register>) -> Result<(),String> {
         let tmp = self.context.regalloc.allocate();
         self.add_instr(Instruction::Nil(tmp.clone()),defstore)?;
         for val in values {
             let r = self.context.regalloc.allocate();
-            self.build_rvalue(defstore,val,&r,dollar)?;
+            self.build_rvalue(defstore,val,&r,dollar,at)?;
             let push = Instruction::Append(tmp.clone(),r.clone());
             self.add_instr(push,defstore)?;
         }
@@ -206,18 +206,15 @@ impl CodeGen {
             Expression::Filter(x,f) => {
                 let subreg = self.context.regalloc.allocate();
                 self.build_lvalue(defstore,x,&subreg,false)?;
-
-                let atreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::At(atreg.clone(),subreg.clone()),defstore)?;
-
                 let filterreg = self.context.regalloc.allocate();
                 let argreg = self.reg_nonref(defstore,&subreg)?;
-                self.build_rvalue(defstore,f,&filterreg,Some((&argreg,&atreg)))?;
+                /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
+                self.build_rvalue(defstore,f,&filterreg,Some(&argreg),None);
                 self.add_instr(Instruction::RefFilter(reg.clone(),subreg.clone(),filterreg.clone()),defstore)?;
                 /* make permanent copy of filterreg to avoid competing updates */
                 let permreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::Copy(permreg.clone(),filterreg.clone()),defstore)?;
-                self.context.route.set_derive(&subreg,&subreg,&RouteExpr::Filter(permreg));
+                self.context.route.set_derive(&reg,&subreg,&RouteExpr::Filter(permreg));
             },
             Expression::Bracket(x,f) => {
                 let interreg = self.context.regalloc.allocate();
@@ -231,7 +228,7 @@ impl CodeGen {
                 self.context.route.set_derive(&interreg,&subreg,&RouteExpr::Square);
                 let filterreg = self.context.regalloc.allocate();
                 let argreg = self.reg_nonref(defstore,&interreg)?;
-                self.build_rvalue(defstore,f,&filterreg,Some((&argreg,&atreg)))?;
+                self.build_rvalue(defstore,f,&filterreg,Some(&argreg),Some(&atreg))?;
                 /* make permanent copy of filterreg to avoid competing updates */
                 let permreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::Copy(permreg.clone(),filterreg.clone()),defstore)?;
@@ -243,7 +240,7 @@ impl CodeGen {
         Ok(())
     }
 
-    fn build_rvalue(&mut self, defstore: &DefStore, expr: &Expression, reg: &Register, dollar: Option<(&Register,&Register)>) -> Result<(),String> {
+    fn build_rvalue(&mut self, defstore: &DefStore, expr: &Expression, reg: &Register, dollar: Option<&Register>, at: Option<&Register>) -> Result<(),String> {
         match expr {
             Expression::Identifier(id) => {
                 if !self.regnames.contains_key(id) {
@@ -264,12 +261,12 @@ impl CodeGen {
             Expression::LiteralBytes(b) => {
                 self.add_instr(Instruction::BytesConst(reg.clone(),b.to_vec()),defstore)?;
             },
-            Expression::Vector(v) => self.build_vec(defstore,v,reg,dollar)?,
+            Expression::Vector(v) => self.build_vec(defstore,v,reg,dollar,at)?,
             Expression::Operator(name,x) => {
                 let mut subregs = Vec::new();
                 for e in x {
                     let r = self.context.regalloc.allocate();
-                    self.build_rvalue(defstore,e,&r,dollar)?;
+                    self.build_rvalue(defstore,e,&r,dollar,at)?;
                     subregs.push(r);
                 }
                 self.add_instr(Instruction::Operator(name.clone(),vec![reg.clone()],subregs),defstore)?;
@@ -278,7 +275,7 @@ impl CodeGen {
                 let mut subregs = Vec::new();
                 for e in x {
                     let r = self.context.regalloc.allocate();
-                    self.build_rvalue(defstore,e,&r,dollar)?;
+                    self.build_rvalue(defstore,e,&r,dollar,at)?;
                     subregs.push(r);
                 }
                 let x = self.struct_rearrange(defstore,s,subregs,n)?;
@@ -286,12 +283,12 @@ impl CodeGen {
             },
             Expression::CtorEnum(e,b,x) => {
                 let subreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,x,&subreg,dollar)?;
+                self.build_rvalue(defstore,x,&subreg,dollar,at)?;
                 self.add_instr(Instruction::CtorEnum(e.clone(),b.clone(),reg.clone(),subreg),defstore)?;
             },
             Expression::Dot(x,f) => {
                 let subreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,x,&subreg,dollar)?;
+                self.build_rvalue(defstore,x,&subreg,dollar,at)?;
                 let stype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::StructType(name)) = stype {
                     self.add_instr(Instruction::SValue(f.clone(),name.to_string(),reg.clone(),subreg),defstore)?;
@@ -301,7 +298,7 @@ impl CodeGen {
             },
             Expression::Query(x,f) => {
                 let subreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,x,&subreg,dollar)?;
+                self.build_rvalue(defstore,x,&subreg,dollar,at)?;
                 let etype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
                     self.add_instr(Instruction::ETest(f.clone(),name.to_string(),reg.clone(),subreg),defstore)?;
@@ -311,7 +308,7 @@ impl CodeGen {
             },
             Expression::Pling(x,f) => {
                 let subreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,x,&subreg,dollar)?;
+                self.build_rvalue(defstore,x,&subreg,dollar,at)?;
                 let etype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
                     self.add_instr(Instruction::EValue(f.clone(),name.to_string(),reg.clone(),subreg),defstore)?;
@@ -321,28 +318,25 @@ impl CodeGen {
             },
             Expression::Square(x) => {
                 let subreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,x,&subreg,dollar)?;
+                self.build_rvalue(defstore,x,&subreg,dollar,at)?;
                 self.add_instr(Instruction::Square(reg.clone(),subreg),defstore)?;
             },
             Expression::Star(x) => {
                 let subreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,x,&subreg,dollar)?;
+                self.build_rvalue(defstore,x,&subreg,dollar,at)?;
                 self.add_instr(Instruction::Star(reg.clone(),subreg),defstore)?;
             },
             Expression::Filter(x,f) => {
                 let subreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,x,&subreg,dollar)?;
-
-                let atreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::At(atreg.clone(),subreg.clone()),defstore)?;
-
+                self.build_rvalue(defstore,x,&subreg,dollar,at)?;
+                /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
                 let filterreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,f,&filterreg,Some((&subreg,&atreg)))?;
+                self.build_rvalue(defstore,f,&filterreg,Some(&subreg),None)?;
                 self.add_instr(Instruction::Filter(reg.clone(),subreg.clone(),filterreg.clone()),defstore)?;
             },
             Expression::Bracket(x,f) => {
                 let subreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,x,&subreg,dollar)?;
+                self.build_rvalue(defstore,x,&subreg,dollar,at)?;
 
                 let atreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::At(atreg.clone(),subreg.clone()),defstore)?;
@@ -351,19 +345,19 @@ impl CodeGen {
                 self.add_instr(Instruction::Square(sq_subreg.clone(),subreg.clone()),defstore)?;
 
                 let filterreg = self.context.regalloc.allocate();
-                self.build_rvalue(defstore,f,&filterreg,Some((&sq_subreg,&atreg)))?;
+                self.build_rvalue(defstore,f,&filterreg,Some(&sq_subreg),Some(&atreg))?;
                 self.add_instr(Instruction::Filter(reg.clone(),sq_subreg.clone(),filterreg.clone()),defstore)?;
             },
             Expression::Dollar => {
                 if let Some(dollar) = dollar {
-                    self.add_instr(Instruction::Copy(reg.clone(),dollar.0.clone()),defstore)?;
+                    self.add_instr(Instruction::Copy(reg.clone(),dollar.clone()),defstore)?;
                 } else {
                     return Err("Unexpected $".to_string());
                 }
             },
             Expression::At => {
-                if let Some(dollar) = dollar {
-                    self.add_instr(Instruction::Copy(reg.clone(),dollar.1.clone()),defstore)?;
+                if let Some(at) = at {
+                    self.add_instr(Instruction::Copy(reg.clone(),at.clone()),defstore)?;
                 } else {
                     return Err("Unexpected @".to_string());
                 }
@@ -384,7 +378,7 @@ impl CodeGen {
         for (i,member) in procdecl.unwrap().get_signature().each_member().enumerate() {
             match member {
                 SignatureMemberConstraint::RValue(_) =>
-                    self.build_rvalue(defstore,&stmt.1[i],&regs[i],None)?,
+                    self.build_rvalue(defstore,&stmt.1[i],&regs[i],None,None)?,
                 SignatureMemberConstraint::LValue(_) =>
                     self.build_lvalue(defstore,&stmt.1[i],&regs[i],true)?,
             }

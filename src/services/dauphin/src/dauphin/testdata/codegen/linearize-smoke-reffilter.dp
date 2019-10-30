@@ -7,6 +7,7 @@ enum etest3 { A: stest, B: etest, C: boolean, D: vec(vec(number)) };
 proc assign(out _A, _A);
 proc print_regs(_A);
 proc print_vec(_);
+func len(vec(_)) becomes number;
 func gt(number,number) becomes boolean;
 func lt(number,number) becomes boolean;
 func eq(number,number) becomes boolean;
@@ -79,13 +80,10 @@ e[@==0][@==2][@==2] := 433;
 print_regs(e); // 133 -> 433
 print_vec(e);
 
-/*
 // reassign by repeated filter at same level
-// XXX extend to proper $ test
-e[@==0][@==0][@==0] := 200;
+e[@==1][@==0][@==0] := 200;
 print_regs(e); // 211 -> 200
 print_vec(e);
-*/
 
 // 3d to exercise non-top copying
 e := [[[1,2],[3,4]],[[5,6],[7,8]]];
@@ -100,3 +98,16 @@ print_vec(e);
 
 // test print_vec
 print_vec([[[1,2,3],[4,5],[6],[]],[[7]]]);
+
+// test len
+e := [1,2,3];
+print_vec([len(e)]);
+
+// test dollar: simple
+e := [1,2,3];
+print_vec([e[@>0]&[$<3]]);
+
+// test dollar: vecs and assign
+e := [[],[1,2],[3],[]];
+e[@>0]&[len($)==0] := [4];
+print_vec(e);

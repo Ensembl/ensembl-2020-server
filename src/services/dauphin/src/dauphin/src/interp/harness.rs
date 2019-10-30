@@ -218,6 +218,23 @@ fn print_vec(defstore: &DefStore, harness: &mut HarnessInterp, type_: &MemberTyp
     out
 }
 
+fn vec_len(defstore: &DefStore, harness: &mut HarnessInterp, type_: &MemberType, regs: &Vec<Register>) {
+    let mut top_reg = None;
+    let offsets = offset(defstore,type_).expect("resolving to registers");
+    for (j,offset) in offsets.iter().enumerate() {
+        match offset.get_linear() {
+            LinearPath::Length(_) => {
+                if offset.is_top() {
+                    top_reg = Some(&regs[j+1]);
+                }
+            },
+            _ => {}
+        }
+    }
+    let lens = harness.get(top_reg.unwrap()).clone();
+    harness.insert(&regs[0],lens);
+}
+
 fn number_binop(harness: &mut HarnessInterp, name: &str, c: &Register, a: &Register, b: &Register) {
     let a_vals = harness.get(a).clone();
     let b_vals = harness.get(b).clone();
@@ -229,6 +246,7 @@ fn number_binop(harness: &mut HarnessInterp, name: &str, c: &Register, a: &Regis
             match name {
                 "eq" => { c_vals.push(if a_val == b_val {1} else {0}); },
                 "lt" => { c_vals.push(if a_val < b_val {1} else {0}); },
+                "gt" => { c_vals.push(if a_val > b_val {1} else {0}); },
                 _ => { panic!("Unknown binop {}",name); }
             }
         }
@@ -317,7 +335,10 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                         print!("{}\n",s);
                         strings.push(s);
                     },
-                    "eq" | "lt" => {
+                    "len" => {
+                        vec_len(defstore,&mut harness,&types[1],regs);
+                    },
+                    "eq" | "lt" | "gt" => {
                         number_binop(&mut harness,name,&regs[0],&regs[1],&regs[2]);
                     },
                     _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
