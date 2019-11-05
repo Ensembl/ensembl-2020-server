@@ -41,6 +41,7 @@ Build e!-Server:feature:
   script:
   - feature_branch=${CI_COMMIT_REF_NAME}
   - feature_tag=${feature_branch#"feature/"}
+  - feature_tag=`echo "${feature_tag}" | tr '[A-Z]' '[a-z]'`
   - docker build -t ${CONTAINER_IMAGE}-$feature_tag --no-cache .
   - docker images
   - echo "$GITLAB_REGISTRY_TOKEN" | docker login -u "$GITLAB_REGISTRY_USER" --password-stdin https://"$GITLAB_REGISTRY_URL"
@@ -139,6 +140,7 @@ Feature:
   - mv ./kubectl /usr/local/bin/kubectl  
   - feature_branch=${CI_COMMIT_REF_NAME}
   - feature_tag=${feature_branch#"feature/"}
+  - feature_tag=`echo "${feature_tag}" | tr '[A-Z]' '[a-z]'`
   - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
   - cd ensembl-client-caas-deploy
   - git checkout refactor-manifest
