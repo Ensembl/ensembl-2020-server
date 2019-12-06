@@ -1,0 +1,93 @@
+<html>
+    <head>
+        <style>
+            #tr {
+                border: 1px solid black;
+                float: right;
+            }
+        </style>
+        <script>
+            var interval = undefined;
+            var timer = undefined;
+            function ar_cookie() {
+                var cookies = document.cookie.split(';');
+                for(var i=0;i<cookies.length;i++) {
+                    let kv = cookies[i].split('=');
+                    if(kv[0].trim() == "autorefresh") {
+                        var interval = parseInt(kv[1],10);
+                        if(timer) { window.clearTimeout(timer); }
+                        if(!interval || interval<3) { interval=0; }
+                        if(interval>0) {
+                            timer = window.setTimeout(function() {
+                                window.location.href = window.location.href;
+                            },interval*1000);
+                        }
+                        document.getElementById("autorefresh").value = interval;
+                    }
+                }
+            }
+
+            function ar_set_cookie() {
+                document.cookie = "autorefresh="+parseInt(document.getElementById("autorefresh").value,10);
+                ar_cookie();
+                return false;
+            }
+        </script>
+    </head>
+    <body onload="ar_cookie()">
+        <div id="tr">
+            <form method="POST" onsubmit="ar_set_cookie(); return false">
+                autorefresh <input id="autorefresh"/>s (0=never)
+                <input type="submit" name="update" value="update"/>
+            </form>
+        </div>
+        <h1>Blackbox</h1>
+        <h2>Streams</h2>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Filename</th>
+                <th>Actions</th>
+            </tr>
+            {% for (stream,smodel) in config.streams.items() | sort %}
+            <tr>
+                <td>{{ stream }}</td>
+                <td>{{ "enabled" if smodel.active else "disabled" }}</td>
+                <td>{{ smodel.filename }}</td>
+                <td>
+                    {% if smodel.active %}
+                    <form method="POST" action="blackbox/update-config-page">
+                        <input type="hidden" name="disable" value="{{ stream |e }}"/>
+                        <button>disable</button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="blackbox/update-config-page">
+                        <input type="hidden" name="enable" value="{{ stream |e }}"/>
+                        <button>enable</button>
+                    </form>  
+                    {% endif %}
+                </td>
+            <tr>
+            {% endfor %}
+        </table>
+        <form method="POST" action="blackbox/update-config-page">
+            Add new section:
+            <input name="enable"/>
+            <input type="submit" name="add" value="add"/>
+        </form>
+        {% for (stream,smodel) in config.streams.items() | sort %}
+        {% if smodel.active %}
+        <h2>{{ stream }}</h2>
+        <iframe src="{{ smodel.tail }}"></iframe>
+        <form method="POST" action="blackbox/mark">
+            Add mark:
+            <input type="hidden" name="stream" value="{{ stream |e }}"/>
+            <input name="mark"/>
+            <button>mark</button>
+
+        </form>
+        {% endif %}
+        {% endfor %}
+    </body>
+</html>
