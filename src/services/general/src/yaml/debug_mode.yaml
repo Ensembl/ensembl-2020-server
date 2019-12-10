@@ -2,7 +2,7 @@ enabled:
     - main
     - debug
     - trainmanager
-    - train
+#   - train
 #    - cursor
 
 # temporary comments denote work done so far. needs moving to docs when

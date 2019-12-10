@@ -87,6 +87,72 @@
             <button>mark</button>
 
         </form>
+        <table>
+            <tr>
+                <th>Data Set</th>
+                <th>Status</th>
+                <th>Filename</th>
+                <th>Count</th>
+                <th>Total</th>
+                <th>Mean</th>
+                <th>95%ile</th>
+                <th>Top</th>
+                <th>Raw Data</th>
+            </tr>
+            {% for ((streamname,rawname),raw) in config.raws.items() | sort %}
+            {% if streamname == stream %}
+            <tr>
+                <td>{{ rawname }}</td>
+                <td>
+                    {% if raw.enabled %}
+                    Full Raw Data
+                    {% else %}
+                    Summary Only
+                    {% endif %}    
+                </td>
+                <td>
+                    {{ raw.filename }}
+                </td>
+                {% if (streamname,rawname) in data.datasets %}
+                <td>{{ data.datasets[(streamname,rawname)]["count"] }}</td>
+                <td>{{ data.datasets[(streamname,rawname)]["total"] }}</td>
+                <td>{{ data.datasets[(streamname,rawname)]["mean"] }}</td>
+                <td>{{ data.datasets[(streamname,rawname)]["high"] }}</td>
+                <td>{{ data.datasets[(streamname,rawname)]["top"] }}</td>
+                {% else %}
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                {% endif %}
+                <td>
+                    <a href="{{ raw.summary_url |e }}" target="_blank">open summaries</a>
+                    {% if raw.enabled %}
+                    <form method="POST" action="blackbox/update-config-page">
+                        <input type="hidden" name="raw-stream" value="{{ streamname |e }}"/>
+                        <input type="hidden" name="raw-disable" value="{{ rawname |e }}"/>
+                        <button>raw data off</button>
+                    </form>
+                    <a href="{{ raw.rawdata_url |e }}" target="_blank">raw data</a>
+                    {% else %}
+                    <form method="POST" action="blackbox/update-config-page">
+                        <input type="hidden" name="raw-stream" value="{{ streamname |e }}"/>
+                        <input type="hidden" name="raw-enable" value="{{ rawname |e }}"/>
+                        <button>raw data on</button>
+                    </form>  
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </table>
+        <form method="POST" action="blackbox/update-config-page">
+            Add new dataset:
+            <input type="hidden" name="raw-stream" value="{{ stream |e }}"/>
+            <input name="raw-disable"/>
+            <input type="submit" name="add" value="add"/>
+        </form>
         {% endif %}
         {% endfor %}
     </body>
