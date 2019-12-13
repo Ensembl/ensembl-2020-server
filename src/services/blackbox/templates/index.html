@@ -41,32 +41,65 @@
                 return false;
             }
 
+            function zpad(i) { if (i < 10) { i = "0" + i; } return i; } 
+
+            function plotly_time(d) {
+                return (
+                    zpad(d.getFullYear())+"-"+zpad(d.getMonth())+"-"+zpad(d.getDay())+" "+
+                    zpad(d.getHours())+":"+zpad(d.getMinutes())+":"+zpad(d.getSeconds())
+                );
+            }
+
+            var TRUNC = 1000*60*60;
+
             function reformat(data) {
+                var now = +Date.now();
                 var lines = data.split("\n");
                 var headings = lines.shift().split("\t");
                 var out = {};
+                var time_col = 0;
                 for(var i=0;i<headings.length;i++) {
                     out[headings[i]] = {
-                        'x': [], 'y': [], 'type': 'scatter', name: headings[i]
-                    }
+                        'x': [], 'y': [], 'type': 'scatter', name: headings[i],
+                        'mode': 'lines+markers',
+                    };
+                    if(headings[i] == 'time') { time_col = i; }
                 }
                 for(var i=0;i<lines.length;i++) {
                     var line = lines[i].split("\t");
+                    if(now - line[time_col]*1000 > TRUNC) { continue; }
                     for(var j=0;j<headings.length;j++) {
                         out[headings[j]].y.push(line[j]);
-                        out[headings[j]].x.push(i);
                     }
                 }
+                var times = out["time"].y;
+                for(var i=0;i<times.length;i++) {
+                    let d = new Date(times[i]*1000);
+                    times[i] = plotly_time(d);
+                }
+                for(var i=0;i<headings.length;i++) {
+                    out[headings[i]].x = times;
+                }
+                delete out.time;
                 return Object.values(out);
             }
 
             function reformat_raw(data) {
+                var now = +Date.now();
                 let x = [];
-                for(var i=0;i<data.length;i++) { x.push(i); }
+                let y = [];
+                var data = data.split("\n");
+                for(var i=0;i<data.length;i++) {
+                    var line = data[i].split("\t");
+                    if(now - line[0]*1000 > TRUNC) { continue; }
+                    x.push(plotly_time(new Date(line[0]*1000)));
+                    y.push(line[1]);
+                }
                 return [{
                     'x': x,
-                    'y': data.split("\n"),
+                    'y': y,
                     'type': 'scatter',
+                    'mode': 'lines+markers',
                     'name': 'raw data'
                 }]
             }
@@ -82,7 +115,11 @@
                             t: 20,
                             pad: 4
                         },
-                    };
+                        xaxis: {
+                            tickformat: '%H:%M:%S'
+                        },
+                        marker: { size: 12 }
+            };
 
             $(function() {
                 $('.plotly-dataset').each(function() {

@@ -11,23 +11,23 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 """
 TODO
 
+OpenAPI
+instances
+stacks
 raw -> dataset
 ORM
-time in raw data
-time in all summaries
-time in log writes
-formatted log writes
 truncation
 no absolute paths
 tests
 line counts
+CSS
 """
 
 EXAMPLE_DATA = """
 [
             {"instance":"test1","stack":["a","b"],"text":"Hello, world!","time":2.0},
             {
-                "data":[2.0],"dataset":"raw","instance":"test1",
+                "data":[2.0],"dataset":"raw","instance":"test1","ago":[0.0],
                 "count": 1, "total": 2.0, "mean": 2.0, "high": 2.0, "top": 2.0,
                 "text":"raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units","time":2.0
             }
@@ -53,6 +53,9 @@ except OSError as e:
     else:
         raise
 sys.stderr.write("\n\n")
+
+def fmtime(when):
+    return datetime.datetime.fromtimestamp(when).strftime("%Y-%m-%d %H:%M:%S")
 
 # 
 
@@ -154,12 +157,14 @@ class Model:
         self.config = Config()
         # XXX
         incoming = json.loads(EXAMPLE_DATA)
+        for record in incoming:
+            record["time"] = time.time()
         for line in incoming:
             self.process_line(line)
 
     def write_line(self,line):
         with open(stream_path(line["instance"]),"a") as f:
-            f.write("{0}\n".format(line["text"]))
+            f.write("[{0}] {1}\n".format(fmtime(line['time']),line["text"]))
 
     def write_dataset(self,line):
         with open(dataset_path(line["instance"],line["dataset"]),"a") as f:
@@ -167,8 +172,8 @@ class Model:
 
     def write_data(self,line):
         with open(rawdata_path(line["instance"],line["dataset"]),"a") as f:
-            for point in line["data"]:
-                f.write("{0}\n".format(point))
+            for (ago,point) in zip(line["ago"],line["data"]):
+                f.write("{0}\t{1}\n".format(line["time"]-ago,point))
 
     def process_line(self,line):
         self.config.seen(line["instance"])
@@ -214,7 +219,7 @@ def create_app(testing=False):
     def blackbox_dataset():
         stream = request.args.get("stream")
         dataset = request.args.get("dataset")
-        columns = ["count","total","mean","high","top"]
+        columns = ["time","count","total","mean","high","top"]
         names = { k: k for k in columns }
         names["high"] = "95%ile"
         data = "\t".join([ names[x] for x in columns ]) + "\n"
@@ -261,8 +266,7 @@ def create_app(testing=False):
         mark = request.form["mark"]
         path = stream_path(stream)        
         with open(path,"a") as f:
-            now = datetime.datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %H:%M:%S")
-            f.write("[{0}] MARK: {1}\n".format(now,mark))
+            f.write("[{0}] MARK: {1}\n".format(fmtime(time.time()),mark))
         return redirect("/blackbox")
 
     @app.route("/blackbox/update-config", methods=["POST"])
