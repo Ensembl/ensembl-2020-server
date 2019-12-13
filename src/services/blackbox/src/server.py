@@ -11,7 +11,6 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 """
 TODO
 
-raw -> dataset
 no absolute paths + blueprint
 ORM
 CSS
@@ -65,15 +64,15 @@ def stream_path(stream):
     stream = fscode(stream)
     return os.path.join(blackbox_dir,"stream_{0}.txt".format(stream))
 
-def dataset_path(stream,raw):
+def dataset_path(stream,dataset):
     stream = fscode(stream)
-    raw = fscode(raw)
-    return os.path.join(blackbox_dir,"dataset_{0}_{1}.txt".format(stream,raw))
+    dataset = fscode(dataset)
+    return os.path.join(blackbox_dir,"dataset_{0}_{1}.txt".format(stream,dataset))
 
-def rawdata_path(stream,raw):
+def rawdata_path(stream,dataset):
     stream = fscode(stream)
-    raw = fscode(raw)
-    return os.path.join(blackbox_dir,"rawdata_{0}_{1}.txt".format(stream,raw))
+    dataset = fscode(dataset)
+    return os.path.join(blackbox_dir,"rawdata_{0}_{1}.txt".format(stream,dataset))
 
 def page_path():
     instance = request.args.get("instance") or request.form.get("instance") or ""
@@ -96,14 +95,14 @@ class Config:
     def __init__(self):
         self.streams_seen = set()
         self.streams_enabled = set()
-        self.raw_seen = set()
+        self.dataset_seen = set()
         self.raw_enabled = set()
 
     def seen(self,value):
         self.streams_seen.add(value)
 
-    def seen_raw(self,stream,value):
-        self.raw_seen.add((stream,value))
+    def seen_dataset(self,stream,value):
+        self.dataset_seen.add((stream,value))
 
     def enable(self,value):
         self.streams_seen.add(value)
@@ -115,12 +114,12 @@ class Config:
 
     def enable_raw(self,stream,value):
         self.streams_seen.add(stream)
-        self.raw_seen.add((stream,value))
+        self.dataset_seen.add((stream,value))
         self.raw_enabled.add((stream,value))
 
     def disable_raw(self,stream,value):
         self.streams_seen.add(stream)
-        self.raw_seen.add((stream,value))
+        self.dataset_seen.add((stream,value))
         self.raw_enabled.discard((stream,value))
 
     def to_json(self):
@@ -132,7 +131,7 @@ class Config:
 
     def get_jinja(self):
         streams = {}
-        raws = {}
+        datasets = {}
         for stream in self.streams_seen:
             tail = "/blackbox/tail?"+ urllib.parse.urlencode({
                 "stream": stream,
@@ -151,27 +150,27 @@ class Config:
                 "lines": loglines,
                 "tail": tail,
             }
-        for (stream,raw) in self.raw_seen:
+        for (stream,dataset) in self.dataset_seen:
             summary_url = "/blackbox/dataset?"+ urllib.parse.urlencode({
                 "stream": stream,
-                "dataset": raw,
+                "dataset": dataset,
                 "instance": request.args.get("instance") or ""
             })
             rawdata_url = "/blackbox/rawdata?"+ urllib.parse.urlencode({
                 "stream": stream,
-                "dataset": raw,
+                "dataset": dataset,
                 "instance": request.args.get("instance") or ""
             })
-            raws[(stream,raw)] = {
-                "enabled": (stream,raw) in self.raw_enabled,
-                "filename": os.path.split(dataset_path(stream,raw))[-1],
-                "raw_filename": os.path.split(rawdata_path(stream,raw))[-1],
+            datasets[(stream,dataset)] = {
+                "enabled": (stream,dataset) in self.raw_enabled,
+                "filename": os.path.split(dataset_path(stream,dataset))[-1],
+                "dataset_filename": os.path.split(rawdata_path(stream,dataset))[-1],
                 "summary_url": summary_url,
                 "rawdata_url": rawdata_url
             }
         return {
             "streams": streams,
-            "raws": raws
+            "datasets": datasets
         }
 
 class Model:
@@ -227,7 +226,7 @@ class Model:
         self.config.seen(line["stream"])
         self.write_line(line)
         if "dataset" in line:
-            self.config.seen_raw(line["stream"],line["dataset"])
+            self.config.seen_dataset(line["stream"],line["dataset"])
             self.write_dataset(line)
             if "data" in line:
                 self.write_data(line)
@@ -332,10 +331,10 @@ def create_app(testing=False):
             elif key == "disable":
                 model.config.disable(value)
             elif key == "raw-enable":
-                stream = request.form["raw-stream"]
+                stream = request.form["stream"]
                 model.config.enable_raw(stream,value)
             elif key == "raw-disable":
-                stream = request.form["raw-stream"]
+                stream = request.form["stream"]
                 model.config.disable_raw(stream,value)
         return model.config.to_json()
 

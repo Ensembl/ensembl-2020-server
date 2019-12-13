@@ -270,19 +270,19 @@
                 <th>Top</th>
                 <th>Raw Data</th>
             </tr>
-            {% for ((streamname,rawname),raw) in config.raws.items() | sort %}
+            {% for ((streamname,datasetname),dataset) in config.datasets.items() | sort %}
             {% if streamname == stream %}
-            <tr class="dataset-row" data-stream="{{streamname |e}}" data-dataset="{{rawname |e}}">
-                <td>{{ rawname }}</td>
+            <tr class="dataset-row" data-stream="{{streamname |e}}" data-dataset="{{datasetname |e}}">
+                <td>{{ datasetname }}</td>
                 <td>
-                    {% if raw.enabled %}
+                    {% if dataset.enabled %}
                     Full Raw Data
                     {% else %}
                     Summary Only
                     {% endif %}    
                 </td>
                 <td>
-                    {{ raw.filename }}
+                    {{ dataset.filename }}
                 </td>
                 <td class="dataset-number" data-column="count">-</td>
                 <td class="dataset-number" data-column="total">-</td>
@@ -290,19 +290,19 @@
                 <td class="dataset-number" data-column="95%ile">-</td>
                 <td class="dataset-number" data-column="top">-</td>
                 <td>
-                    <a href="{{ raw.summary_url |e }}" target="_blank">open summaries</a>
-                    {% if raw.enabled %}
+                    <a href="{{ dataset.summary_url |e }}" target="_blank">open summaries</a>
+                    {% if dataset.enabled %}
                     <form method="POST" action="blackbox/update-config-page">
-                        <input type="hidden" name="raw-stream" value="{{ streamname |e }}"/>
-                        <input type="hidden" name="raw-disable" value="{{ rawname |e }}"/>
+                        <input type="hidden" name="stream" value="{{ streamname |e }}"/>
+                        <input type="hidden" name="raw-disable" value="{{ datasetname |e }}"/>
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>raw data off</button>
                     </form>
-                    <a href="{{ raw.rawdata_url |e }}" target="_blank">raw data</a>
+                    <a href="{{ dataset.rawdata_url |e }}" target="_blank">raw data</a>
                     {% else %}
                     <form method="POST" action="blackbox/update-config-page">
-                        <input type="hidden" name="raw-stream" value="{{ streamname |e }}"/>
-                        <input type="hidden" name="raw-enable" value="{{ rawname |e }}"/>
+                        <input type="hidden" name="stream" value="{{ streamname |e }}"/>
+                        <input type="hidden" name="raw-enable" value="{{ datasetname |e }}"/>
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>raw data on</button>
                     </form>  
@@ -314,19 +314,19 @@
         </table>
         <form method="POST" action="blackbox/update-config-page">
             Add new dataset:
-            <input type="hidden" name="raw-stream" value="{{ stream |e }}"/>
+            <input type="hidden" name="stream" value="{{ stream |e }}"/>
             <input name="raw-disable"/>
             <input type="hidden" name="instance" value="{{ instance |e }}"/>
             <input type="submit" name="add" value="add"/>
         </form>
-        {% for ((streamname,rawname),raw) in config.raws.items() | sort %}
+        {% for ((streamname,datasetname),dataset) in config.datasets.items() | sort %}
         {% if streamname == stream %}
-        <h3>{{ rawname |e }}</h3>
+        <h3>{{ datasetname |e }}</h3>
         <h4>Summary</h4>
-        <div class="plotly-dataset" data-stream="{{ streamname |e }}" data-dataset="{{ rawname |e }}"></div>
-        {% if raw.enabled %}
+        <div class="plotly-dataset" data-stream="{{ streamname |e }}" data-dataset="{{ datasetname |e }}"></div>
+        {% if dataset.enabled %}
         <h4>Raw Data</h4>
-        <div class="plotly-rawdata" data-stream="{{ streamname |e }}" data-dataset="{{ rawname |e }}"></div>
+        <div class="plotly-rawdata" data-stream="{{ streamname |e }}" data-dataset="{{ datasetname |e }}"></div>
         {% endif %}
         {% endif %}
         {% endfor %}        
