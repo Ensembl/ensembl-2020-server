@@ -72,16 +72,18 @@
                         out[headings[j]].y.push(line[j]);
                     }
                 }
-                var times = out["time"].y;
-                for(var i=0;i<times.length;i++) {
-                    let d = new Date(times[i]*1000);
-                    times[i] = plotly_time(d);
+                if(out.time) {
+                    var times = out["time"].y;
+                    for(var i=0;i<times.length;i++) {
+                        let d = new Date(times[i]*1000);
+                        times[i] = plotly_time(d);
+                    }
+                    for(var i=0;i<headings.length;i++) {
+                        out[headings[i]].x = times;
+                    }
+                    delete out.time;
+                    delete out.instance;
                 }
-                for(var i=0;i<headings.length;i++) {
-                    out[headings[i]].x = times;
-                }
-                delete out.time;
-                delete out.instance;
                 return Object.values(out);
             }
 
@@ -206,6 +208,7 @@
                 <th>Name</th>
                 <th>Status</th>
                 <th>Filename</th>
+                <th>Log lines</th>
                 <th>Actions</th>
             </tr>
             {% for (stream,smodel) in config.streams.items() | sort %}
@@ -213,6 +216,7 @@
                 <td>{{ stream }}</td>
                 <td>{{ "enabled" if smodel.active else "disabled" }}</td>
                 <td>{{ smodel.filename }}</td>
+                <td>{{ smodel.lines }}</td>
                 <td>
                     {% if smodel.active %}
                     <form method="POST" action="blackbox/update-config-page">
@@ -227,6 +231,11 @@
                         <button>enable</button>
                     </form>  
                     {% endif %}
+                    <form method="POST" action="blackbox/truncate">
+                        <input type="hidden" name="stream" value="{{ stream |e }}"/>
+                        <input type="hidden" name="instance" value="{{ instance |e }}"/>
+                        <button>truncate</button>
+                    </form>  
                 </td>
             <tr>
             {% endfor %}

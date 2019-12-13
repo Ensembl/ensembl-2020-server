@@ -11,15 +11,13 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 """
 TODO
 
-OpenAPI
-stacks
 raw -> dataset
+no absolute paths + blueprint
 ORM
-truncation
-no absolute paths
-tests
-line counts
 CSS
+OpenAPI
+tests
+
 """
 
 EXAMPLE_DATA = """
@@ -58,23 +56,27 @@ def fmtime(when):
 
 # 
 
+def fscode(text):
+    text = urllib.parse.quote(text,safe='')
+    text = text.replace('%','@')
+    return text
+
 def stream_path(stream):
-    stream = b64encode(stream.encode("utf8"),b"-_").decode("utf8").rstrip("=")
-    return os.path.join(blackbox_dir,"stream-{0}.txt".format(stream))
+    stream = fscode(stream)
+    return os.path.join(blackbox_dir,"stream_{0}.txt".format(stream))
 
 def dataset_path(stream,raw):
-    stream = b64encode(stream.encode("utf8"),b"-_").decode("utf8").rstrip("=")
-    raw = b64encode(raw.encode("utf8"),b"-_").decode("utf8").rstrip("=")
-    return os.path.join(blackbox_dir,"dataset-{0}-{1}.txt".format(stream,raw))
+    stream = fscode(stream)
+    raw = fscode(raw)
+    return os.path.join(blackbox_dir,"dataset_{0}_{1}.txt".format(stream,raw))
 
 def rawdata_path(stream,raw):
-    stream = b64encode(stream.encode("utf8"),b"-_").decode("utf8").rstrip("=")
-    raw = b64encode(raw.encode("utf8"),b"-_").decode("utf8").rstrip("=")
-    return os.path.join(blackbox_dir,"rawdata-{0}-{1}.txt".format(stream,raw))
+    stream = fscode(stream)
+    raw = fscode(raw)
+    return os.path.join(blackbox_dir,"rawdata_{0}_{1}.txt".format(stream,raw))
 
 def page_path():
     instance = request.args.get("instance") or request.form.get("instance") or ""
-    print("B",instance)
     path = "/blackbox"
     if instance:
         path += "?"+ urllib.parse.urlencode({
@@ -136,9 +138,17 @@ class Config:
                 "stream": stream,
                 "instance": request.args.get("instance") or ""
             })
+            loglines = "-"
+            try:
+                with open(stream_path(stream)) as f:
+                    loglines = str(len(f.readlines()))
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    pass
             streams[stream] = {
                 "active": stream in self.streams_enabled,
                 "filename": os.path.split(stream_path(stream))[-1],
+                "lines": loglines,
                 "tail": tail,
             }
         for (stream,raw) in self.raw_seen:
@@ -174,9 +184,26 @@ class Model:
         for line in incoming:
             self.process_line(line)
 
+    def truncate(self,stream):
+        doomed = []
+        stream = fscode(stream)
+        prefixes = [ x.format(stream) for x in ("dataset_{0}_","stream_{0}.","rawdata_{0}_")]
+        for filename in os.listdir(blackbox_dir):
+            parts = filename.split("-")
+            for prefix in prefixes:
+                if filename.startswith(prefix):
+                    doomed.append(filename)
+        for filename in doomed:
+            with open(os.path.join(blackbox_dir,filename),"w") as f:
+                pass
+        return doomed
+
     def write_line(self,line):
         with open(stream_path(line["stream"]),"a") as f:
-            f.write("[{0}] ({1}) {2}\n".format(fmtime(line['time']),line['instance'],line["text"]))
+            text = line["text"]
+            if "stack" in line and len(line["stack"]) > 0:
+                text = "({0}) {1}".format("/".join(line["stack"]),text)
+            f.write("[{0}] ({1}) {2}\n".format(fmtime(line['time']),line['instance'],text))
 
     def write_dataset(self,line):
         filename = dataset_path(line["stream"],line["dataset"])
@@ -233,13 +260,16 @@ def create_app(testing=False):
             with open(dataset_path(stream,dataset)) as f:
                 headings = f.readline().split("\t")
                 data += "\t".join(headings)
-                instance_heading = headings.index("instance")
-                for line in f.readlines():
-                    if instance:
-                        parts = line.split("\t")
-                        if parts[instance_heading] != instance:
-                            continue
-                    data += line
+                try:
+                    instance_heading = headings.index("instance")
+                    for line in f.readlines():
+                        if instance:
+                            parts = line.split("\t")
+                            if parts[instance_heading] != instance:
+                                continue
+                        data += line
+                except ValueError:
+                    pass
         except OSError as e:
             if e.errno == errno.ENOENT:
                 pass
@@ -312,6 +342,12 @@ def create_app(testing=False):
     @app.route("/blackbox/update-config-page", methods=["POST"])
     def blackbox_page_config():
         blackbox_config()
+        return redirect(page_path())
+
+    @app.route("/blackbox/truncate", methods=["POST"])
+    def blackbox_truncate():
+        stream = request.form["stream"]
+        model.truncate(stream)
         return redirect(page_path())
 
     @app.route("/blackbox/data", methods=["POST"])
