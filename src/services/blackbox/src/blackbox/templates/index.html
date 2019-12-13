@@ -1,15 +1,123 @@
 <html>
     <head>
         <style>
-            #tr {
-                border: 1px solid black;
+
+
+
+
+
+
+
+
+
+h1 {
+    margin-top: 0;
+}
+
+h2 {
+    font-size: 18px;
+}
+
+h4 {
+    font-size: 14px;
+}
+
+#autorefresh {
+    width: 32px;
+}
+
+#tr {
+                border: 1px solid #ccc;
                 float: right;
+    display: inline-block;
+    text-align: right;
+    line-height: 150%;
+    padding: 8px;
+    color: #666;
             }
             .plotly {
                 width: 100%;
                 height: 200px;
             }
-        </style>
+
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                margin: 8px 0;
+                padding: 16px;
+            }
+
+            tr {
+                font-size: 11px;
+                margin: 0;
+                padding: 0;              
+            }
+
+            td,th {
+                text-align: right;
+                border: 1px solid #999;
+                margin: 0;
+                padding: 2px 3px;
+                white-space: nowrap;
+                color: #000;
+            }
+            td {
+                background: #b0d0ff;
+            }
+th {
+    background: #c0ffc0;
+    
+}
+
+            button, input[type="submit"]  {
+                background: none!important;
+                border: none;
+                padding: 0 8px!important;
+                font-family: arial, sans-serif;
+                color: #069;
+                cursor: pointer;
+                font-size: 11px;
+                text-align: right;
+                display: inline;
+                width: auto;
+            }
+
+a { text-decoration: none; color: #069 }
+
+            button:hover,a:hover {
+                text-decoration: underline;
+            }
+
+            form {
+                display: inline-block; margin: 0;
+                font-size: 10px;
+            }
+
+input {
+    border: 1px solid #ccc;
+    height: 18px;
+    width: 80px;
+    vertical-align: middle;
+    font-size: 10px;
+}
+
+html {
+    font-family: arial, helvetica, sans-serif;
+}   
+
+body {
+    padding: 8px 16px;
+}
+
+iframe {
+    width: 100%;
+    height: 300px;
+    border: 1px solid #ccc;
+    margin: 8px 0;
+}
+                
+                                                                                
+                                                                </style>
         <script src="https://code.jquery.com/jquery-3.4.1.min.js"
                 integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
                 crossorigin="anonymous"></script>
@@ -108,8 +216,8 @@
             }
 
             var layout = {
-                        autosize: false,
-                        width: 1000,
+                        //autosize: false,
+                        //width: 1000,
                         height: 200,
                         margin: {
                             l: 100,
@@ -193,11 +301,12 @@
     <body onload="ar_cookie()">
         <div id="tr">
             <form method="POST" onsubmit="ar_set_cookie(); return false">
-                autorefresh <input id="autorefresh"/>s (0=never)
-                <input type="submit" name="update" value="update"/><br/>
+                autorefresh (sec, 0=never) <input id="autorefresh"/>
+                <input type="submit" name="update" value="update"/>
             </form>
+            <br/>
             <form method="GET" action=".">
-                instance <input id="instance" name="instance" value="{{ instance |e }}"/> (blank=all)
+                instance (blank=all) <input id="instance" name="instance" value="{{ instance |e }}"/>
                 <input type="submit" name="" value="update"/><br/>
             </form>
         </div>
@@ -265,7 +374,7 @@
         </form>
         <table>
             <tr>
-                <th>Data Set</th>
+                <th>Dataset</th>
                 <th>Status</th>
                 <th>Filename</th>
                 <th>Count</th>
@@ -281,9 +390,9 @@
                 <td>{{ datasetname }}</td>
                 <td>
                     {% if dataset.enabled %}
-                    Full Raw Data
+                    full raw data
                     {% else %}
-                    Summary Only
+                    summary only
                     {% endif %}    
                 </td>
                 <td>
@@ -303,7 +412,7 @@
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>raw data off</button>
                     </form>
-                    <a href="{{ dataset.rawdata_url |e }}" target="_blank">raw data</a>
+                    <a href="{{ dataset.rawdata_url |e }}" target="_blank">open raw data</a>
                     {% else %}
                     <form method="POST" action="update-config-page">
                         <input type="hidden" name="stream" value="{{ streamname |e }}"/>

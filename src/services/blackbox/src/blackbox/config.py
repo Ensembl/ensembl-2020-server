@@ -36,8 +36,8 @@ class Config:
     def delete_stream(self,stream):
         self.streams_seen.discard(stream)
         self.streams_enabled.discard(stream)
-        self.dataset_seen = set([x for x in self.dataset_seen if x[0] == stream ])
-        self.raw_enabled = set([x for x in self.raw_enabled if x[0]== stream ])
+        self.dataset_seen = set([x for x in self.dataset_seen if x[0] != stream ])
+        self.raw_enabled = set([x for x in self.raw_enabled if x[0] != stream ])
 
     def delete_dataset(self,stream,dataset):
         self.dataset_seen = set([x for x in self.dataset_seen if x != (stream,dataset) ])
