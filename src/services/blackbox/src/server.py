@@ -18,7 +18,6 @@ time in all summaries
 time in log writes
 formatted log writes
 truncation
-raw graph
 no absolute paths
 tests
 line counts

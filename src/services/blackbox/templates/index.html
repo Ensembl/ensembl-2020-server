@@ -40,6 +40,78 @@
                 ar_cookie();
                 return false;
             }
+
+            function reformat(data) {
+                var lines = data.split("\n");
+                var headings = lines.shift().split("\t");
+                var out = {};
+                for(var i=0;i<headings.length;i++) {
+                    out[headings[i]] = {
+                        'x': [], 'y': [], 'type': 'scatter', name: headings[i]
+                    }
+                }
+                for(var i=0;i<lines.length;i++) {
+                    var line = lines[i].split("\t");
+                    for(var j=0;j<headings.length;j++) {
+                        out[headings[j]].y.push(line[j]);
+                        out[headings[j]].x.push(i);
+                    }
+                }
+                return Object.values(out);
+            }
+
+            function reformat_raw(data) {
+                let x = [];
+                for(var i=0;i<data.length;i++) { x.push(i); }
+                return [{
+                    'x': x,
+                    'y': data.split("\n"),
+                    'type': 'scatter',
+                    'name': 'raw data'
+                }]
+            }
+
+            var layout = {
+                        autosize: false,
+                        width: 1000,
+                        height: 200,
+                        margin: {
+                            l: 100,
+                            r: 100,
+                            b: 30,
+                            t: 20,
+                            pad: 4
+                        },
+                    };
+
+            $(function() {
+                $('.plotly-dataset').each(function() {
+                    var domel = this;
+                    var stream = $(this).data('stream');
+                    var dataset = $(this).data('dataset');
+                    var url = "blackbox/dataset?"+$.param({
+                        'stream': $(this).data('stream'),
+                        'dataset': $(this).data('dataset')
+                    });
+                    $.get(url,function(data) {
+                        var data = reformat(data);
+                        Plotly.newPlot(domel,data,layout);
+                    },"text");
+                });
+                $('.plotly-rawdata').each(function() {
+                    var domel = this;
+                    var stream = $(this).data('stream');
+                    var dataset = $(this).data('dataset');
+                    var url = "blackbox/rawdata?"+$.param({
+                        'stream': $(this).data('stream'),
+                        'dataset': $(this).data('dataset')
+                    });
+                    $.get(url,function(data) {
+                        var data = reformat_raw(data);
+                        Plotly.newPlot(domel,data,layout);
+                    },"text");
+                });
+            });
         </script>
     </head>
     <body onload="ar_cookie()">
@@ -164,7 +236,12 @@
         {% for ((streamname,rawname),raw) in config.raws.items() | sort %}
         {% if streamname == stream %}
         <h3>{{ rawname |e }}</h3>
-        <div class="plotly" data-stream="{{ streamname |e }}" data-dataset="{{ rawname |e }}"></div>
+        <h4>Summary</h4>
+        <div class="plotly-dataset" data-stream="{{ streamname |e }}" data-dataset="{{ rawname |e }}"></div>
+        {% if raw.enabled %}
+        <h4>Raw Data</h4>
+        <div class="plotly-rawdata" data-stream="{{ streamname |e }}" data-dataset="{{ rawname |e }}"></div>
+        {% endif %}
         {% endif %}
         {% endfor %}        
         {% endif %}
