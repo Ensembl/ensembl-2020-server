@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_from_directory, render_template, redirect, Response
+from flask import Flask, jsonify, request, send_from_directory, render_template, redirect, Response, Blueprint, url_for
 from flask_cors import CORS
 import sys, os, os.path, yaml, logging, logging.config, errno, urllib, datetime, time, collections,json, re
 from base64 import b64encode
@@ -11,11 +11,11 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 """
 TODO
 
-no absolute paths + blueprint
 ORM
 CSS
 OpenAPI
 tests
+README
 
 """
 
@@ -74,14 +74,18 @@ def rawdata_path(stream,dataset):
     dataset = fscode(dataset)
     return os.path.join(blackbox_dir,"rawdata_{0}_{1}.txt".format(stream,dataset))
 
+def make_url(page,**params):
+    instance = request.args.get("instance") or request.form.get("instance") or ""
+    path = url_for("."+page)
+    if params:
+        p = { k: v for (k,v) in params.items() if v }
+        if len(p):
+            path += "?"+ urllib.parse.urlencode(p)
+    return path
+
 def page_path():
     instance = request.args.get("instance") or request.form.get("instance") or ""
-    path = "/blackbox"
-    if instance:
-        path += "?"+ urllib.parse.urlencode({
-            "instance": instance
-        })
-    return path
+    return make_url("blackbox_control",instance = instance)
 
 def xxx_make_fake_config():
     config = Config()
@@ -133,10 +137,10 @@ class Config:
         streams = {}
         datasets = {}
         for stream in self.streams_seen:
-            tail = "/blackbox/tail?"+ urllib.parse.urlencode({
-                "stream": stream,
-                "instance": request.args.get("instance") or ""
-            })
+            tail = make_url('blackbox_tail', 
+                stream = stream,
+                instance = request.args.get("instance") or ""
+            )
             loglines = "-"
             try:
                 with open(stream_path(stream)) as f:
@@ -151,16 +155,16 @@ class Config:
                 "tail": tail,
             }
         for (stream,dataset) in self.dataset_seen:
-            summary_url = "/blackbox/dataset?"+ urllib.parse.urlencode({
-                "stream": stream,
-                "dataset": dataset,
-                "instance": request.args.get("instance") or ""
-            })
-            rawdata_url = "/blackbox/rawdata?"+ urllib.parse.urlencode({
-                "stream": stream,
-                "dataset": dataset,
-                "instance": request.args.get("instance") or ""
-            })
+            summary_url = make_url('blackbox_dataset',
+                stream = stream,
+                dataset = dataset,
+                instance = request.args.get("instance") or ""
+            )
+            rawdata_url = make_url('blackbox_rawdata',
+                stream = stream,
+                dataset = dataset,
+                instance = request.args.get("instance") or ""
+            )
             datasets[(stream,dataset)] = {
                 "enabled": (stream,dataset) in self.raw_enabled,
                 "filename": os.path.split(dataset_path(stream,dataset))[-1],
@@ -234,22 +238,21 @@ class Model:
 
 instance_re = re.compile(r'\[.*?\] \((.*?)\)')
 
-def create_app(testing=False):
+def blackbox():
     model = Model()
-    app = Flask(__name__,template_folder="../templates")
-    app.testing = testing
-    CORS(app)
+    bb = Blueprint('blackbox', __name__,template_folder='../templates')
 
-    @app.route('/blackbox')
+
+    @bb.route('/')
     def blackbox_control():
         instance = request.args.get("instance") or ""
         return render_template("index.html", config = model.config.get_jinja(),instance = instance)
 
-    @app.route("/blackbox/<path:asset>")
+    @bb.route("/<path:asset>")
     def blackbox_asset(asset):
         return send_from_directory(os.path.join(script_dir,"../assets"),asset)
 
-    @app.route("/blackbox/dataset")
+    @bb.route("/dataset")
     def blackbox_dataset():
         stream = request.args.get("stream")
         dataset = request.args.get("dataset")
@@ -274,8 +277,8 @@ def create_app(testing=False):
                 pass
         return Response(data,mimetype="text/plain")
 
-    @app.route("/blackbox/rawdata")
-    def blackbox_raw():
+    @bb.route("/rawdata")
+    def blackbox_rawdata():
         stream = request.args.get("stream")
         dataset = request.args.get("dataset")
         instance = request.args.get("instance")
@@ -293,7 +296,7 @@ def create_app(testing=False):
                 pass
         return Response(data,mimetype="text/plain")
 
-    @app.route("/blackbox/tail")
+    @bb.route("/tail")
     def blackbox_tail():
         stream = request.args.get("stream")
         instance = request.args.get("instance") or ""
@@ -314,7 +317,7 @@ def create_app(testing=False):
                 data = "ERROR: {0}".format(str(e))
         return render_template("tail.html", data = out)
 
-    @app.route("/blackbox/mark",methods=["POST"])
+    @bb.route("/mark",methods=["POST"])
     def blackbox_mark():
         stream = request.form["stream"]
         mark = request.form["mark"]
@@ -323,7 +326,7 @@ def create_app(testing=False):
             f.write("[{0}] MARK: {1}\n".format(fmtime(time.time()),mark))
         return redirect(page_path())
 
-    @app.route("/blackbox/update-config", methods=["POST"])
+    @bb.route("/update-config", methods=["POST"])
     def blackbox_config():
         for (key,value) in request.form.items():
             if key == "enable":
@@ -338,25 +341,28 @@ def create_app(testing=False):
                 model.config.disable_raw(stream,value)
         return model.config.to_json()
 
-    @app.route("/blackbox/update-config-page", methods=["POST"])
+    @bb.route("/update-config-page", methods=["POST"])
     def blackbox_page_config():
         blackbox_config()
         return redirect(page_path())
 
-    @app.route("/blackbox/truncate", methods=["POST"])
+    @bb.route("/truncate", methods=["POST"])
     def blackbox_truncate():
         stream = request.form["stream"]
         model.truncate(stream)
         return redirect(page_path())
 
-    @app.route("/blackbox/data", methods=["POST"])
+    @bb.route("/data", methods=["POST"])
     def blackbox_data():
         incoming = request.get_json(force=True)
         for line in incoming:
             model.process_line(line)
         return model.config.to_json()
-    
-    return app
+
+    return bb
 
 if __name__ == "__main__":
-   create_app().run(port=4040,host='0.0.0.0')
+    app = Flask(__name__)
+    app.register_blueprint(blackbox(),url_prefix="/blackbox")
+    CORS(app)
+    app.run(port=4040,host='0.0.0.0')

@@ -132,7 +132,7 @@
                     var domel = this;
                     var stream = $(this).data('stream');
                     var dataset = $(this).data('dataset');
-                    var url = "blackbox/dataset?"+$.param({
+                    var url = "dataset?"+$.param({
                         'stream': $(this).data('stream'),
                         'dataset': $(this).data('dataset'),
                         'instance': $("#instance").attr('value')
@@ -146,7 +146,7 @@
                     var domel = this;
                     var stream = $(this).data('stream');
                     var dataset = $(this).data('dataset');
-                    var url = "blackbox/rawdata?"+$.param({
+                    var url = "rawdata?"+$.param({
                         'stream': $(this).data('stream'),
                         'dataset': $(this).data('dataset'),
                         'instance': $("#instance").attr('value')
@@ -160,7 +160,7 @@
                     var domel = this;
                     var stream = $(this).data('stream');
                     var dataset = $(this).data('dataset');
-                    var url = "blackbox/dataset?"+$.param({
+                    var url = "dataset?"+$.param({
                         'stream': $(this).data('stream'),
                         'dataset': $(this).data('dataset'),
                         'instance': $("#instance").attr('value')
@@ -196,7 +196,7 @@
                 autorefresh <input id="autorefresh"/>s (0=never)
                 <input type="submit" name="update" value="update"/><br/>
             </form>
-            <form method="GET" action="blackbox">
+            <form method="GET" action=".">
                 instance <input id="instance" name="instance" value="{{ instance |e }}"/> (blank=all)
                 <input type="submit" name="" value="update"/><br/>
             </form>
@@ -219,19 +219,19 @@
                 <td>{{ smodel.lines }}</td>
                 <td>
                     {% if smodel.active %}
-                    <form method="POST" action="blackbox/update-config-page">
+                    <form method="POST" action="update-config-page">
                         <input type="hidden" name="disable" value="{{ stream |e }}"/>
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>disable</button>
                     </form>
                     {% else %}
-                    <form method="POST" action="blackbox/update-config-page">
+                    <form method="POST" action="update-config-page">
                         <input type="hidden" name="enable" value="{{ stream |e }}"/>
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>enable</button>
                     </form>  
                     {% endif %}
-                    <form method="POST" action="blackbox/truncate">
+                    <form method="POST" action="truncate">
                         <input type="hidden" name="stream" value="{{ stream |e }}"/>
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>truncate</button>
@@ -240,7 +240,7 @@
             <tr>
             {% endfor %}
         </table>
-        <form method="POST" action="blackbox/update-config-page">
+        <form method="POST" action="update-config-page">
             Add new section:
             <input name="enable"/>
             <input type="hidden" name="instance" value="{{ instance |e }}"/>
@@ -250,7 +250,7 @@
         {% if smodel.active %}
         <h2>{{ stream }}</h2>
         <iframe src="{{ smodel.tail }}"></iframe>
-        <form method="POST" action="blackbox/mark">
+        <form method="POST" action="mark">
             Add mark:
             <input type="hidden" name="stream" value="{{ stream |e }}"/>
             <input type="hidden" name="instance" value="{{ instance |e }}"/>
@@ -292,7 +292,7 @@
                 <td>
                     <a href="{{ dataset.summary_url |e }}" target="_blank">open summaries</a>
                     {% if dataset.enabled %}
-                    <form method="POST" action="blackbox/update-config-page">
+                    <form method="POST" action="update-config-page">
                         <input type="hidden" name="stream" value="{{ streamname |e }}"/>
                         <input type="hidden" name="raw-disable" value="{{ datasetname |e }}"/>
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
@@ -300,7 +300,7 @@
                     </form>
                     <a href="{{ dataset.rawdata_url |e }}" target="_blank">raw data</a>
                     {% else %}
-                    <form method="POST" action="blackbox/update-config-page">
+                    <form method="POST" action="update-config-page">
                         <input type="hidden" name="stream" value="{{ streamname |e }}"/>
                         <input type="hidden" name="raw-enable" value="{{ datasetname |e }}"/>
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
@@ -312,7 +312,7 @@
             {% endif %}
             {% endfor %}
         </table>
-        <form method="POST" action="blackbox/update-config-page">
+        <form method="POST" action="update-config-page">
             Add new dataset:
             <input type="hidden" name="stream" value="{{ stream |e }}"/>
             <input name="raw-disable"/>
