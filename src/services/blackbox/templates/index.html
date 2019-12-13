@@ -236,6 +236,11 @@
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>truncate</button>
                     </form>  
+                    <form method="POST" action="update-config-page">
+                            <input type="hidden" name="delete" value="{{ stream |e }}"/>
+                            <input type="hidden" name="instance" value="{{ instance |e }}"/>
+                            <button>delete</button>
+                        </form>      
                 </td>
             <tr>
             {% endfor %}
@@ -307,6 +312,12 @@
                         <button>raw data on</button>
                     </form>  
                     {% endif %}
+                    <form method="POST" action="update-config-page">
+                            <input type="hidden" name="stream" value="{{ streamname |e }}"/>
+                            <input type="hidden" name="dataset-delete" value="{{ datasetname |e }}"/>
+                            <input type="hidden" name="instance" value="{{ instance |e }}"/>
+                            <button>delete</button>
+                    </form>    
                 </td>
             </tr>
             {% endif %}

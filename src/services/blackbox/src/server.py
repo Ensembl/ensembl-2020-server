@@ -11,7 +11,7 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 """
 TODO
 
-ORM
+split files
 CSS
 OpenAPI
 tests
@@ -97,13 +97,43 @@ def xxx_make_fake_config():
 
 class Config:
     def __init__(self):
+        self.filename = os.path.join(blackbox_dir,"config.json")
         self.streams_seen = set()
         self.streams_enabled = set()
         self.dataset_seen = set()
         self.raw_enabled = set()
+        self.load()
 
+    def load(self):
+        if os.path.exists(self.filename):
+            with open(self.filename) as f:
+                data = json.load(f)
+                self.streams_seen = set(data['streams_seen'])
+                self.streams_enabled = set(data['streams_enabled'])
+                self.dataset_seen = set([tuple(x) for x in data['dataset_seen']])
+                self.raw_enabled = set([tuple(x) for x in data['raw_enabled']])
+
+    def save(self):
+        with open(self.filename,"w") as f:
+            json.dump({
+                'streams_seen': list(self.streams_seen),
+                'streams_enabled': list(self.streams_enabled),
+                'dataset_seen': list(self.dataset_seen),
+                'raw_enabled': list(self.raw_enabled)
+            },f)
+            
     def seen(self,value):
         self.streams_seen.add(value)
+
+    def delete_stream(self,stream):
+        self.streams_seen.discard(stream)
+        self.streams_enabled.discard(stream)
+        self.dataset_seen = set([x for x in self.dataset_seen if x[0] == stream ])
+        self.raw_enabled = set([x for x in self.raw_enabled if x[0]== stream ])
+
+    def delete_dataset(self,stream,dataset):
+        self.dataset_seen = set([x for x in self.dataset_seen if x != (stream,dataset) ])
+        self.raw_enabled = set([x for x in self.raw_enabled if x != (stream,dataset) ])
 
     def seen_dataset(self,stream,value):
         self.dataset_seen.add((stream,value))
@@ -127,9 +157,13 @@ class Config:
         self.raw_enabled.discard((stream,value))
 
     def to_json(self):
+        raw = {}
+        for stream in self.streams_seen:
+            raw[stream] = [ raw for (rstream,raw) in self.raw_enabled if rstream == stream ]
         return jsonify({
             "config": {
                 "enable": list(self.streams_enabled),
+                "raw": raw
             }
         })
 
@@ -187,10 +221,13 @@ class Model:
         for line in incoming:
             self.process_line(line)
 
-    def truncate(self,stream):
+    def truncate(self,stream,dataset=None):
         doomed = []
         stream = fscode(stream)
-        prefixes = [ x.format(stream) for x in ("dataset_{0}_","stream_{0}.","rawdata_{0}_")]
+        if dataset:
+            prefixes = [ x.format(stream,dataset) for x in ("dataset_{0}_{1}.","rawdata_{0}_{1}.")]
+        else:
+            prefixes = [ x.format(stream) for x in ("dataset_{0}_","stream_{0}.","rawdata_{0}_")]
         for filename in os.listdir(blackbox_dir):
             parts = filename.split("-")
             for prefix in prefixes:
@@ -234,7 +271,6 @@ class Model:
             self.write_dataset(line)
             if "data" in line:
                 self.write_data(line)
-        print(line)
 
 instance_re = re.compile(r'\[.*?\] \((.*?)\)')
 
@@ -339,6 +375,17 @@ def blackbox():
             elif key == "raw-disable":
                 stream = request.form["stream"]
                 model.config.disable_raw(stream,value)
+            elif key == "delete":
+                stream = request.form["delete"]
+                model.config.delete_stream(stream)
+                model.truncate(stream)
+            elif key == "dataset-delete":
+                stream = request.form["stream"]
+                dataset = request.form["dataset-delete"]
+                model.config.delete_dataset(stream,dataset)
+                model.truncate(stream,dataset)
+
+        model.config.save()
         return model.config.to_json()
 
     @bb.route("/update-config-page", methods=["POST"])
@@ -352,11 +399,12 @@ def blackbox():
         model.truncate(stream)
         return redirect(page_path())
 
-    @bb.route("/data", methods=["POST"])
+    @bb.route("/data", methods=["POST","GET"])
     def blackbox_data():
-        incoming = request.get_json(force=True)
-        for line in incoming:
-            model.process_line(line)
+        if request.method == "POST":
+            incoming = request.get_json(force=True)
+            for line in incoming:
+                model.process_line(line)
         return model.config.to_json()
 
     return bb
