@@ -3,7 +3,7 @@
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory, render_template, redirect, Response
 from flask_cors import CORS
-import sys, os, os.path, yaml, logging, logging.config, errno, urllib, datetime, time, collections,json
+import sys, os, os.path, yaml, logging, logging.config, errno, urllib, datetime, time, collections,json, re
 from base64 import b64encode
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -12,7 +12,6 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 TODO
 
 OpenAPI
-instances
 stacks
 raw -> dataset
 ORM
@@ -25,9 +24,9 @@ CSS
 
 EXAMPLE_DATA = """
 [
-            {"instance":"test1","stack":["a","b"],"text":"Hello, world!","time":2.0},
+            {"stream":"test1","stack":["a","b"],"text":"Hello, world!","time":2.0,"instance": "abc"},
             {
-                "data":[2.0],"dataset":"raw","instance":"test1","ago":[0.0],
+                "data":[2.0],"dataset":"raw","stream":"test1","ago":[0.0],"instance": "def",
                 "count": 1, "total": 2.0, "mean": 2.0, "high": 2.0, "top": 2.0,
                 "text":"raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units","time":2.0
             }
@@ -72,6 +71,16 @@ def rawdata_path(stream,raw):
     stream = b64encode(stream.encode("utf8"),b"-_").decode("utf8").rstrip("=")
     raw = b64encode(raw.encode("utf8"),b"-_").decode("utf8").rstrip("=")
     return os.path.join(blackbox_dir,"rawdata-{0}-{1}.txt".format(stream,raw))
+
+def page_path():
+    instance = request.args.get("instance") or request.form.get("instance") or ""
+    print("B",instance)
+    path = "/blackbox"
+    if instance:
+        path += "?"+ urllib.parse.urlencode({
+            "instance": instance
+        })
+    return path
 
 def xxx_make_fake_config():
     config = Config()
@@ -124,7 +133,8 @@ class Config:
         raws = {}
         for stream in self.streams_seen:
             tail = "/blackbox/tail?"+ urllib.parse.urlencode({
-                "stream": stream
+                "stream": stream,
+                "instance": request.args.get("instance") or ""
             })
             streams[stream] = {
                 "active": stream in self.streams_enabled,
@@ -134,11 +144,13 @@ class Config:
         for (stream,raw) in self.raw_seen:
             summary_url = "/blackbox/dataset?"+ urllib.parse.urlencode({
                 "stream": stream,
-                "dataset": raw
+                "dataset": raw,
+                "instance": request.args.get("instance") or ""
             })
             rawdata_url = "/blackbox/rawdata?"+ urllib.parse.urlencode({
                 "stream": stream,
-                "dataset": raw
+                "dataset": raw,
+                "instance": request.args.get("instance") or ""
             })
             raws[(stream,raw)] = {
                 "enabled": (stream,raw) in self.raw_enabled,
@@ -163,15 +175,15 @@ class Model:
             self.process_line(line)
 
     def write_line(self,line):
-        with open(stream_path(line["instance"]),"a") as f:
-            f.write("[{0}] {1}\n".format(fmtime(line['time']),line["text"]))
+        with open(stream_path(line["stream"]),"a") as f:
+            f.write("[{0}] ({1}) {2}\n".format(fmtime(line['time']),line['instance'],line["text"]))
 
     def write_dataset(self,line):
-        filename = dataset_path(line["instance"],line["dataset"])
-        columns = ["time","count","total","mean","high","top"]
+        filename = dataset_path(line["stream"],line["dataset"])
+        columns = ["time","instance","count","total","mean","high","top"]
         data = ""
         if (not os.path.exists(filename)) or os.path.getsize(filename) == 0:
-            with open(dataset_path(line["instance"],line["dataset"]),"w") as f:
+            with open(dataset_path(line["stream"],line["dataset"]),"w") as f:
                 names = { k: k for k in columns }
                 names["high"] = "95%ile"
                 data += "\t".join([ names[x] for x in columns ]) + "\n"
@@ -180,41 +192,21 @@ class Model:
             f.write(data)
 
     def write_data(self,line):
-        with open(rawdata_path(line["instance"],line["dataset"]),"a") as f:
+        with open(rawdata_path(line["stream"],line["dataset"]),"a") as f:
             for (ago,point) in zip(line["ago"],line["data"]):
-                f.write("{0}\t{1}\n".format(line["time"]-ago,point))
+                f.write("{0}\t{1}\t{2}\n".format(line["time"]-ago,line["instance"],point))
 
     def process_line(self,line):
-        self.config.seen(line["instance"])
+        self.config.seen(line["stream"])
         self.write_line(line)
         if "dataset" in line:
-            self.config.seen_raw(line["instance"],line["dataset"])
+            self.config.seen_raw(line["stream"],line["dataset"])
             self.write_dataset(line)
             if "data" in line:
                 self.write_data(line)
         print(line)
 
-    def get_jinja(self):
-        datasets = {}
-        for (stream,raw) in self.config.raw_seen:
-            try:
-                with open(dataset_path(stream,raw)) as f:
-                    lines = f.readlines()
-                    print(lines)
-                    headings = lines.pop(0).split("\t")
-                    if len(lines) > 0:
-                        out = {}
-                        data = lines[-1].split("\t")
-                        for (heading,data) in zip(headings,data):
-                            out[heading] = data
-                        print(out)
-                        datasets[(stream,raw)] = out
-            except OSError as e:
-                if e.errno == errno.ENOENT:
-                    pass
-        return {
-            "datasets": datasets
-        }
+instance_re = re.compile(r'\[.*?\] \((.*?)\)')
 
 def create_app(testing=False):
     model = Model()
@@ -224,7 +216,8 @@ def create_app(testing=False):
 
     @app.route('/blackbox')
     def blackbox_control():
-        return render_template("index.html", config = model.config.get_jinja(), data = model.get_jinja())
+        instance = request.args.get("instance") or ""
+        return render_template("index.html", config = model.config.get_jinja(),instance = instance)
 
     @app.route("/blackbox/<path:asset>")
     def blackbox_asset(asset):
@@ -234,10 +227,19 @@ def create_app(testing=False):
     def blackbox_dataset():
         stream = request.args.get("stream")
         dataset = request.args.get("dataset")
+        instance = request.args.get("instance")
         data = ""
         try:
             with open(dataset_path(stream,dataset)) as f:
-                data = f.readlines()
+                headings = f.readline().split("\t")
+                data += "\t".join(headings)
+                instance_heading = headings.index("instance")
+                for line in f.readlines():
+                    if instance:
+                        parts = line.split("\t")
+                        if parts[instance_heading] != instance:
+                            continue
+                    data += line
         except OSError as e:
             if e.errno == errno.ENOENT:
                 pass
@@ -247,10 +249,16 @@ def create_app(testing=False):
     def blackbox_raw():
         stream = request.args.get("stream")
         dataset = request.args.get("dataset")
+        instance = request.args.get("instance")
         data = ""
         try:
             with open(rawdata_path(stream,dataset)) as f:
-                data = f.read()
+                for line in f.readlines():
+                    if instance:
+                        parts = line.split("\t")
+                        if parts[1] != instance:
+                            continue
+                    data += line
         except OSError as e:
             if e.errno == errno.ENOENT:
                 pass
@@ -259,16 +267,23 @@ def create_app(testing=False):
     @app.route("/blackbox/tail")
     def blackbox_tail():
         stream = request.args.get("stream")
+        instance = request.args.get("instance") or ""
         path = stream_path(stream)        
+        out = ""
         try:
             with open(path) as f:
-                data = f.read()
+                for line in f.readlines():
+                    if instance:
+                        m = instance_re.match(line)
+                        if m and m.group(1) != instance:
+                            continue
+                    out += line
         except OSError as e:
             if e.errno == errno.ENOENT:
                 data = "ERROR: No such file"
             else:
                 data = "ERROR: {0}".format(str(e))
-        return render_template("tail.html", data = data)
+        return render_template("tail.html", data = out)
 
     @app.route("/blackbox/mark",methods=["POST"])
     def blackbox_mark():
@@ -277,7 +292,7 @@ def create_app(testing=False):
         path = stream_path(stream)        
         with open(path,"a") as f:
             f.write("[{0}] MARK: {1}\n".format(fmtime(time.time()),mark))
-        return redirect("/blackbox")
+        return redirect(page_path())
 
     @app.route("/blackbox/update-config", methods=["POST"])
     def blackbox_config():
@@ -297,14 +312,13 @@ def create_app(testing=False):
     @app.route("/blackbox/update-config-page", methods=["POST"])
     def blackbox_page_config():
         blackbox_config()
-        return redirect("/blackbox")
+        return redirect(page_path())
 
     @app.route("/blackbox/data", methods=["POST"])
     def blackbox_data():
         incoming = request.get_json(force=True)
         for line in incoming:
             model.process_line(line)
-        sys.stderr.write("Got {0} lines\n".format(len(incoming)))
         return model.config.to_json()
     
     return app

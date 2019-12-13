@@ -81,6 +81,7 @@
                     out[headings[i]].x = times;
                 }
                 delete out.time;
+                delete out.instance;
                 return Object.values(out);
             }
 
@@ -93,7 +94,7 @@
                     var line = data[i].split("\t");
                     if(now - line[0]*1000 > TRUNC) { continue; }
                     x.push(plotly_time(new Date(line[0]*1000)));
-                    y.push(line[1]);
+                    y.push(line[2]);
                 }
                 return [{
                     'x': x,
@@ -118,6 +119,9 @@
                         xaxis: {
                             tickformat: '%H:%M:%S'
                         },
+                        yaxis: {
+                            rangemode: 'tozero'
+                        },
                         marker: { size: 12 }
             };
 
@@ -128,7 +132,8 @@
                     var dataset = $(this).data('dataset');
                     var url = "blackbox/dataset?"+$.param({
                         'stream': $(this).data('stream'),
-                        'dataset': $(this).data('dataset')
+                        'dataset': $(this).data('dataset'),
+                        'instance': $("#instance").attr('value')
                     });
                     $.get(url,function(data) {
                         var data = reformat(data);
@@ -141,11 +146,43 @@
                     var dataset = $(this).data('dataset');
                     var url = "blackbox/rawdata?"+$.param({
                         'stream': $(this).data('stream'),
-                        'dataset': $(this).data('dataset')
+                        'dataset': $(this).data('dataset'),
+                        'instance': $("#instance").attr('value')
                     });
                     $.get(url,function(data) {
                         var data = reformat_raw(data);
                         Plotly.newPlot(domel,data,layout);
+                    },"text");
+                });
+                $('.dataset-row').each(function() {
+                    var domel = this;
+                    var stream = $(this).data('stream');
+                    var dataset = $(this).data('dataset');
+                    var url = "blackbox/dataset?"+$.param({
+                        'stream': $(this).data('stream'),
+                        'dataset': $(this).data('dataset'),
+                        'instance': $("#instance").attr('value')
+                    });
+                    $.get(url,function(data) {
+                        var last = "";
+                        var data = data.split("\n");
+                        var headings = data.shift().split("\t");
+                        while(data.length && last == "") {
+                            last = data.pop().trim();
+                        }
+                        if(last) {
+                            last = last.split("\t");
+                            var out = {};
+                            for(var i=0;i<last.length;i++) {
+                                out[headings[i]] = last[i];
+                            }
+                            $('.dataset-number',domel).each(function() {
+                                var value = out[$(this).data('column')];
+                                if(value) {
+                                    $(this).text(value);
+                                }
+                            });
+                        }
                     },"text");
                 });
             });
@@ -155,7 +192,11 @@
         <div id="tr">
             <form method="POST" onsubmit="ar_set_cookie(); return false">
                 autorefresh <input id="autorefresh"/>s (0=never)
-                <input type="submit" name="update" value="update"/>
+                <input type="submit" name="update" value="update"/><br/>
+            </form>
+            <form method="GET" action="blackbox">
+                instance <input id="instance" name="instance" value="{{ instance |e }}"/> (blank=all)
+                <input type="submit" name="" value="update"/><br/>
             </form>
         </div>
         <h1>Blackbox</h1>
@@ -176,11 +217,13 @@
                     {% if smodel.active %}
                     <form method="POST" action="blackbox/update-config-page">
                         <input type="hidden" name="disable" value="{{ stream |e }}"/>
+                        <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>disable</button>
                     </form>
                     {% else %}
                     <form method="POST" action="blackbox/update-config-page">
                         <input type="hidden" name="enable" value="{{ stream |e }}"/>
+                        <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>enable</button>
                     </form>  
                     {% endif %}
@@ -191,6 +234,7 @@
         <form method="POST" action="blackbox/update-config-page">
             Add new section:
             <input name="enable"/>
+            <input type="hidden" name="instance" value="{{ instance |e }}"/>
             <input type="submit" name="add" value="add"/>
         </form>
         {% for (stream,smodel) in config.streams.items() | sort %}
@@ -200,6 +244,7 @@
         <form method="POST" action="blackbox/mark">
             Add mark:
             <input type="hidden" name="stream" value="{{ stream |e }}"/>
+            <input type="hidden" name="instance" value="{{ instance |e }}"/>
             <input name="mark"/>
             <button>mark</button>
 
@@ -218,7 +263,7 @@
             </tr>
             {% for ((streamname,rawname),raw) in config.raws.items() | sort %}
             {% if streamname == stream %}
-            <tr>
+            <tr class="dataset-row" data-stream="{{streamname |e}}" data-dataset="{{rawname |e}}">
                 <td>{{ rawname }}</td>
                 <td>
                     {% if raw.enabled %}
@@ -230,25 +275,18 @@
                 <td>
                     {{ raw.filename }}
                 </td>
-                {% if (streamname,rawname) in data.datasets %}
-                <td>{{ data.datasets[(streamname,rawname)]["count"] }}</td>
-                <td>{{ data.datasets[(streamname,rawname)]["total"] }}</td>
-                <td>{{ data.datasets[(streamname,rawname)]["mean"] }}</td>
-                <td>{{ data.datasets[(streamname,rawname)]["95%ile"] }}</td>
-                <td>{{ data.datasets[(streamname,rawname)]["top"] }}</td>
-                {% else %}
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                {% endif %}
+                <td class="dataset-number" data-column="count">-</td>
+                <td class="dataset-number" data-column="total">-</td>
+                <td class="dataset-number" data-column="mean">-</td>
+                <td class="dataset-number" data-column="95%ile">-</td>
+                <td class="dataset-number" data-column="top">-</td>
                 <td>
                     <a href="{{ raw.summary_url |e }}" target="_blank">open summaries</a>
                     {% if raw.enabled %}
                     <form method="POST" action="blackbox/update-config-page">
                         <input type="hidden" name="raw-stream" value="{{ streamname |e }}"/>
                         <input type="hidden" name="raw-disable" value="{{ rawname |e }}"/>
+                        <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>raw data off</button>
                     </form>
                     <a href="{{ raw.rawdata_url |e }}" target="_blank">raw data</a>
@@ -256,6 +294,7 @@
                     <form method="POST" action="blackbox/update-config-page">
                         <input type="hidden" name="raw-stream" value="{{ streamname |e }}"/>
                         <input type="hidden" name="raw-enable" value="{{ rawname |e }}"/>
+                        <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>raw data on</button>
                     </form>  
                     {% endif %}
@@ -268,6 +307,7 @@
             Add new dataset:
             <input type="hidden" name="raw-stream" value="{{ stream |e }}"/>
             <input name="raw-disable"/>
+            <input type="hidden" name="instance" value="{{ instance |e }}"/>
             <input type="submit" name="add" value="add"/>
         </form>
         {% for ((streamname,rawname),raw) in config.raws.items() | sort %}
