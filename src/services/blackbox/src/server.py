@@ -167,8 +167,17 @@ class Model:
             f.write("[{0}] {1}\n".format(fmtime(line['time']),line["text"]))
 
     def write_dataset(self,line):
-        with open(dataset_path(line["instance"],line["dataset"]),"a") as f:
-            f.write("{0}\n".format(json.dumps(line).replace("\n"," ")))
+        filename = dataset_path(line["instance"],line["dataset"])
+        columns = ["time","count","total","mean","high","top"]
+        data = ""
+        if (not os.path.exists(filename)) or os.path.getsize(filename) == 0:
+            with open(dataset_path(line["instance"],line["dataset"]),"w") as f:
+                names = { k: k for k in columns }
+                names["high"] = "95%ile"
+                data += "\t".join([ names[x] for x in columns ]) + "\n"
+        with open(filename,"a") as f:
+            data += "\t".join([ str(line[x]) for x in columns ]) + "\n"
+            f.write(data)
 
     def write_data(self,line):
         with open(rawdata_path(line["instance"],line["dataset"]),"a") as f:
@@ -191,9 +200,15 @@ class Model:
             try:
                 with open(dataset_path(stream,raw)) as f:
                     lines = f.readlines()
+                    print(lines)
+                    headings = lines.pop(0).split("\t")
                     if len(lines) > 0:
-                        data = json.loads(lines[-1])
-                        datasets[(stream,raw)] = data
+                        out = {}
+                        data = lines[-1].split("\t")
+                        for (heading,data) in zip(headings,data):
+                            out[heading] = data
+                        print(out)
+                        datasets[(stream,raw)] = out
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     pass
@@ -219,15 +234,10 @@ def create_app(testing=False):
     def blackbox_dataset():
         stream = request.args.get("stream")
         dataset = request.args.get("dataset")
-        columns = ["time","count","total","mean","high","top"]
-        names = { k: k for k in columns }
-        names["high"] = "95%ile"
-        data = "\t".join([ names[x] for x in columns ]) + "\n"
+        data = ""
         try:
             with open(dataset_path(stream,dataset)) as f:
-                for line in f.readlines():
-                    row = json.loads(line)
-                    data += "\t".join([ str(row[x]) for x in columns ]) + "\n"
+                data = f.readlines()
         except OSError as e:
             if e.errno == errno.ENOENT:
                 pass
