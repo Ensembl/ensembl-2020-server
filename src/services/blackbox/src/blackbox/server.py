@@ -61,10 +61,6 @@ def blackbox():
         instance = request.args.get("instance") or ""
         return render_template("index.html", config = model.config.get_jinja(model),instance = instance)
 
-    @bb.route("/<path:asset>")
-    def blackbox_asset(asset):
-        return send_from_directory(os.path.join(script_dir,"../assets"),asset)
-
     @bb.route("/dataset")
     def blackbox_dataset():
         stream = request.args.get("stream")
@@ -139,5 +135,10 @@ def blackbox():
             for line in incoming:
                 model.process_line(line)
         return model.config.to_json()
+
+    @bb.route("/assets/<path:asset>")
+    def blackbox_asset(asset):
+        print("ASSETS",asset)
+        return send_from_directory(os.path.join(script_dir,"../../assets"),asset)
 
     return bb

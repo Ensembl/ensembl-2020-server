@@ -1,58 +1,78 @@
 <html>
     <head>
         <style>
-
-
-
-
-
-
-
-
-
-h1 {
-    margin-top: 0;
-}
-
-h2 {
-    font-size: 18px;
-}
-
-h4 {
-    font-size: 14px;
-}
-
-#autorefresh {
-    width: 32px;
-}
-
-#tr {
+            /* ids, then classes, then tags (alphabetical) */
+            #autorefresh {
+                width: 32px;
+            }
+            #tr {
                 border: 1px solid #ccc;
-                float: right;
-    display: inline-block;
-    text-align: right;
-    line-height: 150%;
-    padding: 8px;
-    color: #666;
+                display: inline-block;
+                text-align: right;
+                line-height: 150%;
+                padding: 8px;
+                color: #666;
             }
             .plotly {
                 width: 100%;
                 height: 200px;
             }
-
+            a {
+                text-decoration: none;
+                color: #069;
+            }
+            body {
+                padding: 8px 16px;
+            }
+            button:hover,a:hover {
+                text-decoration: underline;
+            }
+            button, input[type="submit"]  {
+                background: none!important;
+                border: none;
+                padding: 0 8px!important;
+                font-family: arial, sans-serif;
+                color: #069;
+                cursor: pointer;
+                font-size: 11px;
+                text-align: right;
+                display: inline;
+            }
+            form {
+                display: inline-block; margin: 0;
+                font-size: 10px;
+            }
+            input {
+                border: 1px solid #ccc;
+                height: 18px;
+                width: 80px;
+                vertical-align: middle;
+                font-size: 10px;
+            }
+            h1 {
+                margin-top: 0;
+            }
+            h2 {
+                font-size: 18px;
+            }
+            h4 {
+                font-size: 14px;
+            }
+            html {
+                font-family: arial, helvetica, sans-serif;
+            }  
+            iframe {
+                width: 100%;
+                height: 300px;
+                border: 1px solid #ccc;
+                margin: 8px 0;
+            } 
             table {
                 border-collapse: collapse;
                 width: 100%;
                 margin: 8px 0;
                 padding: 16px;
             }
-
-            tr {
-                font-size: 11px;
-                margin: 0;
-                padding: 0;              
-            }
-
             td,th {
                 text-align: right;
                 border: 1px solid #999;
@@ -64,64 +84,18 @@ h4 {
             td {
                 background: #b0d0ff;
             }
-th {
-    background: #c0ffc0;
-    
-}
-
-            button, input[type="submit"]  {
-                background: none!important;
-                border: none;
-                padding: 0 8px!important;
-                font-family: arial, sans-serif;
-                color: #069;
-                cursor: pointer;
+            th {
+                background: #c0ffc0;                
+            }
+            tr {
                 font-size: 11px;
-                text-align: right;
-                display: inline;
-                width: auto;
+                margin: 0;
+                padding: 0;              
             }
-
-a { text-decoration: none; color: #069 }
-
-            button:hover,a:hover {
-                text-decoration: underline;
-            }
-
-            form {
-                display: inline-block; margin: 0;
-                font-size: 10px;
-            }
-
-input {
-    border: 1px solid #ccc;
-    height: 18px;
-    width: 80px;
-    vertical-align: middle;
-    font-size: 10px;
-}
-
-html {
-    font-family: arial, helvetica, sans-serif;
-}   
-
-body {
-    padding: 8px 16px;
-}
-
-iframe {
-    width: 100%;
-    height: 300px;
-    border: 1px solid #ccc;
-    margin: 8px 0;
-}
-                
-                                                                                
-                                                                </style>
-        <script src="https://code.jquery.com/jquery-3.4.1.min.js"
-                integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
-                crossorigin="anonymous"></script>
-        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</style>
+        <!--<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>-->
+        <script src="assets/plotly-latest.min.js"></script>
+        <script src="assets/jquery-3.4.1.min.js"></script>
         <script>
             var interval = undefined;
             var timer = undefined;
