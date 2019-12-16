@@ -1,4 +1,4 @@
-import time, json, errno, os.path, urllib, re, datetime
+import time, json, errno, os.path, urllib, re, datetime, sys
 
 from config import Config
 
@@ -23,8 +23,23 @@ def fscode(text):
     text = text.replace('%','@')
     return text
 
+def check_create_dir(blackbox_dir):
+    try:
+        os.makedirs(blackbox_dir)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            pass
+        else:
+            raise
+
 class Model:
-    def __init__(self,blackbox_dir):
+    def __init__(self,blackbox_dir = None):
+        if blackbox_dir == None:
+            blackbox_dir = os.path.join(
+                os.path.abspath(os.environ.get("BLACKBOX_DIR",".")),
+                "log"
+            )
+        check_create_dir(blackbox_dir)
         self.blackbox_dir = blackbox_dir
         self.config = Config(blackbox_dir)
         # XXX

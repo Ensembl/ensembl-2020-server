@@ -1,0 +1,161 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Blackbox Diagnostics API
+  description: The client/server API for the blackbox diagnostics engine.
+
+paths:
+  /data:
+    get:
+      description:
+        Retrieve the current user-configured blackbox config for 
+        the blackbox client. Note that this is mainly used for conveinience and
+        debugging purposes as it duplicates the functionality of the POST
+        method without the ability to send data. A true integration of blackbox
+        would rely on the POST endpoint only.
+      responses:
+        '200':
+          description: Successfully returned config.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - enable
+                properties:
+                  enable:
+                    type: array
+                    items:
+                      type: string
+                    example: ["timings","performance"]
+                  raw:
+                    type: object
+                    items:
+                      type: array
+                      items:
+                        type: string
+                    example:
+                      timings: ['frame-timings','load-timings']
+    post:
+      description: |
+        Submit log data, and retrieve the current user-configured blackbox 
+        config for the blackbox client for the next cycle. Note that the
+        returned payload is identical to that of the corresponding GET request.
+        
+        Two types of record are supported. Both include:
+          * `time`: (most servers will/should expect seconds since the UNIX epoch)
+          * `text`: a log message string or data summary,
+          * `instance`: a string identifying the generating instance,
+          * `stream`: a string identifying the string to which the record belongs.
+          
+        In addition, records _may_ include:
+          * `stack`: an assray of strings indicating the call stack at generation,
+          * a "dataset" comprising,
+            * `dataset`: a string identifying the dataset (within a stream),
+            * `count`: the number of datapoints,
+            * `total`: total value of datapoints,
+            * `mean`: mean of datapoints,
+            * `high`: 95%ile of datapoints,
+            * `top`: highest datapoint.
+          * `data` and `ago`, arrays, of equal length, denoting data values and
+             time offset of each relative to the `time` field. (positive = past).
+             These only deing present if the stream/dataset is configured for
+             raw data.
+           
+        In the case where a record refers to a dataset, the text contains text
+        summarizing the data stats and time is the time at which the summary
+        was generated.
+      requestBody:
+        required: true
+        content:
+          application.json:
+            schema:
+              type: array
+              items:
+                oneOf:
+                  -
+                    type: object
+                    properties:
+                      time:
+                        type: number
+                        example: 123456789.01
+                      stream:
+                        type: string
+                        example: timing
+                      stack:
+                        type: array
+                        items:
+                          type: string
+                        example: ["outer","middle","inner"]
+                      instance:
+                        type: string
+                        example: abc123
+                      text:
+                        type: string
+                        example: Log message
+                  -
+                    type: object
+                    properties:
+                      time:
+                        type: number
+                        example: 123456789.01
+                      stream:
+                        type: string
+                        example: timings
+                      instance:
+                        type: string
+                        example: abc123
+                      text:
+                        type: string
+                        example: Summary message
+                      dataset:
+                        type: string
+                        example: "load-timings"
+                      data:                      
+                        type: array
+                        items:
+                          type: number
+                        example: [1,7,3,2,6]
+                      ago:
+                        type: array
+                        items:
+                          type: number
+                        example: [10,8,7,2,0]
+                      count:
+                        type: number
+                        example: 10
+                      total:
+                        type: number
+                        example: 1234
+                      mean:
+                        type: number
+                        example: 123.4
+                      high:
+                        type: number
+                        example: 200
+                      top:
+                        type: number
+                        example: 202
+      responses:
+        '200':
+          description: Successfully returned config.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - enable
+                properties:
+                  enable:
+                    type: array
+                    items:
+                      type: string
+                    example: ["timings","performance"]
+                  raw:
+                    type: object
+                    items:
+                      type: array
+                      items:
+                        type: string
+                    example:
+                      timings: ['frame-timings','load-timings']

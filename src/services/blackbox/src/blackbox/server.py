@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
-from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory, render_template, redirect, Response, Blueprint, url_for
+from dotenv import load_dotenv
 import sys, os, os.path, yaml, logging, logging.config, errno, urllib, datetime, time, collections,json, re
 from base64 import b64encode
 
@@ -14,47 +14,17 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 """
 TODO
 
-local assets
-OpenAPI
-tests
 README
 
 """
 
-# Find and maybe create working directory
+#
 
 load_dotenv()
-blackbox_dir = os.path.join(
-    os.path.abspath(os.environ.get("BLACKBOX_DIR",".")),
-    "log"
-)
 
-sys.stderr.write("Using {0} as working directory\n".format(blackbox_dir))
-
-try:
-    os.makedirs(blackbox_dir)
-    sys.stderr.write("created!\n")
-except OSError as e:
-    if e.errno == errno.EEXIST:
-        sys.stderr.write("Already existed. Fine.\n")
-    else:
-        raise
-sys.stderr.write("\n\n")
-
-# 
-
-def xxx_make_fake_config():
-    config = Config(blackbox_dir)
-    config.enable("test1")
-    config.disable("test2")
-    config.enable_raw("test1","raw")
-    config.disable_raw("test1","noraw")
-    return config
-
-def blackbox():
+def blackbox(blackbox_dir=None):
     model = Model(blackbox_dir)
     bb = Blueprint('blackbox', __name__,template_folder='templates')
-
 
     @bb.route('/')
     def blackbox_control():
@@ -113,7 +83,6 @@ def blackbox():
                 dataset = request.form["dataset-delete"]
                 model.config.delete_dataset(stream,dataset)
                 model.truncate(stream,dataset)
-
         model.config.save()
         return model.config.to_json()
 
@@ -138,7 +107,6 @@ def blackbox():
 
     @bb.route("/assets/<path:asset>")
     def blackbox_asset(asset):
-        print("ASSETS",asset)
         return send_from_directory(os.path.join(script_dir,"../../assets"),asset)
 
     return bb
