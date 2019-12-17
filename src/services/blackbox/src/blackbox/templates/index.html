@@ -148,20 +148,25 @@
                     out[headings[i]] = {
                         'x': [], 'y': [], 'type': 'scatter', name: headings[i],
                         'mode': 'lines+markers',
-                    };
+                        'yaxis': 'y2'
+                    }
                     if(headings[i] == 'time') { time_col = i; }
                 }
                 for(var i=0;i<lines.length;i++) {
                     var line = lines[i].split("\t");
-                    if(now - line[time_col]*1000 > TRUNC) { continue; }
+                    if(now - line[time_col] > TRUNC) { continue; }
                     for(var j=0;j<headings.length;j++) {
                         out[headings[j]].y.push(line[j]);
                     }
                 }
+                var bar = out["count"];
+                delete bar.yaxis;
+                bar["type"] = "bar";
+                bar["marker"] = { "color": "rgb(200,200,200)" };
                 if(out.time) {
                     var times = out["time"].y;
                     for(var i=0;i<times.length;i++) {
-                        let d = new Date(times[i]*1000);
+                        let d = new Date(times[i]*1);
                         times[i] = plotly_time(d);
                     }
                     for(var i=0;i<headings.length;i++) {
@@ -180,8 +185,8 @@
                 var data = data.split("\n");
                 for(var i=0;i<data.length;i++) {
                     var line = data[i].split("\t");
-                    if(now - line[0]*1000 > TRUNC) { continue; }
-                    x.push(plotly_time(new Date(line[0]*1000)));
+                    if(now - line[0] > TRUNC) { continue; }
+                    x.push(plotly_time(new Date(line[0])));
                     y.push(line[2]);
                 }
                 return [{
@@ -197,7 +202,7 @@
                         height: 200,
                         margin: {
                             l: 100,
-                            r: 100,
+                            r: 150,
                             b: 30,
                             t: 20,
                             pad: 4
@@ -205,10 +210,17 @@
                         xaxis: {
                             tickformat: '%H:%M:%S'
                         },
-                        yaxis: {
-                            rangemode: 'tozero'
+                        yaxis2: {
+                            rangemode: 'tozero',
+                            side: 'left',
+                            overlaying: 'y'
                         },
-                        marker: { size: 12 }
+                        yaxis: {
+                            showgrid: false,
+                            rangemode: 'tozero',
+                            side: 'right',
+                        },
+                        marker: { size: 12 },
             };
 
             $(function() {
@@ -223,7 +235,7 @@
                     });
                     $.get(url,function(data) {
                         var data = reformat(data);
-                        Plotly.newPlot(domel,data,layout);
+                        Plotly.newPlot(domel,data,JSON.parse(JSON.stringify(layout)));
                     },"text");
                 });
                 $('.plotly-rawdata').each(function() {
@@ -237,7 +249,7 @@
                     });
                     $.get(url,function(data) {
                         var data = reformat_raw(data);
-                        Plotly.newPlot(domel,data,layout);
+                        Plotly.newPlot(domel,data,JSON.parse(JSON.stringify(layout)));
                     },"text");
                 });
                 $('.dataset-row').each(function() {
