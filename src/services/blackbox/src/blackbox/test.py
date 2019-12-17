@@ -127,9 +127,9 @@ class BasicTests(unittest.TestCase):
         # check logs
         text = self._get_tail("test")
         self.assertEqual([
-            '[1970-01-01 01:00:02] (test1) (a/b) Hello, world!', 
-            '[1970-01-01 01:00:02] (test1) raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units',
-            '[1970-01-01 01:00:03] (test2) raw elapsed: num=2 total=1.00units avg=1.00units 95%ile=1.00units top=1.00units'
+            '[1970-01-01 01:00:00.002] (test1) (a/b) Hello, world!', 
+            '[1970-01-01 01:00:00.002] (test1) raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units',
+            '[1970-01-01 01:00:00.003] (test2) raw elapsed: num=2 total=1.00units avg=1.00units 95%ile=1.00units top=1.00units'
         ],text)
         # check summaries
         dataset = self._get_dataset("test","raw")
@@ -208,18 +208,18 @@ class BasicTests(unittest.TestCase):
         response = self.client.post('/blackbox/data',data=SMOKE_DATA)
         text = self._get_tail("test")
         self.assertEqual([
-            '[1970-01-01 01:00:02] (test1) (a/b) Hello, world!', 
-            '[1970-01-01 01:00:02] (test1) raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units',
-            '[1970-01-01 01:00:03] (test2) raw elapsed: num=2 total=1.00units avg=1.00units 95%ile=1.00units top=1.00units'
+            '[1970-01-01 01:00:00.002] (test1) (a/b) Hello, world!', 
+            '[1970-01-01 01:00:00.002] (test1) raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units',
+            '[1970-01-01 01:00:00.003] (test2) raw elapsed: num=2 total=1.00units avg=1.00units 95%ile=1.00units top=1.00units'
         ],text)
         text = self._get_tail("test","test1")
         self.assertEqual([
-            '[1970-01-01 01:00:02] (test1) (a/b) Hello, world!', 
-            '[1970-01-01 01:00:02] (test1) raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units'
+            '[1970-01-01 01:00:00.002] (test1) (a/b) Hello, world!', 
+            '[1970-01-01 01:00:00.002] (test1) raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units'
         ],text)
         text = self._get_tail("test","test2")
         self.assertEqual([
-            '[1970-01-01 01:00:03] (test2) raw elapsed: num=2 total=1.00units avg=1.00units 95%ile=1.00units top=1.00units'
+            '[1970-01-01 01:00:00.003] (test2) raw elapsed: num=2 total=1.00units avg=1.00units 95%ile=1.00units top=1.00units'
         ],text)
 
     def test_instance_dataset(self):

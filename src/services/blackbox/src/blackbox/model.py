@@ -3,7 +3,7 @@ import time, json, errno, os.path, urllib, re, datetime, sys
 from config import Config
 
 def fmtime(when):
-    return datetime.datetime.fromtimestamp(when).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.fromtimestamp(when).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 instance_re = re.compile(r'\[.*?\] \((.*?)\)')
 
@@ -88,7 +88,7 @@ class Model:
             text = line["text"]
             if "stack" in line and len(line["stack"]) > 0:
                 text = "({0}) {1}".format("/".join(line["stack"]),text)
-            f.write("[{0}] ({1}) {2}\n".format(fmtime(line['time']),line['instance'],text))
+            f.write("[{0}] ({1}) {2}\n".format(fmtime(line['time']/1000.),line['instance'],text))
 
     def write_dataset(self,line):
         filename = self.dataset_path(line["stream"],line["dataset"])
