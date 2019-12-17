@@ -5,7 +5,7 @@ api:
     2: api/2/api.yaml
     3: api/3/api.yaml
 
-debug-url: ./debug
+debug-url: http://localhost:4040/blackbox/data
 jumper-url: ./locale
 
 tracks:
