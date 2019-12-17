@@ -55,11 +55,15 @@
             h2 {
                 font-size: 18px;
             }
+            h3 {
+                font-size: 16px;
+            }
             h4 {
                 font-size: 14px;
             }
             html {
                 font-family: arial, helvetica, sans-serif;
+                font-size: 10px;
             }  
             iframe {
                 width: 100%;
@@ -335,6 +339,7 @@
         {% for (stream,smodel) in config.streams.items() | sort %}
         {% if smodel.active %}
         <h2>{{ stream }}</h2>
+        <a href="{{ smodel.tail_raw }}" target="_blank">open raw log file</a>
         <iframe src="{{ smodel.tail }}"></iframe>
         <form method="POST" action="mark">
             Add mark:

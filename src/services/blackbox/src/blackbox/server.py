@@ -45,6 +45,13 @@ def blackbox(blackbox_dir=None):
         out = model.get_log(stream,instance)
         return render_template("tail.html", data = out)
 
+    @bb.route("/tail-raw")
+    def blackbox_tail_raw():
+        stream = request.args.get("stream")
+        instance = request.args.get("instance") or ""
+        out = model.get_log(stream,instance)
+        return Response(out,mimetype="text/plain")
+
     @bb.route("/mark",methods=["POST"])
     def blackbox_mark():
         stream = request.form["stream"]

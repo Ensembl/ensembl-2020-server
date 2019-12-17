@@ -84,12 +84,17 @@ class Config:
                 stream = stream,
                 instance = request.args.get("instance") or ""
             )
+            tail_raw = make_url('blackbox_tail_raw', 
+                stream = stream,
+                instance = request.args.get("instance") or ""
+            )
             loglines = model.get_log_lines(stream) or "-"
             streams[stream] = {
                 "active": stream in self.streams_enabled,
                 "filename": model.get_stream_filename(stream),
                 "lines": loglines,
                 "tail": tail,
+                "tail_raw": tail_raw
             }
         for (stream,dataset) in self.dataset_seen:
             summary_url = make_url('blackbox_dataset',
