@@ -11,15 +11,6 @@ from util import page_path
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
-"""
-TODO
-
-README
-
-"""
-
-#
-
 load_dotenv()
 
 def blackbox(blackbox_dir=None):
@@ -98,8 +89,12 @@ def blackbox(blackbox_dir=None):
     def blackbox_data():
         if request.method == "POST":
             incoming = request.get_json(force=True)
-            for line in incoming:
+            for line in incoming["records"]:
                 model.process_line(line)
+            for (stream,datasets) in incoming["streams"].items():
+                model.config.seen(stream)
+                for dataset in datasets:
+                    model.config.seen_dataset(stream,dataset)
         return model.config.to_json()
 
     @bb.route("/assets/<path:asset>")

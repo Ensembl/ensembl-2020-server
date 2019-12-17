@@ -70,72 +70,82 @@ paths:
         content:
           application.json:
             schema:
-              type: array
-              items:
-                oneOf:
-                  -
-                    type: object
-                    properties:
-                      time:
-                        type: number
-                        example: 123456789.01
-                      stream:
-                        type: string
-                        example: timing
-                      stack:
-                        type: array
-                        items:
-                          type: string
-                        example: ["outer","middle","inner"]
-                      instance:
-                        type: string
-                        example: abc123
-                      text:
-                        type: string
-                        example: Log message
-                  -
-                    type: object
-                    properties:
-                      time:
-                        type: number
-                        example: 123456789.01
-                      stream:
-                        type: string
-                        example: timings
-                      instance:
-                        type: string
-                        example: abc123
-                      text:
-                        type: string
-                        example: Summary message
-                      dataset:
-                        type: string
-                        example: "load-timings"
-                      data:                      
-                        type: array
-                        items:
-                          type: number
-                        example: [1,7,3,2,6]
-                      ago:
-                        type: array
-                        items:
-                          type: number
-                        example: [10,8,7,2,0]
-                      count:
-                        type: number
-                        example: 10
-                      total:
-                        type: number
-                        example: 1234
-                      mean:
-                        type: number
-                        example: 123.4
-                      high:
-                        type: number
-                        example: 200
-                      top:
-                        type: number
-                        example: 202
+              type: object
+              properties:
+                streams:
+                  type: object
+                  items:
+                    type: array
+                    items:
+                      type: string
+                  example: {"stream1": ["dataset1","dataset2"]}
+                records:
+                  type: array
+                  items:
+                    oneOf:
+                      -
+                        type: object
+                        properties:
+                          time:
+                            type: number
+                            example: 123456789.01
+                          stream:
+                            type: string
+                            example: timing
+                          stack:
+                            type: array
+                            items:
+                              type: string
+                            example: ["outer","middle","inner"]
+                          instance:
+                            type: string
+                            example: abc123
+                          text:
+                            type: string
+                            example: Log message
+                      -
+                        type: object
+                        properties:
+                          time:
+                            type: number
+                            example: 123456789.01
+                          stream:
+                            type: string
+                            example: timings
+                          instance:
+                            type: string
+                            example: abc123
+                          text:
+                            type: string
+                            example: Summary message
+                          dataset:
+                            type: string
+                            example: "load-timings"
+                          data:                      
+                            type: array
+                            items:
+                              type: number
+                            example: [1,7,3,2,6]
+                          ago:
+                            type: array
+                            items:
+                              type: number
+                            example: [10,8,7,2,0]
+                          count:
+                            type: number
+                            example: 10
+                          total:
+                            type: number
+                            example: 1234
+                          mean:
+                            type: number
+                            example: 123.4
+                          high:
+                            type: number
+                            example: 200
+                          top:
+                            type: number
+                            example: 202
       responses:
         '200':
           description: Successfully returned config.

@@ -44,6 +44,7 @@ class Config:
         self.raw_enabled = set([x for x in self.raw_enabled if x != (stream,dataset) ])
 
     def seen_dataset(self,stream,value):
+        self.streams_seen.add(stream)
         self.dataset_seen.add((stream,value))
 
     def enable(self,value):

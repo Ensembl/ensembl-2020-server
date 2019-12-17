@@ -4,43 +4,49 @@ from html.parser import HTMLParser
 from flask import Flask
 from server import blackbox
 
-SMOKE_DATA = json.dumps([
-    {
-        "instance":"test1",
-        "stack":["a","b"],
-        "text":"Hello, world!",
-        "time":2.0, 
-        "stream": "test"
+SMOKE_DATA = json.dumps({
+    "streams": {
+        "test": ["raw","raw2"],
+        "test2": ["raw3","raw4"],
     },
-    {
-        "stream": "test",
-        "data":[2.0],
-        "ago": [0],
-        "dataset":"raw",
-        "instance":"test1",
-        "text":"raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units",
-        "time":2.0,
-        "count": 1,
-        "total": 2,
-        "mean": 2,
-        "high": 2,
-        "top": 2
-    },
+    "records": [
         {
-        "stream": "test",
-        "data":[2.0],
-        "ago": [0],
-        "dataset":"raw",
-        "instance":"test2",
-        "text":"raw elapsed: num=2 total=1.00units avg=1.00units 95%ile=1.00units top=1.00units",
-        "time": 3.0,
-        "count": 2,
-        "total": 1,
-        "mean": 1,
-        "high":1,
-        "top": 1
-    }
-])
+            "instance":"test1",
+            "stack":["a","b"],
+            "text":"Hello, world!",
+            "time":2.0, 
+            "stream": "test"
+        },
+        {
+            "stream": "test",
+            "data":[2.0],
+            "ago": [0],
+            "dataset":"raw",
+            "instance":"test1",
+            "text":"raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units",
+            "time":2.0,
+            "count": 1,
+            "total": 2,
+            "mean": 2,
+            "high": 2,
+            "top": 2
+        },
+            {
+            "stream": "test",
+            "data":[2.0],
+            "ago": [0],
+            "dataset":"raw",
+            "instance":"test2",
+            "text":"raw elapsed: num=2 total=1.00units avg=1.00units 95%ile=1.00units top=1.00units",
+            "time": 3.0,
+            "count": 2,
+            "total": 1,
+            "mean": 1,
+            "high":1,
+            "top": 1
+        }
+    ]
+})
 
 def convert_line(line):
     return [int(float(x)) if i != 1 else x for (i,x) in enumerate(line.split("\t"))]
@@ -50,7 +56,8 @@ class TagExtractor(HTMLParser):
         super().__init__()
         self.tag = tag
         self.active = False
-        self.output = ""
+        self.current = ""
+        self.output = []
     
     def handle_starttag(self, tag, attrs):
         if tag == self.tag:
@@ -59,10 +66,12 @@ class TagExtractor(HTMLParser):
     def handle_endtag(self, tag):
         if tag == self.tag:
             self.active = False
+            self.output.append(self.current)
+            self.current = ""
 
     def handle_data(self, data):
         if self.active:
-            self.output += data
+            self.current += data
 
 def tag_extract(tag,text):
     tx = TagExtractor(tag)
@@ -85,7 +94,7 @@ class BasicTests(unittest.TestCase):
             "instance": instance
         })
         self.assertEqual(response.status_code,200)
-        return tag_extract("pre",response.data).strip().split("\n")
+        return tag_extract("pre",response.data)[0].strip().split("\n")
 
     def _get_dataset(self,stream,dataset,instance=''):
         response = self.client.get('/blackbox/dataset',query_string={
@@ -254,6 +263,15 @@ class BasicTests(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertRegex(response.data.decode("utf8"),'Open Sans')
         response.close()
+
+    def test_prepopulation(self):
+        self.client.post('/blackbox/data',data=SMOKE_DATA)
+        self.client.post('/blackbox/update-config',data={
+            'enable': 'test2'
+        })
+        response = self.client.get('/blackbox/')
+        cells = tag_extract("td",response.data)
+        self.assertTrue("raw3" in cells)
 
 if __name__ == "__main__":
     unittest.main()
