@@ -5,17 +5,6 @@ from config import Config
 def fmtime(when):
     return datetime.datetime.fromtimestamp(when).strftime("%Y-%m-%d %H:%M:%S")
 
-EXAMPLE_DATA = """
-[
-            {"stream":"test1","stack":["a","b"],"text":"Hello, world!","time":2.0,"instance": "abc"},
-            {
-                "data":[2.0],"dataset":"raw","stream":"test1","ago":[0.0],"instance": "def",
-                "count": 1, "total": 2.0, "mean": 2.0, "high": 2.0, "top": 2.0,
-                "text":"raw elapsed: num=1 total=2.00units avg=2.00units 95%ile=2.00units top=2.00units","time":2.0
-            }
-]
-"""
-
 instance_re = re.compile(r'\[.*?\] \((.*?)\)')
 
 def fscode(text):
@@ -42,12 +31,6 @@ class Model:
         check_create_dir(blackbox_dir)
         self.blackbox_dir = blackbox_dir
         self.config = Config(blackbox_dir)
-        # XXX
-        incoming = json.loads(EXAMPLE_DATA)
-        for record in incoming:
-            record["time"] = time.time()
-        for line in incoming:
-            self.process_line(line)
 
     def stream_path(self,stream):
         stream = fscode(stream)
