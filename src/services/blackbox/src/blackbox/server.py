@@ -83,18 +83,15 @@ def blackbox(blackbox_dir=None):
                 dataset = request.form["dataset-delete"]
                 model.config.delete_dataset(stream,dataset)
                 model.truncate(stream,dataset)
+            elif key == "truncate":
+                stream = request.form["truncate"]
+                model.truncate(stream)
         model.config.save()
         return model.config.to_json()
 
     @bb.route("/update-config-page", methods=["POST"])
     def blackbox_page_config():
         blackbox_config()
-        return redirect(page_path())
-
-    @bb.route("/truncate", methods=["POST"])
-    def blackbox_truncate():
-        stream = request.form["stream"]
-        model.truncate(stream)
         return redirect(page_path())
 
     @bb.route("/data", methods=["POST","GET"])

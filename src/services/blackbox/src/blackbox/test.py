@@ -243,8 +243,8 @@ class BasicTests(unittest.TestCase):
         response = self.client.post('/blackbox/data',data=SMOKE_DATA)
         text = self._get_tail("test")
         self.assertNotEqual('',text[0])
-        self.client.post('/blackbox/truncate',data={
-            'stream': 'test',
+        self.client.post('/blackbox/update-config',data={
+            'truncate': 'test',
         })
         text = self._get_tail("test")
         self.assertEqual('',text[0])

@@ -314,8 +314,8 @@
                         <button>enable</button>
                     </form>  
                     {% endif %}
-                    <form method="POST" action="truncate">
-                        <input type="hidden" name="stream" value="{{ stream |e }}"/>
+                    <form method="POST" action="update-config-page">
+                        <input type="hidden" name="truncate" value="{{ stream |e }}"/>
                         <input type="hidden" name="instance" value="{{ instance |e }}"/>
                         <button>truncate</button>
                     </form>  
