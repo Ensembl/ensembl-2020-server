@@ -36,13 +36,11 @@ def browser_setup(yaml_path,data_path,assets_path):
     universe = Universe(data_path)
     
     config_path = os.path.join(yaml_path,"config.yaml")
-    variant_pattern = "homo_sapiens_incl_consequences-chr{0}.{1}.sorted.bed.bb"
     gc_file = os.path.join(data_path,"e2020-vcf/gc.all.bw")
     refget_hashes = os.path.join(data_path,"e2020_march_datafiles/common_files/grch38.chrom.hashes")
-    variant_files = os.path.join(data_path,"e2020-vcf/bigbeds")
     config = BAIConfig(config_path,assets_path)
     seqcache = SequenceCache(refget_hashes)
-    sources = BAISources(variant_files,variant_pattern,gc_file,seqcache)
+    sources = BAISources(gc_file,seqcache)
     print("building locales")
     for chrom in universe.all_chroms():
         sources.add_locales(chrom,universe.locale)

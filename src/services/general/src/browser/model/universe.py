@@ -15,7 +15,7 @@ class Universe(object):
         
     def _load(self):
         with open(os.path.join(self.config_path,"common_files","genome_id_info.yml")) as f:
-            config = yaml.load(f)
+            config = yaml.load(f,Loader=yaml.SafeLoader)
             for (k,v) in config.items():
                 s = Species(self,k,v)
                 self.species[s.wire_genome_id] = s

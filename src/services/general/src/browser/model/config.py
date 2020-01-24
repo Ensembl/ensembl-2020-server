@@ -82,12 +82,12 @@ class BAIConfig(object):
         with open(self.config_path) as f:
             endpoints = {}
             choices = {}
-            bc = yaml.load(f)
+            bc = yaml.load(f,Loader=yaml.SafeLoader)
             self._api = bc["api"]
             ep_cfg_path = bc['endpoints']
             ep_cfg_path = os.path.join(dir_,ep_cfg_path)
             with open(ep_cfg_path) as f_ep:
-                ep = yaml.load(f_ep)
+                ep = yaml.load(f_ep,Loader=yaml.SafeLoader)
                 for (ep_name,v) in ep['endpoints'].items():
                     if "endpoint" in v and "bytecode" in v:
                         endpoints[ep_name] = (v["endpoint"],v["bytecode"])

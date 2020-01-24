@@ -3,7 +3,6 @@ import re
 from ..data import get_bigbed_data, get_chrom_length
 from ..shimmer import shimmer
 
-FEATURED=set(["BRCA2","TraesCS3D02G273600","PF3D7_1143500","grpE","SFA1","sms-2"])
 MIN_WIDTH = 1000
 
 # HACK Strip versions from IDs. We have discussed but noy yet agreed on whether versions 
@@ -25,7 +24,7 @@ class BAISGeneTranscript(object):
         self.seqcache = seqcache
 
     def gene_shimmer(self,chrom,leaf,type_,dir_):
-        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        path = chrom.file_path("genes_and_transcripts","transcripts.bb")
         data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         starts = []
         lens = []
@@ -34,15 +33,13 @@ class BAISGeneTranscript(object):
             gene_start = int(line[0])
             gene_end = int(line[1])
             parts = line[2].split("\t")
-            (biotype,gene_name,strand,gene_id) = (parts[16],parts[15],parts[2],parts[14])
-            if gene_name == "none":
-                gene_name = parts[14]
+            (biotype,strand,gene_id,prestige) = (parts[12],parts[1],parts[8],parts[14])
+            if prestige not in ('canonical','mane_select'):
+                continue
             if type_ == 'feat':
                 colour = 2
                 dir_ = ("fwd" if strand == '+' else "rev")
             else:
-                if gene_name in FEATURED:
-                    continue
                 if (strand == '+') != (dir_ == 'fwd'):
                     continue
                 if (biotype == 'protein_coding') != (type_ == 'pc'):
@@ -62,7 +59,7 @@ class BAISGeneTranscript(object):
         return ([starts,lens,senses,[colour,dir_]],leaf)
 
     def gene(self,chrom,leaf,type_,dir_,get_names,focus=None):        
-        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        path = chrom.file_path("genes_and_transcripts","transcripts.bb")
         data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         out_starts = []
         out_lens = []
@@ -80,16 +77,18 @@ class BAISGeneTranscript(object):
             gene_end = int(line[1])
             parts = line[2].split("\t")
             (
-                biotype,gene_name,strand,gene_id,prestige,trans_id
+                biotype,gene_name,strand,gene_id,prestige,trans_id,prestige
             ) = (
-                parts[16],parts[15],parts[2],parts[14],parts[18],parts[0]
+                parts[12],parts[10],parts[1],parts[7],parts[14],parts[0],parts[14]
             )
+            if prestige not in ('canonical','mane_select'):
+                continue
             disp_id = gene_id
             disp_trans_id = trans_id
             gene_id = id_strip.sub('',gene_id)
             trans_id = id_strip.sub('',trans_id)
             if gene_name == "none":
-                gene_name = parts[14]
+                gene_name = parts[7]
             if type_ == 'feat':
                 colour = 2
                 dir_ = ("fwd" if strand == '+' else "rev")
@@ -135,7 +134,7 @@ class BAISGeneTranscript(object):
 
     def transcript(self,chrom,leaf,type_,dir_,seq,names):
         min_bp = leaf.bp_px / MIN_WIDTH
-        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        path = chrom.file_path("genes_and_transcripts","transcripts.bb")
         data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
         out_starts = []
         out_lens = []
@@ -162,13 +161,15 @@ class BAISGeneTranscript(object):
                 biotype,gene_name,part_starts,part_lens,cds_start,cds_end,
                 strand,gene_id,prestige,trans_id
             ) = (
-                parts[16],parts[15],parts[8],parts[7],parts[3],parts[4],
-                parts[2],parts[14],parts[18],parts[0]
+                parts[12],parts[10],parts[6],parts[5],parts[2],parts[3],
+                parts[1],parts[7],parts[14],parts[0]
             )
+            if prestige not in ('canonical','mane_select'):
+                continue
             gene_id = id_strip.sub('',gene_id)
             trans_id = id_strip.sub('',trans_id)
             if gene_name == "none":
-                gene_name = parts[14]
+                gene_name = parts[7]
             if type_ == 'feat':
                 colour = 2
                 dir_ = ("fwd" if strand == '+' else "rev")
@@ -258,7 +259,7 @@ class BAISGeneTranscript(object):
         return (data,leaf)
 
     def add_locales(self,chrom,locales):
-        path = chrom.file_path("genes_and_transcripts","canonical.bb")
+        path = chrom.file_path("genes_and_transcripts","transcripts.bb")
         chr_len = get_chrom_length(path,chrom.name)
         for (start,end,extra) in get_bigbed_data(path,chrom.name,0,chr_len):
             extra = extra.split("\t")

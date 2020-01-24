@@ -47,15 +47,15 @@ var_category = {
 }
 
 class BAISVariant(object):
-    def __init__(self,variant_files,variant_pattern):
-        self.variant_files = variant_files
-        self.variant_pattern = variant_pattern
-    
+    def __init__(self):
+        pass
+
     def variant(self,chrom,leaf,scale):
         starts = []
         lens = []
         types = []
-        filename = self.variant_pattern.format(chrom.name,scale)
+        filename = "{0}${1}.{2}.bb".format(chrom.genome_id,chrom.name,scale)
+        path = chrom.file_path("genes_and_transcripts",filename)
         path = chrom.file_path("variants",filename)
         if os.path.exists(path):
             data = get_bigbed_data(path,chrom.name,leaf.start,leaf.end)
