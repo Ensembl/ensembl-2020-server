@@ -77,6 +77,25 @@ Staging:
   - kubectl config use-context ens-stage-ctx
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
+# Deploy staging to WP-HX-k8s cluster
+Staging:WP-HX:
+  stage: deploy
+  image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
+  only:
+  - /^migration\/.*$/
+  environment:
+    name : wp-hx-staging
+  script:
+  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
+  - cd ensembl-client-caas-deploy
+  - git checkout migration/wp-hx
+  - cd ..
+  - feature_branch=${CI_COMMIT_REF_NAME}
+  - feature_tag=${feature_branch#"migration/"}
+  - feature_tag=`echo "${feature_tag}" | tr '[A-Z]' '[a-z]'`
+  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+
 # Deploy Live
 Live:
   stage: deploy
