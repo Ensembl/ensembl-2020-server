@@ -28,6 +28,7 @@ Build e!-Server:
   only:
   - dev
   - master
+  - migration/wp-hx
 
 Build e!-Server:feature:
   stage: build_flask
