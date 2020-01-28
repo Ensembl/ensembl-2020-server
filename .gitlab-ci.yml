@@ -5,7 +5,6 @@ stages:
 
 variables:
   CONTAINER_IMAGE: $GITLAB_REGISTRY_URL/$GITLAB_REGISTRY_NAMESPACE/ensembl-2020-server:${CI_COMMIT_SHORT_SHA}
-  KUBECONFIG: /etc/deploy/config
   DEPLOYENV: dev
   DOCKER_TLS_CERTDIR: ""
 
@@ -61,6 +60,7 @@ Staging:
   - dev
   before_script:
   - mkdir -p /etc/deploy
+  - export KUBECONFIG=/etc/deploy/config
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
@@ -85,6 +85,7 @@ Live:
   - master
   before_script:
   - mkdir -p /etc/deploy
+  - export KUBECONFIG=/etc/deploy/config
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
@@ -109,6 +110,7 @@ Internal:
   - master
   before_script:
   - mkdir -p /etc/deploy
+  - export KUBECONFIG=/etc/deploy/config
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
@@ -132,6 +134,7 @@ Feature:
   - /^feature\/.*$/
   before_script:
   - mkdir -p /etc/deploy
+  - export KUBECONFIG=/etc/deploy/config
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
