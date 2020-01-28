@@ -91,9 +91,6 @@ Staging:WP-HX:
   - cd ensembl-client-caas-deploy
   - git checkout migration/wp-hx
   - cd ..
-  - feature_branch=${CI_COMMIT_REF_NAME}
-  - feature_tag=${feature_branch#"migration/"}
-  - feature_tag=`echo "${feature_tag}" | tr '[A-Z]' '[a-z]'`
   - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
