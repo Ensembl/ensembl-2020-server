@@ -5,7 +5,6 @@ stages:
 
 variables:
   CONTAINER_IMAGE: $GITLAB_REGISTRY_URL/$GITLAB_REGISTRY_NAMESPACE/ensembl-2020-server:${CI_COMMIT_SHORT_SHA}
-  KUBECONFIG: /etc/deploy/config
   DEPLOYENV: dev
   DOCKER_TLS_CERTDIR: ""
 
@@ -29,6 +28,7 @@ Build e!-Server:
   only:
   - dev
   - master
+  - migration/wp-hx
 
 Build e!-Server:feature:
   stage: build_flask
@@ -61,6 +61,7 @@ Staging:
   - dev
   before_script:
   - mkdir -p /etc/deploy
+  - export KUBECONFIG=/etc/deploy/config
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
@@ -77,6 +78,22 @@ Staging:
   - kubectl config use-context ens-stage-ctx
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
+# Deploy staging to WP-HX-k8s cluster
+Staging:WP-HX:
+  stage: deploy
+  image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
+  only:
+  - dev
+  environment:
+    name : wp-hx-staging
+  script:
+  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
+  - cd ensembl-client-caas-deploy
+  - git checkout migration/wp-hx
+  - cd ..
+  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+
 # Deploy Live
 Live:
   stage: deploy
@@ -85,6 +102,7 @@ Live:
   - master
   before_script:
   - mkdir -p /etc/deploy
+  - export KUBECONFIG=/etc/deploy/config
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
@@ -109,6 +127,7 @@ Internal:
   - master
   before_script:
   - mkdir -p /etc/deploy
+  - export KUBECONFIG=/etc/deploy/config
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
@@ -132,6 +151,7 @@ Feature:
   - /^feature\/.*$/
   before_script:
   - mkdir -p /etc/deploy
+  - export KUBECONFIG=/etc/deploy/config
   - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
   - apk update && apk add --no-cache curl git
