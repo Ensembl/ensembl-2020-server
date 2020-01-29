@@ -83,7 +83,7 @@ Staging:WP-HX:
   stage: deploy
   image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
   only:
-  - /^migration\/.*$/
+  - dev
   environment:
     name : wp-hx-staging
   script:
