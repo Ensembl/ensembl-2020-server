@@ -3,32 +3,39 @@ stages:
   - build_flask
   - deploy
 
-variables:
-  CONTAINER_IMAGE: $GITLAB_REGISTRY_URL/$GITLAB_REGISTRY_NAMESPACE/ensembl-2020-server:${CI_COMMIT_SHORT_SHA}
-  DEPLOYENV: dev
-  DOCKER_TLS_CERTDIR: ""
-
-Build e!-Server:
+.build:
   stage: build_flask
-
   image: docker
-
   services:
     - docker:dind
 
   script:
   - docker build -t ${CONTAINER_IMAGE} --no-cache .
-  - docker images
   - echo "$GITLAB_REGISTRY_TOKEN" | docker login -u "$GITLAB_REGISTRY_USER" --password-stdin https://"$GITLAB_REGISTRY_URL"
-  - cat ~/.docker/config.json
   - docker push ${CONTAINER_IMAGE}
   - docker rmi ${CONTAINER_IMAGE}
   - docker logout $GITLAB_REGISTRY_URL
 
+.deploy:
+  stage: deploy
+  image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
+
+  script:
+  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
+  - cd -C ensembl-client-caas-deploy/ checkout migration/wp-hx
+  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+
+variables:
+  CONTAINER_IMAGE: $GITLAB_REGISTRY_URL/$GITLAB_REGISTRY_NAMESPACE/ensembl-2020-server:${CI_COMMIT_SHORT_SHA}
+  DEPLOYENV: dev
+  DOCKER_TLS_CERTDIR: ""
+
+Docker:IMG:
+  extends: .build
   only:
   - dev
   - master
-  - migration/wp-hx
 
 Build e!-Server:feature:
   stage: build_flask
@@ -80,19 +87,11 @@ Staging:
 
 # Deploy staging to WP-HX-k8s cluster
 Staging:WP-HX:
-  stage: deploy
-  image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
-  only:
-  - dev
+  extends: .deploy
   environment:
     name : wp-hx-staging
-  script:
-  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-  - cd ensembl-client-caas-deploy
-  - git checkout migration/wp-hx
-  - cd ..
-  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  only:
+  - dev
 
 # Deploy Live
 Live:
