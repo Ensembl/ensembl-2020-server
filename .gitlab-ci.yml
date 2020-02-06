@@ -85,7 +85,15 @@ Staging:
   - kubectl config use-context ens-stage-ctx
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
-# Deploy staging to WP-HH-k8s cluster
+# Deploy staging to WP-HX cluster
+Staging:WP-HX:
+  extends: .deploy
+  environment:
+    name : wp-hx-staging
+  only:
+  - dev
+
+# Deploy staging to WP-HH cluster
 Staging:WP-HH:
   extends: .deploy
   environment:
