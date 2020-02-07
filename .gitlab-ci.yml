@@ -31,7 +31,7 @@ stages:
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
 variables:
-  CONTAINER_IMAGE: $GITLAB_REGISTRY_URL/$GITLAB_REGISTRY_NAMESPACE/ensembl-2020-server:${CI_COMMIT_SHORT_SHA}
+  CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
   DEPLOYENV: dev
   DOCKER_TLS_CERTDIR: ""
 
