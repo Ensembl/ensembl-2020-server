@@ -65,28 +65,12 @@ Docker:feature:
 
 # Deploy Stage 
 Staging:EHK-HH:
-  stage: deploy
-  image: alpine
+  extends: .deploy-ehk
+  variables:
+    DEPLOY_TAG: staging
+    KUBE_CONTEXT: ens-stage-ctx
   only:
   - dev
-  before_script:
-  - mkdir -p /etc/deploy
-  - export KUBECONFIG=/etc/deploy/config
-  - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
-  script:
-  - apk update && apk add --no-cache curl git
-  - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-  - chmod +x ./kubectl
-  - mv ./kubectl /usr/local/bin/kubectl
-  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-  - cd ensembl-client-caas-deploy
-  - git checkout refactor-manifest
-  - cd ..
-  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - sed -i "s/<DEPLOYMNET_ENV>/staging/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - kubectl config view
-  - kubectl config use-context ens-stage-ctx
-  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
 # Deploy staging to WP-HX cluster
 Staging:WP-HX:
