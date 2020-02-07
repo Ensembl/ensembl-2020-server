@@ -3,6 +3,10 @@ stages:
   - build_flask
   - deploy
 
+variables:
+  CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
+  DOCKER_TLS_CERTDIR: ""
+
 .build:
   stage: build_flask
   image: docker
@@ -43,10 +47,6 @@ stages:
     - sed -i "s#<DEPLOYMNET_ENV>#${DEPLOY_TAG}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
     - kubectl config use-context ${KUBE_CONTEXT}
     - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-
-variables:
-  CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
-  DOCKER_TLS_CERTDIR: ""
 
 Docker:IMG:
   extends: .build
