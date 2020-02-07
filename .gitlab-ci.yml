@@ -41,25 +41,10 @@ Docker:IMG:
   - dev
   - master
 
-Build e!-Server:feature:
-  stage: build_flask
-
-  image: docker
-
-  services:
-    - docker:dind
-
-  script:
-  - feature_branch=${CI_COMMIT_REF_NAME}
-  - feature_tag=${feature_branch#"feature/"}
-  - feature_tag=`echo "${feature_tag}" | tr '[A-Z]' '[a-z]'`
-  - docker build -t ${CONTAINER_IMAGE}-$feature_tag --no-cache .
-  - docker images
-  - echo "$GITLAB_REGISTRY_TOKEN" | docker login -u "$GITLAB_REGISTRY_USER" --password-stdin https://"$GITLAB_REGISTRY_URL"
-  - cat ~/.docker/config.json
-  - docker push ${CONTAINER_IMAGE}-$feature_tag
-  - docker rmi ${CONTAINER_IMAGE}-$feature_tag
-  - docker logout $GITLAB_REGISTRY_URL
+Docker:feature:
+  .extends: .build
+  variables:
+    CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_REF_SLUG}
 
   only:
   - /^feature\/.*$/
