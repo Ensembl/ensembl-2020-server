@@ -22,7 +22,7 @@ variables:
   - docker rmi ${CONTAINER_IMAGE}
   - docker logout $CI_REGISTRY
 
-.deploy:
+.deploy-wp:
   stage: deploy
   image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
 
@@ -73,7 +73,7 @@ Staging:EHK-HH:
 
 # Deploy staging to WP-HX cluster
 Staging:WP-HX:
-  extends: .deploy
+  extends: .deploy-wp
   variables:
     NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
     NFS_PATH: /ifs/public-r/ro/enswbsites
@@ -84,7 +84,7 @@ Staging:WP-HX:
 
 # Deploy staging to WP-HH cluster
 Staging:WP-HH:
-  extends: .deploy
+  extends: .deploy-wp
   variables:
     NFS_SERVER: hh-isi-srv-vlan1493.ebi.ac.uk
     NFS_PATH: /ifs/public/ro/enswbsites
