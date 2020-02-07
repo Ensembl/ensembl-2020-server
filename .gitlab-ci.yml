@@ -24,6 +24,8 @@ stages:
   - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
   - git -C ensembl-client-caas-deploy/ checkout migration/wp-hx
   - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - sed -i "s/<NFS_SERVER>/${NFS_SERVER}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - sed -i "s/<NFS_PATH>/${NFS_PATH}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
 variables:
@@ -88,6 +90,9 @@ Staging:
 # Deploy staging to WP-HX cluster
 Staging:WP-HX:
   extends: .deploy
+  variables:
+    NFS_SERVER: http://hx-isi-srv-vlan157.ebi.ac.uk/
+    NFS_PATH: /ifs/public-r/ro/enswbsites
   environment:
     name : wp-hx-staging
   only:
@@ -96,6 +101,9 @@ Staging:WP-HX:
 # Deploy staging to WP-HH cluster
 Staging:WP-HH:
   extends: .deploy
+  variables:
+    NFS_SERVER: http://hh-isi-srv-vlan1493.ebi.ac.uk/
+    NFS_PATH: /ifs/public/ro/enswbsites
   environment:
     name : wp-hh-staging
   only:
