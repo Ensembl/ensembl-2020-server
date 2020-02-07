@@ -39,7 +39,6 @@ stages:
     - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
     - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-    - git -C ensembl-client-caas-deploy/ checkout refactor-manifest
     - sed -i "s/<DOCKER_IMAGE>/${CONTAINER_IMAGE}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
     - sed -i "s/<DEPLOYMNET_ENV>/${DEPLOY_TAG}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
     - kubectl config use-context ${KUBE_CONTEXT}
@@ -162,28 +161,10 @@ Internal:
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
 Feature:
-  stage: deploy
-  image: alpine
+  extends: .deploy-ehk
+  variables:
+    CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_REF_SLUG}
+    DEPLOY_TAG: ${CI_COMMIT_REF_SLUG}
+    KUBE_CONTEXT: ens-dev-ctx
   only:
   - /^feature\/.*$/
-  before_script:
-  - mkdir -p /etc/deploy
-  - export KUBECONFIG=/etc/deploy/config
-  - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
-  script:
-  - apk update && apk add --no-cache curl git
-  - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-  - chmod +x ./kubectl
-  - mv ./kubectl /usr/local/bin/kubectl  
-  - feature_branch=${CI_COMMIT_REF_NAME}
-  - feature_tag=${feature_branch#"feature/"}
-  - feature_tag=`echo "${feature_tag}" | tr '[A-Z]' '[a-z]'`
-  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-  - cd ensembl-client-caas-deploy
-  - git checkout refactor-manifest
-  - cd ..
-  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}-$feature_tag/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - sed -i "s/<DEPLOYMNET_ENV>/$feature_tag/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - kubectl config view
-  - kubectl config use-context ens-dev-ctx
-  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
