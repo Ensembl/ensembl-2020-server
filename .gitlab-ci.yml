@@ -64,7 +64,7 @@ Docker:feature:
   - /^feature\/.*$/
 
 # Deploy Stage 
-Staging:
+Staging:EHK-HH:
   stage: deploy
   image: alpine
   only:
@@ -111,7 +111,7 @@ Staging:WP-HH:
   - dev
 
 # Deploy Live
-Live:
+Live:EHK-HH:
   stage: deploy
   image: alpine
   only:
@@ -136,7 +136,7 @@ Live:
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
 # Deploy Internal
-Internal:
+Internal:EHK-HH:
   stage: deploy
   image: alpine
   only:
@@ -160,7 +160,7 @@ Internal:
   - kubectl config use-context ens-dev-ctx
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
-Feature:
+Feature:EHK-HH:
   extends: .deploy-ehk
   variables:
     CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_REF_SLUG}
