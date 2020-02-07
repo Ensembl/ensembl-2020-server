@@ -39,8 +39,8 @@ stages:
     - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
   script:
     - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-    - sed -i "s/<DOCKER_IMAGE>/${CONTAINER_IMAGE}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-    - sed -i "s/<DEPLOYMNET_ENV>/${DEPLOY_TAG}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+    - sed -i "s#<DOCKER_IMAGE>#${CONTAINER_IMAGE}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+    - sed -i "s#<DEPLOYMNET_ENV>#${DEPLOY_TAG}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
     - kubectl config use-context ${KUBE_CONTEXT}
     - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
