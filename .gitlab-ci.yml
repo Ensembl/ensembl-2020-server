@@ -91,7 +91,7 @@ Staging:
 Staging:WP-HX:
   extends: .deploy
   variables:
-    NFS_SERVER: http://hx-isi-srv-vlan157.ebi.ac.uk/
+    NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
     NFS_PATH: /ifs/public-r/ro/enswbsites
   environment:
     name : wp-hx-staging
@@ -102,7 +102,7 @@ Staging:WP-HX:
 Staging:WP-HH:
   extends: .deploy
   variables:
-    NFS_SERVER: http://hh-isi-srv-vlan1493.ebi.ac.uk/
+    NFS_SERVER: hh-isi-srv-vlan1493.ebi.ac.uk
     NFS_PATH: /ifs/public/ro/enswbsites
   environment:
     name : wp-hh-staging
