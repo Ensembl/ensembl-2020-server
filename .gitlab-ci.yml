@@ -103,6 +103,28 @@ Staging:WP-HH:
   only:
   - dev
 
+# Deploy staging to WP-HX cluster
+Live:WP-HX:
+  extends: .deploy-wp
+  variables:
+    NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
+    NFS_PATH: /ifs/public-r/ro/enswbsites
+  environment:
+    name : wp-hx-live
+  only:
+  - master
+
+# Deploy staging to WP-HX cluster
+Live:WP-HH:
+  extends: .deploy-wp
+  variables:
+    NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
+    NFS_PATH: /ifs/public-r/ro/enswbsites
+  environment:
+    name : wp-hh-live
+  only:
+  - master
+
 # Deploy Live to EHK-HH cluster
 Live:EHK-HH:
   extends: .deploy-ehk
