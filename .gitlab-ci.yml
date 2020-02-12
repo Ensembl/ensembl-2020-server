@@ -118,8 +118,8 @@ Live:WP-HX:
 Live:WP-HH:
   extends: .deploy-wp
   variables:
-    NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
-    NFS_PATH: /ifs/public-r/ro/enswbsites
+    NFS_SERVER: hh-isi-srv-vlan1493.ebi.ac.uk
+    NFS_PATH: /ifs/public/ro/enswbsites
   environment:
     name : wp-hh-live
   only:
