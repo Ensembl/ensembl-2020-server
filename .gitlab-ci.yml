@@ -1,4 +1,9 @@
-# EMBASSY Working CI/CD with gitlab registry
+# CI/CD Pipeline
+# dev branch -> staging
+# master branch -> internal
+# master branch -> live
+
+# Define stages for the CI/CD pipeline
 stages:
   - build_flask
   - deploy
@@ -7,6 +12,7 @@ variables:
   CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
   DOCKER_TLS_CERTDIR: ""
 
+# Template to build to docker image
 .build:
   stage: build_flask
   image: docker
@@ -22,6 +28,7 @@ variables:
   - docker rmi ${CONTAINER_IMAGE}
   - docker logout $CI_REGISTRY
 
+# Template to deploy to WP k8s cluster
 .deploy-wp:
   stage: deploy
   image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
@@ -34,6 +41,7 @@ variables:
   - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
+# Template to deploy to EHK k8s cluster
 .deploy-ehk:
   stage: deploy
   image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
@@ -48,12 +56,14 @@ variables:
     - kubectl config use-context ${KUBE_CONTEXT}
     - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
+# Build docker image for live/internal/stage environment
 Docker:IMG:
   extends: .build
   only:
   - dev
   - master
 
+# Build docker image for feature_branch dev environment
 Docker:feature:
   extends: .build
   variables:
@@ -62,7 +72,7 @@ Docker:feature:
   only:
   - /^feature\/.*$/
 
-# Deploy Stage 
+# Deploy staging to EHK-HH cluster
 Staging:EHK-HH:
   extends: .deploy-ehk
   variables:
@@ -93,7 +103,7 @@ Staging:WP-HH:
   only:
   - dev
 
-# Deploy Live
+# Deploy Live to EHK-HH cluster
 Live:EHK-HH:
   extends: .deploy-ehk
   variables:
@@ -102,7 +112,7 @@ Live:EHK-HH:
   only:
   - master
 
-# Deploy Internal
+# Deploy internal to EHK-HH cluster
 Internal:EHK-HH:
   extends: .deploy-ehk
   variables:
@@ -111,6 +121,7 @@ Internal:EHK-HH:
   only:
   - master
 
+# Deploy feature to EHK-HH cluster
 Feature:EHK-HH:
   extends: .deploy-ehk
   variables:
