@@ -143,6 +143,17 @@ Internal:EHK-HH:
   only:
   - master
 
+# Deploy internal to WP-HX cluster
+Internal:WP-HX:
+  extends: .deploy-wp
+  variables:
+    NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
+    NFS_PATH: /ifs/public-r/ro/enswbsites
+  environment:
+    name : wp-hx-internal
+  only:
+  - dev
+
 # Deploy feature to EHK-HH cluster
 Feature:EHK-HH:
   extends: .deploy-ehk
