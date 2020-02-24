@@ -33,7 +33,7 @@ class BAISGeneTranscript(object):
             gene_start = int(line[0])
             gene_end = int(line[1])
             parts = line[2].split("\t")
-            (biotype,strand,gene_id,prestige) = (parts[12],parts[1],parts[8],parts[14])
+            (biotype,strand,gene_id,prestige) = (parts[14],parts[1],parts[11],parts[10])
             if prestige not in ('canonical','mane_select'):
                 continue
             if type_ == 'feat':
@@ -77,9 +77,9 @@ class BAISGeneTranscript(object):
             gene_end = int(line[1])
             parts = line[2].split("\t")
             (
-                biotype,gene_name,strand,gene_id,prestige,trans_id,prestige
+                biotype,gene_name,strand,gene_id,prestige,trans_id
             ) = (
-                parts[12],parts[10],parts[1],parts[7],parts[14],parts[0],parts[14]
+                parts[14],parts[12],parts[1],parts[11],parts[10],parts[0]
             )
             if prestige not in ('canonical','mane_select'):
                 continue
@@ -88,7 +88,7 @@ class BAISGeneTranscript(object):
             gene_id = id_strip.sub('',gene_id)
             trans_id = id_strip.sub('',trans_id)
             if gene_name == "none":
-                gene_name = parts[7]
+                gene_name = parts[11]
             if type_ == 'feat':
                 colour = 2
                 dir_ = ("fwd" if strand == '+' else "rev")
@@ -161,15 +161,15 @@ class BAISGeneTranscript(object):
                 biotype,gene_name,part_starts,part_lens,cds_start,cds_end,
                 strand,gene_id,prestige,trans_id
             ) = (
-                parts[12],parts[10],parts[6],parts[5],parts[2],parts[3],
-                parts[1],parts[7],parts[14],parts[0]
+                parts[14],parts[12],parts[6],parts[5],parts[2],parts[3],
+                parts[1],parts[11],parts[10],parts[0]
             )
             if prestige not in ('canonical','mane_select'):
                 continue
             gene_id = id_strip.sub('',gene_id)
             trans_id = id_strip.sub('',trans_id)
             if gene_name == "none":
-                gene_name = parts[7]
+                gene_name = parts[11]
             if type_ == 'feat':
                 colour = 2
                 dir_ = ("fwd" if strand == '+' else "rev")
@@ -263,7 +263,7 @@ class BAISGeneTranscript(object):
         chr_len = get_chrom_length(path,chrom.name)
         for (start,end,extra) in get_bigbed_data(path,chrom.name,0,chr_len):
             extra = extra.split("\t")
-            id_ = id_strip.sub('',extra[14])
+            id_ = id_strip.sub('',extra[11])
             id_ = "{0}:gene:{1}".format(chrom.species.wire_genome_id,id_)
             middle = int((start+end)/2)
             size = end-start
