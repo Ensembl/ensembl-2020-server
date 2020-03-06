@@ -160,7 +160,11 @@
                     }
                 }
                 var bar = out["count"];
-                delete bar.yaxis;
+                if(bar) {
+                  delete bar.yaxis;
+                } else {
+                  bar = {};
+                }
                 bar["type"] = "bar";
                 bar["marker"] = { "color": "rgb(200,200,200)" };
                 if(out.time) {
