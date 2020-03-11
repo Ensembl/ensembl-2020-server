@@ -30,10 +30,13 @@ pub struct RegisterPurpose {
 
 impl fmt::Display for RegisterPurpose {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut first = true;
         for path in &self.complex {
-            write!(f,"{}.",path)?;
+            if !first { write!(f,".")?; }
+            first = false;
+            write!(f,"{}",path)?;
         }
-        write!(f,"{}",self.linear)?;
+        write!(f,":{}",self.linear)?;
         match self.linear {
             LinearPath::Data => write!(f,"/{}",self.base)?,
             _ => {}
@@ -151,8 +154,8 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let _context = generate_code(&defstore,stmts).expect("codegen");
         let regs = offset(&defstore,&make_type(&defstore,"boolean")).expect("a");
-        assert_eq!("D/boolean",format_pvec(&regs));
+        assert_eq!(":D/boolean",format_pvec(&regs));
         let regs = offset(&defstore,&make_type(&defstore,"vec(etest3)")).expect("b");
-        assert_eq!("A.A.D/number,A.A.A0,A.A.B0,A.A.A1,A.A.B1,A.B.X.D/string,A.B.X.A0,A.B.X.B0,A.B.Y.D/boolean,A.B.Y.A0,A.B.Y.B0,B.X.D/string,B.X.A0,B.X.B0,B.Y.D/boolean,B.Y.A0,B.Y.B0,C.D/boolean,C.A0,C.B0,D.D/number,D.A0,D.B0,D.A1,D.B1,D.A2,D.B2",format_pvec(&regs));
+        assert_eq!("A.A:D/number,A.A:A0,A.A:B0,A.A:A1,A.A:B1,A.B.X:D/string,A.B.X:A0,A.B.X:B0,A.B.Y:D/boolean,A.B.Y:A0,A.B.Y:B0,B.X:D/string,B.X:A0,B.X:B0,B.Y:D/boolean,B.Y:A0,B.Y:B0,C:D/boolean,C:A0,C:B0,D:D/number,D:A0,D:B0,D:A1,D:B1,D:A2,D:B2",format_pvec(&regs));
     }
 }

@@ -18,25 +18,50 @@ inline "<" lt left 6;
 inline "==" eq left 5;
 func oper_test(stest) becomes stest;
 
-/* an etest3 has register structure:
+/* 
 
- 0 A.A/D
- 1 A.A/A0
- 2 A.A/B0
- 3 A.B.X/D
- 4 A.B.Y/D
- 5 A.B.Y/A0
- 6 A.B.Y/B0
- 7 B.X/D
- 8 B.Y/D
- 9 B.Y/A0
-10 B.Y/B0
-11 C/D
-12 D/D
-13 D/A0
-14 D/B0
-15 D/A1
-16 D/B1
+etest:
+
+0 /S  [number]
+1 X/D [number]
+2 Y/D 
+3 Y/A0
+4 Y/B0
+
+stest:
+0 A/D     [number]
+1 A/A0
+2 A/B0
+3 B/S     [number]
+4 B.X/D   [number]
+5 B.Y/D   
+6 B.Y/A0
+7 B.Y/B0
+
+an etest3 has register structure:
+
+0 /S          [number]
+1 A.A/D
+2 A.A/A0
+3 A.A/B0
+4 A.B/S       [number]
+5 A.B.X/D     [number]
+6 A.B.Y/D     
+7 A.B.Y/A0
+8 A.B.Y/B0
+9 B/S         [number]
+10 B.X/D      [number]
+11 B.Y/D      
+12 B.Y/A0
+13 B.Y/B0
+14 C/D        [boolean]
+15 D/D        [number]
+16 D/A0
+17 D/B0
+18 D/A1
+19 D/B1
+
+2 - - - 0 0 - - - 0 0 - - - t 0 - - - -
 
 */
 

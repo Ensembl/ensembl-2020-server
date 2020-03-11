@@ -117,7 +117,7 @@ fn assign(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp
     print!("      -> {:?}\n",type_);
     let offsets = offset(defstore,type_).expect("resolving to registers");
     for (j,v) in offsets.iter().enumerate() {
-        print!("          {:?}\n",v);
+        print!("          {}\n",v);
         if let Some(r) = context.route.get(&regs[j]) {
             print!("             route path {:?}\n",r);
         } 

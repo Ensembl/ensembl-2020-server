@@ -8,6 +8,17 @@ use super::intstruction::Instruction;
 
 use super::optimise::remove_unused_registers;
 
+/* Linearization is the process of converting arbitrarily deep vectors of simple values into multivals. Although a 
+ * multival is a sequence of values, as we need to support multivals of single level lists, all lists get additional
+ * levels. The previous simplify step has abolished complex, structured types by this point by "pushing in" vecs.
+ * 
+ * vecs are represented by 2n+1 registers where n is the depth of the vec: the index registers An, Bn, and the data
+ * register D. Each mapping is stored in a Linearized object.
+ * 
+ * Linearization proceeds by first mapping any registers containing vec values into register sets. It then proceeds,
+ * instruction by instruction, converting instructions into their linearized, multi-register forms.
+ */
+
 #[derive(Debug)]
 struct Linearized {
     index: Vec<(Register,Register)>,
@@ -33,6 +44,11 @@ impl Linearized {
     }
 }
 
+/* allocate_subregs performs the allocation of linearized registers in two stages. In the first, the type of each
+ * register is examined and those of depth greater than zero are added to a todo list along with their depth. In the
+ * second this todo list is iterated over and linearized versions created. Two stages are needed as the linearization
+ * creates new registers during iteration.
+ */
 fn allocate_subregs(context: &mut GenContext) -> BTreeMap<Register,Linearized> {
     let mut targets = Vec::new();
     for (reg,type_) in context.types.each_register() {
@@ -48,12 +64,16 @@ fn allocate_subregs(context: &mut GenContext) -> BTreeMap<Register,Linearized> {
     out
 }
 
+/* UTILITY METHODS for procedures repeatedly used during linearization. */
+
+/* tmp_number_reg: allocate a new number register */
 fn tmp_number_reg(context: &mut GenContext) -> Register {
     let r = context.regalloc.allocate();
     context.types.add(&r,&MemberType::Base(BaseType::NumberType));
     r
 }
 
+/* create a register containing the legnth of the layer beneath the top */
 fn lower_seq_length(out: &mut Vec<Instruction>, context: &mut GenContext, lin: &Linearized, level: usize) -> Register {
     let reg = tmp_number_reg(context);
     if level == 0 {
@@ -133,7 +153,9 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::NumberConst(_,_) |
         Instruction::BooleanConst(_,_) |
         Instruction::StringConst(_,_) | 
-        Instruction::BytesConst(_,_) => out.push(instr.clone()),
+        Instruction::BytesConst(_,_) => {
+            out.push(instr.clone());
+        },
         Instruction::List(r) => {
             let lin = subregs.get(r).ok_or_else(|| format!("Missing info for register {:?}",r))?;
             out.push(Instruction::Nil(lin.data.clone()));
@@ -465,8 +487,9 @@ mod test {
         for s in &strings {
             print!("{}\n",s);
         }
-//        assert_eq!(vec![
-//        ],strings);
+        assert_eq!(vec![
+            "[[2], [], [], [], [0], [0], [], [], [], [0], [0], [], [], [], [1], [], [], [], [], []]"
+        ],prints.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>());
     }
 
     fn linearize_stable_pass() -> GenContext {

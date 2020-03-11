@@ -4,6 +4,26 @@ use crate::model::{ DefStore, Register, StructDef, EnumDef };
 use crate::typeinf::{ BaseType, ContainerType, MemberType, RouteExpr };
 use super::codegen::GenContext;
 
+/* simplification is the process of converting arbitrary assemblies of structs, enums and vecs into sets of vecs of
+ * simple values. To achieve this, vecs of structured types are converted to sets of vecs of simpler types.
+ * 
+ * dauphin datastructures cannot be defined recursively, so they can be ordered such that within the ordering
+ * containment occurs in only one direction. With such an order and starting at the largest type, data structures
+ * are simplified iteratively. After the complete elimination of one structure to generate new code, the code is
+ * considered completely afresh to eliminate the next.
+ * 
+ * For each elimination, first registers are made and then each instruction updated in turn.
+ * 
+ * Registers are made in two stages. First they are allocated and then refs are updated. refs refer to some origin
+ * register of the same type. Because registers have just been allocated for the whole type, there are now matching
+ * sets of registers to replace the ref and non-ref types. For each reference, the origin is updated to point to the
+ * relevant sub-register, copying the path. Any of those reference registers which refer to the type currently being 
+ * split are then replaced with a new origin and this part removed from the expression.
+ * 
+ * Extension proceeds slightly differently depending on whether a struct or an enum is extended. However, most
+ * instructions are extended in the same way and are handled in a common function.
+ */
+
 fn allocate_registers(context: &mut GenContext, member_types: &Vec<MemberType>, with_index: bool, container_type: ContainerType) -> Vec<Register> {
     let mut out = Vec::new();
     if with_index {
@@ -19,6 +39,7 @@ fn allocate_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
     out
 }
 
+/* extend_vertical applies the given operation to all subregisters. It's the operation to apply to most instrctions. */
 fn extend_vertical<F>(in_: Vec<&Register>, mapping: &HashMap<Register,Vec<Register>>,cb: F) -> Result<Vec<Instruction>,()>
         where F: Fn(Vec<Register>) -> Instruction {
     let mut expanded = Vec::new();
@@ -38,6 +59,7 @@ fn extend_vertical<F>(in_: Vec<&Register>, mapping: &HashMap<Register,Vec<Regist
     Ok(out)
 }
 
+/* Some easy value for unused enum branches */
 fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<Vec<Instruction>,()> {
     let mut out = Vec::new();
     match type_ {
