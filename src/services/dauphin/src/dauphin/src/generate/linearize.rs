@@ -492,6 +492,27 @@ mod test {
         ],prints.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>());
     }
 
+    #[test]
+    fn linearize_refsquare() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
+        simplify(&defstore,&mut context).expect("k");
+        print!("{:?}\n",context);
+        linearize(&mut context).expect("linearize");
+        print!("{:?}\n",context);
+        let (_prints,values,strings) = mini_interp(&defstore,&mut context);
+        print!("{:?}\n",values);
+        for s in &strings {
+            print!("{}\n",s);
+        }
+        assert_eq!(vec!["[[0],[2],[0],[4]]","[[0],[2],[9,9,9],[4]]"],strings);
+    }
+
     fn linearize_stable_pass() -> GenContext {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);

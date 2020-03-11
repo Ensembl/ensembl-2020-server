@@ -55,13 +55,13 @@ an etest3 has register structure:
 12 B.Y/A0
 13 B.Y/B0
 14 C/D        [boolean]
-15 D/D        [number]
+15 D/D
 16 D/A0
 17 D/B0
 18 D/A1
 19 D/B1
 
-2 - - - 0 0 - - - 0 0 - - - t 0 - - - -
+2 - - - 0 0 - - - 0 0 - - - t - - - - -
 
 */
 
