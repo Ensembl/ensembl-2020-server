@@ -320,7 +320,7 @@ fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
         let ref_subregs = &new_registers[ref_reg];
         let offset = if with_index { 1 } else { 0 };
         for i in 0..names.len() {
-            context.route.quantify_member(ref_reg,&ref_subregs[i+offset],&names[i]);
+            context.route.quantify_member(ref_reg,&ref_subregs[i+offset]);
         }
     }
     print!("{:?}\n",new_registers);

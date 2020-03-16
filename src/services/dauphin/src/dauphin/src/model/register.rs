@@ -2,7 +2,7 @@ use std::fmt;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-#[derive(Clone,Hash,PartialEq,Eq,PartialOrd,Ord)]
+#[derive(Clone,Copy,Hash,PartialEq,Eq,PartialOrd,Ord)]
 pub struct Register(usize);
 
 impl fmt::Debug for Register {

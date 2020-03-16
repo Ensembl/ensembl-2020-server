@@ -82,7 +82,6 @@ fn build_filter(harness: &mut HarnessInterp, seq: &Vec<RouteExpr>) -> Vec<usize>
                 }
                 source = Some(new_source);
             },
-            _ => {}
         }
         print!("      (after filter step {:?}: {:?})\n",r,source);
     }

@@ -5,8 +5,6 @@ use crate::model::Register;
 
 #[derive(Clone,Debug)]
 pub enum RouteExpr {
-    Member(String),
-    Square,
     Filter(Register),
     SeqFilter(Register,Register)
 }
@@ -69,26 +67,7 @@ impl Route {
         }
     }
 
-    fn remove_member(&self, expr: &Vec<RouteExpr>, name: &str) -> Option<Vec<RouteExpr>> {
-        let mut out = Vec::new();
-        let mut seen = false;
-        for expr in expr.iter() {
-            if !seen {
-                if let RouteExpr::Member(n) = expr {
-                    if name == n {
-                        seen = true;
-                        continue;
-                    } else {
-                        return None;
-                    }
-                }
-            }
-            out.push(expr.clone());
-        }
-        if seen { Some(out) } else { None }
-    }
-
-    pub fn quantify_member(&mut self, old_origin_reg: &Register, new_origin_reg: &Register, name: &str) {
+    pub fn quantify_member(&mut self, old_origin_reg: &Register, new_origin_reg: &Register) {
         let mut matching_origin = Vec::new();
         for (reg,(origin_reg,_)) in self.route.iter() {
             if origin_reg == old_origin_reg {
@@ -97,10 +76,8 @@ impl Route {
         }
         for reg in &matching_origin {
             let expr = self.route[reg].1.clone();
-            if let Some(new_expr) = self.remove_member(&expr,name) {
-                self.route.insert(reg.clone(),(new_origin_reg.clone(),new_expr));
-                print!("gonna have to change {:?} to use {:?} ({:?} has been split)\n",reg,new_origin_reg,old_origin_reg);
-            }
+            self.route.insert(reg.clone(),(new_origin_reg.clone(),expr));
+            print!("gonna have to change {:?} to use {:?} ({:?} has been split)\n",reg,new_origin_reg,old_origin_reg);
         }
     }
 }
