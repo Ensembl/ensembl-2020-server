@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use crate::generate::Instruction;
 use crate::model::{ DefStore, Register, StructDef, EnumDef };
-use crate::typeinf::{ BaseType, ContainerType, MemberType, RouteExpr };
+use crate::typeinf::{ BaseType, ContainerType, MemberType };
 use super::codegen::GenContext;
 
 /* simplification is the process of converting arbitrary assemblies of structs, enums and vecs into sets of vecs of
@@ -269,7 +269,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
     })
 }
 
-fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, names: &Vec<String>, base: BaseType, with_index: bool) -> Result<HashMap<Register,Vec<Register>>,()> {
+fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, base: BaseType, with_index: bool) -> Result<HashMap<Register,Vec<Register>>,()> {
     let mut target_registers = Vec::new();
     /* which registers will we be expanding? */
     for (reg,reg_type) in context.types.each_register() {
@@ -293,17 +293,15 @@ fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Resu
     let mut new_instrs : Vec<Instruction> = Vec::new();
     if let Some(decl) = defstore.get_struct(name) {
         let member_types = decl.get_member_types();
-        let names = decl.get_names();
         let base = BaseType::StructType(name.to_string());
-        let new_registers = make_new_registers(context,member_types,names,base,false)?;
+        let new_registers = make_new_registers(context,member_types,base,false)?;
         for instr in &context.instrs {
             new_instrs.extend(extend_struct_instr(name,decl,instr,&new_registers)?.iter().cloned());
         }
     } else if let Some(decl) = defstore.get_enum(name) {
         let member_types = decl.get_branch_types();
-        let names = decl.get_names();
         let base = BaseType::EnumType(name.to_string());
-        let new_registers = make_new_registers(context,member_types,names,base,true)?;
+        let new_registers = make_new_registers(context,member_types,base,true)?;
         print!("new_registers {:?}\n",new_registers);
         for instr in &context.instrs.clone() {
             new_instrs.extend(extend_enum_instr(defstore,context,name,decl,instr,&new_registers)?.iter().cloned());

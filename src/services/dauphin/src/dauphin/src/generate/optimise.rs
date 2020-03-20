@@ -22,6 +22,5 @@ pub fn remove_unused_registers(context: &mut GenContext) {
     }
     for reg in &unused {
         context.types.remove(reg);
-        context.route.remove(reg);
     }
 }

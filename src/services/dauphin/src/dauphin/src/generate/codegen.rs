@@ -5,19 +5,18 @@ use super::intstruction::Instruction;
 use crate::parser::{ Expression, Statement };
 use crate::model::{ Register, RegisterAllocator };
 use crate::model::DefStore;
-use crate::typeinf::{ BaseType, ExpressionType, Route, RouteExpr, SignatureMemberConstraint, TypeModel, Typing, MemberMode };
+use crate::typeinf::{ BaseType, ExpressionType, SignatureMemberConstraint, TypeModel, Typing, MemberMode };
 
 pub struct GenContext {
     pub instrs: Vec<Instruction>,
     pub regalloc: RegisterAllocator,
-    pub route: Route,
     pub types: TypeModel
 }
 
 impl fmt::Debug for GenContext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let instr_str : Vec<String> = self.instrs.iter().map(|v| format!("{:?}",v)).collect();
-        write!(f,"{:?}\n{:?}{}\n",self.types,self.route,instr_str.join(""))?;
+        write!(f,"{:?}\n{}\n",self.types,instr_str.join(""))?;
         Ok(())
     }
 }
@@ -35,7 +34,6 @@ impl<'a> CodeGen<'a> {
             context: GenContext {
                 instrs: Vec::new(),
                 regalloc: RegisterAllocator::new(),
-                route: Route::new(),
                 types: TypeModel::new()
             },
             defstore,

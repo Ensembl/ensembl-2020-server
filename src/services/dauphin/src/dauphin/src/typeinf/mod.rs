@@ -1,4 +1,3 @@
-mod route;
 mod types;
 mod typesinternal;
 mod typemodel;
@@ -11,6 +10,5 @@ pub use self::types::{
     SignatureMemberConstraint, MemberMode
 };
 
-pub use self::route::{ Route, RouteExpr };
 pub use self::typing::Typing;
 pub use self::typemodel::TypeModel;

@@ -2,7 +2,7 @@ use std::collections::{ HashMap };
 use crate::generate::Instruction;
 use crate::generate::GenContext;
 use crate::model::{ offset, DefStore, LinearPath, Register, RegisterPurpose };
-use crate::typeinf::{ MemberType, RouteExpr, MemberMode };
+use crate::typeinf::{ MemberType, MemberMode };
 
 struct HarnessInterp {
     values: HashMap<Option<Register>,Vec<usize>>,
@@ -50,91 +50,22 @@ impl HarnessInterp {
     }
 }
 
-fn assign_unfiltered(context: &GenContext, harness: &mut HarnessInterp, regs: &Vec<Register>) {
+fn assign_unfiltered(harness: &mut HarnessInterp, regs: &Vec<Register>) {
     let n = regs.len()/2;
     for i in 0..n {                            
-        let r = context.route.get(&regs[i]).expect(&format!("missing route for {:?}",regs[i]));
-        harness.insert(&r.0,harness.get(&regs[i+n]).to_vec()); // XXX don't copy when we have CoW!
+        harness.insert(&regs[i],harness.get(&regs[i+n]).to_vec()); // XXX don't copy when we have CoW!
     }        
 }
 
-// XXX efficiently via iterators
-fn build_filter(harness: &mut HarnessInterp, seq: &Vec<RouteExpr>) -> Vec<usize> {
-    let mut source : Option<Vec<usize>> = None;
-    for r in seq {
-        match r {
-            RouteExpr::SeqFilter(off_reg,len_reg) => {
-                let offs = harness.get(off_reg);
-                let lens = harness.get(len_reg);
-                let mut len_iter = lens.iter();
-                let mut new_source = Vec::new();
-                for off in offs {
-                    let len = len_iter.next().unwrap();
-                    match source {
-                        None => {
-                            for i in 0..*len {
-                                new_source.push(off+i);
-                            }
-                        },
-                        Some(ref mut src) => {
-                            for i in 0..*len {
-                                new_source.push(src[off+i]);
-                            }
-                        }
-                    }
-                }
-                source = Some(new_source);
-            },
-            RouteExpr::Filter(reg) => {
-                let bools = harness.get(reg);
-                let mut new_source = Vec::new();
-                for (i,b) in bools.iter().enumerate() {
-                    if *b != 0 {
-                        match source {
-                            None => { new_source.push(i); },
-                            Some(ref mut src) => { new_source.push(src[i]); }
-                        }
-                    }
-                }
-                source = Some(new_source);
-            }
-        }
-        print!("      (after filter step {:?}: {:?})\n",r,source);
-    }
-    source.unwrap()
-}
-
-fn copy_non_top(context: &GenContext, harness: &mut HarnessInterp, offsets: &Vec<RegisterPurpose>, regs: &Vec<Register>) -> usize {
-    /* relies on ordering of innter-to-outer */
-    let mut offset = 0;
-    let n = regs.len()/2;
-    for (j,purpose) in offsets.iter().enumerate() {
-        if !purpose.is_top() {
-            if let Some(r) = context.route.get(&regs[j]) {
-                let applied_offset = match purpose.get_linear() {
-                    LinearPath::Offset(_) => offset,
-                    _ => 0
-                };
-                let mut new_values = harness.get(&regs[j+n]).iter().map(|x| x+applied_offset).collect();
-                let new_offset = harness.get(&r.0).len();
-                print!("      non-top copy to {:?} offset={} (old len {}) from {:?} containing {:?}\n",r.0,offset,new_offset,&regs[j+n],new_values);
-                harness.get_mut(&r.0).append(&mut new_values); // XXX no-dup flag
-                offset = new_offset;
-            }            
-        }
-    }
-    offset
-}
-
-fn assign(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType)>, regs: &Vec<Register>) {
+fn assign(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType)>, regs: &Vec<Register>) {
     if types[0].0 == MemberMode::LValue {
-        assign_unfiltered(context,harness,regs);
+        assign_unfiltered(harness,regs);
     } else {
-        assign_filtered(defstore,context,harness,types,regs);
+        assign_filtered(defstore,harness,types,regs);
     }
 }
 
-fn assign_filtered(defstore: &DefStore, context: &GenContext, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType)>, regs: &Vec<Register>) {
+fn assign_filtered(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType)>, regs: &Vec<Register>) {
     let len = (regs.len()-1)/2;
     let filter = regs[0];
     let left_all = &regs[1..len+1];
@@ -288,9 +219,6 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
     for instr in &context.instrs {
         for r in instr.get_registers() {
             print!("{:?}={:?}",r,harness.get(&r));
-            if let Some(route) = context.route.get(&r) {
-                print!(" [{:?}]",route);
-            }
             print!("\n");
         }
         print!("{:?}",instr);
@@ -359,7 +287,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             Instruction::Call(name,types,regs) => {
                 match &name[..] {
                     "assign" => {
-                        assign(defstore,context,&mut harness,types,regs);
+                        assign(defstore,&mut harness,types,regs);
                     },
                     "print_regs" => {
                         let mut print = Vec::new();
@@ -388,9 +316,6 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
         }
         for r in instr.get_registers() {
             print!("{:?}={:?}",r,harness.get(&r));
-            if let Some(route) = context.route.get(&r) {
-                print!(" [{:?}]",route);
-            }
             print!("\n");
         }
     }

@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 use crate::model::{ Register };
-use crate::typeinf::{ BaseType, MemberType, RouteExpr };
+use crate::typeinf::{ BaseType, MemberType };
 use super::codegen::GenContext;
 use super::intstruction::Instruction;
 
@@ -54,12 +54,12 @@ fn allocate_subregs(context: &mut GenContext) -> BTreeMap<Register,Linearized> {
     for (reg,type_) in context.types.each_register() {
         let depth = type_.depth();
         if depth > 0 {
-            targets.push((reg.clone(),type_.clone(),depth));
+            targets.push((*reg,type_.clone(),depth));
         }
     }
     let mut out = BTreeMap::new();
     for (reg,type_,depth) in &targets {
-        out.insert(reg.clone(),Linearized::new(context,type_,*depth));
+        out.insert(*reg,Linearized::new(context,type_,*depth));
     }
     out
 }
@@ -77,37 +77,32 @@ fn tmp_number_reg(context: &mut GenContext) -> Register {
 fn lower_seq_length(out: &mut Vec<Instruction>, context: &mut GenContext, lin: &Linearized, level: usize) -> Register {
     let reg = tmp_number_reg(context);
     if level == 0 {
-        out.push(Instruction::Length(reg.clone(),lin.data.clone()));
+        out.push(Instruction::Length(reg,lin.data.clone()));
     } else {
-        out.push(Instruction::Length(reg.clone(),lin.index[level-1].0.clone()));
+        out.push(Instruction::Length(reg,lin.index[level-1].0));
     }
     reg
-}
-
-fn add_copy(out: &mut Vec<Instruction>, context: &mut GenContext, dst: &Register, src: &Register) {
-    out.push(Instruction::Copy(dst.clone(),src.clone()));
-    context.route.copy(dst,src);
 }
 
 fn push_copy_level(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Linearized, lin_src: &Linearized, level: usize) {
     /* offset is offset in next layer down (be it index or data) */
     let offset = lower_seq_length(out,context,lin_dst,level);
     let tmp = tmp_number_reg(context);
-    add_copy(out,context,&tmp,&lin_src.index[level].0);
-    out.push(Instruction::Add(tmp.clone(),offset.clone()));
-    out.push(Instruction::Append(lin_dst.index[level].0.clone(),tmp));
-    out.push(Instruction::Append(lin_dst.index[level].1.clone(),lin_src.index[level].1.clone()));
+    out.push(Instruction::Copy(tmp,lin_src.index[level].0));
+    out.push(Instruction::Add(tmp,offset.clone()));
+    out.push(Instruction::Append(lin_dst.index[level].0,tmp));
+    out.push(Instruction::Append(lin_dst.index[level].1,lin_src.index[level].1));
 }
 
 fn push_top(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Linearized, lin_src: &Linearized, level: usize) {
     /* top level offset is current length of next level down plus offset in source */
     let src_len = lower_seq_length(out,context,lin_dst,level);
     let tmp = tmp_number_reg(context);
-    add_copy(out,context,&tmp,&lin_src.index[level].0);
-    out.push(Instruction::Add(tmp.clone(),src_len.clone()));
-    out.push(Instruction::Append(lin_dst.index[level].0.clone(),tmp));
+    out.push(Instruction::Copy(tmp,lin_src.index[level].0));
+    out.push(Instruction::Add(tmp,src_len));
+    out.push(Instruction::Append(lin_dst.index[level].0,tmp));
     /* top level lengths are copied over */
-    out.push(Instruction::Append(lin_dst.index[level].1.clone(),lin_src.index[level].1.clone()));
+    out.push(Instruction::Append(lin_dst.index[level].1,lin_src.index[level].1));
 }
 
 fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src: &Register, mut cb: F)
@@ -151,23 +146,23 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         },
         Instruction::List(r) => {
             let lin = subregs.get(r).ok_or_else(|| format!("Missing info for register {:?}",r))?;
-            out.push(Instruction::Nil(lin.data.clone()));
+            out.push(Instruction::Nil(lin.data));
             for (start,len) in &lin.index {
-                out.push(Instruction::Nil(start.clone()));
-                out.push(Instruction::Nil(len.clone()));
+                out.push(Instruction::Nil(*start));
+                out.push(Instruction::Nil(*len));
             }
         },
         Instruction::Call(name,type_,regs) => {
             let mut new = Vec::new();
             for r in regs {
                 if let Some(lin_src) = subregs.get(r) {
-                    new.push(lin_src.data.clone());
+                    new.push(lin_src.data);
                     for i in 0..lin_src.index.len() {
-                        new.push(lin_src.index[i].0.clone());
-                        new.push(lin_src.index[i].1.clone());
+                        new.push(lin_src.index[i].0);
+                        new.push(lin_src.index[i].1);
                     }
                 } else {
-                    new.push(r.clone());
+                    new.push(*r);
                 }
             }
             out.push(Instruction::Call(name.clone(),type_.clone(),new));
@@ -179,20 +174,18 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 for level in (0..lin_src.index.len()-1).rev() {
                     push_copy_level(out,context,lin_dst,lin_src,level);
                 }
-                out.push(Instruction::Append(lin_dst.data.clone(),lin_src.data.clone()));
+                out.push(Instruction::Append(lin_dst.data,lin_src.data));
             } else {
-                out.push(Instruction::Append(dst.clone(),src.clone()));
+                out.push(Instruction::Append(*dst,*src));
             }
         },
         Instruction::Copy(dst,src) => {
             linear_extend(subregs,dst,src, |d,s| {
-                context.route.set_empty(d,s);
-                add_copy(out,context,d,s); 
+                out.push(Instruction::Copy(*d,*s));
             });
         },
         Instruction::LValue(dst,src) => {
             linear_extend(subregs,dst,src, |d,s| {
-                context.route.set_empty(d,s);
                 out.push(Instruction::Alias(*d,*s));
             });
         },
@@ -217,42 +210,41 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?} A",src))?;
             if lin_src.index.len() > 1 {
                 let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?} B",dst))?;
-                add_copy(out,context,&lin_dst.data,&lin_src.data);
+                out.push(Instruction::Copy(lin_dst.data,lin_src.data));
                 let top_level = lin_dst.index.len()-1;
                 if top_level > 0 {
                     for level in 0..top_level {
-                        add_copy(out,context,&lin_dst.index[level].0,&lin_src.index[level].0);
-                        add_copy(out,context,&lin_dst.index[level].1,&lin_src.index[level].1);
+                        out.push(Instruction::Copy(lin_dst.index[level].0,lin_src.index[level].0));
+                        out.push(Instruction::Copy(lin_dst.index[level].1,lin_src.index[level].1));
                     }
                 }
-                out.push(Instruction::SeqFilter(lin_dst.index[top_level].0.clone(),lin_src.index[top_level].0.clone(),
-                                                lin_src.index[top_level+1].0.clone(),lin_src.index[top_level+1].1.clone()));
-                out.push(Instruction::SeqFilter(lin_dst.index[top_level].1.clone(),lin_src.index[top_level].1.clone(),
-                                                lin_src.index[top_level+1].0.clone(),lin_src.index[top_level+1].1.clone()));
+                out.push(Instruction::SeqFilter(lin_dst.index[top_level].0,lin_src.index[top_level].0,
+                                                lin_src.index[top_level+1].0,lin_src.index[top_level+1].1));
+                out.push(Instruction::SeqFilter(lin_dst.index[top_level].1,lin_src.index[top_level].1,
+                                                lin_src.index[top_level+1].0,lin_src.index[top_level+1].1));
             } else {
-                out.push(Instruction::SeqFilter(dst.clone(),lin_src.data.clone(),
-                                                lin_src.index[0].0.clone(),lin_src.index[0].1.clone()));
+                out.push(Instruction::SeqFilter(*dst,lin_src.data,lin_src.index[0].0,lin_src.index[0].1));
             }
         },
         Instruction::At(dst,src) => {
             if let Some(lin_src) = subregs.get(src) {
                 let top_level = lin_src.index.len()-1;
-                out.push(Instruction::SeqAt(dst.clone(),lin_src.index[top_level].1.clone()));
+                out.push(Instruction::SeqAt(*dst,lin_src.index[top_level].1));
             } else {
-                out.push(Instruction::At(dst.clone(),src.clone()));
+                out.push(Instruction::At(*dst,*src));
             }
         },
         Instruction::Filter(dst,src,f) => {
             if let Some(lin_src) = subregs.get(src) {
                 let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
                 let top_level = lin_dst.index.len()-1;
-                out.push(Instruction::Filter(lin_dst.index[top_level].0.clone(),lin_src.index[top_level].0.clone(),f.clone()));
-                out.push(Instruction::Filter(lin_dst.index[top_level].1.clone(),lin_src.index[top_level].1.clone(),f.clone()));
-                add_copy(out,context,&lin_dst.data,&lin_src.data);
+                out.push(Instruction::Filter(lin_dst.index[top_level].0,lin_src.index[top_level].0,f.clone()));
+                out.push(Instruction::Filter(lin_dst.index[top_level].1,lin_src.index[top_level].1,f.clone()));
+                out.push(Instruction::Copy(lin_dst.data,lin_src.data));
                 if top_level > 0 {
                     for level in 0..top_level {
-                        add_copy(out,context,&lin_dst.index[level].0,&lin_src.index[level].0);
-                        add_copy(out,context,&lin_dst.index[level].1,&lin_src.index[level].1);
+                        out.push(Instruction::Copy(lin_dst.index[level].0,lin_src.index[level].0));
+                        out.push(Instruction::Copy(lin_dst.index[level].1,lin_src.index[level].1));
                     }
                 }
             } else {
@@ -262,27 +254,27 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::Star(dst,src) => {
             let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
             let top_level = lin_dst.index.len()-1;
-            out.push(Instruction::Nil(lin_dst.index[top_level].0.clone()));
+            out.push(Instruction::Nil(lin_dst.index[top_level].0));
             let src_len = if let Some(lin_src) = subregs.get(src) {
                 let src_len = lower_seq_length(out,context,lin_src,top_level);
                 if top_level > 0 {
                     for level in 0..top_level {
-                        add_copy(out,context,&lin_dst.index[level].0,&lin_src.index[level].0);
-                        add_copy(out,context,&lin_dst.index[level].1,&lin_src.index[level].1);
+                        out.push(Instruction::Copy(lin_dst.index[level].0,lin_src.index[level].0));
+                        out.push(Instruction::Copy(lin_dst.index[level].1,lin_src.index[level].1));
                     }
                 }
-                out.push(Instruction::Append(lin_dst.data.clone(),lin_src.data.clone()));
+                out.push(Instruction::Append(lin_dst.data,lin_src.data));
                 src_len
             } else {
                 let src_len = tmp_number_reg(context);
-                out.push(Instruction::Length(src_len.clone(),src.clone()));
-                out.push(Instruction::Append(lin_dst.data.clone(),src.clone()));
+                out.push(Instruction::Length(src_len,*src));
+                out.push(Instruction::Append(lin_dst.data,*src));
                 src_len
             };
             let zero_reg = tmp_number_reg(context);
-            out.push(Instruction::NumberConst(zero_reg.clone(),0.));
-            out.push(Instruction::Append(lin_dst.index[top_level].0.clone(),zero_reg));
-            out.push(Instruction::Append(lin_dst.index[top_level].1.clone(),src_len.clone()));
+            out.push(Instruction::NumberConst(zero_reg,0.));
+            out.push(Instruction::Append(lin_dst.index[top_level].0,zero_reg));
+            out.push(Instruction::Append(lin_dst.index[top_level].1,src_len));
         },
     };
     Ok(())
@@ -296,7 +288,6 @@ fn linearize_real(context: &mut GenContext) -> Result<BTreeMap<Register,Lineariz
         linearize_one(&mut instrs,context,&subregs,&instr)?;
     }
     context.instrs = instrs;
-    print!("subregs {:?}\n",subregs);
     Ok(subregs)
 }
 
@@ -324,7 +315,7 @@ mod test {
                     if let Some(reg) = subregs.get(&vv[1]) {
                         lin.push(reg);
                     } else {
-                        norm.push(vv[1].clone());
+                        norm.push(vv[1]);
                     }
                 }
             }
