@@ -1,5 +1,5 @@
 use crate::generate::{ Instruction };
-use crate::typeinf::MemberType;
+use crate::typeinf::MemberMode;
 use super::codegen::GenContext;
 
 pub fn call(context: &mut GenContext) -> Result<(),String> {
@@ -7,13 +7,17 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
     for instr in &context.instrs.to_vec() {
         match instr {
             Instruction::Proc(name,regs) => {
-                let types = regs.iter().map(|reg| context.types.get(reg).unwrap().clone()).collect();
-                out.push(Instruction::Call(name.to_string(),types,regs.to_vec()));
+                let mut sig = Vec::new();
+                for reg in regs {
+                    let type_ = context.types.get(&reg.1).unwrap().clone();
+                    sig.push((reg.0,type_));
+                }
+                out.push(Instruction::Call(name.to_string(),sig,regs.iter().map(|x| x.1).collect()));
             },
             Instruction::Operator(name,dst,src) => {
                 let mut regs = dst.to_vec();
                 regs.append(&mut src.to_vec());
-                let types : Vec<MemberType> = regs.iter().map(|reg| context.types.get(reg).unwrap().clone()).collect();
+                let types = regs.iter().map(|reg| (MemberMode::RValue,context.types.get(reg).unwrap().clone())).collect();
                 out.push(Instruction::Call(name.to_string(),types,regs.to_vec()));
             },
             _ => { out.push(instr.clone()); }

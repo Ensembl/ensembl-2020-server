@@ -89,16 +89,6 @@ fn add_copy(out: &mut Vec<Instruction>, context: &mut GenContext, dst: &Register
     context.route.copy(dst,src);
 }
 
-fn add_refseq_filter(out: &mut Vec<Instruction>, context: &mut GenContext, dst: &Register, src: &Register, a: &Register, b: &Register) {
-    out.push(Instruction::RefSeqFilter(dst.clone(),src.clone(),a.clone(),b.clone()));
-    context.route.set_derive(&dst,&src,&RouteExpr::SeqFilter(a.clone(),b.clone()));
-}
-
-fn add_ref_filter(out: &mut Vec<Instruction>, context: &mut GenContext, dst: &Register, src: &Register, f: &Register) {
-    out.push(Instruction::RefFilter(dst.clone(),src.clone(),f.clone()));
-    context.route.set_derive(&dst,&src,&RouteExpr::Filter(f.clone()));
-}
-
 fn push_copy_level(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Linearized, lin_src: &Linearized, level: usize) {
     /* offset is offset in next layer down (be it index or data) */
     let offset = lower_seq_length(out,context,lin_dst,level);
@@ -142,18 +132,21 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::EValue(_,_,_,_) |
         Instruction::ETest(_,_,_,_) |
         Instruction::SeqFilter(_,_,_,_) |
-        Instruction::RefSeqFilter(_,_,_,_) |
-        Instruction::RefSValue(_,_,_,_) |
         Instruction::Proc(_,_) |
         Instruction::Operator(_,_,_) |
-        Instruction::RefEValue(_,_,_,_) |
-        Instruction::SeqAt(_,_) => {
+        Instruction::Alias(_,_) | 
+        Instruction::Run(_,_,_) |
+        Instruction::SeqAt(_,_) |
+        Instruction::Length(_,_) | 
+        Instruction::Add(_,_) => {
             panic!("unexpected instruction {:?}",instr);
         },
         Instruction::NumberConst(_,_) |
         Instruction::BooleanConst(_,_) |
-        Instruction::StringConst(_,_) | 
-        Instruction::BytesConst(_,_) => {
+        Instruction::StringConst(_,_) |
+        Instruction::BytesConst(_,_) |
+        Instruction::Nil(_) |
+        Instruction::NumEq(_,_,_) => {
             out.push(instr.clone());
         },
         Instruction::List(r) => {
@@ -191,29 +184,39 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 out.push(Instruction::Append(dst.clone(),src.clone()));
             }
         },
-        Instruction::Nil(_) => {
-            out.push(instr.clone());
-        },
         Instruction::Copy(dst,src) => {
             linear_extend(subregs,dst,src, |d,s| {
                 context.route.set_empty(d,s);
                 add_copy(out,context,d,s); 
             });
         },
-        Instruction::Ref(dst,src) => {
+        Instruction::LValue(dst,src) => {
             linear_extend(subregs,dst,src, |d,s| {
                 context.route.set_empty(d,s);
-                out.push(Instruction::Ref(d.clone(),s.clone()));
+                out.push(Instruction::Alias(*d,*s));
             });
         },
-        Instruction::NumEq(_,_,_) => {
-            out.push(instr.clone())
+        Instruction::RefSquare(dst,src) => {
+            let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?} C",src))?;
+            if let Some(lin_dst) = subregs.get(dst) {
+                out.push(Instruction::Alias(lin_dst.data,lin_src.data));
+                for level in 0..lin_dst.index.len() {
+                    out.push(Instruction::Alias(lin_dst.index[level].0,lin_src.index[level].0));
+                    out.push(Instruction::Alias(lin_dst.index[level].1,lin_src.index[level].1));
+                }
+            } else {
+                out.push(Instruction::Alias(*dst,lin_src.data));
+            }
         },
-        // XXX unfiltered tracking
+        Instruction::FilterSquare(dst,src) => {
+            let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?} D",src))?;
+            let top_level = lin_src.index.len()-1;
+            out.push(Instruction::Run(*dst,lin_src.index[top_level].0,lin_src.index[top_level].1));
+        },
         Instruction::Square(dst,src) => {
-            let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+            let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?} A",src))?;
             if lin_src.index.len() > 1 {
-                let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
+                let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?} B",dst))?;
                 add_copy(out,context,&lin_dst.data,&lin_src.data);
                 let top_level = lin_dst.index.len()-1;
                 if top_level > 0 {
@@ -229,51 +232,6 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             } else {
                 out.push(Instruction::SeqFilter(dst.clone(),lin_src.data.clone(),
                                                 lin_src.index[0].0.clone(),lin_src.index[0].1.clone()));
-            }
-        },
-        Instruction::RefSquare(dst,src) => {
-            let lin_src = subregs.get(src).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
-            if lin_src.index.len() > 1 {
-                let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
-                add_copy(out,context,&lin_dst.data,&lin_src.data);
-                let data_type = context.types.get(&lin_src.data).unwrap().clone();
-                context.types.add(&lin_dst.data,&data_type);
-                let top_level = lin_dst.index.len()-1;
-                if top_level > 0 {
-                    for level in 0..top_level {
-                        add_copy(out,context,&lin_dst.index[level].0,&lin_src.index[level].0);
-                        add_copy(out,context,&lin_dst.index[level].1,&lin_src.index[level].1);
-                    }
-                }
-                add_refseq_filter(out,context,&lin_dst.index[top_level].0,&lin_src.index[top_level].0,
-                                  &lin_src.index[top_level+1].0,&lin_src.index[top_level+1].1);
-                add_refseq_filter(out,context,&lin_dst.index[top_level].1,&lin_src.index[top_level].1,
-                                  &lin_src.index[top_level+1].0,&lin_src.index[top_level+1].1);
-            } else {
-                let tmp_a = context.regalloc.allocate();
-                context.types.add(&tmp_a,&MemberType::Base(BaseType::NumberType));
-                let tmp_b = context.regalloc.allocate();
-                context.types.add(&tmp_b,&MemberType::Base(BaseType::NumberType));
-                add_copy(out,context,&tmp_a,&lin_src.index[0].0);
-                add_copy(out,context,&tmp_b,&lin_src.index[0].1);
-                add_refseq_filter(out,context,&dst,&lin_src.data,&tmp_a,&tmp_b);
-            }
-        },
-        Instruction::RefFilter(dst,src,f) => {
-            if let Some(lin_src) = subregs.get(src) {
-                let lin_dst = subregs.get(dst).unwrap();
-                let top_level = lin_dst.index.len()-1;
-                add_ref_filter(out,context,&lin_dst.index[top_level].0.clone(),&lin_src.index[top_level].0.clone(),&f.clone());
-                add_ref_filter(out,context,&lin_dst.index[top_level].1.clone(),&lin_src.index[top_level].1.clone(),&f.clone());
-                add_copy(out,context,&lin_dst.data,&lin_src.data);
-                if top_level > 0 {
-                    for level in 0..top_level {
-                        add_copy(out,context,&lin_dst.index[level].0,&lin_src.index[level].0);
-                        add_copy(out,context,&lin_dst.index[level].1,&lin_src.index[level].1);
-                    }
-                }
-            } else {
-                add_ref_filter(out,context,dst,src,f);
             }
         },
         Instruction::At(dst,src) => {
@@ -300,9 +258,6 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
             } else {
                 out.push(instr.clone());
             }
-        },
-        Instruction::Length(_,_) | Instruction::Add(_,_) => {
-            return Err(format!("Bad instruction {:?}",instr.clone()));
         },
         Instruction::Star(dst,src) => {
             let lin_dst = subregs.get(dst).ok_or_else(|| format!("Missing info for register {:?}",dst))?;
@@ -444,7 +399,7 @@ mod test {
         for s in &strings {
             print!("{}\n",s);
         }
-        assert_eq!(vec![
+        let cmp = vec![
             "1",
             "2,3",
             "[4,5]",
@@ -463,7 +418,10 @@ mod test {
             "[3]",
             "[2]",
             "[[],[1,2],[3],[4]]"
-        ],strings);
+        ];
+        for (i,string) in strings.iter().enumerate() {
+            assert_eq!(cmp[i],string);
+        }
     }
 
     #[test]
@@ -510,7 +468,7 @@ mod test {
         for s in &strings {
             print!("{}\n",s);
         }
-        assert_eq!(vec!["[[0],[2],[0],[4]]","[[0],[2],[9,9,9],[4]]"],strings);
+        assert_eq!(vec!["[[0],[2],[0],[4]]","[[0],[2],[9,9,9],[9,9,9]]","[0,0,0]","[[0],[2],[8,9,9],[9,9,9]]"],strings);
     }
 
     fn linearize_stable_pass() -> GenContext {

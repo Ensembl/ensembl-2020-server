@@ -74,7 +74,7 @@ impl TypeStore {
     }
 
     fn try_unify(&self, a: &ExpressionConstraint, b: &ExpressionConstraint) -> Result<Option<(Key,ExpressionConstraint)>,String> {
-        self.unify(a,b).map_err(|_| format!("Cannout unify {:?} and {:?}",a,b))
+        self.unify(a,b).map_err(|_| format!("Cannot unify {:?} and {:?}",a,b))
     }
 
     fn replace_placeholder(&mut self, key: &Key, constraint: &ExpressionConstraint) -> Result<(),String> {

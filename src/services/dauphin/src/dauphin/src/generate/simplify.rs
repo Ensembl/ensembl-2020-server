@@ -98,7 +98,6 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
         Instruction::SeqFilter(_,_,_,_) |
-        Instruction::RefSeqFilter(_,_,_,_) |
         Instruction::Length(_,_) |
         Instruction::Add(_,_) |
         Instruction::Operator(_,_,_) |
@@ -115,66 +114,68 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         Instruction::SValue(_,_,_,_) |
         Instruction::EValue(_,_,_,_) |
         Instruction::ETest(_,_,_,_) |
-        Instruction::RefSValue(_,_,_,_) |
-        Instruction::RefEValue(_,_,_,_) |
+        Instruction::Alias(_,_) |
+        Instruction::Run(_,_,_) |
         Instruction::NumEq(_,_,_) => {
             vec![instr.clone()]
         },
         Instruction::Nil(r) => {
             extend_vertical(vec![r],mapping,|regs| {
-                Instruction::Nil(regs[0].clone())
+                Instruction::Nil(regs[0])
             })?
         },
-        Instruction::Ref(dst,src) => {
+        Instruction::LValue(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Ref(regs[0].clone(),regs[1].clone())
+                Instruction::LValue(regs[0],regs[1])
             })?
         },
         Instruction::Copy(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Copy(regs[0].clone(),regs[1].clone())
+                Instruction::Copy(regs[0],regs[1])
             })?
         },  
         Instruction::Append(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Append(regs[0].clone(),regs[1].clone())
+                Instruction::Append(regs[0],regs[1])
             })?
         },  
         Instruction::List(reg) => {
             extend_vertical(vec![reg],mapping,|regs| {
-                Instruction::List(regs[0].clone())
+                Instruction::List(regs[0])
             })?
         },  
         Instruction::Square(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Square(regs[0].clone(),regs[1].clone())
+                Instruction::Square(regs[0],regs[1])
             })?
         },
         Instruction::RefSquare(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::RefSquare(regs[0].clone(),regs[1].clone())
+                Instruction::RefSquare(regs[0],regs[1])
             })?
+        },
+        Instruction::FilterSquare(dst,src) => {
+            if let Some(srcs) = mapping.get(&src) {
+                vec![Instruction::FilterSquare(*dst,srcs[0])]
+            } else {
+                vec![Instruction::FilterSquare(*dst,*src)]
+            }
         },
         Instruction::Star(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Star(regs[0].clone(),regs[1].clone())
+                Instruction::Star(regs[0],regs[1])
             })?
         },
         Instruction::Filter(dst,src,filter) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Filter(regs[0].clone(),regs[1].clone(),filter.clone())
-            })?
-        },
-        Instruction::RefFilter(dst,src,filter) => {
-            extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::RefFilter(regs[0].clone(),regs[1].clone(),filter.clone())
+                Instruction::Filter(regs[0],regs[1],filter.clone())
             })?
         },
         Instruction::At(dst,src) => {
             if let Some(srcs) = mapping.get(&src) {
-                vec![Instruction::At(dst.clone(),srcs[0].clone())]
+                vec![Instruction::At(*dst,srcs[0])]
             } else {
-                vec![Instruction::At(dst.clone(),src.clone())]
+                vec![Instruction::At(*dst,*src)]
             }
         },
         Instruction::Call(name,type_,regs) => {
@@ -210,12 +211,6 @@ fn extend_struct_instr(obj_name: &str, decl: &StructDef, instr: &Instruction, ma
             }
         },
         Instruction::SValue(field,name,dst,src) if name == obj_name => {
-            let dests = mapping.get(src).ok_or_else(|| ())?;
-            print!("{:?} find {:?}\n",decl.get_names(),field);
-            let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| ())?;
-            vec![Instruction::Copy(dst.clone(),dests[pos].clone())]
-        },
-        Instruction::RefSValue(field,name,dst,src) if name == obj_name => {
             let dests = mapping.get(src).ok_or_else(|| ())?;
             print!("{:?} find {:?}\n",decl.get_names(),field);
             let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| ())?;
@@ -270,19 +265,6 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             out.push(Instruction::NumEq(dst.clone(),srcs[0].clone(),posreg));
             out
         },
-        Instruction::RefEValue(field,name,dst,src) if name == obj_name => {
-            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-            let srcs = mapping.get(src).ok_or_else(|| ())?;
-            let mut out = Vec::new();
-            let filter = context.regalloc.allocate();
-            let posreg = context.regalloc.allocate();
-            out.push(Instruction::NumberConst(posreg.clone(),pos as f64));
-            context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
-            out.push(Instruction::NumEq(filter.clone(),srcs[0].clone(),posreg));
-            context.route.set_derive(&dst,&srcs[pos+1],&RouteExpr::Filter(filter.clone()));
-            out.push(Instruction::RefFilter(dst.clone(),srcs[pos+1].clone(),filter));
-            out
-        },
         instr => extend_common(instr,mapping)?
     })
 }
@@ -302,27 +284,7 @@ fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
         let type_ = context.types.get(reg).ok_or_else(|| ())?.clone();
         new_registers.insert(reg.clone(),allocate_registers(context,member_types,with_index,type_.get_container()));
     }
-    /* make sure all the ref registers we're splitting get updated to use the split non-ref targets */
-    for ref_reg in &target_registers {
-        if let Some((origin_reg,_)) = context.route.get(ref_reg) {
-            let ref_subregs = &new_registers[ref_reg];
-            let origin_subregs = &new_registers[origin_reg];
-            if origin_subregs.len() != ref_subregs.len() {
-                return Err(());
-            }
-            for i in 0..origin_subregs.len() {
-                context.route.split_origin(&ref_subregs[i],&origin_subregs[i],&ref_reg);
-            }
-        }
-    }
     /* move any refs which include our member forward to new origin */
-    for ref_reg in &target_registers {
-        let ref_subregs = &new_registers[ref_reg];
-        let offset = if with_index { 1 } else { 0 };
-        for i in 0..names.len() {
-            context.route.quantify_member(ref_reg,&ref_subregs[i+offset]);
-        }
-    }
     print!("{:?}\n",new_registers);
     Ok(new_registers)
 }

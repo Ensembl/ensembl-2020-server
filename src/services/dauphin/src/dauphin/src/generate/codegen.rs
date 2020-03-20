@@ -5,7 +5,7 @@ use super::intstruction::Instruction;
 use crate::parser::{ Expression, Statement };
 use crate::model::{ Register, RegisterAllocator };
 use crate::model::DefStore;
-use crate::typeinf::{ BaseType, ExpressionType, Route, RouteExpr, SignatureMemberConstraint, TypeModel, Typing };
+use crate::typeinf::{ BaseType, ExpressionType, Route, RouteExpr, SignatureMemberConstraint, TypeModel, Typing, MemberMode };
 
 pub struct GenContext {
     pub instrs: Vec<Instruction>,
@@ -46,7 +46,7 @@ impl<'a> CodeGen<'a> {
 
     fn add_instr(&mut self, instr: Instruction) -> Result<(),String> {
         self.typing.add(&instr.get_constraint(self.defstore)?)?;
-        self.context.instrs.push(instr);
+        self.context.instrs.push(instr.clone());
         Ok(())
     }
 
@@ -131,19 +131,7 @@ impl<'a> CodeGen<'a> {
         })
     }
 
-    fn derive_rdot(&mut self, reg: Register, f: &str) -> Result<Register,String> {
-        let subreg = self.context.regalloc.allocate();
-        self.add_instr(match self.typing.get(&reg) {
-            ExpressionType::Base(BaseType::StructType(name)) =>
-                Instruction::SValue(f.to_string(),name.clone(),subreg,reg),
-            ExpressionType::Base(BaseType::EnumType(name)) =>
-                Instruction::EValue(f.to_string(),name.clone(),subreg,reg),
-            _ => return Err(format!("unexpected type\n"))
-        })?;
-        Ok(subreg)
-    }
-
-    fn build_lvalue(&mut self, expr: &Expression, top: bool) -> Result<(Register,Register),String> {
+    fn build_lvalue(&mut self, expr: &Expression, top: bool, unfiltered_in: bool) -> Result<(Register,Option<Register>,Register),String> {
         match expr {
             Expression::Identifier(id) => {
                 if top {
@@ -155,76 +143,69 @@ impl<'a> CodeGen<'a> {
                 }
                 let real_reg = self.regnames[id];
                 let lvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Ref(lvalue_reg,real_reg))?;
-                self.context.route.set_empty(&lvalue_reg,&real_reg);
-                Ok((lvalue_reg,real_reg))
+                self.add_instr(Instruction::LValue(lvalue_reg,real_reg))?;
+                Ok((lvalue_reg,None,real_reg))
             },
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
-                    let (lvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false)?;
+                    let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
                     let lvalue_reg = self.context.regalloc.allocate();
-                    let rvalue_reg = self.derive_rdot(rvalue_subreg,f)?;
-                    self.add_instr(Instruction::RefSValue(f.clone(),name.to_string(),lvalue_reg,lvalue_subreg))?;
-                    self.context.route.copy(&lvalue_reg,&lvalue_subreg);
-                    Ok((lvalue_reg,rvalue_reg))
+                    let rvalue_reg = self.context.regalloc.allocate();
+                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),lvalue_reg,lvalue_subreg))?;
+                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),rvalue_reg,rvalue_subreg))?;
+                    Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"dot\" of structs".to_string())
                 }
             },
             Expression::Pling(x,f) => {
                 if let ExpressionType::Base(BaseType::EnumType(name)) = self.type_of(x)? {
-                    let (lvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false)?;
+                    let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
                     let lvalue_reg = self.context.regalloc.allocate();
-                    let rvalue_reg = self.derive_rdot(rvalue_subreg,f)?;
-                    self.add_instr(Instruction::RefEValue(f.clone(),name.to_string(),lvalue_reg,lvalue_subreg))?;
-                    self.context.route.copy(&lvalue_reg,&lvalue_subreg);
-                    Ok((lvalue_reg,rvalue_reg))
+                    let rvalue_reg = self.context.regalloc.allocate();
+                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),lvalue_reg,lvalue_subreg))?;
+                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),rvalue_reg,rvalue_subreg))?;
+                    Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"pling\" of enums".to_string())
                 }
             },
             Expression::Square(x) => {
-                let (lvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false)?;
+                let (lvalue_subreg,_,rvalue_subreg) = self.build_lvalue(x,false,false)?;
                 let lvalue_reg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::RefSquare(lvalue_reg,lvalue_subreg))?;
-                self.context.route.copy(&lvalue_reg,&lvalue_subreg);
                 let rvalue_reg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::Square(rvalue_reg,rvalue_subreg))?;
-                Ok((lvalue_reg,rvalue_reg))
+                let fvalue_reg = self.context.regalloc.allocate();
+                self.add_instr(Instruction::FilterSquare(fvalue_reg,rvalue_subreg))?;
+                Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             Expression::Filter(x,f) => {
-                let (lvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false)?;
+                let (lvalue_reg,fvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false,false)?;
                 /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
-                let filterreg = self.build_rvalue(f,Some(&rvalue_subreg),None)?;
-                let lvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::RefFilter(lvalue_reg,lvalue_subreg,filterreg))?;
-                /* make permanent copy of filterreg to avoid competing updates */
-                let permreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Copy(permreg,filterreg))?;
-                self.context.route.set_derive(&lvalue_reg,&lvalue_subreg,&RouteExpr::Filter(permreg));
+                let filterreg = self.build_rvalue(f,Some(&rvalue_subreg),None)?;                
+                let fvalue_reg = self.context.regalloc.allocate();
+                self.add_instr(Instruction::Filter(fvalue_reg,fvalue_subreg.unwrap(),filterreg))?;
                 let rvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Filter(rvalue_reg,rvalue_subreg,permreg))?;
-                Ok((lvalue_reg,rvalue_reg))
+                self.add_instr(Instruction::Filter(rvalue_reg,rvalue_subreg,filterreg))?;
+                Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             Expression::Bracket(x,f) => {
-                let (lvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false)?;
-                let atreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::At(atreg,lvalue_subreg))?;
-                let lvalue_interreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::RefSquare(lvalue_interreg,lvalue_subreg))?;
+                let (lvalue_subreg,_,rvalue_subreg) = self.build_lvalue(x,false,false)?;
+                let lvalue_reg = self.context.regalloc.allocate();
+                self.add_instr(Instruction::RefSquare(lvalue_reg,lvalue_subreg))?;
                 let rvalue_interreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::Square(rvalue_interreg,rvalue_subreg))?;
-                self.context.route.copy(&lvalue_interreg,&lvalue_subreg);
+                let fvalue_interreg = self.context.regalloc.allocate();
+                self.add_instr(Instruction::FilterSquare(fvalue_interreg,rvalue_subreg))?;
+                let atreg = self.context.regalloc.allocate();
+                self.add_instr(Instruction::At(atreg,rvalue_subreg))?;
                 let filterreg = self.build_rvalue(f,Some(&rvalue_interreg),Some(&atreg))?;
-                /* make permanent copy of filterreg to avoid competing updates */
-                let permreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Copy(permreg,filterreg))?;
-                let lvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::RefFilter(lvalue_reg,lvalue_interreg,permreg))?;
-                self.context.route.set_derive(&lvalue_reg,&lvalue_interreg,&RouteExpr::Filter(permreg));
+                let fvalue_reg = self.context.regalloc.allocate();
+                self.add_instr(Instruction::Filter(fvalue_reg,fvalue_interreg,filterreg))?;
                 let rvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Filter(rvalue_reg,rvalue_interreg,permreg))?;
-                Ok((lvalue_reg,rvalue_reg))
+                self.add_instr(Instruction::Filter(rvalue_reg,rvalue_interreg,filterreg))?;
+                Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             _ => return Err("Invalid lvalue".to_string())
         }
@@ -348,15 +329,17 @@ impl<'a> CodeGen<'a> {
         if procdecl.is_none() {
             return Err(format!("No such procedure '{}'",stmt.0));
         }
-        for _ in procdecl.unwrap().get_signature().each_member() {
-            regs.push(self.context.regalloc.allocate());
-        }
         for (i,member) in procdecl.unwrap().get_signature().each_member().enumerate() {
             match member {
                 SignatureMemberConstraint::RValue(_) =>
-                    regs[i] = self.build_rvalue(&stmt.1[i],None,None)?,
-                SignatureMemberConstraint::LValue(_) =>
-                    regs[i] = self.build_lvalue(&stmt.1[i],true)?.0,
+                    regs.push((MemberMode::RValue,self.build_rvalue(&stmt.1[i],None,None)?)),
+                SignatureMemberConstraint::LValue(_) => {
+                    let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.1[i],true,true)?;
+                    if let Some(fvalue_reg) = fvalue_reg {
+                        regs.push((MemberMode::FValue,fvalue_reg));
+                    }
+                    regs.push((MemberMode::LValue,lvalue_reg));
+                }
             }
         }
         self.add_instr(Instruction::Proc(stmt.0.to_string(),regs.clone()))?;

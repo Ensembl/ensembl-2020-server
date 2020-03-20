@@ -8,7 +8,7 @@ mod typing;
 pub use self::types::{
     ArgumentConstraint, ArgumentExpressionConstraint, BaseType, ExpressionType,
     InstructionConstraint, MemberType, SignatureConstraint, ContainerType,
-    SignatureMemberConstraint
+    SignatureMemberConstraint, MemberMode
 };
 
 pub use self::route::{ Route, RouteExpr };

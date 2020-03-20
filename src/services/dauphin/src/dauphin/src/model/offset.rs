@@ -3,11 +3,21 @@ use super::definitionstore::DefStore;
 use super::structenum::{ EnumDef, StructDef };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub enum LinearPath {
     Data,
     Offset(usize),
     Length(usize)
+}
+
+impl LinearPath {
+    pub fn references(&self) -> Option<LinearPath> {
+        match self {
+            LinearPath::Offset(0) => Some(LinearPath::Data),
+            LinearPath::Offset(n) => Some(LinearPath::Offset(n-1)),
+            _ => None
+        }
+    }
 }
 
 impl fmt::Display for LinearPath {
@@ -20,7 +30,7 @@ impl fmt::Display for LinearPath {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct RegisterPurpose {
     complex: Vec<String>,
     linear: LinearPath,

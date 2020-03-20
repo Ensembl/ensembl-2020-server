@@ -37,3 +37,6 @@ g := etest:Y true;
 g!Y := false;
 h := [etest:Y true,etest:Y false,etest:X "hi"];
 h[]!Y := false;
+
+x.A := [1,2,3];
+x.A[$>1]&[$<3] := 5;

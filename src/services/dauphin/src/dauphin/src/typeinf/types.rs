@@ -137,6 +137,24 @@ impl MemberType {
     }
 }
 
+#[derive(Debug,Clone,Copy,PartialEq)]
+pub enum MemberMode {
+    RValue,
+    LValue,
+    FValue
+}
+
+impl fmt::Display for MemberMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let x =match self {
+            MemberMode::RValue => "R",
+            MemberMode::LValue => "L",
+            MemberMode::FValue => "F"
+        };
+        write!(f,"{}",x)
+    }
+}
+
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
 pub enum ArgumentExpressionConstraint {
     Base(BaseType),
