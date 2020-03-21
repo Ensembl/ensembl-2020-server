@@ -12,7 +12,16 @@ pub enum InstructionType {
     Append(),
     Square(),
     FilterSquare(),
-    RefSquare()
+    RefSquare(),
+    Star(),
+    At(),
+    Filter(),
+    Run(),
+    NumEq(),
+    Length(),
+    Add(),
+    SeqFilter(),
+    SeqAt()
 }
 
 impl InstructionType {
@@ -25,7 +34,16 @@ impl InstructionType {
             InstructionType::Append() => "append",
             InstructionType::Square() => "square",
             InstructionType::FilterSquare() => "filtersquare",
-            InstructionType::RefSquare() => "refsquare"
+            InstructionType::RefSquare() => "refsquare",
+            InstructionType::Star() => "star",
+            InstructionType::At() => "at",
+            InstructionType::Filter() => "filter",
+            InstructionType::Run() => "run",
+            InstructionType::NumEq() => "numeq",
+            InstructionType::Length() => "length",
+            InstructionType::Add() => "add",
+            InstructionType::SeqFilter() => "seqfilter",
+            InstructionType::SeqAt() => "seqat",
         }.to_string()
     }
 
@@ -49,6 +67,23 @@ impl InstructionType {
             InstructionType::FilterSquare() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
                                                     ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
                                                         Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
+            InstructionType::Star() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
+                                                Box::new(ArgumentExpressionConstraint::Placeholder(String::new())))),
+                                            ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
+            InstructionType::At() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
+                                          ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
+            InstructionType::Filter() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
+                                              ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
+                                              ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::BooleanType))],
+            InstructionType::Run() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
+                                           ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
+                                           ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType))],
+            InstructionType::NumEq() |
+            InstructionType::Length() |
+            InstructionType::Add() |
+            InstructionType::SeqFilter() |
+            InstructionType::SeqAt() =>
+                vec![],
         }
     }
 }
@@ -74,21 +109,6 @@ pub enum Instruction {
     Proc(String,Vec<(MemberMode,Register)>),
     Operator(String,Vec<Register>,Vec<Register>),
     Call(String,Vec<(MemberMode,MemberType)>,Vec<Register>),
-
-    /* filtering */
-    Star(Register,Register),
-    Filter(Register,Register,Register),
-    At(Register,Register),
-    Run(Register,Register,Register),
-
-    /* opers that are promoted to here because used internally */
-    /* introduced in simplify */
-    NumEq(Register,Register,Register),
-    /* introduced in linearize */
-    Length(Register,Register),
-    Add(Register,Register),
-    SeqFilter(Register,Register,Register,Register),
-    SeqAt(Register,Register)
 }
 
 fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {
@@ -121,10 +141,6 @@ impl fmt::Debug for Instruction {
                 fmt_instr(f,"string",&vec![r0],&vec![format!("\"{}\"",s.to_string())])?,
             Instruction::BytesConst(r0,b) => 
                 fmt_instr(f,"bytes",&vec![r0],&vec![format!("\'{}\'",hex::encode(b))])?,
-            Instruction::Length(r0,r1) =>
-                fmt_instr(f,"length",&vec![r0,r1],&vec![])?,
-            Instruction::Add(r0,r1) => 
-                fmt_instr(f,"add",&vec![r0,r1],&vec![])?,
             Instruction::Proc(name,regs) =>  {
                 let regs : Vec<String> = regs.iter().map(|x| format!("{:?}/{}",x.1,x.0)).collect();
                 write!(f,"#proc:{} {};\n",name,regs.join(" "))?;
@@ -156,27 +172,6 @@ impl fmt::Debug for Instruction {
             Instruction::ETest(field,name,dst,src) => {
                 fmt_instr(f,&format!("etest:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
-            Instruction::Star(dst,src) => {
-                fmt_instr(f,"star",&vec![dst,src],&vec![])?
-            },
-            Instruction::At(dst,src) => {
-                fmt_instr(f,"at",&vec![dst,src],&vec![])?
-            },
-            Instruction::Run(dst,offset,len) => {
-                fmt_instr(f,"run",&vec![dst,offset,len],&vec![])?
-            },
-            Instruction::SeqAt(dst,src) => {
-                fmt_instr(f,"seqat",&vec![dst,src],&vec![])?
-            },
-            Instruction::Filter(dst,src,filter) => {
-                fmt_instr(f,"filter",&vec![dst,src,filter],&vec![])?
-            },
-            Instruction::SeqFilter(dst,src,start,len) => {
-                fmt_instr(f,"seqfilter",&vec![dst,src,start,len],&vec![])?
-            },
-            Instruction::NumEq(out,a,b) => {
-                fmt_instr(f,"numeq",&vec![out,a,b],&vec![])?
-            },
         }
         Ok(())
     }
@@ -194,19 +189,10 @@ impl Instruction {
             Instruction::BooleanConst(a,_) => vec![a.clone()],
             Instruction::StringConst(a,_) => vec![a.clone()],
             Instruction::BytesConst(a,_) => vec![a.clone()],
-            Instruction::Add(a,b) => vec![a.clone(),b.clone()],
             Instruction::Proc(_,aa) => aa.iter().map(|x| x.1).collect(),
             Instruction::Operator(_,aa,bb) => { let mut out = aa.to_vec(); out.extend(bb.to_vec()); out },
             Instruction::Call(_,_,aa) => aa.to_vec(),
-            Instruction::Star(a,b) => vec![a.clone(),b.clone()],
-            Instruction::Filter(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
-            Instruction::SeqFilter(a,b,c,d) => vec![a.clone(),b.clone(),c.clone(),d.clone()],
-            Instruction::At(a,b) => vec![a.clone(),b.clone()],
-            Instruction::Run(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
-            Instruction::SeqAt(a,b) => vec![a.clone(),b.clone()],
-            Instruction::NumEq(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
             Instruction::New(_,_,r) => r.iter().cloned().collect(),
-            Instruction::Length(a,b) => vec![a.clone(),b.clone()],
         }
     }
 
@@ -362,64 +348,6 @@ impl Instruction {
                     out.push((c,regs[i]));
                 }
                 out
-            },
-            Instruction::Star(dst,src) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Vec(Box::new(
-                            ArgumentExpressionConstraint::Placeholder(String::new())
-                        ))
-                    ),dst.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),src.clone())
-                ]
-            },
-            Instruction::Filter(dst,src,filter) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),dst.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),src.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::BooleanType
-                        )
-                    ),filter.clone()),
-                ]
-            },
-            Instruction::At(dst,src) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::NumberType
-                        )
-                    ),dst.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),src.clone()),
-                ]
-            },
-            Instruction::Run(dst,offset,len) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::NumberType
-                        )
-                    ),dst.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::NumberType
-                        )
-                    ),offset.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::NumberType
-                        )
-                    ),len.clone()),
-                ]
             },
             other => return Err(format!("Cannot deduce type of {:?} instructions",other))
         }))

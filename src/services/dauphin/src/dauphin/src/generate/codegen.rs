@@ -56,7 +56,7 @@ impl<'a> CodeGen<'a> {
             self.add_instr(Instruction::New(InstructionType::Append(),vec![],vec![tmp,r]))?;
 
         }
-        self.add_instr(Instruction::Star(reg,tmp))?;
+        self.add_instr(Instruction::New(InstructionType::Star(),vec![],vec![reg,tmp]))?;
         Ok(())
     }
 
@@ -183,9 +183,9 @@ impl<'a> CodeGen<'a> {
                 /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
                 let filterreg = self.build_rvalue(f,Some(&rvalue_subreg),None)?;                
                 let fvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Filter(fvalue_reg,fvalue_subreg.unwrap(),filterreg))?;
+                self.add_instr(Instruction::New(InstructionType::Filter(),vec![],vec![fvalue_reg,fvalue_subreg.unwrap(),filterreg]))?;
                 let rvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Filter(rvalue_reg,rvalue_subreg,filterreg))?;
+                self.add_instr(Instruction::New(InstructionType::Filter(),vec![],vec![rvalue_reg,rvalue_subreg,filterreg]))?;
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             Expression::Bracket(x,f) => {
@@ -197,12 +197,12 @@ impl<'a> CodeGen<'a> {
                 let fvalue_interreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::New(InstructionType::FilterSquare(),vec![],vec![fvalue_interreg,rvalue_subreg]))?;
                 let atreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::At(atreg,rvalue_subreg))?;
+                self.add_instr(Instruction::New(InstructionType::At(),vec![],vec![atreg,rvalue_subreg]))?;
                 let filterreg = self.build_rvalue(f,Some(&rvalue_interreg),Some(&atreg))?;
                 let fvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Filter(fvalue_reg,fvalue_interreg,filterreg))?;
+                self.add_instr(Instruction::New(InstructionType::Filter(),vec![],vec![fvalue_reg,fvalue_interreg,filterreg]))?;
                 let rvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Filter(rvalue_reg,rvalue_interreg,filterreg))?;
+                self.add_instr(Instruction::New(InstructionType::Filter(),vec![],vec![rvalue_reg,rvalue_interreg,filterreg]))?;
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             _ => return Err("Invalid lvalue".to_string())
@@ -286,22 +286,22 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Star(x) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                self.add_instr(Instruction::Star(reg,subreg))?;
+                self.add_instr(Instruction::New(InstructionType::Star(),vec![],vec![reg,subreg]))?;
             },
             Expression::Filter(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
                 let filterreg = self.build_rvalue(f,Some(&subreg),None)?;
-                self.add_instr(Instruction::Filter(reg,subreg,filterreg))?;
+                self.add_instr(Instruction::New(InstructionType::Filter(),vec![],vec![reg,subreg,filterreg]))?;
             },
             Expression::Bracket(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let atreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::At(atreg,subreg))?;
+                self.add_instr(Instruction::New(InstructionType::At(),vec![],vec![atreg,subreg]))?;
                 let sq_subreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::New(InstructionType::Square(),vec![],vec![sq_subreg,subreg]))?;
                 let filterreg = self.build_rvalue(f,Some(&sq_subreg),Some(&atreg))?;
-                self.add_instr(Instruction::Filter(reg,sq_subreg,filterreg))?;
+                self.add_instr(Instruction::New(InstructionType::Filter(),vec![],vec![reg,sq_subreg,filterreg]))?;
             },
             Expression::Dollar => {
                 if let Some(dollar) = dollar {
