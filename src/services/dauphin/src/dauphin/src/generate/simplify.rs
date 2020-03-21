@@ -40,7 +40,7 @@ fn allocate_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
 }
 
 /* extend_vertical applies the given operation to all subregisters. It's the operation to apply to most instrctions. */
-fn extend_vertical<F>(in_: Vec<&Register>, mapping: &HashMap<Register,Vec<Register>>,cb: F) -> Result<Vec<Instruction>,String>
+fn extend_vertical<F>(in_: Vec<&Register>, mapping: &HashMap<Register,Vec<Register>>,cb: F) -> Result<Vec<Instruction>,()>
         where F: Fn(Vec<Register>) -> Instruction {
     let mut expanded = Vec::new();
     let mut len = None;
@@ -48,7 +48,7 @@ fn extend_vertical<F>(in_: Vec<&Register>, mapping: &HashMap<Register,Vec<Regist
         let in_reg = in_reg.clone().clone();
         let map = mapping.get(&in_reg).unwrap_or(&vec![in_reg]).clone();
         if len.is_none() { len = Some(map.len()); }
-        if map.len() != len.unwrap() { return Err("internal error: length mismatch".to_string()); }
+        if map.len() != len.unwrap() { return Err(()); }
         expanded.push(map);
     }
     let mut out = Vec::new();
@@ -59,7 +59,7 @@ fn extend_vertical<F>(in_: Vec<&Register>, mapping: &HashMap<Register,Vec<Regist
     Ok(out)
 }
 
-fn extend_common(instr: &Instruction, defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, branch_names: &Vec<String>) -> Result<Vec<Instruction>,String> {
+fn extend_common(instr: &Instruction, defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, branch_names: &Vec<String>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
         Instruction::New(b) =>
             b.simplify(defstore,context,obj_name,mapping,branch_names)?,
@@ -75,6 +75,7 @@ fn extend_common(instr: &Instruction, defstore: &DefStore, context: &mut GenCont
         Instruction::BooleanConst(_,_) |
         Instruction::StringConst(_,_) |
         Instruction::BytesConst(_,_) |
+        Instruction::Alias(_,_) |
         Instruction::Run(_,_,_) |
         Instruction::NumEq(_,_,_) => {
             vec![instr.clone()]
@@ -84,9 +85,9 @@ fn extend_common(instr: &Instruction, defstore: &DefStore, context: &mut GenCont
                 Instruction::Nil(regs[0])
             })?
         },
-        Instruction::Alias(dst,src) => {
+        Instruction::LValue(dst,src) => {
             extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Alias(regs[0],regs[1])
+                Instruction::LValue(regs[0],regs[1])
             })?
         },
         Instruction::Copy(dst,src) => {
@@ -152,7 +153,7 @@ fn extend_common(instr: &Instruction, defstore: &DefStore, context: &mut GenCont
     })
 }
 
-fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, base: BaseType, with_index: bool) -> Result<HashMap<Register,Vec<Register>>,String> {
+fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, base: BaseType, with_index: bool) -> Result<HashMap<Register,Vec<Register>>,()> {
     let mut target_registers = Vec::new();
     /* which registers will we be expanding? */
     for (reg,reg_type) in context.types.each_register() {
@@ -164,16 +165,17 @@ fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
     /* create some new subregisters for them */
     let mut new_registers = HashMap::new();
     for reg in &target_registers {
-        let type_ = context.types.get(reg).ok_or_else(|| "cannot get type".to_string())?.clone();
+        let type_ = context.types.get(reg).ok_or_else(|| ())?.clone();
         new_registers.insert(reg.clone(),allocate_registers(context,member_types,with_index,type_.get_container()));
     }
     /* move any refs which include our member forward to new origin */
+    print!("{:?}\n",new_registers);
     Ok(new_registers)
 }
 
-fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Result<(),String> {
+fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Result<(),()> {
     let mut new_instrs : Vec<Instruction> = Vec::new();
-    if let Ok(decl) = defstore.get_struct(name) {
+    if let Some(decl) = defstore.get_struct(name) {
         let member_names = decl.get_names();
         let member_types = decl.get_member_types();
         let base = BaseType::StructType(name.to_string());
@@ -181,7 +183,7 @@ fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Resu
         for instr in &context.instrs.clone() {
             new_instrs.extend(extend_common(instr,defstore,context,name,&new_registers,&member_names)?);
         }
-    } else if let Ok(decl) = defstore.get_enum(name) {
+    } else if let Some(decl) = defstore.get_enum(name) {
         let member_names = decl.get_names();
         let member_types = decl.get_branch_types();
         let base = BaseType::EnumType(name.to_string());
@@ -190,13 +192,13 @@ fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Resu
             new_instrs.extend(extend_common(instr,defstore,context,name,&new_registers,&member_names)?);
         }
     } else {
-        return Err("internal error: unknown struct/enum".to_string());                
+        return Err(());                
     };
     context.instrs = new_instrs;
     Ok(())
 }
 
-pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
+pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),()> {
     for name in defstore.get_structenum_order().rev() {
         extend_one(defstore,context,name)?;
     }

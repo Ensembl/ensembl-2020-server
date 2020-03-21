@@ -86,9 +86,9 @@ pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Signatu
 }
 
 fn id_to_type(id: &str, lexer: &Lexer, defstore: &DefStore) -> Result<BaseType2,ParseError> {
-    if defstore.get_struct(id).is_ok() {
+    if defstore.get_struct(id).is_some() {
         Ok(BaseType2::StructType(id.to_string()))
-    } else if defstore.get_enum(id).is_ok() {
+    } else if defstore.get_enum(id).is_some() {
         Ok(BaseType2::EnumType(id.to_string()))
     } else {
         Err(ParseError::new(&format!("No such struct/enum '{}'",id),lexer))

@@ -30,7 +30,7 @@ impl Instruction2 for CtorStruct {
                 BaseType::StructType(name.to_string())
             )
         ),dst.clone()));
-        let exprdecl = defstore.get_struct(name)?;
+        let exprdecl = defstore.get_struct(name).ok_or_else(|| format!("No such struct {:?}",name))?;
         let intypes = exprdecl.get_member_types();
         if intypes.len() != srcs.len() {
             return Err(format!("Incorrect number of arguments: got {} expected {}",srcs.len(),intypes.len()));
@@ -43,13 +43,13 @@ impl Instruction2 for CtorStruct {
         Ok(out)
     }
 
-    fn simplify(&self, _defstore: &DefStore, _context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, _branch_names: &Vec<String>) -> Result<Vec<Instruction>,String> {
+    fn simplify(&self, _defstore: &DefStore, _context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, _branch_names: &Vec<String>) -> Result<Vec<Instruction>,()> {
         let name = &self.0.prefixes[1];
         if name == obj_name {
             let dst = &self.0.registers[0];
             let srcs = &self.0.registers[1..];
-            let dests = mapping.get(dst).ok_or_else(|| "internal error: bad mapping".to_string())?;
-            if dests.len() != srcs.len() { return Err("internal error: mismatching lengths".to_string()); }
+            let dests = mapping.get(dst).ok_or_else(|| ())?;
+            if dests.len() != srcs.len() { return Err(()); }
             let mut out = Vec::new();
             for i in 0..srcs.len() {
                 out.push(Instruction::Copy(dests[i].clone(),srcs[i].clone()));
@@ -80,7 +80,7 @@ impl Instruction2 for SValue {
         let field = &self.0.prefixes[2];
         let dst = &self.0.registers[0];
         let src = &self.0.registers[1];
-        let exprdecl = defstore.get_struct(stype)?;
+        let exprdecl = defstore.get_struct(stype).ok_or_else(|| format!("No such struct {:?}",stype))?;
         let dtype = exprdecl.get_member_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
         Ok(vec![
             (ArgumentConstraint::NonReference(
@@ -94,14 +94,14 @@ impl Instruction2 for SValue {
         ])
     }
 
-    fn simplify(&self, _defstore: &DefStore, _context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, names: &Vec<String>) -> Result<Vec<Instruction>,String> {
+    fn simplify(&self, _defstore: &DefStore, _context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, names: &Vec<String>) -> Result<Vec<Instruction>,()> {
         let name = &self.0.prefixes[1];
         let field = &self.0.prefixes[2];
         let dst = &self.0.registers[0];
         let src = &self.0.registers[1];
         if name == obj_name {
-            let dests = mapping.get(src).ok_or_else(|| "internal error: bad mapping".to_string())?;
-            let pos = names.iter().position(|n| n==field).ok_or_else(|| "internal error: no such field".to_string())?;
+            let dests = mapping.get(src).ok_or_else(|| ())?;
+            let pos = names.iter().position(|n| n==field).ok_or_else(|| ())?;
             Ok(vec![Instruction::Copy(dst.clone(),dests[pos].clone())])
         } else {
             Ok(vec![Instruction::New(Rc::new(self.clone()))])
