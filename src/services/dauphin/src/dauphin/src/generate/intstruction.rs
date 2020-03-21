@@ -10,7 +10,7 @@ pub trait Instruction2 {
     fn get_registers(&self) -> Vec<Register>;
     fn format(&self) -> String;
     fn get_constraint(&self, defstore: &DefStore) -> Result<Vec<(ArgumentConstraint,Register)>,String>;
-    fn simplify(&self, defstore: &DefStore, context: &mut GenContext, obj_name: &str,mapping: &HashMap<Register,Vec<Register>>, branch_names: &Vec<String>) -> Result<Vec<Instruction>,()>;
+    fn simplify(&self, defstore: &DefStore, context: &mut GenContext, obj_name: &str,mapping: &HashMap<Register,Vec<Register>>, branch_names: &Vec<String>) -> Result<Vec<Instruction>,String>;
 }
 
 #[derive(PartialEq,Clone)]
@@ -42,7 +42,6 @@ impl<T> Instruction2Core<T> {
 pub enum Instruction {
     /* structs/enums: created at codegeneration, removed at simplification */
     New(Rc<dyn Instruction2>),
-    //ETest(String,String,Register,Register),
 
     /* constant building */
     NumberConst(Register,f64),
@@ -54,7 +53,6 @@ pub enum Instruction {
 
     /* housekeeping */
     Copy(Register,Register),
-    LValue(Register,Register),
     Alias(Register,Register),
     Nil(Register),
 
@@ -139,9 +137,6 @@ impl fmt::Debug for Instruction {
             Instruction::Star(dst,src) => {
                 fmt_instr(f,"star",&vec![dst,src],&vec![])?
             },
-            Instruction::LValue(dst,src) => {
-                fmt_instr(f,"lvalue",&vec![dst,src],&vec![])?
-            },
             Instruction::Alias(dst,src) => {
                 fmt_instr(f,"alias",&vec![dst,src],&vec![])?
             },
@@ -183,7 +178,6 @@ impl Instruction {
             Instruction::Append(a,b) => vec![a.clone(),b.clone()],
             Instruction::Add(a,b) => vec![a.clone(),b.clone()],
             Instruction::Copy(a,b) => vec![a.clone(),b.clone()],
-            Instruction::LValue(a,b) => vec![a.clone(),b.clone()],
             Instruction::Alias(a,b) => vec![a.clone(),b.clone()],
             Instruction::Proc(_,aa) => aa.iter().map(|x| x.1).collect(),
             Instruction::Operator(_,aa,bb) => { let mut out = aa.to_vec(); out.extend(bb.to_vec()); out },
@@ -206,7 +200,7 @@ impl Instruction {
     pub fn get_constraint(&self, defstore: &DefStore) -> Result<InstructionConstraint,String> {
         Ok(InstructionConstraint::new(&match self {
             Instruction::New(b) => b.get_constraint(defstore)?,
-            Instruction::LValue(dst,src) => {
+            Instruction::Alias(dst,src) => {
                 vec![
                     (ArgumentConstraint::Reference(
                         ArgumentExpressionConstraint::Placeholder(String::new())

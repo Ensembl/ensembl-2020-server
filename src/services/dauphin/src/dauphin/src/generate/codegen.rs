@@ -63,20 +63,16 @@ impl<'a> CodeGen<'a> {
     }
 
     fn struct_rearrange(&mut self, s: &str, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
-        if let Some(decl) = self.defstore.get_struct(s) {
-            let gotpos : HashMap<String,usize> = got_names.iter().enumerate().map(|(i,e)| (e.to_string(),i)).collect();
-            let mut out = Vec::new();
-            for want_name in decl.get_names().iter() {
-                if let Some(got_pos) = gotpos.get(want_name) {
-                    out.push(x[*got_pos]);
-                } else {
-                    return Err(format!("Missing member '{}'",want_name));
-                }
+        let gotpos : HashMap<String,usize> = got_names.iter().enumerate().map(|(i,e)| (e.to_string(),i)).collect();
+        let mut out = Vec::new();
+        for want_name in self.defstore.get_struct(s)?.get_names().iter() {
+            if let Some(got_pos) = gotpos.get(want_name) {
+                out.push(x[*got_pos]);
+            } else {
+                return Err(format!("Missing member '{}'",want_name));
             }
-            Ok(out)
-        } else {
-            Err(format!("no such struct '{}'",s))
         }
+        Ok(out)
     }
 
     fn type_of(&mut self, expr: &Expression) -> Result<ExpressionType,String> {
@@ -89,14 +85,10 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
-                    if let Some(struct_) = self.defstore.get_struct(&name) {
-                        if let Some(type_) = struct_.get_member_type(f) {
-                            type_.to_expressiontype()
-                        } else {
-                            return Err(format!("no such field {:?}",f));
-                        }
+                    if let Some(type_) = self.defstore.get_struct(&name)?.get_member_type(f) {
+                        type_.to_expressiontype()
                     } else {
-                        return Err(format!("{:?} is not a structure",expr));
+                        return Err(format!("no such field {:?}",f));
                     }
                 } else {
                     return Err(format!("{:?} is not a structure",expr));
@@ -104,14 +96,10 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Pling(x,f) => {
                 if let ExpressionType::Base(BaseType::EnumType(name)) = self.type_of(x)? {
-                    if let Some(enum_) = self.defstore.get_enum(&name) {
-                        if let Some(type_) = enum_.get_branch_type(f) {
-                            type_.to_expressiontype()
-                        } else {
-                            return Err(format!("no such field {:?}",f));
-                        }
+                    if let Some(type_) = self.defstore.get_enum(&name)?.get_branch_type(f) {
+                        type_.to_expressiontype()
                     } else {
-                        return Err(format!("{:?} is not a structure",expr));
+                        return Err(format!("no such field {:?}",f));
                     }
                 } else {
                     return Err(format!("{:?} is not a structure",expr));
@@ -143,7 +131,7 @@ impl<'a> CodeGen<'a> {
                 }
                 let real_reg = self.regnames[id];
                 let lvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::LValue(lvalue_reg,real_reg))?;
+                self.add_instr(Instruction::Alias(lvalue_reg,real_reg))?;
                 Ok((lvalue_reg,None,real_reg))
             },
             Expression::Dot(x,f) => {

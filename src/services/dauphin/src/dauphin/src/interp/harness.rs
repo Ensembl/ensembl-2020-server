@@ -267,7 +267,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 }
                 h.insert(d,v);
             },
-            Instruction::At(d,s) | Instruction::LValue(d,s) => {
+            Instruction::At(d,s) => {
                 let mut v = vec![];
                 for i in 0..harness.get(s).len() {
                     v.push(i);

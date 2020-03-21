@@ -84,8 +84,8 @@ impl DefStore {
         Ok(())
     }
 
-    pub fn get_struct(&self, name: &str) -> Option<&StructDef> {
-        self.structs.get(name)
+    pub fn get_struct(&self, name: &str) -> Result<&StructDef,String> {
+        self.structs.get(name).ok_or(format!("No such member {}",name))
     }
 
     pub fn get_func(&self, name: &str) -> Option<&FuncDecl> {
@@ -99,8 +99,8 @@ impl DefStore {
         Ok(())
     }
 
-    pub fn get_enum(&self, name: &str) -> Option<&EnumDef> {
-        self.enums.get(name)
+    pub fn get_enum(&self, name: &str) -> Result<&EnumDef,String> {
+        self.enums.get(name).ok_or(format!("No such branch {}",name))
     }
 
     pub fn add_inline(&mut self, inline: Inline) -> Result<(),ParseError> {

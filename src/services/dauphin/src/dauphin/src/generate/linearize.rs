@@ -125,7 +125,6 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::SeqFilter(_,_,_,_) |
         Instruction::Proc(_,_) |
         Instruction::Operator(_,_,_) |
-        Instruction::Alias(_,_) | 
         Instruction::Run(_,_,_) |
         Instruction::SeqAt(_,_) |
         Instruction::Length(_,_) | 
@@ -180,7 +179,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 out.push(Instruction::Copy(*d,*s));
             });
         },
-        Instruction::LValue(dst,src) => {
+        Instruction::Alias(dst,src) => {
             linear_extend(subregs,dst,src, |d,s| {
                 out.push(Instruction::Alias(*d,*s));
             });

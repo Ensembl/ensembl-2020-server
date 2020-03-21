@@ -6,7 +6,7 @@ use super::CtorStruct;
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, MemberType };
 
 /* Some easy value for unused enum branches */
-fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<Vec<Instruction>,()> {
+fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<Vec<Instruction>,String> {
     let mut out = Vec::new();
     match type_ {
         MemberType::Vec(_) => out.push(Instruction::List(reg.clone())),
@@ -15,9 +15,9 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
             BaseType::StringType => out.push(Instruction::StringConst(reg.clone(),String::new())),
             BaseType::NumberType => out.push(Instruction::NumberConst(reg.clone(),0.)),
             BaseType::BytesType => out.push(Instruction::BytesConst(reg.clone(),vec![])),
-            BaseType::Invalid => return Err(()),
+            BaseType::Invalid => return Err("Cannot build invalid type".to_string()),
             BaseType::StructType(name) => {
-                let decl = defstore.get_struct(name).ok_or_else(|| ())?;
+                let decl = defstore.get_struct(name)?;
                 let mut subregs = Vec::new();
                 for member_type in decl.get_member_types() {
                     let r = context.regalloc.allocate();
@@ -28,9 +28,9 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
                 out.push(Instruction::New(Rc::new(CtorStruct::new(name.to_string(),reg.clone(),subregs))));
             },
             BaseType::EnumType(name) => {
-                let decl = defstore.get_enum(name).ok_or_else(|| ())?;
-                let branch_type = decl.get_branch_types().get(0).ok_or_else(|| ())?;
-                let field_name = decl.get_names().get(0).ok_or_else(|| ())?;
+                let decl = defstore.get_enum(name)?;
+                let branch_type = decl.get_branch_types().get(0).ok_or_else(|| "enum must have at least one member".to_string())?;
+                let field_name = decl.get_names().get(0).ok_or_else(|| "enum must have at least one member".to_string())?;
                 let subreg = context.regalloc.allocate();
                 context.types.add(&subreg,branch_type);
                 out.extend(build_nil(context,defstore,&subreg,branch_type)?);
@@ -66,7 +66,7 @@ impl Instruction2 for CtorEnum {
                 BaseType::EnumType(name.to_string())
             )
         ),dst.clone()));
-        let exprdecl = defstore.get_enum(name).ok_or_else(|| format!("No such enum {:?}",name))?;
+        let exprdecl = defstore.get_enum(name)?;
         out.push((ArgumentConstraint::NonReference(
             exprdecl.get_branch_type(branch).ok_or_else(|| format!("No such enum branch {:?}",name))?
                 .to_argumentexpressionconstraint()
@@ -74,21 +74,21 @@ impl Instruction2 for CtorEnum {
         Ok(out)
     }
 
-    fn simplify(&self, defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, branch_names: &Vec<String>) -> Result<Vec<Instruction>,()> {
+    fn simplify(&self, defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, branch_names: &Vec<String>) -> Result<Vec<Instruction>,String> {
         let name = &self.0.prefixes[1];
         let branch = &self.0.prefixes[2];
         let dst = &self.0.registers[0];
         let src = &self.0.registers[1];
         if name == obj_name {
-            let pos = branch_names.iter().position(|v| v==branch).ok_or_else(|| ())?;
-            let dests = mapping.get(dst).ok_or_else(|| ())?;
+            let pos = branch_names.iter().position(|v| v==branch).ok_or_else(|| "unknown branch".to_string())?;
+            let dests = mapping.get(dst).ok_or_else(|| "unknown branch".to_string())?;
             let mut out = Vec::new();
             for i in 1..dests.len() {
                 if i-1 == pos {
                     out.push(Instruction::NumberConst(dests[0].clone(),(i-1) as f64));
                     out.push(Instruction::Copy(dests[i].clone(),src.clone()));
                 } else {
-                    let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
+                    let type_ = context.types.get(&dests[i]).ok_or_else(|| "unknown branch".to_string())?.clone();
                     out.extend(build_nil(context,defstore,&dests[i],&type_)?.iter().cloned());
                 }
             }
@@ -117,7 +117,7 @@ impl Instruction2 for EValue {
         let branch = &self.0.prefixes[2];
         let dst = &self.0.registers[0];
         let src = &self.0.registers[1];
-        let exprdecl = defstore.get_enum(name).ok_or_else(|| format!("No such enum {:?}",name))?;
+        let exprdecl = defstore.get_enum(name)?;
         let dtype = exprdecl.get_branch_type(branch).ok_or_else(|| format!("No such branch {:?}",branch))?;
         Ok(vec![
             (ArgumentConstraint::NonReference(
@@ -131,14 +131,14 @@ impl Instruction2 for EValue {
         ])
     }
 
-    fn simplify(&self, _defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, names: &Vec<String>) -> Result<Vec<Instruction>,()> {
+    fn simplify(&self, _defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, names: &Vec<String>) -> Result<Vec<Instruction>,String> {
         let name = &self.0.prefixes[1];
         if name == obj_name {
             let branch = &self.0.prefixes[2];
             let dst = &self.0.registers[0];
             let src = &self.0.registers[1];
-            let pos = names.iter().position(|v| v==branch).ok_or_else(|| ())?;
-            let srcs = mapping.get(src).ok_or_else(|| ())?;
+            let pos = names.iter().position(|v| v==branch).ok_or_else(|| "internal error: no such field".to_string())?;
+            let srcs = mapping.get(src).ok_or_else(|| "internal error: bad mapping".to_string())?;
             let mut out = Vec::new();
             let filter = context.regalloc.allocate();
             let posreg = context.regalloc.allocate();
@@ -184,14 +184,14 @@ impl Instruction2 for ETest {
         ])
     }
 
-    fn simplify(&self, _defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, names: &Vec<String>) -> Result<Vec<Instruction>,()> {
+    fn simplify(&self, _defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, names: &Vec<String>) -> Result<Vec<Instruction>,String> {
         let name = &self.0.prefixes[1];
         let branch = &self.0.prefixes[2];
         let dst = &self.0.registers[0];
         let src = &self.0.registers[1];
         if name == obj_name {
-            let pos = names.iter().position(|v| v==branch).ok_or_else(|| ())?;
-            let srcs = mapping.get(src).ok_or_else(|| ())?;
+            let pos = names.iter().position(|v| v==branch).ok_or_else(|| "internal error: no such field".to_string())?;
+            let srcs = mapping.get(src).ok_or_else(|| "internal error: bad mapping".to_string())?;
             let mut out = Vec::new();
             let posreg = context.regalloc.allocate();
             out.push(Instruction::NumberConst(posreg.clone(),pos as f64));
