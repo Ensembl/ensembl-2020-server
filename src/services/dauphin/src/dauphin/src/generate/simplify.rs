@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::generate::Instruction;
-use crate::model::{ DefStore, Register, StructDef, EnumDef };
+use crate::model::{ DefStore, Register };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
 use super::codegen::GenContext;
 
@@ -59,44 +59,10 @@ fn extend_vertical<F>(in_: Vec<&Register>, mapping: &HashMap<Register,Vec<Regist
     Ok(out)
 }
 
-/* Some easy value for unused enum branches */
-fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<Vec<Instruction>,()> {
-    let mut out = Vec::new();
-    match type_ {
-        MemberType::Vec(_) => out.push(Instruction::List(reg.clone())),
-        MemberType::Base(b) => match b {
-            BaseType::BooleanType => out.push(Instruction::BooleanConst(reg.clone(),false)),
-            BaseType::StringType => out.push(Instruction::StringConst(reg.clone(),String::new())),
-            BaseType::NumberType => out.push(Instruction::NumberConst(reg.clone(),0.)),
-            BaseType::BytesType => out.push(Instruction::BytesConst(reg.clone(),vec![])),
-            BaseType::Invalid => return Err(()),
-            BaseType::StructType(name) => {
-                let decl = defstore.get_struct(name).ok_or_else(|| ())?;
-                let mut subregs = Vec::new();
-                for member_type in decl.get_member_types() {
-                    let r = context.regalloc.allocate();
-                    context.types.add(&r,member_type);
-                    out.extend(build_nil(context,defstore,&r,member_type)?.iter().cloned());
-                    subregs.push(r);
-                }
-                out.push(Instruction::CtorStruct(name.to_string(),reg.clone(),subregs));
-            },
-            BaseType::EnumType(name) => {
-                let decl = defstore.get_enum(name).ok_or_else(|| ())?;
-                let branch_type = decl.get_branch_types().get(0).ok_or_else(|| ())?;
-                let field_name = decl.get_names().get(0).ok_or_else(|| ())?;
-                let subreg = context.regalloc.allocate();
-                context.types.add(&subreg,branch_type);
-                out.extend(build_nil(context,defstore,&subreg,branch_type)?.iter().cloned());
-                out.push(Instruction::CtorEnum(name.to_string(),field_name.clone(),reg.clone(),subreg));
-            }
-        }
-    }
-    Ok(out)
-}
-
-fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
+fn extend_common(instr: &Instruction, defstore: &DefStore, context: &mut GenContext, obj_name: &str, mapping: &HashMap<Register,Vec<Register>>, branch_names: &Vec<String>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
+        Instruction::New(b) =>
+            b.simplify(defstore,context,obj_name,mapping,branch_names)?,
         Instruction::SeqFilter(_,_,_,_) |
         Instruction::Length(_,_) |
         Instruction::Add(_,_) |
@@ -109,11 +75,6 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         Instruction::BooleanConst(_,_) |
         Instruction::StringConst(_,_) |
         Instruction::BytesConst(_,_) |
-        Instruction::CtorStruct(_,_,_) |
-        Instruction::CtorEnum(_,_,_,_) |
-        Instruction::SValue(_,_,_,_) |
-        Instruction::EValue(_,_,_,_) |
-        Instruction::ETest(_,_,_,_) |
         Instruction::Alias(_,_) |
         Instruction::Run(_,_,_) |
         Instruction::NumEq(_,_,_) => {
@@ -192,83 +153,6 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
     })
 }
 
-fn extend_struct_instr(obj_name: &str, decl: &StructDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
-    /* because types topologically ordered and non-recursive
-    * we know there's nothing to expand in the args in the else branches.
-    */
-    Ok(match instr {
-        Instruction::CtorStruct(name,dst,srcs) => {
-            if name == obj_name {
-                let dests = mapping.get(dst).ok_or_else(|| ())?;
-                if dests.len() != srcs.len() { return Err(()); }
-                let mut out = Vec::new();
-                for i in 0..srcs.len() {
-                    out.push(Instruction::Copy(dests[i].clone(),srcs[i].clone()));
-                }
-                out
-            } else {
-                vec![instr.clone()]
-            }
-        },
-        Instruction::SValue(field,name,dst,src) if name == obj_name => {
-            let dests = mapping.get(src).ok_or_else(|| ())?;
-            print!("{:?} find {:?}\n",decl.get_names(),field);
-            let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| ())?;
-            vec![Instruction::Copy(dst.clone(),dests[pos].clone())]
-        },
-        instr => extend_common(instr,mapping)?
-    })
-}
-
-fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &str, decl: &EnumDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
-    /* because types topologically ordered and non-recursive we know
-        * there's nothing to expand in the args
-        */
-    Ok(match instr {
-        Instruction::CtorEnum(name,field,dst,src) => {
-            if name == obj_name {
-                let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-                let dests = mapping.get(dst).ok_or_else(|| ())?;
-                let mut out = Vec::new();
-                for i in 1..dests.len() {
-                    if i-1 == pos {
-                        out.push(Instruction::NumberConst(dests[0].clone(),(i-1) as f64));
-                        out.push(Instruction::Copy(dests[i].clone(),src.clone()));
-                    } else {
-                        let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
-                        out.extend(build_nil(context,defstore,&dests[i],&type_)?.iter().cloned());
-                    }
-                }
-                out
-            } else {
-                vec![instr.clone()]
-            }
-        },
-        Instruction::EValue(field,name,dst,src) if name == obj_name => {
-            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-            let srcs = mapping.get(src).ok_or_else(|| ())?;
-            let mut out = Vec::new();
-            let filter = context.regalloc.allocate();
-            let posreg = context.regalloc.allocate();
-            out.push(Instruction::NumberConst(posreg.clone(),pos as f64));
-            context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
-            out.push(Instruction::NumEq(filter.clone(),srcs[0].clone(),posreg));
-            out.push(Instruction::Filter(dst.clone(),srcs[pos+1].clone(),filter));
-            out
-        },
-        Instruction::ETest(field,name,dst,src) if name == obj_name => {
-            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-            let srcs = mapping.get(src).ok_or_else(|| ())?;
-            let mut out = Vec::new();
-            let posreg = context.regalloc.allocate();
-            out.push(Instruction::NumberConst(posreg.clone(),pos as f64));
-            out.push(Instruction::NumEq(dst.clone(),srcs[0].clone(),posreg));
-            out
-        },
-        instr => extend_common(instr,mapping)?
-    })
-}
-
 fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, base: BaseType, with_index: bool) -> Result<HashMap<Register,Vec<Register>>,()> {
     let mut target_registers = Vec::new();
     /* which registers will we be expanding? */
@@ -292,19 +176,20 @@ fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
 fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Result<(),()> {
     let mut new_instrs : Vec<Instruction> = Vec::new();
     if let Some(decl) = defstore.get_struct(name) {
+        let member_names = decl.get_names();
         let member_types = decl.get_member_types();
         let base = BaseType::StructType(name.to_string());
         let new_registers = make_new_registers(context,member_types,base,false)?;
-        for instr in &context.instrs {
-            new_instrs.extend(extend_struct_instr(name,decl,instr,&new_registers)?.iter().cloned());
+        for instr in &context.instrs.clone() {
+            new_instrs.extend(extend_common(instr,defstore,context,name,&new_registers,&member_names)?);
         }
     } else if let Some(decl) = defstore.get_enum(name) {
+        let member_names = decl.get_names();
         let member_types = decl.get_branch_types();
         let base = BaseType::EnumType(name.to_string());
         let new_registers = make_new_registers(context,member_types,base,true)?;
-        print!("new_registers {:?}\n",new_registers);
         for instr in &context.instrs.clone() {
-            new_instrs.extend(extend_enum_instr(defstore,context,name,decl,instr,&new_registers)?.iter().cloned());
+            new_instrs.extend(extend_common(instr,defstore,context,name,&new_registers,&member_names)?);
         }
     } else {
         return Err(());                
@@ -315,7 +200,6 @@ fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Resu
 
 pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),()> {
     for name in defstore.get_structenum_order().rev() {
-        print!("extend {:?}\n",name);
         extend_one(defstore,context,name)?;
     }
     Ok(())

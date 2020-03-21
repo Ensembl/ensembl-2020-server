@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 
 use super::intstruction::Instruction;
+use crate::opcodes::{ CtorEnum, CtorStruct, SValue, EValue, ETest };
 use crate::parser::{ Expression, Statement };
 use crate::model::{ Register, RegisterAllocator };
 use crate::model::DefStore;
@@ -44,7 +46,7 @@ impl<'a> CodeGen<'a> {
 
     fn add_instr(&mut self, instr: Instruction) -> Result<(),String> {
         self.typing.add(&instr.get_constraint(self.defstore)?)?;
-        self.context.instrs.push(instr.clone());
+        self.context.instrs.push(instr);
         Ok(())
     }
 
@@ -149,8 +151,8 @@ impl<'a> CodeGen<'a> {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
                     let lvalue_reg = self.context.regalloc.allocate();
                     let rvalue_reg = self.context.regalloc.allocate();
-                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),lvalue_reg,lvalue_subreg))?;
-                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),rvalue_reg,rvalue_subreg))?;
+                    self.add_instr(Instruction::New(Rc::new(SValue::new(name.to_string(),f.clone(),lvalue_reg,lvalue_subreg))))?;
+                    self.add_instr(Instruction::New(Rc::new(SValue::new(name.to_string(),f.clone(),rvalue_reg,rvalue_subreg))))?;
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"dot\" of structs".to_string())
@@ -161,8 +163,8 @@ impl<'a> CodeGen<'a> {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
                     let lvalue_reg = self.context.regalloc.allocate();
                     let rvalue_reg = self.context.regalloc.allocate();
-                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),lvalue_reg,lvalue_subreg))?;
-                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),rvalue_reg,rvalue_subreg))?;
+                    self.add_instr(Instruction::New(Rc::new(EValue::new(name.to_string(),f.clone(),lvalue_reg,lvalue_subreg))))?;
+                    self.add_instr(Instruction::New(Rc::new(EValue::new(name.to_string(),f.clone(),rvalue_reg,rvalue_subreg))))?;
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"pling\" of enums".to_string())
@@ -247,17 +249,17 @@ impl<'a> CodeGen<'a> {
                     subregs.push(r);
                 }
                 let x = self.struct_rearrange(s,subregs,n)?;
-                self.add_instr(Instruction::CtorStruct(s.clone(),reg,x))?;
+                self.add_instr(Instruction::New(Rc::new(CtorStruct::new(s.clone(),reg,x))))?;
             },
             Expression::CtorEnum(e,b,x) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                self.add_instr(Instruction::CtorEnum(e.clone(),b.clone(),reg,subreg))?;
+                self.add_instr(Instruction::New(Rc::new(CtorEnum::new(e.clone(),b.clone(),reg,subreg))))?;
             },
             Expression::Dot(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let stype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::StructType(name)) = stype {
-                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),reg,subreg))?;
+                    self.add_instr(Instruction::New(Rc::new(SValue::new(name.to_string(),f.clone(),reg,subreg))))?;
                 } else {
                     return Err(format!("Can only take \"dot\" of structs, not {:?}",stype));
                 }
@@ -266,7 +268,7 @@ impl<'a> CodeGen<'a> {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let etype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
-                    self.add_instr(Instruction::ETest(f.clone(),name.to_string(),reg,subreg))?;
+                    self.add_instr(Instruction::New(Rc::new(ETest::new(name.to_string(),f.clone(),reg,subreg))))?;
                 } else {
                     return Err("Can only take \"query\" of enums".to_string());
                 }
@@ -275,7 +277,7 @@ impl<'a> CodeGen<'a> {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let etype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
-                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),reg,subreg))?;
+                    self.add_instr(Instruction::New(Rc::new(EValue::new(name.clone(),f.to_string(),reg,subreg))))?;
                 } else {
                     return Err("Can only take \"pling\" of enums".to_string());
                 }
