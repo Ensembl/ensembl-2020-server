@@ -4,7 +4,59 @@ use crate::model::{ DefStore, Register };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberType, MemberMode };
 
 #[derive(Clone,PartialEq)]
+pub enum InstructionType {
+    Nil(),
+    Alias(),
+    Copy(),
+    List(),
+    Append(),
+    Square(),
+    FilterSquare(),
+    RefSquare()
+}
+
+impl InstructionType {
+    pub fn get_name(&self) -> String {
+        match self {
+            InstructionType::Nil() => "nil",
+            InstructionType::Alias() => "alias",
+            InstructionType::Copy() => "copy",
+            InstructionType::List() => "list",
+            InstructionType::Append() => "append",
+            InstructionType::Square() => "square",
+            InstructionType::FilterSquare() => "filtersquare",
+            InstructionType::RefSquare() => "refsquare"
+        }.to_string()
+    }
+
+    pub fn get_constraints(&self) -> Vec<ArgumentConstraint> {
+        match self {
+            InstructionType::Nil()   => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
+            InstructionType::Alias() => vec![ArgumentConstraint::Reference(ArgumentExpressionConstraint::Placeholder(String::new())),
+                                             ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
+            InstructionType::Copy() =>  vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
+                                             ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
+            InstructionType::List() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
+                                                Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
+            InstructionType::Append() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
+                                              ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
+            InstructionType::Square() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
+                                              ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
+                                                  Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
+            InstructionType::RefSquare() => vec![ArgumentConstraint::Reference(ArgumentExpressionConstraint::Placeholder(String::new())),
+                                                 ArgumentConstraint::Reference(ArgumentExpressionConstraint::Vec(
+                                                    Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
+            InstructionType::FilterSquare() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
+                                                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
+                                                        Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
+        }
+    }
+}
+
+#[derive(Clone,PartialEq)]
 pub enum Instruction {
+    New(InstructionType,Vec<String>,Vec<Register>),
+
     /* structs/enums: created at codegeneration, removed at simplification */
     CtorStruct(String,Register,Vec<Register>),
     CtorEnum(String,String,Register,Register),
@@ -17,14 +69,6 @@ pub enum Instruction {
     BooleanConst(Register,bool),
     StringConst(Register,String),
     BytesConst(Register,Vec<u8>),
-    List(Register),
-    Append(Register,Register),
-
-    /* housekeeping */
-    Copy(Register,Register),
-    LValue(Register,Register),
-    Alias(Register,Register),
-    Nil(Register),
 
     /* calls-out */
     Proc(String,Vec<(MemberMode,Register)>),
@@ -32,9 +76,6 @@ pub enum Instruction {
     Call(String,Vec<(MemberMode,MemberType)>,Vec<Register>),
 
     /* filtering */
-    Square(Register,Register),
-    FilterSquare(Register,Register),
-    RefSquare(Register,Register),
     Star(Register,Register),
     Filter(Register,Register,Register),
     At(Register,Register),
@@ -57,11 +98,21 @@ fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, mor
     Ok(())
 }
 
+fn fmt_instr2(f: &mut fmt::Formatter<'_>, opcode: &str, regs: &Vec<Register>, more: &Vec<String>) -> fmt::Result {
+    let mut regs : Vec<String> = regs.iter().map(|x| format!("{:?}",x)).collect();
+    if more.len() > 0 { regs.push("".to_string()); }
+    write!(f,"#{} {}{};\n",opcode,regs.join(" "),more.join(" "))?;
+    Ok(())
+}
+
 impl fmt::Debug for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Instruction::Nil(r) =>
-                fmt_instr(f,"nil",&vec![r],&vec![])?,
+            Instruction::New(itype,prefixes,regs) => {
+                let mut name = vec![itype.get_name()];
+                name.extend(prefixes.iter().cloned());
+                fmt_instr2(f,&name.join(":"),regs,&vec![])?
+            },
             Instruction::NumberConst(r0,num) =>
                 fmt_instr(f,"number",&vec![r0],&vec![num.to_string()])?,
             Instruction::BooleanConst(r0,b) => 
@@ -70,12 +121,8 @@ impl fmt::Debug for Instruction {
                 fmt_instr(f,"string",&vec![r0],&vec![format!("\"{}\"",s.to_string())])?,
             Instruction::BytesConst(r0,b) => 
                 fmt_instr(f,"bytes",&vec![r0],&vec![format!("\'{}\'",hex::encode(b))])?,
-            Instruction::List(r0) =>
-                fmt_instr(f,"list",&vec![r0],&vec![])?,
             Instruction::Length(r0,r1) =>
                 fmt_instr(f,"length",&vec![r0,r1],&vec![])?,
-            Instruction::Append(r0,r1) => 
-                fmt_instr(f,"append",&vec![r0,r1],&vec![])?,
             Instruction::Add(r0,r1) => 
                 fmt_instr(f,"add",&vec![r0,r1],&vec![])?,
             Instruction::Proc(name,regs) =>  {
@@ -109,23 +156,8 @@ impl fmt::Debug for Instruction {
             Instruction::ETest(field,name,dst,src) => {
                 fmt_instr(f,&format!("etest:{}:{}",name,field),&vec![dst,src],&vec![])?
             },
-            Instruction::Square(dst,src) => {
-                fmt_instr(f,"square",&vec![dst,src],&vec![])?
-            },
-            Instruction::RefSquare(dst,src) => {
-                fmt_instr(f,"refsquare",&vec![dst,src],&vec![])?
-            },
-            Instruction::FilterSquare(dst,src) => {
-                fmt_instr(f,"filtersquare",&vec![dst,src],&vec![])?
-            },
             Instruction::Star(dst,src) => {
                 fmt_instr(f,"star",&vec![dst,src],&vec![])?
-            },
-            Instruction::LValue(dst,src) => {
-                fmt_instr(f,"lvalue",&vec![dst,src],&vec![])?
-            },
-            Instruction::Alias(dst,src) => {
-                fmt_instr(f,"alias",&vec![dst,src],&vec![])?
             },
             Instruction::At(dst,src) => {
                 fmt_instr(f,"at",&vec![dst,src],&vec![])?
@@ -141,9 +173,6 @@ impl fmt::Debug for Instruction {
             },
             Instruction::SeqFilter(dst,src,start,len) => {
                 fmt_instr(f,"seqfilter",&vec![dst,src,start,len],&vec![])?
-            },
-            Instruction::Copy(dst,src) => {
-                fmt_instr(f,"copy",&vec![dst,src],&vec![])?
             },
             Instruction::NumEq(out,a,b) => {
                 fmt_instr(f,"numeq",&vec![out,a,b],&vec![])?
@@ -165,18 +194,10 @@ impl Instruction {
             Instruction::BooleanConst(a,_) => vec![a.clone()],
             Instruction::StringConst(a,_) => vec![a.clone()],
             Instruction::BytesConst(a,_) => vec![a.clone()],
-            Instruction::List(a) => vec![a.clone()],
-            Instruction::Append(a,b) => vec![a.clone(),b.clone()],
             Instruction::Add(a,b) => vec![a.clone(),b.clone()],
-            Instruction::Copy(a,b) => vec![a.clone(),b.clone()],
-            Instruction::LValue(a,b) => vec![a.clone(),b.clone()],
-            Instruction::Alias(a,b) => vec![a.clone(),b.clone()],
             Instruction::Proc(_,aa) => aa.iter().map(|x| x.1).collect(),
             Instruction::Operator(_,aa,bb) => { let mut out = aa.to_vec(); out.extend(bb.to_vec()); out },
             Instruction::Call(_,_,aa) => aa.to_vec(),
-            Instruction::Square(a,b) => vec![a.clone(),b.clone()],
-            Instruction::RefSquare(a,b) => vec![a.clone(),b.clone()],
-            Instruction::FilterSquare(a,b) => vec![a.clone(),b.clone()],
             Instruction::Star(a,b) => vec![a.clone(),b.clone()],
             Instruction::Filter(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
             Instruction::SeqFilter(a,b,c,d) => vec![a.clone(),b.clone(),c.clone(),d.clone()],
@@ -184,23 +205,13 @@ impl Instruction {
             Instruction::Run(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
             Instruction::SeqAt(a,b) => vec![a.clone(),b.clone()],
             Instruction::NumEq(a,b,c) => vec![a.clone(),b.clone(),c.clone()],
-            Instruction::Nil(a) => vec![a.clone()],
+            Instruction::New(_,_,r) => r.iter().cloned().collect(),
             Instruction::Length(a,b) => vec![a.clone(),b.clone()],
         }
     }
 
     pub fn get_constraint(&self, defstore: &DefStore) -> Result<InstructionConstraint,String> {
         Ok(InstructionConstraint::new(&match self {
-            Instruction::LValue(dst,src) => {
-                vec![
-                    (ArgumentConstraint::Reference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),dst.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),src.clone())
-                ]
-            },
             Instruction::Proc(name,regs) => {
                 let procdecl = defstore.get_proc(name).ok_or_else(|| format!("No such procedure {:?}",name))?;
                 let signature = procdecl.get_signature();
@@ -219,16 +230,6 @@ impl Instruction {
                 }
                 print!("args: {:?}\n",arguments);
                 arguments
-            },
-            Instruction::Copy(dst,src) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),dst.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),src.clone())
-                ]
             },
             Instruction::CtorStruct(name,dst,srcs) => {
                 let mut out = Vec::new();
@@ -355,31 +356,12 @@ impl Instruction {
                     ),r.clone())
                 ]
             },
-            Instruction::List(r) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Vec(Box::new(
-                            ArgumentExpressionConstraint::Placeholder(String::new())
-                        ))
-                    ),r.clone())
-                ]
-            },
-            Instruction::Nil(r) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),r.clone())
-                ]
-            },
-            Instruction::Append(r,c) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),r.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),c.clone())
-                ]
+            Instruction::New(itype,_prefixes,regs) => {
+                let mut out = Vec::new();
+                for (i,c) in itype.get_constraints().drain(..).enumerate() {
+                    out.push((c,regs[i]));
+                }
+                out
             },
             Instruction::Star(dst,src) => {
                 vec![
@@ -390,44 +372,6 @@ impl Instruction {
                     ),dst.clone()),
                     (ArgumentConstraint::NonReference(
                         ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),src.clone())
-                ]
-            },
-            Instruction::Square(dst,src) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),dst.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Vec(Box::new(
-                            ArgumentExpressionConstraint::Placeholder(String::new())
-                        ))
-                    ),src.clone())
-                ]
-            },
-            Instruction::RefSquare(dst,src) => {
-                vec![
-                    (ArgumentConstraint::Reference(
-                        ArgumentExpressionConstraint::Placeholder(String::new())
-                    ),dst.clone()),
-                    (ArgumentConstraint::Reference(
-                        ArgumentExpressionConstraint::Vec(Box::new(
-                            ArgumentExpressionConstraint::Placeholder(String::new())
-                        ))
-                    ),src.clone())
-                ]
-            },
-            Instruction::FilterSquare(dst,src) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::NumberType
-                        )
-                    ),dst.clone()),
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Vec(Box::new(
-                            ArgumentExpressionConstraint::Placeholder(String::new())
-                        ))
                     ),src.clone())
                 ]
             },

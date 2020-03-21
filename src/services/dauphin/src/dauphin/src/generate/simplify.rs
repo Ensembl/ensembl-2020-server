@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::generate::Instruction;
+use crate::generate::{ Instruction, InstructionType };
 use crate::model::{ DefStore, Register, StructDef, EnumDef };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
 use super::codegen::GenContext;
@@ -59,11 +59,30 @@ fn extend_vertical<F>(in_: Vec<&Register>, mapping: &HashMap<Register,Vec<Regist
     Ok(out)
 }
 
+fn extend_vertical2<F>(in_: &Vec<Register>, mapping: &HashMap<Register,Vec<Register>>,cb: F) -> Result<Vec<Instruction>,()>
+        where F: Fn(Vec<Register>) -> Instruction {
+    let mut expanded = Vec::new();
+    let mut len = None;
+    for in_reg in in_.iter() {
+        let in_reg = in_reg.clone().clone();
+        let map = mapping.get(&in_reg).unwrap_or(&vec![in_reg]).clone();
+        if len.is_none() { len = Some(map.len()); }
+        if map.len() != len.unwrap() { return Err(()); }
+        expanded.push(map);
+    }
+    let mut out = Vec::new();
+    for i in 0..len.unwrap() {
+        let here_regs : Vec<Register> = expanded.iter().map(|v| v[i].clone()).collect();
+        out.push(cb(here_regs));
+    }
+    Ok(out)
+}
+
 /* Some easy value for unused enum branches */
 fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<Vec<Instruction>,()> {
     let mut out = Vec::new();
     match type_ {
-        MemberType::Vec(_) => out.push(Instruction::List(reg.clone())),
+        MemberType::Vec(_) =>  out.push(Instruction::New(InstructionType::List(),vec![],vec![*reg])),
         MemberType::Base(b) => match b {
             BaseType::BooleanType => out.push(Instruction::BooleanConst(reg.clone(),false)),
             BaseType::StringType => out.push(Instruction::StringConst(reg.clone(),String::new())),
@@ -114,51 +133,25 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         Instruction::SValue(_,_,_,_) |
         Instruction::EValue(_,_,_,_) |
         Instruction::ETest(_,_,_,_) |
-        Instruction::Alias(_,_) |
         Instruction::Run(_,_,_) |
         Instruction::NumEq(_,_,_) => {
             vec![instr.clone()]
         },
-        Instruction::Nil(r) => {
-            extend_vertical(vec![r],mapping,|regs| {
-                Instruction::Nil(regs[0])
-            })?
-        },
-        Instruction::LValue(dst,src) => {
-            extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::LValue(regs[0],regs[1])
-            })?
-        },
-        Instruction::Copy(dst,src) => {
-            extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Copy(regs[0],regs[1])
-            })?
-        },  
-        Instruction::Append(dst,src) => {
-            extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Append(regs[0],regs[1])
-            })?
-        },  
-        Instruction::List(reg) => {
-            extend_vertical(vec![reg],mapping,|regs| {
-                Instruction::List(regs[0])
-            })?
-        },  
-        Instruction::Square(dst,src) => {
-            extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::Square(regs[0],regs[1])
-            })?
-        },
-        Instruction::RefSquare(dst,src) => {
-            extend_vertical(vec![dst,src],mapping,|regs| {
-                Instruction::RefSquare(regs[0],regs[1])
-            })?
-        },
-        Instruction::FilterSquare(dst,src) => {
-            if let Some(srcs) = mapping.get(&src) {
-                vec![Instruction::FilterSquare(*dst,srcs[0])]
-            } else {
-                vec![Instruction::FilterSquare(*dst,*src)]
+        Instruction::New(itype,prefixes,regs) => {
+            match itype {
+                InstructionType::Nil() | InstructionType::Alias() | InstructionType::Copy() | InstructionType::List() |
+                InstructionType::Append() | InstructionType::Square() | InstructionType::RefSquare() => {
+                    extend_vertical2(regs,mapping,|regs| {
+                        Instruction::New(itype.clone(),prefixes.clone(),regs)
+                    })?
+                },
+                InstructionType::FilterSquare() => {
+                    if let Some(srcs) = mapping.get(&regs[1]) {
+                        vec![Instruction::New(InstructionType::FilterSquare(),vec![],vec![regs[0],srcs[0]])]
+                    } else {
+                        vec![Instruction::New(InstructionType::FilterSquare(),vec![],vec![regs[0],regs[1]])]
+                    }
+                },
             }
         },
         Instruction::Star(dst,src) => {
@@ -203,7 +196,7 @@ fn extend_struct_instr(obj_name: &str, decl: &StructDef, instr: &Instruction, ma
                 if dests.len() != srcs.len() { return Err(()); }
                 let mut out = Vec::new();
                 for i in 0..srcs.len() {
-                    out.push(Instruction::Copy(dests[i].clone(),srcs[i].clone()));
+                    out.push(Instruction::New(InstructionType::Copy(),vec![],vec![dests[i],srcs[i]]));
                 }
                 out
             } else {
@@ -214,7 +207,7 @@ fn extend_struct_instr(obj_name: &str, decl: &StructDef, instr: &Instruction, ma
             let dests = mapping.get(src).ok_or_else(|| ())?;
             print!("{:?} find {:?}\n",decl.get_names(),field);
             let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| ())?;
-            vec![Instruction::Copy(dst.clone(),dests[pos].clone())]
+            vec![Instruction::New(InstructionType::Copy(),vec![],vec![*dst,dests[pos]])]
         },
         instr => extend_common(instr,mapping)?
     })
@@ -233,7 +226,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
                 for i in 1..dests.len() {
                     if i-1 == pos {
                         out.push(Instruction::NumberConst(dests[0].clone(),(i-1) as f64));
-                        out.push(Instruction::Copy(dests[i].clone(),src.clone()));
+                        out.push(Instruction::New(InstructionType::Copy(),vec![],vec![dests[i],*src]));
                     } else {
                         let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
                         out.extend(build_nil(context,defstore,&dests[i],&type_)?.iter().cloned());

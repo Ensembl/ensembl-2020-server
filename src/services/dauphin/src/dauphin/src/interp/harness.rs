@@ -1,5 +1,5 @@
 use std::collections::{ HashMap };
-use crate::generate::Instruction;
+use crate::generate::{ Instruction, InstructionType };
 use crate::generate::GenContext;
 use crate::model::{ offset, DefStore, LinearPath, Register, RegisterPurpose };
 use crate::typeinf::{ MemberType, MemberMode };
@@ -223,14 +223,20 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
         }
         print!("{:?}",instr);
         match instr {
-            Instruction::Nil(r) => { harness.insert(r,vec![]); },
-            Instruction::Alias(d,s) => { harness.alias(d,s); },
-            Instruction::Append(r,s) => { let mut x = harness.get_mut(s).to_vec(); harness.get_mut(r).append(&mut x); },
+            Instruction::New(itype,_prefixes,regs) => { 
+                match itype {
+                    InstructionType::Nil() => { harness.insert(&regs[0],vec![]); },
+                    InstructionType::Alias() => { harness.alias(&regs[0],&regs[1]); },
+                    InstructionType::Copy() => { let x = harness.get_mut(&regs[1]).to_vec(); harness.insert(&regs[0],x); },
+                    InstructionType::Append() => { let mut x = harness.get_mut(&regs[1]).to_vec(); harness.get_mut(&regs[0]).append(&mut x); },
+                    InstructionType::List() | InstructionType::Square() | InstructionType::RefSquare() | InstructionType::FilterSquare() =>
+                        panic!("Illegal instruction")
+                }
+            },
             Instruction::Add(r,v) => { let h = &mut harness; let delta = h.get(v)[0]; let v = h.get(r).iter().map(|x| x+delta).collect(); h.insert(&r,v); },
             Instruction::Length(r,s) => { let v = vec![harness.get(s).len()]; harness.insert(&r,v); }
             Instruction::NumberConst(r,n) => { harness.insert(&r,vec![*n as usize]); },
             Instruction::BooleanConst(r,n) => { harness.insert(&r,vec![if *n {1} else {0}]); },
-            Instruction::Copy(r,s) => { let x = harness.get_mut(s).to_vec(); harness.insert(&r,x); },
             Instruction::Filter(d,s,f) => {
                 let h = &mut harness;
                 let mut f = h.get(f).iter();
@@ -267,7 +273,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 }
                 h.insert(d,v);
             },
-            Instruction::At(d,s) | Instruction::LValue(d,s) => {
+            Instruction::At(d,s) => {
                 let mut v = vec![];
                 for i in 0..harness.get(s).len() {
                     v.push(i);

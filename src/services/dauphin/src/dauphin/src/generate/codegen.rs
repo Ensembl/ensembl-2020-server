@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use super::intstruction::Instruction;
+use super::intstruction::{ Instruction, InstructionType };
 use crate::parser::{ Expression, Statement };
 use crate::model::{ Register, RegisterAllocator };
 use crate::model::DefStore;
@@ -50,11 +50,11 @@ impl<'a> CodeGen<'a> {
 
     fn build_vec(&mut self, values: &Vec<Expression>, reg: Register, dollar: Option<&Register>, at: Option<&Register>) -> Result<(),String> {
         let tmp = self.context.regalloc.allocate();
-        self.add_instr(Instruction::Nil(tmp))?;
+        self.add_instr(Instruction::New(InstructionType::Nil(),vec![],vec![tmp]))?;
         for val in values {
             let r = self.build_rvalue(val,dollar,at)?;
-            let push = Instruction::Append(tmp,r);
-            self.add_instr(push)?;
+            self.add_instr(Instruction::New(InstructionType::Append(),vec![],vec![tmp,r]))?;
+
         }
         self.add_instr(Instruction::Star(reg,tmp))?;
         Ok(())
@@ -141,7 +141,7 @@ impl<'a> CodeGen<'a> {
                 }
                 let real_reg = self.regnames[id];
                 let lvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::LValue(lvalue_reg,real_reg))?;
+                self.add_instr(Instruction::New(InstructionType::Alias(),vec![],vec![lvalue_reg,real_reg]))?;
                 Ok((lvalue_reg,None,real_reg))
             },
             Expression::Dot(x,f) => {
@@ -171,11 +171,11 @@ impl<'a> CodeGen<'a> {
             Expression::Square(x) => {
                 let (lvalue_subreg,_,rvalue_subreg) = self.build_lvalue(x,false,false)?;
                 let lvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::RefSquare(lvalue_reg,lvalue_subreg))?;
+                self.add_instr(Instruction::New(InstructionType::RefSquare(),vec![],vec![lvalue_reg,lvalue_subreg]))?;
                 let rvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Square(rvalue_reg,rvalue_subreg))?;
+                self.add_instr(Instruction::New(InstructionType::Square(),vec![],vec![rvalue_reg,rvalue_subreg]))?;
                 let fvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::FilterSquare(fvalue_reg,rvalue_subreg))?;
+                self.add_instr(Instruction::New(InstructionType::FilterSquare(),vec![],vec![fvalue_reg,rvalue_subreg]))?;
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             Expression::Filter(x,f) => {
@@ -191,11 +191,11 @@ impl<'a> CodeGen<'a> {
             Expression::Bracket(x,f) => {
                 let (lvalue_subreg,_,rvalue_subreg) = self.build_lvalue(x,false,false)?;
                 let lvalue_reg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::RefSquare(lvalue_reg,lvalue_subreg))?;
+                self.add_instr(Instruction::New(InstructionType::RefSquare(),vec![],vec![lvalue_reg,lvalue_subreg]))?;
                 let rvalue_interreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Square(rvalue_interreg,rvalue_subreg))?;
+                self.add_instr(Instruction::New(InstructionType::Square(),vec![],vec![rvalue_interreg,rvalue_subreg]))?;
                 let fvalue_interreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::FilterSquare(fvalue_interreg,rvalue_subreg))?;
+                self.add_instr(Instruction::New(InstructionType::FilterSquare(),vec![],vec![fvalue_interreg,rvalue_subreg]))?;
                 let atreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::At(atreg,rvalue_subreg))?;
                 let filterreg = self.build_rvalue(f,Some(&rvalue_interreg),Some(&atreg))?;
@@ -217,7 +217,7 @@ impl<'a> CodeGen<'a> {
                     return Err(format!("Unset variable {:?}",id));
                 }
                 let real_reg = self.regnames[id];
-                self.add_instr(Instruction::Copy(reg,real_reg))?;
+                self.add_instr(Instruction::New(InstructionType::Copy(),vec![],vec![reg,real_reg]))?;
             },
             Expression::Number(n) => {
                 self.add_instr(Instruction::NumberConst(reg,*n))?;
@@ -282,7 +282,7 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Square(x) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                self.add_instr(Instruction::Square(reg,subreg))?;
+                self.add_instr(Instruction::New(InstructionType::Square(),vec![],vec![reg,subreg]))?;
             },
             Expression::Star(x) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
@@ -299,20 +299,20 @@ impl<'a> CodeGen<'a> {
                 let atreg = self.context.regalloc.allocate();
                 self.add_instr(Instruction::At(atreg,subreg))?;
                 let sq_subreg = self.context.regalloc.allocate();
-                self.add_instr(Instruction::Square(sq_subreg,subreg))?;
+                self.add_instr(Instruction::New(InstructionType::Square(),vec![],vec![sq_subreg,subreg]))?;
                 let filterreg = self.build_rvalue(f,Some(&sq_subreg),Some(&atreg))?;
                 self.add_instr(Instruction::Filter(reg,sq_subreg,filterreg))?;
             },
             Expression::Dollar => {
                 if let Some(dollar) = dollar {
-                    self.add_instr(Instruction::Copy(reg,*dollar))?;
+                    self.add_instr(Instruction::New(InstructionType::Copy(),vec![],vec![reg,*dollar]))?;
                 } else {
                     return Err("Unexpected $".to_string());
                 }
             },
             Expression::At => {
                 if let Some(at) = at {
-                    self.add_instr(Instruction::Copy(reg,*at))?;
+                    self.add_instr(Instruction::New(InstructionType::Copy(),vec![],vec![reg,*at]))?;
                 } else {
                     return Err("Unexpected @".to_string());
                 }
