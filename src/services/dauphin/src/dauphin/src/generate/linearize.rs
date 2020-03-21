@@ -121,7 +121,11 @@ fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src
 
 fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: &BTreeMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match instr {
-        Instruction::New(_) |
+        Instruction::CtorStruct(_,_,_) |
+        Instruction::CtorEnum(_,_,_,_) |
+        Instruction::SValue(_,_,_,_) |
+        Instruction::EValue(_,_,_,_) |
+        Instruction::ETest(_,_,_,_) |
         Instruction::SeqFilter(_,_,_,_) |
         Instruction::Proc(_,_) |
         Instruction::Operator(_,_,_) |
@@ -476,9 +480,7 @@ mod test {
     fn linearize_stable_allocs() {
         let a = linearize_stable_pass();
         let b = linearize_stable_pass();
-        let astr = a.instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>();
-        let bstr = b.instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>();
-        assert_eq!(astr,bstr);
+        assert_eq!(a.instrs,b.instrs);
     }
 
    #[test]

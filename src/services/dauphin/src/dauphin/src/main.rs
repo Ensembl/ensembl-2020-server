@@ -2,7 +2,6 @@ mod generate;
 mod interp;
 mod lexer;
 mod model;
-mod opcodes;
 mod parser;
 mod testsuite;
 mod typeinf;
