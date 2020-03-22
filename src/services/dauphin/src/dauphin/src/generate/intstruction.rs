@@ -21,12 +21,17 @@ pub enum InstructionType {
     Length(),
     Add(),
     SeqFilter(),
-    SeqAt()
+    SeqAt(),
+    NumberConst(f64),
+    BooleanConst(bool),
+    StringConst(String),
+    BytesConst(Vec<u8>),
+
 }
 
 impl InstructionType {
-    pub fn get_name(&self) -> String {
-        match self {
+    pub fn get_name(&self) -> Vec<String> {
+        let mut out = vec![match self {
             InstructionType::Nil() => "nil",
             InstructionType::Alias() => "alias",
             InstructionType::Copy() => "copy",
@@ -44,7 +49,21 @@ impl InstructionType {
             InstructionType::Add() => "add",
             InstructionType::SeqFilter() => "seqfilter",
             InstructionType::SeqAt() => "seqat",
-        }.to_string()
+            InstructionType::NumberConst(_) => "number",
+            InstructionType::BooleanConst(_) => "bool",
+            InstructionType::StringConst(_) => "string",
+            InstructionType::BytesConst(_) => "bytes"
+        }.to_string()];
+        if let Some(suffix) = match self {
+            InstructionType::NumberConst(n) => Some(n.to_string()),
+            InstructionType::BooleanConst(b) => Some(b.to_string()),
+            InstructionType::StringConst(s) => Some(format!("\"{}\"",s.to_string())),
+            InstructionType::BytesConst(b) => Some(format!("\'{}\'",hex::encode(b))),
+            _ => None
+        } {
+            out.push(suffix);
+        }
+        out
     }
 
     pub fn get_constraints(&self) -> Vec<ArgumentConstraint> {
@@ -78,6 +97,10 @@ impl InstructionType {
             InstructionType::Run() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
                                            ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
                                            ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType))],
+            InstructionType::NumberConst(_) => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType))],
+            InstructionType::BooleanConst(_) => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::BooleanType))],
+            InstructionType::StringConst(_) => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::StringType))],
+            InstructionType::BytesConst(_) => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::BytesType))],
             InstructionType::NumEq() |
             InstructionType::Length() |
             InstructionType::Add() |
@@ -99,12 +122,6 @@ pub enum Instruction {
     EValue(String,String,Register,Register),
     ETest(String,String,Register,Register),
 
-    /* constant building */
-    NumberConst(Register,f64),
-    BooleanConst(Register,bool),
-    StringConst(Register,String),
-    BytesConst(Register,Vec<u8>),
-
     /* calls-out */
     Proc(String,Vec<(MemberMode,Register)>),
     Operator(String,Vec<Register>,Vec<Register>),
@@ -118,7 +135,7 @@ fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, mor
     Ok(())
 }
 
-fn fmt_instr2(f: &mut fmt::Formatter<'_>, opcode: &str, regs: &Vec<Register>, more: &Vec<String>) -> fmt::Result {
+fn fmt_instr2(f: &mut fmt::Formatter<'_>, opcode: &str, regs: &Vec<Register>, more: &[String]) -> fmt::Result {
     let mut regs : Vec<String> = regs.iter().map(|x| format!("{:?}",x)).collect();
     if more.len() > 0 { regs.push("".to_string()); }
     write!(f,"#{} {}{};\n",opcode,regs.join(" "),more.join(" "))?;
@@ -129,18 +146,11 @@ impl fmt::Debug for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Instruction::New(itype,prefixes,regs) => {
-                let mut name = vec![itype.get_name()];
+                let args = itype.get_name();
+                let mut name = vec![args[0].clone()];
                 name.extend(prefixes.iter().cloned());
-                fmt_instr2(f,&name.join(":"),regs,&vec![])?
+                fmt_instr2(f,&name.join(":"),regs,&args[1..])?
             },
-            Instruction::NumberConst(r0,num) =>
-                fmt_instr(f,"number",&vec![r0],&vec![num.to_string()])?,
-            Instruction::BooleanConst(r0,b) => 
-                fmt_instr(f,"bool",&vec![r0],&vec![b.to_string()])?,
-            Instruction::StringConst(r0,s) =>
-                fmt_instr(f,"string",&vec![r0],&vec![format!("\"{}\"",s.to_string())])?,
-            Instruction::BytesConst(r0,b) => 
-                fmt_instr(f,"bytes",&vec![r0],&vec![format!("\'{}\'",hex::encode(b))])?,
             Instruction::Proc(name,regs) =>  {
                 let regs : Vec<String> = regs.iter().map(|x| format!("{:?}/{}",x.1,x.0)).collect();
                 write!(f,"#proc:{} {};\n",name,regs.join(" "))?;
@@ -185,10 +195,6 @@ impl Instruction {
             Instruction::SValue(_,_,a,b) => vec![a.clone(),b.clone()],
             Instruction::EValue(_,_,a,b) => vec![a.clone(),b.clone()],
             Instruction::ETest(_,_,a,b) => vec![a.clone(),b.clone()],
-            Instruction::NumberConst(a,_) => vec![a.clone()],
-            Instruction::BooleanConst(a,_) => vec![a.clone()],
-            Instruction::StringConst(a,_) => vec![a.clone()],
-            Instruction::BytesConst(a,_) => vec![a.clone()],
             Instruction::Proc(_,aa) => aa.iter().map(|x| x.1).collect(),
             Instruction::Operator(_,aa,bb) => { let mut out = aa.to_vec(); out.extend(bb.to_vec()); out },
             Instruction::Call(_,_,aa) => aa.to_vec(),
@@ -305,42 +311,6 @@ impl Instruction {
                 }
                 print!("operator {:?} ({:?})\n",out,signature);
                 out
-            },
-            Instruction::NumberConst(r,_) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::NumberType
-                        )
-                    ),r.clone())
-                ]
-            },
-            Instruction::BooleanConst(r,_) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::BooleanType
-                        )
-                    ),r.clone())
-                ]
-            },
-            Instruction::StringConst(r,_) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::StringType
-                        )
-                    ),r.clone())
-                ]
-            },
-            Instruction::BytesConst(r,_) => {
-                vec![
-                    (ArgumentConstraint::NonReference(
-                        ArgumentExpressionConstraint::Base(
-                            BaseType::BytesType
-                        )
-                    ),r.clone())
-                ]
             },
             Instruction::New(itype,_prefixes,regs) => {
                 let mut out = Vec::new();

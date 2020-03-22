@@ -220,16 +220,16 @@ impl<'a> CodeGen<'a> {
                 self.add_instr(Instruction::New(InstructionType::Copy(),vec![],vec![reg,real_reg]))?;
             },
             Expression::Number(n) => {
-                self.add_instr(Instruction::NumberConst(reg,*n))?;
+                self.add_instr(Instruction::New(InstructionType::NumberConst(*n),vec![],vec![reg]))?;
             },
             Expression::LiteralString(s) => {
-                self.add_instr(Instruction::StringConst(reg,s.to_string()))?;
+                self.add_instr(Instruction::New(InstructionType::StringConst(s.to_string()),vec![],vec![reg]))?;
             },
             Expression::LiteralBool(b) => {
-                self.add_instr(Instruction::BooleanConst(reg,*b))?;
+                self.add_instr(Instruction::New(InstructionType::BooleanConst(*b),vec![],vec![reg]))?;
             },
             Expression::LiteralBytes(b) => {
-                self.add_instr(Instruction::BytesConst(reg,b.to_vec()))?;
+                self.add_instr(Instruction::New(InstructionType::BytesConst(b.to_vec()),vec![],vec![reg]))?;
             },
             Expression::Vector(v) => self.build_vec(v,reg,dollar,at)?,
             Expression::Operator(name,x) => {

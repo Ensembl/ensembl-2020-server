@@ -64,10 +64,10 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
     match type_ {
         MemberType::Vec(_) =>  out.push(Instruction::New(InstructionType::List(),vec![],vec![*reg])),
         MemberType::Base(b) => match b {
-            BaseType::BooleanType => out.push(Instruction::BooleanConst(reg.clone(),false)),
-            BaseType::StringType => out.push(Instruction::StringConst(reg.clone(),String::new())),
-            BaseType::NumberType => out.push(Instruction::NumberConst(reg.clone(),0.)),
-            BaseType::BytesType => out.push(Instruction::BytesConst(reg.clone(),vec![])),
+            BaseType::BooleanType => out.push(Instruction::New(InstructionType::BooleanConst(false),vec![],vec![*reg])),
+            BaseType::StringType => out.push(Instruction::New(InstructionType::StringConst(String::new()),vec![],vec![*reg])),
+            BaseType::NumberType => out.push(Instruction::New(InstructionType::NumberConst(0.),vec![],vec![*reg])),
+            BaseType::BytesType => out.push(Instruction::New(InstructionType::BytesConst(vec![]),vec![],vec![*reg])),
             BaseType::Invalid => return Err(()),
             BaseType::StructType(name) => {
                 let decl = defstore.get_struct(name).ok_or_else(|| ())?;
@@ -100,10 +100,6 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         Instruction::Proc(_,_) => {
             panic!("Impossible instruction! {:?}",instr);
         },
-        Instruction::NumberConst(_,_) |
-        Instruction::BooleanConst(_,_) |
-        Instruction::StringConst(_,_) |
-        Instruction::BytesConst(_,_) |
         Instruction::CtorStruct(_,_,_) |
         Instruction::CtorEnum(_,_,_,_) |
         Instruction::SValue(_,_,_,_) |
@@ -120,9 +116,12 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                 InstructionType::SeqAt() =>
                     panic!("Impossible instruction! {:?}",instr),
 
-                InstructionType::NumEq() =>
+                InstructionType::NumEq() |
+                InstructionType::NumberConst(_) |
+                InstructionType::BooleanConst(_) |
+                InstructionType::StringConst(_) |
+                InstructionType::BytesConst(_) =>
                     vec![instr.clone()],
-
                 InstructionType::Nil() |
                 InstructionType::Alias() |
                 InstructionType::Copy() |
@@ -213,7 +212,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
                 let mut out = Vec::new();
                 for i in 1..dests.len() {
                     if i-1 == pos {
-                        out.push(Instruction::NumberConst(dests[0].clone(),(i-1) as f64));
+                        out.push(Instruction::New(InstructionType::NumberConst((i-1) as f64),vec![],vec![dests[0]]));
                         out.push(Instruction::New(InstructionType::Copy(),vec![],vec![dests[i],*src]));
                     } else {
                         let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
@@ -231,7 +230,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             let mut out = Vec::new();
             let filter = context.regalloc.allocate();
             let posreg = context.regalloc.allocate();
-            out.push(Instruction::NumberConst(posreg.clone(),pos as f64));
+            out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![],vec![posreg]));
             context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
             out.push(Instruction::New(InstructionType::NumEq(),vec![],vec![filter,srcs[0].clone(),posreg]));
             out.push(Instruction::New(InstructionType::Filter(),vec![],vec![*dst,srcs[pos+1],filter]));
@@ -242,7 +241,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             let srcs = mapping.get(src).ok_or_else(|| ())?;
             let mut out = Vec::new();
             let posreg = context.regalloc.allocate();
-            out.push(Instruction::NumberConst(posreg.clone(),pos as f64));
+            out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![],vec![posreg]));
             out.push(Instruction::New(InstructionType::NumEq(),vec![],vec![*dst,srcs[0],posreg]));
             out
         },

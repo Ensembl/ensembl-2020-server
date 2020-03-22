@@ -226,6 +226,11 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             Instruction::New(itype,_prefixes,regs) => { 
                 match itype {
                     InstructionType::Nil() => { harness.insert(&regs[0],vec![]); },
+                    InstructionType::NumberConst(n) => { harness.insert(&regs[0],vec![*n as usize]); },
+                    InstructionType::BooleanConst(n) => { harness.insert(&regs[0],vec![if *n {1} else {0}]); },
+                    InstructionType::StringConst(_) |
+                    InstructionType::BytesConst(_) =>
+                        panic!("Unimplemented"),
                     InstructionType::Alias() => { harness.alias(&regs[0],&regs[1]); },
                     InstructionType::Copy() => { let x = harness.get_mut(&regs[1]).to_vec(); harness.insert(&regs[0],x); },
                     InstructionType::Append() => { let mut x = harness.get_mut(&regs[1]).to_vec(); harness.get_mut(&regs[0]).append(&mut x); },
@@ -307,8 +312,6 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                         panic!("Illegal instruction")
                 }
             },
-            Instruction::NumberConst(r,n) => { harness.insert(&r,vec![*n as usize]); },
-            Instruction::BooleanConst(r,n) => { harness.insert(&r,vec![if *n {1} else {0}]); },
             Instruction::Call(name,types,regs) => {
                 match &name[..] {
                     "assign" => {

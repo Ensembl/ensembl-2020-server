@@ -132,7 +132,11 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::New(itype,_prefixes,regs) => {
             match itype {
                 InstructionType::NumEq() |
-                InstructionType::Nil() =>
+                InstructionType::Nil() |
+                InstructionType::NumberConst(_) |
+                InstructionType::BooleanConst(_) |
+                InstructionType::StringConst(_) |
+                InstructionType::BytesConst(_) =>
                     out.push(instr.clone()),
 
                 InstructionType::Run() |
@@ -247,7 +251,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                         src_len
                     };
                     let zero_reg = tmp_number_reg(context);
-                    out.push(Instruction::NumberConst(zero_reg,0.));
+                    out.push(Instruction::New(InstructionType::NumberConst(0.),vec![],vec![zero_reg]));
                     out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.index[top_level].0,zero_reg]));
                     out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.index[top_level].1,src_len]));
                 },
@@ -270,12 +274,6 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                     }
                 },
             }
-        },
-        Instruction::NumberConst(_,_) |
-        Instruction::BooleanConst(_,_) |
-        Instruction::StringConst(_,_) |
-        Instruction::BytesConst(_,_) => {
-            out.push(instr.clone());
         },
         Instruction::Call(name,type_,regs) => {
             let mut new = Vec::new();
