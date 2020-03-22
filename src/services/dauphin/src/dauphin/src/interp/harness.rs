@@ -223,7 +223,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
         }
         print!("{:?}",instr);
         match instr {
-            Instruction::New(itype,_prefixes,regs) => { 
+            Instruction::New(itype,regs) => { 
                 match itype {
                     InstructionType::Nil() => { harness.insert(&regs[0],vec![]); },
                     InstructionType::NumberConst(n) => { harness.insert(&regs[0],vec![*n as usize]); },
@@ -304,6 +304,8 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                         }
                         harness.insert(&regs[0],v);
                     },
+
+                    InstructionType::CtorStruct(_) |
                     InstructionType::List() |
                     InstructionType::Square() |
                     InstructionType::RefSquare() |

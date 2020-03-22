@@ -3,6 +3,31 @@ use std::fmt;
 use crate::model::{ DefStore, Register };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberType, MemberMode };
 
+fn placeholder(ref_: bool) -> ArgumentConstraint {
+    if ref_ {
+        ArgumentConstraint::Reference(
+            ArgumentExpressionConstraint::Placeholder(String::new()))
+    } else {
+        ArgumentConstraint::NonReference(
+            ArgumentExpressionConstraint::Placeholder(String::new()))
+    }
+}
+
+fn array(ref_: bool) -> ArgumentConstraint {
+    if ref_ {
+        ArgumentConstraint::Reference(ArgumentExpressionConstraint::Vec(Box::new(
+            ArgumentExpressionConstraint::Placeholder(String::new()))))
+    } else {
+        ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(Box::new(
+            ArgumentExpressionConstraint::Placeholder(String::new()))))
+    }
+
+}
+
+fn fixed(bt: BaseType) -> ArgumentConstraint {
+    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(bt))
+}
+
 #[derive(Clone,PartialEq)]
 pub enum InstructionType {
     Nil(),
@@ -26,7 +51,7 @@ pub enum InstructionType {
     BooleanConst(bool),
     StringConst(String),
     BytesConst(Vec<u8>),
-
+    CtorStruct(String)
 }
 
 impl InstructionType {
@@ -52,8 +77,16 @@ impl InstructionType {
             InstructionType::NumberConst(_) => "number",
             InstructionType::BooleanConst(_) => "bool",
             InstructionType::StringConst(_) => "string",
-            InstructionType::BytesConst(_) => "bytes"
+            InstructionType::BytesConst(_) => "bytes",
+            InstructionType::CtorStruct(_) => "struct",
         }.to_string()];
+        if let Some(prefixes) = match self {
+            InstructionType::CtorStruct(name) => Some(vec![name]),
+            _ => None
+        } {
+            out[0] = format!("{}:{}",out[0],prefixes.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(":"));
+        };
+
         if let Some(suffix) = match self {
             InstructionType::NumberConst(n) => Some(n.to_string()),
             InstructionType::BooleanConst(b) => Some(b.to_string()),
@@ -66,57 +99,55 @@ impl InstructionType {
         out
     }
 
-    pub fn get_constraints(&self) -> Vec<ArgumentConstraint> {
+    pub fn get_constraints(&self, defstore: &DefStore) -> Result<Vec<ArgumentConstraint>,String> {
         match self {
-            InstructionType::Nil()   => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
-            InstructionType::Alias() => vec![ArgumentConstraint::Reference(ArgumentExpressionConstraint::Placeholder(String::new())),
-                                             ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
-            InstructionType::Copy() =>  vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
-                                             ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
-            InstructionType::List() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
-                                                Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
-            InstructionType::Append() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
-                                              ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
-            InstructionType::Square() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
-                                              ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
-                                                  Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
-            InstructionType::RefSquare() => vec![ArgumentConstraint::Reference(ArgumentExpressionConstraint::Placeholder(String::new())),
-                                                 ArgumentConstraint::Reference(ArgumentExpressionConstraint::Vec(
-                                                    Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
-            InstructionType::FilterSquare() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
-                                                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
-                                                        Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))],
-            InstructionType::Star() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(
-                                                Box::new(ArgumentExpressionConstraint::Placeholder(String::new())))),
-                                            ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
-            InstructionType::At() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
-                                          ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))],
-            InstructionType::Filter() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
-                                              ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new())),
-                                              ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::BooleanType))],
-            InstructionType::Run() => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
-                                           ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
-                                           ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType))],
-            InstructionType::NumberConst(_) => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType))],
-            InstructionType::BooleanConst(_) => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::BooleanType))],
-            InstructionType::StringConst(_) => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::StringType))],
-            InstructionType::BytesConst(_) => vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::BytesType))],
+            InstructionType::CtorStruct(name) => {
+                let mut out = Vec::new();
+                out.push(ArgumentConstraint::NonReference(
+                    ArgumentExpressionConstraint::Base(
+                        BaseType::StructType(name.to_string())
+                    )
+                ));
+                let exprdecl = defstore.get_struct(name).ok_or_else(|| format!("No such struct {:?}",name))?;
+                let intypes = exprdecl.get_member_types();
+                for intype in intypes.iter() {
+                    out.push(ArgumentConstraint::NonReference(intype.to_argumentexpressionconstraint()));
+                }
+                Ok(out)
+            },
+
+            InstructionType::Nil()   => Ok(vec![placeholder(false)]),
+            InstructionType::Alias() => Ok(vec![placeholder(true),placeholder(false)]),
+            InstructionType::Copy() =>  Ok(vec![placeholder(false),placeholder(false)]),
+            InstructionType::List() => Ok(vec![array(false)]),
+            InstructionType::Append() => Ok(vec![placeholder(false),placeholder(false)]),
+            InstructionType::Square() => Ok(vec![placeholder(false),array(false)]),
+            InstructionType::RefSquare() => Ok(vec![placeholder(true),array(true)]),
+            InstructionType::FilterSquare() => Ok(vec![fixed(BaseType::NumberType),array(false)]),
+            InstructionType::Star() => Ok(vec![array(false),placeholder(false)]),
+            InstructionType::At() => Ok(vec![fixed(BaseType::NumberType),placeholder(false)]),
+            InstructionType::Filter() => Ok(vec![placeholder(false),placeholder(false),fixed(BaseType::BooleanType)]),
+            InstructionType::Run() => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
+            InstructionType::NumberConst(_) => Ok(vec![fixed(BaseType::NumberType)]),
+            InstructionType::BooleanConst(_) => Ok(vec![fixed(BaseType::BooleanType)]),
+            InstructionType::StringConst(_) => Ok(vec![fixed(BaseType::StringType)]),
+            InstructionType::BytesConst(_) => Ok(vec![fixed(BaseType::BytesType)]),
             InstructionType::NumEq() |
             InstructionType::Length() |
             InstructionType::Add() |
             InstructionType::SeqFilter() |
             InstructionType::SeqAt() =>
-                vec![],
+                Ok(vec![]),
         }
     }
 }
 
 #[derive(Clone,PartialEq)]
 pub enum Instruction {
-    New(InstructionType,Vec<String>,Vec<Register>),
+    New(InstructionType,Vec<Register>),
 
     /* structs/enums: created at codegeneration, removed at simplification */
-    CtorStruct(String,Register,Vec<Register>),
+    //CtorStruct(String,Register,Vec<Register>),
     CtorEnum(String,String,Register,Register),
     SValue(String,String,Register,Register),
     EValue(String,String,Register,Register),
@@ -145,11 +176,9 @@ fn fmt_instr2(f: &mut fmt::Formatter<'_>, opcode: &str, regs: &Vec<Register>, mo
 impl fmt::Debug for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Instruction::New(itype,prefixes,regs) => {
+            Instruction::New(itype,regs) => {
                 let args = itype.get_name();
-                let mut name = vec![args[0].clone()];
-                name.extend(prefixes.iter().cloned());
-                fmt_instr2(f,&name.join(":"),regs,&args[1..])?
+                fmt_instr2(f,&args[0],regs,&args[1..])?
             },
             Instruction::Proc(name,regs) =>  {
                 let regs : Vec<String> = regs.iter().map(|x| format!("{:?}/{}",x.1,x.0)).collect();
@@ -164,11 +193,6 @@ impl fmt::Debug for Instruction {
             Instruction::Call(name,types,regs) => {
                 let types : Vec<String> = types.iter().map(|x| format!("{:?}/{}",x.1,x.0)).collect();
                 fmt_instr(f,&format!("call:{}:{}",name,types.join(":")),&regs.iter().map(|x| x).collect(),&vec![])?;
-            },
-            Instruction::CtorStruct(name,dest,regs) => {
-                let mut r = vec![dest];
-                r.extend(regs.iter());
-                fmt_instr(f,&format!("struct:{}",name),&r,&vec![])?
             },
             Instruction::CtorEnum(name,branch,dst,src) => {
                 fmt_instr(f,&format!("enum:{}:{}",name,branch),&vec![dst,src],&vec![])?
@@ -190,7 +214,6 @@ impl fmt::Debug for Instruction {
 impl Instruction {
     pub fn get_registers(&self) -> Vec<Register> {
         match self {
-            Instruction::CtorStruct(_,a,bb) => { let mut out = bb.to_vec(); out.push(a.clone()); out },
             Instruction::CtorEnum(_,_,a,b) => vec![a.clone(),b.clone()],
             Instruction::SValue(_,_,a,b) => vec![a.clone(),b.clone()],
             Instruction::EValue(_,_,a,b) => vec![a.clone(),b.clone()],
@@ -198,7 +221,7 @@ impl Instruction {
             Instruction::Proc(_,aa) => aa.iter().map(|x| x.1).collect(),
             Instruction::Operator(_,aa,bb) => { let mut out = aa.to_vec(); out.extend(bb.to_vec()); out },
             Instruction::Call(_,_,aa) => aa.to_vec(),
-            Instruction::New(_,_,r) => r.iter().cloned().collect(),
+            Instruction::New(_,r) => r.iter().cloned().collect(),
         }
     }
 
@@ -222,25 +245,6 @@ impl Instruction {
                 }
                 print!("args: {:?}\n",arguments);
                 arguments
-            },
-            Instruction::CtorStruct(name,dst,srcs) => {
-                let mut out = Vec::new();
-                out.push((ArgumentConstraint::NonReference(
-                    ArgumentExpressionConstraint::Base(
-                        BaseType::StructType(name.to_string())
-                    )
-                ),dst.clone()));
-                let exprdecl = defstore.get_struct(name).ok_or_else(|| format!("No such struct {:?}",name))?;
-                let intypes = exprdecl.get_member_types();
-                if intypes.len() != srcs.len() {
-                    return Err(format!("Incorrect number of arguments: got {} expected {}",srcs.len(),intypes.len()));
-                }
-                for (i,intype) in intypes.iter().enumerate() {
-                    out.push((ArgumentConstraint::NonReference(
-                        intype.to_argumentexpressionconstraint()
-                    ),srcs[i].clone()));
-                }
-                out
             },
             Instruction::CtorEnum(name,branch,dst,src) => {
                 let mut out = Vec::new();
@@ -312,9 +316,9 @@ impl Instruction {
                 print!("operator {:?} ({:?})\n",out,signature);
                 out
             },
-            Instruction::New(itype,_prefixes,regs) => {
+            Instruction::New(itype,regs) => {
                 let mut out = Vec::new();
-                for (i,c) in itype.get_constraints().drain(..).enumerate() {
+                for (i,c) in itype.get_constraints(defstore)?.drain(..).enumerate() {
                     out.push((c,regs[i]));
                 }
                 out

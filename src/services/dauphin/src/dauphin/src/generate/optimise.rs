@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use super::codegen::GenContext;
-use super::intstruction::Instruction;
+use super::instruction::Instruction;
 use crate::model::Register;
 
 fn add_used_registers(used: &mut HashSet<Register>, instr: &Instruction) {

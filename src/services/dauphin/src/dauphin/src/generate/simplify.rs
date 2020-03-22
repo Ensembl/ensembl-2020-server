@@ -62,23 +62,23 @@ fn extend_vertical<F>(in_: &Vec<Register>, mapping: &HashMap<Register,Vec<Regist
 fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<Vec<Instruction>,()> {
     let mut out = Vec::new();
     match type_ {
-        MemberType::Vec(_) =>  out.push(Instruction::New(InstructionType::List(),vec![],vec![*reg])),
+        MemberType::Vec(_) =>  out.push(Instruction::New(InstructionType::List(),vec![*reg])),
         MemberType::Base(b) => match b {
-            BaseType::BooleanType => out.push(Instruction::New(InstructionType::BooleanConst(false),vec![],vec![*reg])),
-            BaseType::StringType => out.push(Instruction::New(InstructionType::StringConst(String::new()),vec![],vec![*reg])),
-            BaseType::NumberType => out.push(Instruction::New(InstructionType::NumberConst(0.),vec![],vec![*reg])),
-            BaseType::BytesType => out.push(Instruction::New(InstructionType::BytesConst(vec![]),vec![],vec![*reg])),
+            BaseType::BooleanType => out.push(Instruction::New(InstructionType::BooleanConst(false),vec![*reg])),
+            BaseType::StringType => out.push(Instruction::New(InstructionType::StringConst(String::new()),vec![*reg])),
+            BaseType::NumberType => out.push(Instruction::New(InstructionType::NumberConst(0.),vec![*reg])),
+            BaseType::BytesType => out.push(Instruction::New(InstructionType::BytesConst(vec![]),vec![*reg])),
             BaseType::Invalid => return Err(()),
             BaseType::StructType(name) => {
                 let decl = defstore.get_struct(name).ok_or_else(|| ())?;
-                let mut subregs = Vec::new();
+                let mut subregs = vec![*reg];
                 for member_type in decl.get_member_types() {
                     let r = context.regalloc.allocate();
                     context.types.add(&r,member_type);
                     out.extend(build_nil(context,defstore,&r,member_type)?.iter().cloned());
                     subregs.push(r);
                 }
-                out.push(Instruction::CtorStruct(name.to_string(),reg.clone(),subregs));
+                out.push(Instruction::New(InstructionType::CtorStruct(name.to_string()),subregs));
             },
             BaseType::EnumType(name) => {
                 let decl = defstore.get_enum(name).ok_or_else(|| ())?;
@@ -100,14 +100,14 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         Instruction::Proc(_,_) => {
             panic!("Impossible instruction! {:?}",instr);
         },
-        Instruction::CtorStruct(_,_,_) |
+
         Instruction::CtorEnum(_,_,_,_) |
         Instruction::SValue(_,_,_,_) |
         Instruction::EValue(_,_,_,_) |
         Instruction::ETest(_,_,_,_) => {
             vec![instr.clone()]
         },
-        Instruction::New(itype,prefixes,regs) => {
+        Instruction::New(itype,regs) => {
             match itype {
                 InstructionType::Run() |
                 InstructionType::Length() |
@@ -116,12 +116,14 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                 InstructionType::SeqAt() =>
                     panic!("Impossible instruction! {:?}",instr),
 
+                InstructionType::CtorStruct(_) |
                 InstructionType::NumEq() |
                 InstructionType::NumberConst(_) |
                 InstructionType::BooleanConst(_) |
                 InstructionType::StringConst(_) |
                 InstructionType::BytesConst(_) =>
                     vec![instr.clone()],
+
                 InstructionType::Nil() |
                 InstructionType::Alias() |
                 InstructionType::Copy() |
@@ -131,21 +133,21 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                 InstructionType::RefSquare() |
                 InstructionType::Star() => {
                     extend_vertical(regs,mapping,|regs| {
-                        Instruction::New(itype.clone(),prefixes.clone(),regs)
+                        Instruction::New(itype.clone(),regs)
                     })?
                 },
 
                 InstructionType::FilterSquare() => {
                     if let Some(srcs) = mapping.get(&regs[1]) {
-                        vec![Instruction::New(InstructionType::FilterSquare(),vec![],vec![regs[0],srcs[0]])]
+                        vec![Instruction::New(InstructionType::FilterSquare(),vec![regs[0],srcs[0]])]
                     } else {
-                        vec![Instruction::New(InstructionType::FilterSquare(),vec![],vec![regs[0],regs[1]])]
+                        vec![Instruction::New(InstructionType::FilterSquare(),vec![regs[0],regs[1]])]
                     }
                 },
 
                 InstructionType::At() => {
                     if let Some(srcs) = mapping.get(&regs[1]) {
-                        vec![Instruction::New(InstructionType::At(),vec![],vec![regs[0],srcs[0]])]
+                        vec![Instruction::New(InstructionType::At(),vec![regs[0],srcs[0]])]
                     } else {
                         vec![instr.clone()]
                     }
@@ -153,7 +155,7 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
 
                 InstructionType::Filter() => {
                     extend_vertical(&vec![regs[0],regs[1]],mapping,|r| {
-                        Instruction::New(InstructionType::Filter(),vec![],vec![r[0],r[1],regs[2]])
+                        Instruction::New(InstructionType::Filter(),vec![r[0],r[1],regs[2]])
                     })?
                 },
             }
@@ -177,24 +179,29 @@ fn extend_struct_instr(obj_name: &str, decl: &StructDef, instr: &Instruction, ma
     * we know there's nothing to expand in the args in the else branches.
     */
     Ok(match instr {
-        Instruction::CtorStruct(name,dst,srcs) => {
-            if name == obj_name {
-                let dests = mapping.get(dst).ok_or_else(|| ())?;
-                if dests.len() != srcs.len() { return Err(()); }
-                let mut out = Vec::new();
-                for i in 0..srcs.len() {
-                    out.push(Instruction::New(InstructionType::Copy(),vec![],vec![dests[i],srcs[i]]));
-                }
-                out
-            } else {
-                vec![instr.clone()]
+        Instruction::New(opcode,regs) =>  {
+            match opcode {
+                InstructionType::CtorStruct(name) => {
+                    if name == obj_name {
+                        let dests = mapping.get(&regs[0]).ok_or_else(|| ())?;
+                        let mut out = Vec::new();
+                        for i in 1..regs.len() {
+                            out.push(Instruction::New(InstructionType::Copy(),vec![dests[i-1],regs[i]]));
+                        }
+                        out
+                    } else {
+                        vec![instr.clone()]
+                    }
+                },
+                _ => extend_common(instr,mapping)?
             }
         },
+
         Instruction::SValue(field,name,dst,src) if name == obj_name => {
             let dests = mapping.get(src).ok_or_else(|| ())?;
             print!("{:?} find {:?}\n",decl.get_names(),field);
             let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| ())?;
-            vec![Instruction::New(InstructionType::Copy(),vec![],vec![*dst,dests[pos]])]
+            vec![Instruction::New(InstructionType::Copy(),vec![*dst,dests[pos]])]
         },
         instr => extend_common(instr,mapping)?
     })
@@ -212,8 +219,8 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
                 let mut out = Vec::new();
                 for i in 1..dests.len() {
                     if i-1 == pos {
-                        out.push(Instruction::New(InstructionType::NumberConst((i-1) as f64),vec![],vec![dests[0]]));
-                        out.push(Instruction::New(InstructionType::Copy(),vec![],vec![dests[i],*src]));
+                        out.push(Instruction::New(InstructionType::NumberConst((i-1) as f64),vec![dests[0]]));
+                        out.push(Instruction::New(InstructionType::Copy(),vec![dests[i],*src]));
                     } else {
                         let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
                         out.extend(build_nil(context,defstore,&dests[i],&type_)?.iter().cloned());
@@ -230,10 +237,10 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             let mut out = Vec::new();
             let filter = context.regalloc.allocate();
             let posreg = context.regalloc.allocate();
-            out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![],vec![posreg]));
+            out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![posreg]));
             context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
-            out.push(Instruction::New(InstructionType::NumEq(),vec![],vec![filter,srcs[0].clone(),posreg]));
-            out.push(Instruction::New(InstructionType::Filter(),vec![],vec![*dst,srcs[pos+1],filter]));
+            out.push(Instruction::New(InstructionType::NumEq(),vec![filter,srcs[0].clone(),posreg]));
+            out.push(Instruction::New(InstructionType::Filter(),vec![*dst,srcs[pos+1],filter]));
             out
         },
         Instruction::ETest(field,name,dst,src) if name == obj_name => {
@@ -241,8 +248,8 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             let srcs = mapping.get(src).ok_or_else(|| ())?;
             let mut out = Vec::new();
             let posreg = context.regalloc.allocate();
-            out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![],vec![posreg]));
-            out.push(Instruction::New(InstructionType::NumEq(),vec![],vec![*dst,srcs[0],posreg]));
+            out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![posreg]));
+            out.push(Instruction::New(InstructionType::NumEq(),vec![*dst,srcs[0],posreg]));
             out
         },
         instr => extend_common(instr,mapping)?

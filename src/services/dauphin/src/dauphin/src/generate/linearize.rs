@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use crate::model::{ Register };
 use crate::typeinf::{ BaseType, MemberType };
 use super::codegen::GenContext;
-use super::intstruction::{ Instruction, InstructionType };
+use super::instruction::{ Instruction, InstructionType };
 
 use super::optimise::remove_unused_registers;
 
@@ -77,9 +77,9 @@ fn tmp_number_reg(context: &mut GenContext) -> Register {
 fn lower_seq_length(out: &mut Vec<Instruction>, context: &mut GenContext, lin: &Linearized, level: usize) -> Register {
     let reg = tmp_number_reg(context);
     if level == 0 {
-        out.push(Instruction::New(InstructionType::Length(),vec![],vec![reg,lin.data]));
+        out.push(Instruction::New(InstructionType::Length(),vec![reg,lin.data]));
     } else {
-        out.push(Instruction::New(InstructionType::Length(),vec![],vec![reg,lin.index[level-1].0]));
+        out.push(Instruction::New(InstructionType::Length(),vec![reg,lin.index[level-1].0]));
     }
     reg
 }
@@ -88,20 +88,20 @@ fn push_copy_level(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst
     /* offset is offset in next layer down (be it index or data) */
     let offset = lower_seq_length(out,context,lin_dst,level);
     let tmp = tmp_number_reg(context);
-    out.push(Instruction::New(InstructionType::Copy(),vec![],vec![tmp,lin_src.index[level].0]));
-    out.push(Instruction::New(InstructionType::Add(),vec![],vec![tmp,offset]));
-    out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.index[level].0,tmp]));
-    out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.index[level].1,lin_src.index[level].1]));
+    out.push(Instruction::New(InstructionType::Copy(),vec![tmp,lin_src.index[level].0]));
+    out.push(Instruction::New(InstructionType::Add(),vec![tmp,offset]));
+    out.push(Instruction::New(InstructionType::Append(),vec![lin_dst.index[level].0,tmp]));
+    out.push(Instruction::New(InstructionType::Append(),vec![lin_dst.index[level].1,lin_src.index[level].1]));
 }
 
 fn push_top(out: &mut Vec<Instruction>, context: &mut GenContext, lin_dst: &Linearized, lin_src: &Linearized, level: usize) {
     /* top level offset is current length of next level down plus offset in source */
     let src_len = lower_seq_length(out,context,lin_dst,level);
     let tmp = tmp_number_reg(context);
-    out.push(Instruction::New(InstructionType::Copy(),vec![],vec![tmp,lin_src.index[level].0]));
-    out.push(Instruction::New(InstructionType::Add(),vec![],vec![tmp,src_len]));
-    out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.index[level].0,tmp]));
-    out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.index[level].1,lin_src.index[level].1]));
+    out.push(Instruction::New(InstructionType::Copy(),vec![tmp,lin_src.index[level].0]));
+    out.push(Instruction::New(InstructionType::Add(),vec![tmp,src_len]));
+    out.push(Instruction::New(InstructionType::Append(),vec![lin_dst.index[level].0,tmp]));
+    out.push(Instruction::New(InstructionType::Append(),vec![lin_dst.index[level].1,lin_src.index[level].1]));
 }
 
 fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src: &Register, mut cb: F)
@@ -120,7 +120,6 @@ fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src
 
 fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: &BTreeMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match instr {
-        Instruction::CtorStruct(_,_,_) |
         Instruction::CtorEnum(_,_,_,_) |
         Instruction::SValue(_,_,_,_) |
         Instruction::EValue(_,_,_,_) |
@@ -129,7 +128,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
         Instruction::Operator(_,_,_) => {
             panic!("unexpected instruction {:?}",instr);
         },
-        Instruction::New(itype,_prefixes,regs) => {
+        Instruction::New(itype,regs) => {
             match itype {
                 InstructionType::NumEq() |
                 InstructionType::Nil() |
@@ -139,6 +138,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 InstructionType::BytesConst(_) =>
                     out.push(instr.clone()),
 
+                InstructionType::CtorStruct(_) |
                 InstructionType::Run() |
                 InstructionType::Length() |
                 InstructionType::Add() |
@@ -149,25 +149,25 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 InstructionType::Alias() |
                 InstructionType::Copy() => {
                     linear_extend(subregs,&regs[0],&regs[1], move |d,s| {
-                        out.push(Instruction::New(itype.clone(),vec![],vec![*d,*s]));
+                        out.push(Instruction::New(itype.clone(),vec![*d,*s]));
                     });
                 },
 
                 InstructionType::At() => {
                     if let Some(lin_src) = subregs.get(&regs[1]) {
                         let top_level = lin_src.index.len()-1;
-                        out.push(Instruction::New(InstructionType::SeqAt(),vec![],vec![regs[0],lin_src.index[top_level].1]));
+                        out.push(Instruction::New(InstructionType::SeqAt(),vec![regs[0],lin_src.index[top_level].1]));
                     } else {
-                        out.push(Instruction::New(InstructionType::At(),vec![],vec![regs[0],regs[1]]));
+                        out.push(Instruction::New(InstructionType::At(),vec![regs[0],regs[1]]));
                     }
                 },
 
                 InstructionType::List() => {
                     let lin = subregs.get(&regs[0]).ok_or_else(|| format!("Missing info for register {:?}",regs[0]))?;
-                    out.push(Instruction::New(InstructionType::Nil(),vec![],vec![lin.data]));
+                    out.push(Instruction::New(InstructionType::Nil(),vec![lin.data]));
                     for (start,len) in &lin.index {
-                        out.push(Instruction::New(InstructionType::Nil(),vec![],vec![*start]));
-                        out.push(Instruction::New(InstructionType::Nil(),vec![],vec![*len]));
+                        out.push(Instruction::New(InstructionType::Nil(),vec![*start]));
+                        out.push(Instruction::New(InstructionType::Nil(),vec![*len]));
                     }
                 },
 
@@ -178,7 +178,7 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                         for level in (0..lin_src.index.len()-1).rev() {
                             push_copy_level(out,context,lin_dst,lin_src,level);
                         }
-                        out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.data,lin_src.data]));
+                        out.push(Instruction::New(InstructionType::Append(),vec![lin_dst.data,lin_src.data]));
                     } else {
                         out.push(instr.clone());
                     }
@@ -187,44 +187,44 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 InstructionType::RefSquare() => {
                     let lin_src = subregs.get(&regs[1]).ok_or_else(|| format!("Missing info for register {:?} C",regs[1]))?;
                     if let Some(lin_dst) = subregs.get(&regs[0]) {
-                        out.push(Instruction::New(InstructionType::Alias(),vec![],vec![lin_dst.data,lin_src.data]));
+                        out.push(Instruction::New(InstructionType::Alias(),vec![lin_dst.data,lin_src.data]));
                         for level in 0..lin_dst.index.len() {
-                            out.push(Instruction::New(InstructionType::Alias(),vec![],vec![lin_dst.index[level].0,lin_src.index[level].0]));
-                            out.push(Instruction::New(InstructionType::Alias(),vec![],vec![lin_dst.index[level].1,lin_src.index[level].1]));
+                            out.push(Instruction::New(InstructionType::Alias(),vec![lin_dst.index[level].0,lin_src.index[level].0]));
+                            out.push(Instruction::New(InstructionType::Alias(),vec![lin_dst.index[level].1,lin_src.index[level].1]));
                         }
                     } else {
-                        out.push(Instruction::New(InstructionType::Alias(),vec![],vec![regs[0],lin_src.data]));
+                        out.push(Instruction::New(InstructionType::Alias(),vec![regs[0],lin_src.data]));
                     }
                 },
 
                 InstructionType::FilterSquare() => {
                     let lin_src = subregs.get(&regs[1]).ok_or_else(|| format!("Missing info for register {:?} D",regs[1]))?;
                     let top_level = lin_src.index.len()-1;
-                    out.push(Instruction::New(InstructionType::Run(),vec![],vec![regs[0],lin_src.index[top_level].0,lin_src.index[top_level].1]));
+                    out.push(Instruction::New(InstructionType::Run(),vec![regs[0],lin_src.index[top_level].0,lin_src.index[top_level].1]));
                 },
 
                 InstructionType::Square() => {
                     let lin_src = subregs.get(&regs[1]).ok_or_else(|| format!("Missing info for register {:?} A",regs[1]))?;
                     if lin_src.index.len() > 1 {
                         let lin_dst = subregs.get(&regs[0]).ok_or_else(|| format!("Missing info for register {:?} B",regs[0]))?;
-                        out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.data,lin_src.data]));
+                        out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.data,lin_src.data]));
                         let top_level = lin_dst.index.len()-1;
                         if top_level > 0 {
                             for level in 0..top_level {
-                                out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.index[level].0,lin_src.index[level].0]));
-                                out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.index[level].1,lin_src.index[level].1]));
+                                out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.index[level].0,lin_src.index[level].0]));
+                                out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.index[level].1,lin_src.index[level].1]));
                             }
                         }
-                        out.push(Instruction::New(InstructionType::SeqFilter(),vec![],vec![
+                        out.push(Instruction::New(InstructionType::SeqFilter(),vec![
                             lin_dst.index[top_level].0,lin_src.index[top_level].0,
                             lin_src.index[top_level+1].0,lin_src.index[top_level+1].1
                         ]));
-                        out.push(Instruction::New(InstructionType::SeqFilter(),vec![],vec![
+                        out.push(Instruction::New(InstructionType::SeqFilter(),vec![
                             lin_dst.index[top_level].1,lin_src.index[top_level].1,
                             lin_src.index[top_level+1].0,lin_src.index[top_level+1].1
                         ]));
                     } else {
-                        out.push(Instruction::New(InstructionType::SeqFilter(),vec![],vec![
+                        out.push(Instruction::New(InstructionType::SeqFilter(),vec![
                             regs[0],lin_src.data,lin_src.index[0].0,lin_src.index[0].1
                         ]));
                     }
@@ -233,40 +233,40 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 InstructionType::Star() => {
                     let lin_dst = subregs.get(&regs[0]).ok_or_else(|| format!("Missing info for register {:?}",regs[0]))?;
                     let top_level = lin_dst.index.len()-1;
-                    out.push(Instruction::New(InstructionType::Nil(),vec![],vec![lin_dst.index[top_level].0]));
+                    out.push(Instruction::New(InstructionType::Nil(),vec![lin_dst.index[top_level].0]));
                     let src_len = if let Some(lin_src) = subregs.get(&regs[1]) {
                         let src_len = lower_seq_length(out,context,lin_src,top_level);
                         if top_level > 0 {
                             for level in 0..top_level {
-                                out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.index[level].0,lin_src.index[level].0]));
-                                out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.index[level].1,lin_src.index[level].1]));
+                                out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.index[level].0,lin_src.index[level].0]));
+                                out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.index[level].1,lin_src.index[level].1]));
                             }
                         }
-                        out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.data,lin_src.data]));
+                        out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.data,lin_src.data]));
                         src_len
                     } else {
                         let src_len = tmp_number_reg(context);
-                        out.push(Instruction::New(InstructionType::Length(),vec![],vec![src_len,regs[1]]));
-                        out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.data,regs[1]]));
+                        out.push(Instruction::New(InstructionType::Length(),vec![src_len,regs[1]]));
+                        out.push(Instruction::New(InstructionType::Append(),vec![lin_dst.data,regs[1]]));
                         src_len
                     };
                     let zero_reg = tmp_number_reg(context);
-                    out.push(Instruction::New(InstructionType::NumberConst(0.),vec![],vec![zero_reg]));
-                    out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.index[top_level].0,zero_reg]));
-                    out.push(Instruction::New(InstructionType::Append(),vec![],vec![lin_dst.index[top_level].1,src_len]));
+                    out.push(Instruction::New(InstructionType::NumberConst(0.),vec![zero_reg]));
+                    out.push(Instruction::New(InstructionType::Append(),vec![lin_dst.index[top_level].0,zero_reg]));
+                    out.push(Instruction::New(InstructionType::Append(),vec![lin_dst.index[top_level].1,src_len]));
                 },
 
                 InstructionType::Filter() => {
                     if let Some(lin_src) = subregs.get(&regs[1]) {
                         let lin_dst = subregs.get(&regs[0]).ok_or_else(|| format!("Missing info for register {:?}",regs[0]))?;
                         let top_level = lin_dst.index.len()-1;
-                        out.push(Instruction::New(InstructionType::Filter(),vec![],vec![lin_dst.index[top_level].0,lin_src.index[top_level].0,regs[2]]));
-                        out.push(Instruction::New(InstructionType::Filter(),vec![],vec![lin_dst.index[top_level].1,lin_src.index[top_level].1,regs[2]]));
-                        out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.data,lin_src.data]));
+                        out.push(Instruction::New(InstructionType::Filter(),vec![lin_dst.index[top_level].0,lin_src.index[top_level].0,regs[2]]));
+                        out.push(Instruction::New(InstructionType::Filter(),vec![lin_dst.index[top_level].1,lin_src.index[top_level].1,regs[2]]));
+                        out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.data,lin_src.data]));
                         if top_level > 0 {
                             for level in 0..top_level {
-                                out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.index[level].0,lin_src.index[level].0]));
-                                out.push(Instruction::New(InstructionType::Copy(),vec![],vec![lin_dst.index[level].1,lin_src.index[level].1]));
+                                out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.index[level].0,lin_src.index[level].0]));
+                                out.push(Instruction::New(InstructionType::Copy(),vec![lin_dst.index[level].1,lin_src.index[level].1]));
                             }
                         }
                     } else {
