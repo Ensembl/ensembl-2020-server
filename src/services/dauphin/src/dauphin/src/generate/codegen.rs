@@ -149,8 +149,8 @@ impl<'a> CodeGen<'a> {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
                     let lvalue_reg = self.context.regalloc.allocate();
                     let rvalue_reg = self.context.regalloc.allocate();
-                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),lvalue_reg,lvalue_subreg))?;
-                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),rvalue_reg,rvalue_subreg))?;
+                    self.add_instr(Instruction::New(InstructionType::SValue(name.to_string(),f.clone()),vec![lvalue_reg,lvalue_subreg]))?;
+                    self.add_instr(Instruction::New(InstructionType::SValue(name.to_string(),f.clone()),vec![rvalue_reg,rvalue_subreg]))?;
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"dot\" of structs".to_string())
@@ -161,8 +161,8 @@ impl<'a> CodeGen<'a> {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
                     let lvalue_reg = self.context.regalloc.allocate();
                     let rvalue_reg = self.context.regalloc.allocate();
-                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),lvalue_reg,lvalue_subreg))?;
-                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),rvalue_reg,rvalue_subreg))?;
+                    self.add_instr(Instruction::New(InstructionType::EValue(name.to_string(),f.clone()),vec![lvalue_reg,lvalue_subreg]))?;
+                    self.add_instr(Instruction::New(InstructionType::EValue(name.to_string(),f.clone()),vec![rvalue_reg,rvalue_subreg]))?;
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"pling\" of enums".to_string())
@@ -233,12 +233,12 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Vector(v) => self.build_vec(v,reg,dollar,at)?,
             Expression::Operator(name,x) => {
-                let mut subregs = Vec::new();
+                let mut subregs = vec![reg];
                 for e in x {
                     let r = self.build_rvalue(e,dollar,at)?;
                     subregs.push(r);
                 }
-                self.add_instr(Instruction::Operator(name.clone(),vec![reg],subregs))?;
+                self.add_instr(Instruction::New(InstructionType::Operator(name.clone()),subregs))?;
             },
             Expression::CtorStruct(s,x,n) => {
                 let mut out = vec![reg];
@@ -252,13 +252,13 @@ impl<'a> CodeGen<'a> {
             },
             Expression::CtorEnum(e,b,x) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                self.add_instr(Instruction::CtorEnum(e.clone(),b.clone(),reg,subreg))?;
+                self.add_instr(Instruction::New(InstructionType::CtorEnum(e.clone(),b.clone()),vec![reg,subreg]))?;
             },
             Expression::Dot(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let stype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::StructType(name)) = stype {
-                    self.add_instr(Instruction::SValue(f.clone(),name.to_string(),reg,subreg))?;
+                    self.add_instr(Instruction::New(InstructionType::SValue(name.to_string(),f.clone()),vec![reg,subreg]))?;
                 } else {
                     return Err(format!("Can only take \"dot\" of structs, not {:?}",stype));
                 }
@@ -267,7 +267,7 @@ impl<'a> CodeGen<'a> {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let etype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
-                    self.add_instr(Instruction::ETest(f.clone(),name.to_string(),reg,subreg))?;
+                    self.add_instr(Instruction::New(InstructionType::ETest(name.to_string(),f.clone()),vec![reg,subreg]))?;
                 } else {
                     return Err("Can only take \"query\" of enums".to_string());
                 }
@@ -276,7 +276,7 @@ impl<'a> CodeGen<'a> {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let etype = self.typing.get(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
-                    self.add_instr(Instruction::EValue(f.clone(),name.to_string(),reg,subreg))?;
+                    self.add_instr(Instruction::New(InstructionType::EValue(name.to_string(),f.clone()),vec![reg,subreg]))?;
                 } else {
                     return Err("Can only take \"pling\" of enums".to_string());
                 }
@@ -324,24 +324,29 @@ impl<'a> CodeGen<'a> {
 
     fn build_stmt(&mut self, stmt: &Statement) -> Result<(),String> {
         let mut regs = Vec::new();
+        let mut modes = Vec::new();
         let procdecl = self.defstore.get_proc(&stmt.0);
         if procdecl.is_none() {
             return Err(format!("No such procedure '{}'",stmt.0));
         }
         for (i,member) in procdecl.unwrap().get_signature().each_member().enumerate() {
             match member {
-                SignatureMemberConstraint::RValue(_) =>
-                    regs.push((MemberMode::RValue,self.build_rvalue(&stmt.1[i],None,None)?)),
+                SignatureMemberConstraint::RValue(_) => {
+                    modes.push(MemberMode::RValue);
+                    regs.push(self.build_rvalue(&stmt.1[i],None,None)?);
+                },
                 SignatureMemberConstraint::LValue(_) => {
                     let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.1[i],true,true)?;
                     if let Some(fvalue_reg) = fvalue_reg {
-                        regs.push((MemberMode::FValue,fvalue_reg));
+                        modes.push(MemberMode::FValue);
+                        regs.push(fvalue_reg);
                     }
-                    regs.push((MemberMode::LValue,lvalue_reg));
+                    modes.push(MemberMode::LValue);
+                    regs.push(lvalue_reg);
                 }
             }
         }
-        self.add_instr(Instruction::Proc(stmt.0.to_string(),regs.clone()))?;
+        self.add_instr(Instruction::New(InstructionType::Proc(stmt.0.to_string(),modes),regs))?;
         Ok(())
     }
 

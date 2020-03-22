@@ -87,7 +87,7 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
                 let subreg = context.regalloc.allocate();
                 context.types.add(&subreg,branch_type);
                 out.extend(build_nil(context,defstore,&subreg,branch_type)?.iter().cloned());
-                out.push(Instruction::CtorEnum(name.to_string(),field_name.clone(),reg.clone(),subreg));
+                out.push(Instruction::New(InstructionType::CtorEnum(name.to_string(),field_name.clone()),vec![*reg,subreg]));
             }
         }
     }
@@ -96,19 +96,10 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 
 fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
     Ok(match instr {
-        Instruction::Operator(_,_,_) |
-        Instruction::Proc(_,_) => {
-            panic!("Impossible instruction! {:?}",instr);
-        },
-
-        Instruction::CtorEnum(_,_,_,_) |
-        Instruction::SValue(_,_,_,_) |
-        Instruction::EValue(_,_,_,_) |
-        Instruction::ETest(_,_,_,_) => {
-            vec![instr.clone()]
-        },
         Instruction::New(itype,regs) => {
             match itype {
+                InstructionType::Proc(_,_) |
+                InstructionType::Operator(_) |
                 InstructionType::Run() |
                 InstructionType::Length() |
                 InstructionType::Add() |
@@ -117,6 +108,10 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                     panic!("Impossible instruction! {:?}",instr),
 
                 InstructionType::CtorStruct(_) |
+                InstructionType::CtorEnum(_,_) |
+                InstructionType::SValue(_,_) |
+                InstructionType::EValue(_,_) |
+                InstructionType::ETest(_,_) |
                 InstructionType::NumEq() |
                 InstructionType::NumberConst(_) |
                 InstructionType::BooleanConst(_) |
@@ -158,19 +153,19 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                         Instruction::New(InstructionType::Filter(),vec![r[0],r[1],regs[2]])
                     })?
                 },
-            }
-        },
-        Instruction::Call(name,type_,regs) => {
-            let mut new_regs = Vec::new();
-            for reg in regs {
-                if let Some(dests) = mapping.get(reg) {
-                    new_regs.extend(dests.iter().cloned());
-                } else {
-                    new_regs.push(reg.clone());
+                InstructionType::Call(name,type_) => {
+                    let mut new_regs = Vec::new();
+                    for reg in regs {
+                        if let Some(dests) = mapping.get(reg) {
+                            new_regs.extend(dests.iter().cloned());
+                        } else {
+                            new_regs.push(reg.clone());
+                        }
+                    }
+                    vec![Instruction::New(InstructionType::Call(name.clone(),type_.clone()),new_regs)]
                 }
             }
-            vec![Instruction::Call(name.clone(),type_.clone(),new_regs)]
-        }
+        },
     })
 }
 
@@ -193,16 +188,17 @@ fn extend_struct_instr(obj_name: &str, decl: &StructDef, instr: &Instruction, ma
                         vec![instr.clone()]
                     }
                 },
+
+                InstructionType::SValue(name,field) if name == obj_name => {
+                    let dests = mapping.get(&regs[1]).ok_or_else(|| ())?;
+                    let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| ())?;
+                    vec![Instruction::New(InstructionType::Copy(),vec![regs[0],dests[pos]])]
+                },
+
                 _ => extend_common(instr,mapping)?
             }
         },
 
-        Instruction::SValue(field,name,dst,src) if name == obj_name => {
-            let dests = mapping.get(src).ok_or_else(|| ())?;
-            print!("{:?} find {:?}\n",decl.get_names(),field);
-            let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| ())?;
-            vec![Instruction::New(InstructionType::Copy(),vec![*dst,dests[pos]])]
-        },
         instr => extend_common(instr,mapping)?
     })
 }
@@ -212,46 +208,55 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
         * there's nothing to expand in the args
         */
     Ok(match instr {
-        Instruction::CtorEnum(name,field,dst,src) => {
-            if name == obj_name {
-                let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-                let dests = mapping.get(dst).ok_or_else(|| ())?;
-                let mut out = Vec::new();
-                for i in 1..dests.len() {
-                    if i-1 == pos {
-                        out.push(Instruction::New(InstructionType::NumberConst((i-1) as f64),vec![dests[0]]));
-                        out.push(Instruction::New(InstructionType::Copy(),vec![dests[i],*src]));
+        Instruction::New(opcode,regs) =>  {
+            match opcode {
+                InstructionType::CtorEnum(name,field) => {
+                    if name == obj_name {
+                        let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
+                        let dests = mapping.get(&regs[0]).ok_or_else(|| ())?;
+                        let mut out = Vec::new();
+                        for i in 1..dests.len() {
+                            if i-1 == pos {
+                                out.push(Instruction::New(InstructionType::NumberConst((i-1) as f64),vec![dests[0]]));
+                                out.push(Instruction::New(InstructionType::Copy(),vec![dests[i],regs[1]]));
+                            } else {
+                                let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
+                                out.extend(build_nil(context,defstore,&dests[i],&type_)?.iter().cloned());
+                            }
+                        }
+                        out
                     } else {
-                        let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
-                        out.extend(build_nil(context,defstore,&dests[i],&type_)?.iter().cloned());
+                        vec![instr.clone()]
                     }
-                }
-                out
-            } else {
-                vec![instr.clone()]
+                },
+
+                InstructionType::EValue(name,field) if name == obj_name => {
+                    let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
+                    let srcs = mapping.get(&regs[1]).ok_or_else(|| ())?;
+                    let mut out = Vec::new();
+                    let filter = context.regalloc.allocate();
+                    let posreg = context.regalloc.allocate();
+                    out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![posreg]));
+                    context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
+                    out.push(Instruction::New(InstructionType::NumEq(),vec![filter,srcs[0].clone(),posreg]));
+                    out.push(Instruction::New(InstructionType::Filter(),vec![regs[0],srcs[pos+1],filter]));
+                    out
+                },
+
+                InstructionType::ETest(name,field) if name == obj_name => {
+                    let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
+                    let srcs = mapping.get(&regs[1]).ok_or_else(|| ())?;
+                    let mut out = Vec::new();
+                    let posreg = context.regalloc.allocate();
+                    out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![posreg]));
+                    out.push(Instruction::New(InstructionType::NumEq(),vec![regs[0],srcs[0],posreg]));
+                    out
+                },
+
+                _ => extend_common(instr,mapping)?
             }
         },
-        Instruction::EValue(field,name,dst,src) if name == obj_name => {
-            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-            let srcs = mapping.get(src).ok_or_else(|| ())?;
-            let mut out = Vec::new();
-            let filter = context.regalloc.allocate();
-            let posreg = context.regalloc.allocate();
-            out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![posreg]));
-            context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
-            out.push(Instruction::New(InstructionType::NumEq(),vec![filter,srcs[0].clone(),posreg]));
-            out.push(Instruction::New(InstructionType::Filter(),vec![*dst,srcs[pos+1],filter]));
-            out
-        },
-        Instruction::ETest(field,name,dst,src) if name == obj_name => {
-            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-            let srcs = mapping.get(src).ok_or_else(|| ())?;
-            let mut out = Vec::new();
-            let posreg = context.regalloc.allocate();
-            out.push(Instruction::New(InstructionType::NumberConst(pos as f64),vec![posreg]));
-            out.push(Instruction::New(InstructionType::NumEq(),vec![*dst,srcs[0],posreg]));
-            out
-        },
+
         instr => extend_common(instr,mapping)?
     })
 }

@@ -305,7 +305,42 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                         harness.insert(&regs[0],v);
                     },
 
+                    InstructionType::Call(name,types) => {
+                        match &name[..] {
+                            "assign" => {
+                                assign(defstore,&mut harness,types,regs);
+                            },
+                            "print_regs" => {
+                                let mut print = Vec::new();
+                                for r in regs {
+                                    let v = harness.get(&r).to_vec();
+                                    print!("{:?} = {:?}\n",r,v);
+                                    print.push(v);
+                                }
+                                printed.push(print);
+                            },
+                            "print_vec" => {
+                                let s = print_vec(defstore,&mut harness,&types[0].1,regs);
+                                print!("{}\n",s);
+                                strings.push(s);
+                            },
+                            "len" => {
+                                vec_len(defstore,&mut harness,&types[1].1,regs);
+                            },
+                            "eq" | "lt" | "gt" => {
+                                number_binop(&mut harness,name,&regs[0],&regs[1],&regs[2]);
+                            },
+                            _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
+                        }
+                    },
+
+                    InstructionType::Proc(_,_) |
+                    InstructionType::Operator(_) |
                     InstructionType::CtorStruct(_) |
+                    InstructionType::CtorEnum(_,_) |
+                    InstructionType::SValue(_,_) |
+                    InstructionType::EValue(_,_) |
+                    InstructionType::ETest(_,_) |
                     InstructionType::List() |
                     InstructionType::Square() |
                     InstructionType::RefSquare() |
@@ -314,35 +349,6 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                         panic!("Illegal instruction")
                 }
             },
-            Instruction::Call(name,types,regs) => {
-                match &name[..] {
-                    "assign" => {
-                        assign(defstore,&mut harness,types,regs);
-                    },
-                    "print_regs" => {
-                        let mut print = Vec::new();
-                        for r in regs {
-                            let v = harness.get(&r).to_vec();
-                            print!("{:?} = {:?}\n",r,v);
-                            print.push(v);
-                        }
-                        printed.push(print);
-                    },
-                    "print_vec" => {
-                        let s = print_vec(defstore,&mut harness,&types[0].1,regs);
-                        print!("{}\n",s);
-                        strings.push(s);
-                    },
-                    "len" => {
-                        vec_len(defstore,&mut harness,&types[1].1,regs);
-                    },
-                    "eq" | "lt" | "gt" => {
-                        number_binop(&mut harness,name,&regs[0],&regs[1],&regs[2]);
-                    },
-                    _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
-                }
-            },
-            _ => { panic!("Bad mini-interp instruction {:?}",instr); }
         }
         for r in instr.get_registers() {
             print!("{:?}={:?}",r,harness.get(&r));

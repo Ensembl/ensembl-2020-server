@@ -120,14 +120,6 @@ fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src
 
 fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: &BTreeMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match instr {
-        Instruction::CtorEnum(_,_,_,_) |
-        Instruction::SValue(_,_,_,_) |
-        Instruction::EValue(_,_,_,_) |
-        Instruction::ETest(_,_,_,_) |
-        Instruction::Proc(_,_) |
-        Instruction::Operator(_,_,_) => {
-            panic!("unexpected instruction {:?}",instr);
-        },
         Instruction::New(itype,regs) => {
             match itype {
                 InstructionType::NumEq() |
@@ -138,7 +130,13 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                 InstructionType::BytesConst(_) =>
                     out.push(instr.clone()),
 
+                InstructionType::Proc(_,_) |
+                InstructionType::Operator(_) |
                 InstructionType::CtorStruct(_) |
+                InstructionType::CtorEnum(_,_) |
+                InstructionType::SValue(_,_) |
+                InstructionType::EValue(_,_) |
+                InstructionType::ETest(_,_) |
                 InstructionType::Run() |
                 InstructionType::Length() |
                 InstructionType::Add() |
@@ -273,22 +271,22 @@ fn linearize_one(out: &mut Vec<Instruction>, context: &mut GenContext, subregs: 
                         out.push(instr.clone());
                     }
                 },
-            }
-        },
-        Instruction::Call(name,type_,regs) => {
-            let mut new = Vec::new();
-            for r in regs {
-                if let Some(lin_src) = subregs.get(r) {
-                    new.push(lin_src.data);
-                    for i in 0..lin_src.index.len() {
-                        new.push(lin_src.index[i].0);
-                        new.push(lin_src.index[i].1);
+                InstructionType::Call(name,type_) => {
+                    let mut new = Vec::new();
+                    for r in regs {
+                        if let Some(lin_src) = subregs.get(r) {
+                            new.push(lin_src.data);
+                            for i in 0..lin_src.index.len() {
+                                new.push(lin_src.index[i].0);
+                                new.push(lin_src.index[i].1);
+                            }
+                        } else {
+                            new.push(*r);
+                        }
                     }
-                } else {
-                    new.push(*r);
-                }
+                    out.push(Instruction::New(InstructionType::Call(name.clone(),type_.clone()),new));
+                },
             }
-            out.push(Instruction::Call(name.clone(),type_.clone(),new));
         },
     };
     Ok(())
@@ -324,7 +322,7 @@ mod test {
         let mut lin = Vec::new();
         let mut norm = Vec::new();
         for instr in instrs {
-            if let Instruction::Call(s,_,vv) = instr {
+            if let Instruction::New(InstructionType::Call(s,_),vv) = instr {
                 if s == "assign" {
                     if let Some(reg) = subregs.get(&vv[1]) {
                         lin.push(reg);
