@@ -1,5 +1,5 @@
 use std::collections::{ HashMap };
-use crate::generate::{ Instruction, InstructionType };
+use crate::generate::InstructionType;
 use crate::generate::GenContext;
 use crate::model::{ offset, DefStore, LinearPath, Register, RegisterPurpose };
 use crate::typeinf::{ MemberType, MemberMode };
@@ -222,133 +222,129 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             print!("\n");
         }
         print!("{:?}",instr);
-        match instr {
-            Instruction::New(itype,regs) => { 
-                match itype {
-                    InstructionType::Nil() => { harness.insert(&regs[0],vec![]); },
-                    InstructionType::NumberConst(n) => { harness.insert(&regs[0],vec![*n as usize]); },
-                    InstructionType::BooleanConst(n) => { harness.insert(&regs[0],vec![if *n {1} else {0}]); },
-                    InstructionType::StringConst(_) |
-                    InstructionType::BytesConst(_) =>
-                        panic!("Unimplemented"),
-                    InstructionType::Alias() => { harness.alias(&regs[0],&regs[1]); },
-                    InstructionType::Copy() => { let x = harness.get_mut(&regs[1]).to_vec(); harness.insert(&regs[0],x); },
-                    InstructionType::Append() => { let mut x = harness.get_mut(&regs[1]).to_vec(); harness.get_mut(&regs[0]).append(&mut x); },
-                    InstructionType::Length() => { let v = vec![harness.get(&regs[1]).len()]; harness.insert(&regs[0],v); }
-                    InstructionType::Add() => {
-                        let h = &mut harness;
-                        let delta = h.get(&regs[1])[0];
-                        let v = h.get(&regs[0]).iter().map(|x| x+delta).collect();
-                        h.insert(&regs[0],v);
-                    },
-                    InstructionType::At() => {
-                        let mut v = vec![];
-                        for i in 0..harness.get(&regs[1]).len() {
-                            v.push(i);
-                        }
-                        harness.insert(&regs[0],v);
-                    },
-                    InstructionType::NumEq() => {
-                        let h = &mut harness;
-                        let mut v = vec![];
-                        let mut b_iter = h.get(&regs[2]).iter().cycle();
-                        for a in h.get(&regs[1]).iter() {
-                            let b = b_iter.next().unwrap();
-                            v.push(if *a == *b {1} else {0});
-                        }
-                        h.insert(&regs[0],v);
-                    },
-                    InstructionType::Filter() => {
-                        let h = &mut harness;
-                        let mut f = h.get(&regs[2]).iter();
-                        let mut v = vec![];
-                        for u in h.get(&regs[1]) {
-                            if *f.next().unwrap() > 0 {
-                                v.push(*u);
-                            }
-                        }
-                        h.insert(&regs[0],v);
-                    },
-                    InstructionType::Run() => {
-                        let h = &mut harness;
-                        let mut v = vec![];
-                        let mut b_iter = h.get(&regs[2]).iter();
-                        for a in h.get(&regs[1]).iter() {
-                            let b = b_iter.next().unwrap();
-                            for i in 0..*b {
-                                v.push(a+i);
-                            }
-                        }
-                        h.insert(&regs[0],v);
-                    },
-                    InstructionType::SeqFilter() => {
-                        let h = &mut harness;
-                        let u = h.get(&regs[1]);
-                        let mut v = vec![];
-                        let mut b_iter = h.get(&regs[3]).iter();
-                        for a in h.get(&regs[2]).iter() {
-                            let b = b_iter.next().unwrap();
-                            for i in 0..*b {
-                                v.push(u[a+i]);
-                            }
-                        }
-                        h.insert(&regs[0],v);
-                    },
-                    InstructionType::SeqAt() => {
-                        let mut v = vec![];
-                        let b_vals = harness.get(&regs[1]);
-                        for b_val in b_vals {
-                            for i in 0..*b_val {
-                                v.push(i);
-                            }
-                        }
-                        harness.insert(&regs[0],v);
-                    },
+        match &instr.itype {
+            InstructionType::Nil() => { harness.insert(&instr.regs[0],vec![]); },
+            InstructionType::NumberConst(n) => { harness.insert(&instr.regs[0],vec![*n as usize]); },
+            InstructionType::BooleanConst(n) => { harness.insert(&instr.regs[0],vec![if *n {1} else {0}]); },
+            InstructionType::StringConst(_) |
+            InstructionType::BytesConst(_) =>
+                panic!("Unimplemented"),
+            InstructionType::Alias() => { harness.alias(&instr.regs[0],&instr.regs[1]); },
+            InstructionType::Copy() => { let x = harness.get_mut(&instr.regs[1]).to_vec(); harness.insert(&instr.regs[0],x); },
+            InstructionType::Append() => { let mut x = harness.get_mut(&instr.regs[1]).to_vec(); harness.get_mut(&instr.regs[0]).append(&mut x); },
+            InstructionType::Length() => { let v = vec![harness.get(&instr.regs[1]).len()]; harness.insert(&instr.regs[0],v); }
+            InstructionType::Add() => {
+                let h = &mut harness;
+                let delta = h.get(&instr.regs[1])[0];
+                let v = h.get(&instr.regs[0]).iter().map(|x| x+delta).collect();
+                h.insert(&instr.regs[0],v);
+            },
+            InstructionType::At() => {
+                let mut v = vec![];
+                for i in 0..harness.get(&instr.regs[1]).len() {
+                    v.push(i);
+                }
+                harness.insert(&instr.regs[0],v);
+            },
+            InstructionType::NumEq() => {
+                let h = &mut harness;
+                let mut v = vec![];
+                let mut b_iter = h.get(&instr.regs[2]).iter().cycle();
+                for a in h.get(&instr.regs[1]).iter() {
+                    let b = b_iter.next().unwrap();
+                    v.push(if *a == *b {1} else {0});
+                }
+                h.insert(&instr.regs[0],v);
+            },
+            InstructionType::Filter() => {
+                let h = &mut harness;
+                let mut f = h.get(&instr.regs[2]).iter();
+                let mut v = vec![];
+                for u in h.get(&instr.regs[1]) {
+                    if *f.next().unwrap() > 0 {
+                        v.push(*u);
+                    }
+                }
+                h.insert(&instr.regs[0],v);
+            },
+            InstructionType::Run() => {
+                let h = &mut harness;
+                let mut v = vec![];
+                let mut b_iter = h.get(&instr.regs[2]).iter();
+                for a in h.get(&instr.regs[1]).iter() {
+                    let b = b_iter.next().unwrap();
+                    for i in 0..*b {
+                        v.push(a+i);
+                    }
+                }
+                h.insert(&instr.regs[0],v);
+            },
+            InstructionType::SeqFilter() => {
+                let h = &mut harness;
+                let u = h.get(&instr.regs[1]);
+                let mut v = vec![];
+                let mut b_iter = h.get(&instr.regs[3]).iter();
+                for a in h.get(&instr.regs[2]).iter() {
+                    let b = b_iter.next().unwrap();
+                    for i in 0..*b {
+                        v.push(u[a+i]);
+                    }
+                }
+                h.insert(&instr.regs[0],v);
+            },
+            InstructionType::SeqAt() => {
+                let mut v = vec![];
+                let b_vals = harness.get(&instr.regs[1]);
+                for b_val in b_vals {
+                    for i in 0..*b_val {
+                        v.push(i);
+                    }
+                }
+                harness.insert(&instr.regs[0],v);
+            },
 
-                    InstructionType::Call(name,types) => {
-                        match &name[..] {
-                            "assign" => {
-                                assign(defstore,&mut harness,types,regs);
-                            },
-                            "print_regs" => {
-                                let mut print = Vec::new();
-                                for r in regs {
-                                    let v = harness.get(&r).to_vec();
-                                    print!("{:?} = {:?}\n",r,v);
-                                    print.push(v);
-                                }
-                                printed.push(print);
-                            },
-                            "print_vec" => {
-                                let s = print_vec(defstore,&mut harness,&types[0].1,regs);
-                                print!("{}\n",s);
-                                strings.push(s);
-                            },
-                            "len" => {
-                                vec_len(defstore,&mut harness,&types[1].1,regs);
-                            },
-                            "eq" | "lt" | "gt" => {
-                                number_binop(&mut harness,name,&regs[0],&regs[1],&regs[2]);
-                            },
-                            _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
-                        }
+            InstructionType::Call(name,types) => {
+                match &name[..] {
+                    "assign" => {
+                        assign(defstore,&mut harness,&types,&instr.regs);
                     },
-
-                    InstructionType::Proc(_,_) |
-                    InstructionType::Operator(_) |
-                    InstructionType::CtorStruct(_) |
-                    InstructionType::CtorEnum(_,_) |
-                    InstructionType::SValue(_,_) |
-                    InstructionType::EValue(_,_) |
-                    InstructionType::ETest(_,_) |
-                    InstructionType::List() |
-                    InstructionType::Square() |
-                    InstructionType::RefSquare() |
-                    InstructionType::FilterSquare() |
-                    InstructionType::Star() =>
-                        panic!("Illegal instruction")
+                    "print_regs" => {
+                        let mut print = Vec::new();
+                        for r in &instr.regs {
+                            let v = harness.get(&r).to_vec();
+                            print!("{:?} = {:?}\n",r,v);
+                            print.push(v);
+                        }
+                        printed.push(print);
+                    },
+                    "print_vec" => {
+                        let s = print_vec(defstore,&mut harness,&types[0].1,&instr.regs);
+                        print!("{}\n",s);
+                        strings.push(s);
+                    },
+                    "len" => {
+                        vec_len(defstore,&mut harness,&types[1].1,&instr.regs);
+                    },
+                    "eq" | "lt" | "gt" => {
+                        number_binop(&mut harness,&name,&instr.regs[0],&instr.regs[1],&instr.regs[2]);
+                    },
+                    _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
                 }
             },
+
+            InstructionType::Proc(_,_) |
+            InstructionType::Operator(_) |
+            InstructionType::CtorStruct(_) |
+            InstructionType::CtorEnum(_,_) |
+            InstructionType::SValue(_,_) |
+            InstructionType::EValue(_,_) |
+            InstructionType::ETest(_,_) |
+            InstructionType::List() |
+            InstructionType::Square() |
+            InstructionType::RefSquare() |
+            InstructionType::FilterSquare() |
+            InstructionType::Star() =>
+                panic!("Illegal instruction")
         }
         for r in instr.get_registers() {
             print!("{:?}={:?}",r,harness.get(&r));

@@ -5,23 +5,18 @@ use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
     if ref_ {
-        ArgumentConstraint::Reference(
-            ArgumentExpressionConstraint::Placeholder(String::new()))
+        ArgumentConstraint::Reference(ArgumentExpressionConstraint::Placeholder(String::new()))
     } else {
-        ArgumentConstraint::NonReference(
-            ArgumentExpressionConstraint::Placeholder(String::new()))
+        ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Placeholder(String::new()))
     }
 }
 
 fn array(ref_: bool) -> ArgumentConstraint {
     if ref_ {
-        ArgumentConstraint::Reference(ArgumentExpressionConstraint::Vec(Box::new(
-            ArgumentExpressionConstraint::Placeholder(String::new()))))
+        ArgumentConstraint::Reference(ArgumentExpressionConstraint::Vec(Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))
     } else {
-        ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(Box::new(
-            ArgumentExpressionConstraint::Placeholder(String::new()))))
+        ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Vec(Box::new(ArgumentExpressionConstraint::Placeholder(String::new()))))
     }
-
 }
 
 fn fixed(bt: BaseType) -> ArgumentConstraint {
@@ -229,18 +224,9 @@ impl InstructionType {
 }
 
 #[derive(Clone,PartialEq)]
-pub enum Instruction {
-    New(InstructionType,Vec<Register>),
-
-    /* calls-out */
-    //Call(String,Vec<(MemberMode,MemberType)>,Vec<Register>),
-}
-
-fn fmt_instr(f: &mut fmt::Formatter<'_>,opcode: &str, regs: &Vec<&Register>, more: &Vec<String>) -> fmt::Result {
-    let mut regs : Vec<String> = regs.iter().map(|x| format!("{:?}",x)).collect();
-    if more.len() > 0 { regs.push("".to_string()); }
-    write!(f,"#{} {}{};\n",opcode,regs.join(" "),more.join(" "))?;
-    Ok(())
+pub struct Instruction {
+    pub itype: InstructionType,
+    pub regs: Vec<Register>
 }
 
 fn fmt_instr2(f: &mut fmt::Formatter<'_>, opcode: &str, regs: &Vec<Register>, more: &[String]) -> fmt::Result {
@@ -252,33 +238,26 @@ fn fmt_instr2(f: &mut fmt::Formatter<'_>, opcode: &str, regs: &Vec<Register>, mo
 
 impl fmt::Debug for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Instruction::New(itype,regs) => {
-                let args = itype.get_name();
-                fmt_instr2(f,&args[0],regs,&args[1..])?
-            },
-        }
+        let args = self.itype.get_name();
+        fmt_instr2(f,&args[0],&self.regs,&args[1..])?;
         Ok(())
     }
 }
 
 impl Instruction {
+    pub fn new(itype: InstructionType, regs: Vec<Register>) -> Instruction {
+        Instruction { itype, regs }
+    }
+
     pub fn get_registers(&self) -> Vec<Register> {
-        match self {
-            Instruction::New(_,r) => r.iter().cloned().collect(),
-        }
+        self.regs.iter().cloned().collect()
     }
 
     pub fn get_constraint(&self, defstore: &DefStore) -> Result<InstructionConstraint,String> {
-        Ok(InstructionConstraint::new(&match self {
-            Instruction::New(itype,regs) => {
-                let mut out = Vec::new();
-                for (i,c) in itype.get_constraints(defstore)?.drain(..).enumerate() {
-                    out.push((c,regs[i]));
-                }
-                out
-            },
-            other => return Err(format!("Cannot deduce type of {:?} instructions",other))
-        }))
+        let mut out = Vec::new();
+        for (i,c) in self.itype.get_constraints(defstore)?.drain(..).enumerate() {
+            out.push((c,self.regs[i]));
+        }
+        Ok(InstructionConstraint::new(&out))
     }
 }
