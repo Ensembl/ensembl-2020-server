@@ -222,11 +222,9 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| ())?;
             let mut out = Vec::new();
-            let filter = context.regalloc.allocate();
-            let posreg = context.regalloc.allocate();
-            out.push(Instruction::new(InstructionType::NumberConst(pos as f64),vec![posreg]));
+            let posreg = Instruction::add1(&mut out,&context,InstructionType::NumberConst(pos as f64),vec![]);
+            let filter = Instruction::add1(&mut out,&context,InstructionType::NumEq(),vec![srcs[0],posreg]);
             context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
-            out.push(Instruction::new(InstructionType::NumEq(),vec![filter,srcs[0].clone(),posreg]));
             out.push(Instruction::new(InstructionType::Filter(),vec![instr.regs[0],srcs[pos+1],filter]));
             out
         },
@@ -235,8 +233,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| ())?;
             let mut out = Vec::new();
-            let posreg = context.regalloc.allocate();
-            out.push(Instruction::new(InstructionType::NumberConst(pos as f64),vec![posreg]));
+            let posreg = Instruction::add1(&mut out,&context,InstructionType::NumberConst(pos as f64),vec![]);
             out.push(Instruction::new(InstructionType::NumEq(),vec![instr.regs[0],srcs[0],posreg]));
             out
         },

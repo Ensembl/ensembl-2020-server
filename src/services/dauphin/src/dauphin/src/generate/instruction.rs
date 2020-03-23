@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::model::{ DefStore, Register };
+use super::codegen::GenContext;
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberType, MemberMode };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
@@ -247,6 +248,14 @@ impl fmt::Debug for Instruction {
 impl Instruction {
     pub fn new(itype: InstructionType, regs: Vec<Register>) -> Instruction {
         Instruction { itype, regs }
+    }
+
+    pub fn add1(out: &mut Vec<Instruction>, context: &GenContext, itype: InstructionType, mut regs_in: Vec<Register>) -> Register {
+        let dst = context.regalloc.allocate();
+        let mut regs = vec![dst];
+        regs.append(&mut regs_in);
+        out.push(Instruction::new(itype,regs));
+        dst
     }
 
     pub fn get_registers(&self) -> Vec<Register> {
