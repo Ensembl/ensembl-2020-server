@@ -216,7 +216,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
     let mut printed = Vec::new();
     let mut strings = Vec::new();
     let mut harness = HarnessInterp::new();
-    for instr in &context.instrs {
+    for instr in &context.get_instructions() {
         for r in instr.get_registers() {
             print!("{:?}={:?}",r,harness.get(&r));
             print!("\n");

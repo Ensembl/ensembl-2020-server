@@ -1,25 +1,12 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use super::gencontext::GenContext;
 use super::instruction::{ Instruction, InstructionType };
 use crate::parser::{ Expression, Statement };
 use crate::model::{ Register, RegisterAllocator };
 use crate::model::DefStore;
 use crate::typeinf::{ BaseType, ExpressionType, SignatureMemberConstraint, TypeModel, Typing, MemberMode };
-
-pub struct GenContext {
-    pub instrs: Vec<Instruction>,
-    pub regalloc: RegisterAllocator,
-    pub types: TypeModel
-}
-
-impl fmt::Debug for GenContext {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let instr_str : Vec<String> = self.instrs.iter().map(|v| format!("{:?}",v)).collect();
-        write!(f,"{:?}\n{}\n",self.types,instr_str.join(""))?;
-        Ok(())
-    }
-}
 
 pub struct CodeGen<'a> {
     context: GenContext,
@@ -31,11 +18,7 @@ pub struct CodeGen<'a> {
 impl<'a> CodeGen<'a> {
     fn new(defstore: &'a DefStore) -> CodeGen {
         CodeGen {
-            context: GenContext {
-                instrs: Vec::new(),
-                regalloc: RegisterAllocator::new(),
-                types: TypeModel::new()
-            },
+            context: GenContext::new(),
             defstore,
             typing: Typing::new(),
             regnames: HashMap::new()
@@ -44,12 +27,12 @@ impl<'a> CodeGen<'a> {
 
     fn add_instr(&mut self, instr: Instruction) -> Result<(),String> {
         self.typing.add(&instr.get_constraint(self.defstore)?)?;
-        self.context.instrs.push(instr.clone());
+        self.context.add_instruction(instr.clone());
         Ok(())
     }
 
     fn build_vec(&mut self, values: &Vec<Expression>, reg: Register, dollar: Option<&Register>, at: Option<&Register>) -> Result<(),String> {
-        let tmp = self.context.regalloc.allocate();
+        let tmp = self.context.allocate_register(None);
         self.add_instr(Instruction::new(InstructionType::Nil(),vec![tmp]))?;
         for val in values {
             let r = self.build_rvalue(val,dollar,at)?;
@@ -137,18 +120,18 @@ impl<'a> CodeGen<'a> {
                     self.regnames.remove(id);
                 }
                 if !self.regnames.contains_key(id) {
-                    self.regnames.insert(id.clone(),self.context.regalloc.allocate());
+                    self.regnames.insert(id.clone(),self.context.allocate_register(None));
                 }
                 let real_reg = self.regnames[id];
-                let lvalue_reg = self.context.regalloc.allocate();
+                let lvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::Alias(),vec![lvalue_reg,real_reg]))?;
                 Ok((lvalue_reg,None,real_reg))
             },
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
-                    let lvalue_reg = self.context.regalloc.allocate();
-                    let rvalue_reg = self.context.regalloc.allocate();
+                    let lvalue_reg = self.context.allocate_register(None);
+                    let rvalue_reg = self.context.allocate_register(None);
                     self.add_instr(Instruction::new(InstructionType::SValue(name.to_string(),f.clone()),vec![lvalue_reg,lvalue_subreg]))?;
                     self.add_instr(Instruction::new(InstructionType::SValue(name.to_string(),f.clone()),vec![rvalue_reg,rvalue_subreg]))?;
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
@@ -159,8 +142,8 @@ impl<'a> CodeGen<'a> {
             Expression::Pling(x,f) => {
                 if let ExpressionType::Base(BaseType::EnumType(name)) = self.type_of(x)? {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
-                    let lvalue_reg = self.context.regalloc.allocate();
-                    let rvalue_reg = self.context.regalloc.allocate();
+                    let lvalue_reg = self.context.allocate_register(None);
+                    let rvalue_reg = self.context.allocate_register(None);
                     self.add_instr(Instruction::new(InstructionType::EValue(name.to_string(),f.clone()),vec![lvalue_reg,lvalue_subreg]))?;
                     self.add_instr(Instruction::new(InstructionType::EValue(name.to_string(),f.clone()),vec![rvalue_reg,rvalue_subreg]))?;
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
@@ -170,11 +153,11 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Square(x) => {
                 let (lvalue_subreg,_,rvalue_subreg) = self.build_lvalue(x,false,false)?;
-                let lvalue_reg = self.context.regalloc.allocate();
+                let lvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::RefSquare(),vec![lvalue_reg,lvalue_subreg]))?;
-                let rvalue_reg = self.context.regalloc.allocate();
+                let rvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::Square(),vec![rvalue_reg,rvalue_subreg]))?;
-                let fvalue_reg = self.context.regalloc.allocate();
+                let fvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::FilterSquare(),vec![fvalue_reg,rvalue_subreg]))?;
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
@@ -182,26 +165,26 @@ impl<'a> CodeGen<'a> {
                 let (lvalue_reg,fvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false,false)?;
                 /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
                 let filterreg = self.build_rvalue(f,Some(&rvalue_subreg),None)?;                
-                let fvalue_reg = self.context.regalloc.allocate();
+                let fvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::Filter(),vec![fvalue_reg,fvalue_subreg.unwrap(),filterreg]))?;
-                let rvalue_reg = self.context.regalloc.allocate();
+                let rvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::Filter(),vec![rvalue_reg,rvalue_subreg,filterreg]))?;
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             Expression::Bracket(x,f) => {
                 let (lvalue_subreg,_,rvalue_subreg) = self.build_lvalue(x,false,false)?;
-                let lvalue_reg = self.context.regalloc.allocate();
+                let lvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::RefSquare(),vec![lvalue_reg,lvalue_subreg]))?;
-                let rvalue_interreg = self.context.regalloc.allocate();
+                let rvalue_interreg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::Square(),vec![rvalue_interreg,rvalue_subreg]))?;
-                let fvalue_interreg = self.context.regalloc.allocate();
+                let fvalue_interreg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::FilterSquare(),vec![fvalue_interreg,rvalue_subreg]))?;
-                let atreg = self.context.regalloc.allocate();
+                let atreg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::At(),vec![atreg,rvalue_subreg]))?;
                 let filterreg = self.build_rvalue(f,Some(&rvalue_interreg),Some(&atreg))?;
-                let fvalue_reg = self.context.regalloc.allocate();
+                let fvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::Filter(),vec![fvalue_reg,fvalue_interreg,filterreg]))?;
-                let rvalue_reg = self.context.regalloc.allocate();
+                let rvalue_reg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::Filter(),vec![rvalue_reg,rvalue_interreg,filterreg]))?;
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
@@ -210,7 +193,7 @@ impl<'a> CodeGen<'a> {
     }
 
     fn build_rvalue(&mut self, expr: &Expression, dollar: Option<&Register>, at: Option<&Register>) -> Result<Register,String> {
-        let reg = self.context.regalloc.allocate();
+        let reg = self.context.allocate_register(None);
         match expr {
             Expression::Identifier(id) => {
                 if !self.regnames.contains_key(id) {
@@ -297,9 +280,9 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Bracket(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                let atreg = self.context.regalloc.allocate();
+                let atreg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::At(),vec![atreg,subreg]))?;
-                let sq_subreg = self.context.regalloc.allocate();
+                let sq_subreg = self.context.allocate_register(None);
                 self.add_instr(Instruction::new(InstructionType::Square(),vec![sq_subreg,subreg]))?;
                 let filterreg = self.build_rvalue(f,Some(&sq_subreg),Some(&atreg))?;
                 self.add_instr(Instruction::new(InstructionType::Filter(),vec![reg,sq_subreg,filterreg]))?;
@@ -361,14 +344,18 @@ impl<'a> CodeGen<'a> {
         if errors.len() > 0 {
             Err(errors)
         } else {
-            self.typing.to_model(&mut self.context.types);
+            self.typing.to_model(self.context.xxx_types());
             Ok(self.context)
         }
     }
 }
 
 pub fn generate_code<'a>(defstore: &'a DefStore, stmts: Vec<Statement>) -> Result<GenContext,Vec<String>> {
-    CodeGen::new(defstore).go(stmts)
+    let mut context = CodeGen::new(defstore).go(stmts)?;
+    print!("c {:?}\n",context.get_instructions().len());
+    context.phase_finished();
+    print!("d {:?}\n",context.get_instructions().len());
+    Ok(context)
 }
 
 #[cfg(test)]
@@ -396,7 +383,8 @@ mod test {
         lexer.import("test:codegen/generate-smoke2.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let cmds : Vec<String> = generate_code(&defstore,stmts).expect("codegen").instrs.iter().map(|e| format!("{:?}",e)).collect();
+        let gencontext = generate_code(&defstore,stmts).expect("codegen");
+        let cmds : Vec<String> = gencontext.get_instructions().iter().map(|e| format!("{:?}",e)).collect();
         let outdata = load_testdata(&["codegen","generate-smoke2.out"]).ok().unwrap();
         assert_eq!(outdata,cmds.join(""));
     }

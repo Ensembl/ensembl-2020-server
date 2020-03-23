@@ -112,10 +112,10 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let context = generate_code(&defstore,stmts).expect("codegen");
-        let instrs_str : Vec<String> = context.instrs.iter().map(|v| format!("{:?}",v)).collect();
+        let instrs_str : Vec<String> = context.get_instructions().iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));
         let mut tp = Typing::new();
-        for instr in &context.instrs {
+        for instr in &context.get_instructions() {
             print!("=== {:?}",instr);
             tp.add(&instr.get_constraint(&defstore).expect("A")).expect("ok");
             print!("{:?}\n",tp);

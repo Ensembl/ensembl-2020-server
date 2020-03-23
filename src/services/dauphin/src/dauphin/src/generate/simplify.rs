@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::generate::{ Instruction, InstructionType };
 use crate::model::{ DefStore, Register, StructDef, EnumDef };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
-use super::codegen::GenContext;
+use super::gencontext::GenContext;
 
 /* simplification is the process of converting arbitrary assemblies of structs, enums and vecs into sets of vecs of
  * simple values. To achieve this, vecs of structured types are converted to sets of vecs of simpler types.
@@ -27,74 +27,68 @@ use super::codegen::GenContext;
 fn allocate_registers(context: &mut GenContext, member_types: &Vec<MemberType>, with_index: bool, container_type: ContainerType) -> Vec<Register> {
     let mut out = Vec::new();
     if with_index {
-        let reg = context.regalloc.allocate();
-        context.types.add(&reg,&container_type.construct(MemberType::Base(BaseType::NumberType)));
+        let reg = context.allocate_register(Some(&container_type.construct(MemberType::Base(BaseType::NumberType))));
         out.push(reg);
     }
     for member_type in member_types.iter() {
-        let reg = context.regalloc.allocate();
-        context.types.add(&reg,&container_type.construct(member_type.clone()));
+        let reg = context.allocate_register(Some(&container_type.construct(member_type.clone())));
         out.push(reg);
     }
     out
 }
 
-fn extend_vertical<F>(in_: &Vec<Register>, mapping: &HashMap<Register,Vec<Register>>,cb: F) -> Result<Vec<Instruction>,()>
-        where F: Fn(Vec<Register>) -> Instruction {
+fn extend_vertical<F>(in_: &Vec<Register>, mapping: &HashMap<Register,Vec<Register>>,mut cb: F) -> Result<(),String>
+        where F: FnMut(Vec<Register>) {
     let mut expanded = Vec::new();
     let mut len = None;
     for in_reg in in_.iter() {
         let in_reg = in_reg.clone().clone();
         let map = mapping.get(&in_reg).unwrap_or(&vec![in_reg]).clone();
         if len.is_none() { len = Some(map.len()); }
-        if map.len() != len.unwrap() { return Err(()); }
+        if map.len() != len.unwrap() { return Err("mismatched register lengths".to_string()); }
         expanded.push(map);
     }
-    let mut out = Vec::new();
     for i in 0..len.unwrap() {
         let here_regs : Vec<Register> = expanded.iter().map(|v| v[i].clone()).collect();
-        out.push(cb(here_regs));
+        cb(here_regs);
     }
-    Ok(out)
+    Ok(())
 }
 
 /* Some easy value for unused enum branches */
-fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<Vec<Instruction>,()> {
-    let mut out = Vec::new();
+fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<(),String> {
     match type_ {
-        MemberType::Vec(_) =>  out.push(Instruction::new(InstructionType::List(),vec![*reg])),
+        MemberType::Vec(_) =>  context.add_instruction(Instruction::new(InstructionType::List(),vec![*reg])),
         MemberType::Base(b) => match b {
-            BaseType::BooleanType => out.push(Instruction::new(InstructionType::BooleanConst(false),vec![*reg])),
-            BaseType::StringType => out.push(Instruction::new(InstructionType::StringConst(String::new()),vec![*reg])),
-            BaseType::NumberType => out.push(Instruction::new(InstructionType::NumberConst(0.),vec![*reg])),
-            BaseType::BytesType => out.push(Instruction::new(InstructionType::BytesConst(vec![]),vec![*reg])),
-            BaseType::Invalid => return Err(()),
+            BaseType::BooleanType => context.add_instruction(Instruction::new(InstructionType::BooleanConst(false),vec![*reg])),
+            BaseType::StringType => context.add_instruction(Instruction::new(InstructionType::StringConst(String::new()),vec![*reg])),
+            BaseType::NumberType => context.add_instruction(Instruction::new(InstructionType::NumberConst(0.),vec![*reg])),
+            BaseType::BytesType => context.add_instruction(Instruction::new(InstructionType::BytesConst(vec![]),vec![*reg])),
+            BaseType::Invalid => return Err("cannot build nil".to_string()),
             BaseType::StructType(name) => {
-                let decl = defstore.get_struct(name).ok_or_else(|| ())?;
+                let decl = defstore.get_struct(name).ok_or_else(|| "cannot build nil".to_string())?;
                 let mut subregs = vec![*reg];
                 for member_type in decl.get_member_types() {
-                    let r = context.regalloc.allocate();
-                    context.types.add(&r,member_type);
-                    out.extend(build_nil(context,defstore,&r,member_type)?.iter().cloned());
+                    let r = context.allocate_register(Some(member_type));
+                    build_nil(context,defstore,&r,member_type)?;
                     subregs.push(r);
                 }
-                out.push(Instruction::new(InstructionType::CtorStruct(name.to_string()),subregs));
+                context.add_instruction(Instruction::new(InstructionType::CtorStruct(name.to_string()),subregs));
             },
             BaseType::EnumType(name) => {
-                let decl = defstore.get_enum(name).ok_or_else(|| ())?;
-                let branch_type = decl.get_branch_types().get(0).ok_or_else(|| ())?;
-                let field_name = decl.get_names().get(0).ok_or_else(|| ())?;
-                let subreg = context.regalloc.allocate();
-                context.types.add(&subreg,branch_type);
-                out.extend(build_nil(context,defstore,&subreg,branch_type)?.iter().cloned());
-                out.push(Instruction::new(InstructionType::CtorEnum(name.to_string(),field_name.clone()),vec![*reg,subreg]));
+                let decl = defstore.get_enum(name).ok_or_else(|| "cannot build nil".to_string())?;
+                let branch_type = decl.get_branch_types().get(0).ok_or_else(|| "cannot build nil".to_string())?;
+                let field_name = decl.get_names().get(0).ok_or_else(|| "cannot build nil".to_string())?;
+                let subreg = context.allocate_register(Some(branch_type));
+                build_nil(context,defstore,&subreg,branch_type)?;
+                context.add_instruction(Instruction::new(InstructionType::CtorEnum(name.to_string(),field_name.clone()),vec![*reg,subreg]));
             }
         }
     }
-    Ok(out)
+    Ok(())
 }
 
-fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
+fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
     Ok(match &instr.itype {
         InstructionType::Proc(_,_) |
         InstructionType::Operator(_) |
@@ -115,7 +109,7 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |
         InstructionType::BytesConst(_) =>
-            vec![instr.clone()],
+            context.add_instruction(instr.clone()),
 
         InstructionType::Nil() |
         InstructionType::Alias() |
@@ -126,29 +120,29 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
         InstructionType::RefSquare() |
         InstructionType::Star() => {
             extend_vertical(&instr.regs,mapping,|regs| {
-                Instruction::new(instr.itype.clone(),regs)
+                context.add_instruction(Instruction::new(instr.itype.clone(),regs));
             })?
         },
 
         InstructionType::FilterSquare() => {
             if let Some(srcs) = mapping.get(&instr.regs[1]) {
-                vec![Instruction::new(InstructionType::FilterSquare(),vec![instr.regs[0],srcs[0]])]
+                context.add_instruction(Instruction::new(InstructionType::FilterSquare(),vec![instr.regs[0],srcs[0]]));
             } else {
-                vec![Instruction::new(InstructionType::FilterSquare(),vec![instr.regs[0],instr.regs[1]])]
+                context.add_instruction(Instruction::new(InstructionType::FilterSquare(),vec![instr.regs[0],instr.regs[1]]));
             }
         },
 
         InstructionType::At() => {
             if let Some(srcs) = mapping.get(&instr.regs[1]) {
-                vec![Instruction::new(InstructionType::At(),vec![instr.regs[0],srcs[0]])]
+                context.add_instruction(Instruction::new(InstructionType::At(),vec![instr.regs[0],srcs[0]]));
             } else {
-                vec![instr.clone()]
+                context.add_instruction(instr.clone());
             }
         },
 
         InstructionType::Filter() => {
             extend_vertical(&vec![instr.regs[0],instr.regs[1]],mapping,|r| {
-                Instruction::new(InstructionType::Filter(),vec![r[0],r[1],instr.regs[2]])
+                context.add_instruction(Instruction::new(InstructionType::Filter(),vec![r[0],r[1],instr.regs[2]]));
             })?
         },
         InstructionType::Call(name,type_) => {
@@ -160,92 +154,81 @@ fn extend_common(instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>)
                     new_regs.push(reg.clone());
                 }
             }
-            vec![Instruction::new(InstructionType::Call(name.clone(),type_.clone()),new_regs)]
+            context.add_instruction(Instruction::new(InstructionType::Call(name.clone(),type_.clone()),new_regs));
         }
     })
 }
 
-fn extend_struct_instr(obj_name: &str, decl: &StructDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
+fn extend_struct_instr(obj_name: &str, context: &mut GenContext, decl: &StructDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
     /* because types topologically ordered and non-recursive
     * we know there's nothing to expand in the args in the else branches.
     */
     Ok(match &instr.itype {
         InstructionType::CtorStruct(name) => {
             if name == obj_name {
-                let dests = mapping.get(&instr.regs[0]).ok_or_else(|| ())?;
-                let mut out = Vec::new();
+                let dests = mapping.get(&instr.regs[0]).ok_or_else(|| "missing register".to_string())?;
                 for i in 1..instr.regs.len() {
-                    out.push(Instruction::new(InstructionType::Copy(),vec![dests[i-1],instr.regs[i]]));
+                    context.add_instruction(Instruction::new(InstructionType::Copy(),vec![dests[i-1],instr.regs[i]]));
                 }
-                out
             } else {
-                vec![instr.clone()]
+                context.add_instruction(instr.clone());
             }
         },
 
         InstructionType::SValue(name,field) if name == obj_name => {
-            let dests = mapping.get(&instr.regs[1]).ok_or_else(|| ())?;
-            let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| ())?;
-            vec![Instruction::new(InstructionType::Copy(),vec![instr.regs[0],dests[pos]])]
+            let dests = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
+            let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| "missing register".to_string())?;
+            context.add_instruction(Instruction::new(InstructionType::Copy(),vec![instr.regs[0],dests[pos]]));
         },
 
-        _ => extend_common(instr,mapping)?
+        _ => extend_common(context,instr,mapping)?
     })
 }
 
-fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &str, decl: &EnumDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<Vec<Instruction>,()> {
-    /* because types topologically ordered and non-recursive we know
-        * there's nothing to expand in the args
-        */
+fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &str, decl: &EnumDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
+    /* because types topologically ordered and non-recursive we know there's nothing to expand in the args */
     Ok(match &instr.itype {
         InstructionType::CtorEnum(name,field) => {
             if name == obj_name {
-                let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-                let dests = mapping.get(&instr.regs[0]).ok_or_else(|| ())?;
-                let mut out = Vec::new();
+                let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
+                let dests = mapping.get(&instr.regs[0]).ok_or_else(|| "missing register".to_string())?;
                 for i in 1..dests.len() {
                     if i-1 == pos {
-                        out.push(Instruction::new(InstructionType::NumberConst((i-1) as f64),vec![dests[0]]));
-                        out.push(Instruction::new(InstructionType::Copy(),vec![dests[i],instr.regs[1]]));
+                        context.add_instruction(Instruction::new(InstructionType::NumberConst((i-1) as f64),vec![dests[0]]));
+                        context.add_instruction(Instruction::new(InstructionType::Copy(),vec![dests[i],instr.regs[1]]));
                     } else {
-                        let type_ = context.types.get(&dests[i]).ok_or_else(|| ())?.clone();
-                        out.extend(build_nil(context,defstore,&dests[i],&type_)?.iter().cloned());
+                        let type_ = context.xxx_types().get(&dests[i]).ok_or_else(|| "missing register".to_string())?.clone();
+                        build_nil(context,defstore,&dests[i],&type_)?;
                     }
                 }
-                out
             } else {
-                vec![instr.clone()]
+                context.add_instruction(instr.clone());
             }
         },
 
         InstructionType::EValue(name,field) if name == obj_name => {
-            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-            let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| ())?;
-            let mut out = Vec::new();
-            let posreg = Instruction::add1(&mut out,&context,InstructionType::NumberConst(pos as f64),vec![]);
-            let filter = Instruction::add1(&mut out,&context,InstructionType::NumEq(),vec![srcs[0],posreg]);
-            context.types.add(&filter,&MemberType::Base(BaseType::BooleanType));
-            out.push(Instruction::new(InstructionType::Filter(),vec![instr.regs[0],srcs[pos+1],filter]));
-            out
+            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
+            let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
+            let posreg = context.add(&MemberType::Base(BaseType::NumberType),InstructionType::NumberConst(pos as f64),vec![]);
+            let filter = context.add(&MemberType::Base(BaseType::BooleanType),InstructionType::NumEq(),vec![srcs[0],posreg]);
+            context.add_instruction(Instruction::new(InstructionType::Filter(),vec![instr.regs[0],srcs[pos+1],filter]));
         },
 
         InstructionType::ETest(name,field) if name == obj_name => {
-            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| ())?;
-            let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| ())?;
-            let mut out = Vec::new();
-            let posreg = Instruction::add1(&mut out,&context,InstructionType::NumberConst(pos as f64),vec![]);
-            out.push(Instruction::new(InstructionType::NumEq(),vec![instr.regs[0],srcs[0],posreg]));
-            out
+            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
+            let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
+            let posreg = context.add(&MemberType::Base(BaseType::NumberType),InstructionType::NumberConst(pos as f64),vec![]);
+            context.add_instruction(Instruction::new(InstructionType::NumEq(),vec![instr.regs[0],srcs[0],posreg]));
         },
 
-        _ => extend_common(instr,mapping)?
+        _ => extend_common(context,instr,mapping)?
     })
 }
 
-fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, base: BaseType, with_index: bool) -> Result<HashMap<Register,Vec<Register>>,()> {
+fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, base: BaseType, with_index: bool) -> Result<HashMap<Register,Vec<Register>>,String> {
     let mut target_registers = Vec::new();
     /* which registers will we be expanding? */
-    for (reg,reg_type) in context.types.each_register() {
+    for (reg,reg_type) in context.xxx_types().each_register() {
         if reg_type.get_base() == base {
             target_registers.push(reg.clone());
         }
@@ -254,42 +237,42 @@ fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
     /* create some new subregisters for them */
     let mut new_registers = HashMap::new();
     for reg in &target_registers {
-        let type_ = context.types.get(reg).ok_or_else(|| ())?.clone();
+        let type_ = context.xxx_types().get(reg).ok_or_else(|| "Missing register")?.clone();
         new_registers.insert(reg.clone(),allocate_registers(context,member_types,with_index,type_.get_container()));
     }
     /* move any refs which include our member forward to new origin */
-    print!("{:?}\n",new_registers);
     Ok(new_registers)
 }
 
-fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Result<(),()> {
-    let mut new_instrs : Vec<Instruction> = Vec::new();
+fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Result<(),String> {
     if let Some(decl) = defstore.get_struct(name) {
         let member_types = decl.get_member_types();
         let base = BaseType::StructType(name.to_string());
         let new_registers = make_new_registers(context,member_types,base,false)?;
-        for instr in &context.instrs {
-            new_instrs.extend(extend_struct_instr(name,decl,instr,&new_registers)?.iter().cloned());
+        for instr in &context.get_instructions() {
+            extend_struct_instr(name,context,decl,instr,&new_registers)?;
         }
     } else if let Some(decl) = defstore.get_enum(name) {
         let member_types = decl.get_branch_types();
         let base = BaseType::EnumType(name.to_string());
         let new_registers = make_new_registers(context,member_types,base,true)?;
         print!("new_registers {:?}\n",new_registers);
-        for instr in &context.instrs.clone() {
-            new_instrs.extend(extend_enum_instr(defstore,context,name,decl,instr,&new_registers)?.iter().cloned());
+        for instr in &context.get_instructions() {
+            extend_enum_instr(defstore,context,name,decl,instr,&new_registers)?;
         }
     } else {
-        return Err(());                
+        return Err("can only extend structs/enums".to_string());                
     };
-    context.instrs = new_instrs;
+    context.phase_finished();
     Ok(())
 }
 
-pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),()> {
+pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
+    print!("f {:?}\n",context.get_instructions().len());
     for name in defstore.get_structenum_order().rev() {
-        print!("extend {:?}\n",name);
+        print!("A {:?}\n",context.get_instructions().len());
         extend_one(defstore,context,name)?;
+        print!("B {:?}\n",context.get_instructions().len());
     }
     Ok(())
 }
@@ -329,11 +312,11 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
-        print!("{:?}\n",context);
+        print!("e {:?}\n",context.get_instructions().len());
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
-        let cmds : Vec<String> = context.instrs.iter().map(|e| format!("{:?}",e)).collect();
+        let cmds : Vec<String> = context.get_instructions().iter().map(|e| format!("{:?}",e)).collect();
         compare_instrs(&cmds,&outdata.split("\n").map(|x| x.to_string()).collect());
         print!("{:?}\n",context);
     }
