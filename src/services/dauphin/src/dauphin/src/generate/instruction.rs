@@ -1,7 +1,6 @@
 use std::fmt;
 
 use crate::model::{ DefStore, Register };
-use super::gencontext::GenContext;
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberType, MemberMode };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
@@ -26,23 +25,23 @@ fn fixed(bt: BaseType) -> ArgumentConstraint {
 
 #[derive(Clone,PartialEq)]
 pub enum InstructionType {
-    Nil(),
-    Alias(),
-    Copy(),
-    List(),
-    Append(),
-    Square(),
-    FilterSquare(),
-    RefSquare(),
-    Star(),
-    At(),
-    Filter(),
-    Run(),
-    NumEq(),
-    Length(),
-    Add(),
-    SeqFilter(),
-    SeqAt(),
+    Nil,
+    Alias,
+    Copy,
+    List,
+    Append,
+    Square,
+    FilterSquare,
+    RefSquare,
+    Star,
+    At,
+    Filter,
+    Run,
+    NumEq,
+    Length,
+    Add,
+    SeqFilter,
+    SeqAt,
     NumberConst(f64),
     BooleanConst(bool),
     StringConst(String),
@@ -60,23 +59,23 @@ pub enum InstructionType {
 impl InstructionType {
     pub fn get_name(&self) -> Vec<String> {
         let mut out = vec![match self {
-            InstructionType::Nil() => "nil",
-            InstructionType::Alias() => "alias",
-            InstructionType::Copy() => "copy",
-            InstructionType::List() => "list",
-            InstructionType::Append() => "append",
-            InstructionType::Square() => "square",
-            InstructionType::FilterSquare() => "filtersquare",
-            InstructionType::RefSquare() => "refsquare",
-            InstructionType::Star() => "star",
-            InstructionType::At() => "at",
-            InstructionType::Filter() => "filter",
-            InstructionType::Run() => "run",
-            InstructionType::NumEq() => "numeq",
-            InstructionType::Length() => "length",
-            InstructionType::Add() => "add",
-            InstructionType::SeqFilter() => "seqfilter",
-            InstructionType::SeqAt() => "seqat",
+            InstructionType::Nil => "nil",
+            InstructionType::Alias => "alias",
+            InstructionType::Copy => "copy",
+            InstructionType::List => "list",
+            InstructionType::Append => "append",
+            InstructionType::Square => "square",
+            InstructionType::FilterSquare => "filtersquare",
+            InstructionType::RefSquare => "refsquare",
+            InstructionType::Star => "star",
+            InstructionType::At => "at",
+            InstructionType::Filter => "filter",
+            InstructionType::Run => "run",
+            InstructionType::NumEq => "numeq",
+            InstructionType::Length => "length",
+            InstructionType::Add => "add",
+            InstructionType::SeqFilter => "seqfilter",
+            InstructionType::SeqAt => "seqat",
             InstructionType::NumberConst(_) => "number",
             InstructionType::BooleanConst(_) => "bool",
             InstructionType::StringConst(_) => "string",
@@ -196,28 +195,28 @@ impl InstructionType {
                 Ok(out)
             },
 
-            InstructionType::Nil()   => Ok(vec![placeholder(false)]),
-            InstructionType::Alias() => Ok(vec![placeholder(true),placeholder(false)]),
-            InstructionType::Copy() =>  Ok(vec![placeholder(false),placeholder(false)]),
-            InstructionType::List() => Ok(vec![array(false)]),
-            InstructionType::Append() => Ok(vec![placeholder(false),placeholder(false)]),
-            InstructionType::Square() => Ok(vec![placeholder(false),array(false)]),
-            InstructionType::RefSquare() => Ok(vec![placeholder(true),array(true)]),
-            InstructionType::FilterSquare() => Ok(vec![fixed(BaseType::NumberType),array(false)]),
-            InstructionType::Star() => Ok(vec![array(false),placeholder(false)]),
-            InstructionType::At() => Ok(vec![fixed(BaseType::NumberType),placeholder(false)]),
-            InstructionType::Filter() => Ok(vec![placeholder(false),placeholder(false),fixed(BaseType::BooleanType)]),
-            InstructionType::Run() => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
+            InstructionType::Nil   => Ok(vec![placeholder(false)]),
+            InstructionType::Alias => Ok(vec![placeholder(true),placeholder(false)]),
+            InstructionType::Copy =>  Ok(vec![placeholder(false),placeholder(false)]),
+            InstructionType::List => Ok(vec![array(false)]),
+            InstructionType::Append => Ok(vec![placeholder(false),placeholder(false)]),
+            InstructionType::Square => Ok(vec![placeholder(false),array(false)]),
+            InstructionType::RefSquare => Ok(vec![placeholder(true),array(true)]),
+            InstructionType::FilterSquare => Ok(vec![fixed(BaseType::NumberType),array(false)]),
+            InstructionType::Star => Ok(vec![array(false),placeholder(false)]),
+            InstructionType::At => Ok(vec![fixed(BaseType::NumberType),placeholder(false)]),
+            InstructionType::Filter => Ok(vec![placeholder(false),placeholder(false),fixed(BaseType::BooleanType)]),
+            InstructionType::Run => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
             InstructionType::NumberConst(_) => Ok(vec![fixed(BaseType::NumberType)]),
             InstructionType::BooleanConst(_) => Ok(vec![fixed(BaseType::BooleanType)]),
             InstructionType::StringConst(_) => Ok(vec![fixed(BaseType::StringType)]),
             InstructionType::BytesConst(_) => Ok(vec![fixed(BaseType::BytesType)]),
 
-            InstructionType::NumEq() |
-            InstructionType::Length() |
-            InstructionType::Add() |
-            InstructionType::SeqFilter() |
-            InstructionType::SeqAt() |
+            InstructionType::NumEq |
+            InstructionType::Length |
+            InstructionType::Add |
+            InstructionType::SeqFilter |
+            InstructionType::SeqAt |
             InstructionType::Call(_,_) =>
                 Ok(vec![]),
         }

@@ -58,7 +58,7 @@ fn extend_vertical<F>(in_: &Vec<Register>, mapping: &HashMap<Register,Vec<Regist
 /* Some easy value for unused enum branches */
 fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<(),String> {
     match type_ {
-        MemberType::Vec(_) =>  context.add_instruction(Instruction::new(InstructionType::List(),vec![*reg])),
+        MemberType::Vec(_) =>  context.add_instruction(Instruction::new(InstructionType::List,vec![*reg])),
         MemberType::Base(b) => match b {
             BaseType::BooleanType => context.add_instruction(Instruction::new(InstructionType::BooleanConst(false),vec![*reg])),
             BaseType::StringType => context.add_instruction(Instruction::new(InstructionType::StringConst(String::new()),vec![*reg])),
@@ -92,11 +92,11 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
     Ok(match &instr.itype {
         InstructionType::Proc(_,_) |
         InstructionType::Operator(_) |
-        InstructionType::Run() |
-        InstructionType::Length() |
-        InstructionType::Add() |
-        InstructionType::SeqFilter() |
-        InstructionType::SeqAt() =>
+        InstructionType::Run |
+        InstructionType::Length |
+        InstructionType::Add |
+        InstructionType::SeqFilter |
+        InstructionType::SeqAt =>
             panic!("Impossible instruction! {:?}",instr),
 
         InstructionType::CtorStruct(_) |
@@ -104,45 +104,45 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
         InstructionType::SValue(_,_) |
         InstructionType::EValue(_,_) |
         InstructionType::ETest(_,_) |
-        InstructionType::NumEq() |
+        InstructionType::NumEq |
         InstructionType::NumberConst(_) |
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |
         InstructionType::BytesConst(_) =>
             context.add_instruction(instr.clone()),
 
-        InstructionType::Nil() |
-        InstructionType::Alias() |
-        InstructionType::Copy() |
-        InstructionType::List() |
-        InstructionType::Append() |
-        InstructionType::Square() |
-        InstructionType::RefSquare() |
-        InstructionType::Star() => {
+        InstructionType::Nil |
+        InstructionType::Alias |
+        InstructionType::Copy |
+        InstructionType::List |
+        InstructionType::Append |
+        InstructionType::Square |
+        InstructionType::RefSquare |
+        InstructionType::Star => {
             extend_vertical(&instr.regs,mapping,|regs| {
                 context.add_instruction(Instruction::new(instr.itype.clone(),regs));
             })?
         },
 
-        InstructionType::FilterSquare() => {
+        InstructionType::FilterSquare => {
             if let Some(srcs) = mapping.get(&instr.regs[1]) {
-                context.add_instruction(Instruction::new(InstructionType::FilterSquare(),vec![instr.regs[0],srcs[0]]));
+                context.add_instruction(Instruction::new(InstructionType::FilterSquare,vec![instr.regs[0],srcs[0]]));
             } else {
-                context.add_instruction(Instruction::new(InstructionType::FilterSquare(),vec![instr.regs[0],instr.regs[1]]));
+                context.add_instruction(Instruction::new(InstructionType::FilterSquare,vec![instr.regs[0],instr.regs[1]]));
             }
         },
 
-        InstructionType::At() => {
+        InstructionType::At => {
             if let Some(srcs) = mapping.get(&instr.regs[1]) {
-                context.add_instruction(Instruction::new(InstructionType::At(),vec![instr.regs[0],srcs[0]]));
+                context.add_instruction(Instruction::new(InstructionType::At,vec![instr.regs[0],srcs[0]]));
             } else {
                 context.add_instruction(instr.clone());
             }
         },
 
-        InstructionType::Filter() => {
+        InstructionType::Filter => {
             extend_vertical(&vec![instr.regs[0],instr.regs[1]],mapping,|r| {
-                context.add_instruction(Instruction::new(InstructionType::Filter(),vec![r[0],r[1],instr.regs[2]]));
+                context.add_instruction(Instruction::new(InstructionType::Filter,vec![r[0],r[1],instr.regs[2]]));
             })?
         },
         InstructionType::Call(name,type_) => {
@@ -168,7 +168,7 @@ fn extend_struct_instr(obj_name: &str, context: &mut GenContext, decl: &StructDe
             if name == obj_name {
                 let dests = mapping.get(&instr.regs[0]).ok_or_else(|| "missing register".to_string())?;
                 for i in 1..instr.regs.len() {
-                    context.add_instruction(Instruction::new(InstructionType::Copy(),vec![dests[i-1],instr.regs[i]]));
+                    context.add_instruction(Instruction::new(InstructionType::Copy,vec![dests[i-1],instr.regs[i]]));
                 }
             } else {
                 context.add_instruction(instr.clone());
@@ -178,7 +178,7 @@ fn extend_struct_instr(obj_name: &str, context: &mut GenContext, decl: &StructDe
         InstructionType::SValue(name,field) if name == obj_name => {
             let dests = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
             let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| "missing register".to_string())?;
-            context.add_instruction(Instruction::new(InstructionType::Copy(),vec![instr.regs[0],dests[pos]]));
+            context.add_instruction(Instruction::new(InstructionType::Copy,vec![instr.regs[0],dests[pos]]));
         },
 
         _ => extend_common(context,instr,mapping)?
@@ -195,7 +195,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
                 for i in 1..dests.len() {
                     if i-1 == pos {
                         context.add_instruction(Instruction::new(InstructionType::NumberConst((i-1) as f64),vec![dests[0]]));
-                        context.add_instruction(Instruction::new(InstructionType::Copy(),vec![dests[i],instr.regs[1]]));
+                        context.add_instruction(Instruction::new(InstructionType::Copy,vec![dests[i],instr.regs[1]]));
                     } else {
                         let type_ = context.xxx_types().get(&dests[i]).ok_or_else(|| "missing register".to_string())?.clone();
                         build_nil(context,defstore,&dests[i],&type_)?;
@@ -210,15 +210,15 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
             let posreg = context.add(&MemberType::Base(BaseType::NumberType),InstructionType::NumberConst(pos as f64),vec![]);
-            let filter = context.add(&MemberType::Base(BaseType::BooleanType),InstructionType::NumEq(),vec![srcs[0],posreg]);
-            context.add_instruction(Instruction::new(InstructionType::Filter(),vec![instr.regs[0],srcs[pos+1],filter]));
+            let filter = context.add(&MemberType::Base(BaseType::BooleanType),InstructionType::NumEq,vec![srcs[0],posreg]);
+            context.add_instruction(Instruction::new(InstructionType::Filter,vec![instr.regs[0],srcs[pos+1],filter]));
         },
 
         InstructionType::ETest(name,field) if name == obj_name => {
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
             let posreg = context.add(&MemberType::Base(BaseType::NumberType),InstructionType::NumberConst(pos as f64),vec![]);
-            context.add_instruction(Instruction::new(InstructionType::NumEq(),vec![instr.regs[0],srcs[0],posreg]));
+            context.add_instruction(Instruction::new(InstructionType::NumEq,vec![instr.regs[0],srcs[0],posreg]));
         },
 
         _ => extend_common(context,instr,mapping)?

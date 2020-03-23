@@ -223,30 +223,30 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
         }
         print!("{:?}",instr);
         match &instr.itype {
-            InstructionType::Nil() => { harness.insert(&instr.regs[0],vec![]); },
+            InstructionType::Nil => { harness.insert(&instr.regs[0],vec![]); },
             InstructionType::NumberConst(n) => { harness.insert(&instr.regs[0],vec![*n as usize]); },
             InstructionType::BooleanConst(n) => { harness.insert(&instr.regs[0],vec![if *n {1} else {0}]); },
             InstructionType::StringConst(_) |
             InstructionType::BytesConst(_) =>
                 panic!("Unimplemented"),
-            InstructionType::Alias() => { harness.alias(&instr.regs[0],&instr.regs[1]); },
-            InstructionType::Copy() => { let x = harness.get_mut(&instr.regs[1]).to_vec(); harness.insert(&instr.regs[0],x); },
-            InstructionType::Append() => { let mut x = harness.get_mut(&instr.regs[1]).to_vec(); harness.get_mut(&instr.regs[0]).append(&mut x); },
-            InstructionType::Length() => { let v = vec![harness.get(&instr.regs[1]).len()]; harness.insert(&instr.regs[0],v); }
-            InstructionType::Add() => {
+            InstructionType::Alias => { harness.alias(&instr.regs[0],&instr.regs[1]); },
+            InstructionType::Copy => { let x = harness.get_mut(&instr.regs[1]).to_vec(); harness.insert(&instr.regs[0],x); },
+            InstructionType::Append => { let mut x = harness.get_mut(&instr.regs[1]).to_vec(); harness.get_mut(&instr.regs[0]).append(&mut x); },
+            InstructionType::Length => { let v = vec![harness.get(&instr.regs[1]).len()]; harness.insert(&instr.regs[0],v); }
+            InstructionType::Add => {
                 let h = &mut harness;
                 let delta = h.get(&instr.regs[1])[0];
                 let v = h.get(&instr.regs[0]).iter().map(|x| x+delta).collect();
                 h.insert(&instr.regs[0],v);
             },
-            InstructionType::At() => {
+            InstructionType::At => {
                 let mut v = vec![];
                 for i in 0..harness.get(&instr.regs[1]).len() {
                     v.push(i);
                 }
                 harness.insert(&instr.regs[0],v);
             },
-            InstructionType::NumEq() => {
+            InstructionType::NumEq => {
                 let h = &mut harness;
                 let mut v = vec![];
                 let mut b_iter = h.get(&instr.regs[2]).iter().cycle();
@@ -256,7 +256,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 }
                 h.insert(&instr.regs[0],v);
             },
-            InstructionType::Filter() => {
+            InstructionType::Filter => {
                 let h = &mut harness;
                 let mut f = h.get(&instr.regs[2]).iter();
                 let mut v = vec![];
@@ -267,7 +267,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 }
                 h.insert(&instr.regs[0],v);
             },
-            InstructionType::Run() => {
+            InstructionType::Run => {
                 let h = &mut harness;
                 let mut v = vec![];
                 let mut b_iter = h.get(&instr.regs[2]).iter();
@@ -279,7 +279,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 }
                 h.insert(&instr.regs[0],v);
             },
-            InstructionType::SeqFilter() => {
+            InstructionType::SeqFilter => {
                 let h = &mut harness;
                 let u = h.get(&instr.regs[1]);
                 let mut v = vec![];
@@ -292,7 +292,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 }
                 h.insert(&instr.regs[0],v);
             },
-            InstructionType::SeqAt() => {
+            InstructionType::SeqAt => {
                 let mut v = vec![];
                 let b_vals = harness.get(&instr.regs[1]);
                 for b_val in b_vals {
@@ -339,11 +339,11 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             InstructionType::SValue(_,_) |
             InstructionType::EValue(_,_) |
             InstructionType::ETest(_,_) |
-            InstructionType::List() |
-            InstructionType::Square() |
-            InstructionType::RefSquare() |
-            InstructionType::FilterSquare() |
-            InstructionType::Star() =>
+            InstructionType::List |
+            InstructionType::Square |
+            InstructionType::RefSquare |
+            InstructionType::FilterSquare |
+            InstructionType::Star =>
                 panic!("Illegal instruction")
         }
         for r in instr.get_registers() {

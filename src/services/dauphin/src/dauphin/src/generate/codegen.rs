@@ -1,46 +1,50 @@
 use std::collections::HashMap;
-use std::fmt;
 
 use super::gencontext::GenContext;
 use super::instruction::{ Instruction, InstructionType };
 use crate::parser::{ Expression, Statement };
-use crate::model::{ Register, RegisterAllocator };
+use crate::model::Register;
 use crate::model::DefStore;
-use crate::typeinf::{ BaseType, ExpressionType, SignatureMemberConstraint, TypeModel, Typing, MemberMode };
+use crate::typeinf::{ BaseType, ExpressionType, SignatureMemberConstraint, MemberMode };
+
+macro_rules! addf {
+    ($this:expr,$opcode:tt,$($regs:expr),*) => {
+        $this.context.add_untyped_f(InstructionType::$opcode,vec![$($regs),*])?
+    };
+    ($this:expr,$opcode:tt($($args:expr),*),$($regs:expr),*) => {
+        $this.context.add_untyped_f(InstructionType::$opcode($($args),*),vec![$($regs),*])?
+    };
+    ($this:expr,$opcode:tt) => {
+        $this.context.add_untyped_f(InstructionType::$opcode,vec![])?
+    };
+    ($this:expr,$opcode:tt($($args:expr),*)) => {
+        $this.context.add_untyped_f(InstructionType::$opcode($($args),*),vec![])?
+    };
+}
 
 pub struct CodeGen<'a> {
-    context: GenContext,
+    context: GenContext<'a>,
     defstore: &'a DefStore,
-    typing: Typing,
     regnames: HashMap<String,Register>
 }
 
 impl<'a> CodeGen<'a> {
     fn new(defstore: &'a DefStore) -> CodeGen {
         CodeGen {
-            context: GenContext::new(),
+            context: GenContext::new(defstore),
             defstore,
-            typing: Typing::new(),
             regnames: HashMap::new()
         }
     }
 
-    fn add_instr(&mut self, instr: Instruction) -> Result<(),String> {
-        self.typing.add(&instr.get_constraint(self.defstore)?)?;
-        self.context.add_instruction(instr.clone());
-        Ok(())
-    }
-
-    fn build_vec(&mut self, values: &Vec<Expression>, reg: Register, dollar: Option<&Register>, at: Option<&Register>) -> Result<(),String> {
-        let tmp = self.context.allocate_register(None);
-        self.add_instr(Instruction::new(InstructionType::Nil(),vec![tmp]))?;
+    fn build_vec(&mut self, values: &Vec<Expression>, dollar: Option<&Register>, at: Option<&Register>) -> Result<Register,String> {
+        let tmp = addf!(self,Nil);
         for val in values {
             let r = self.build_rvalue(val,dollar,at)?;
-            self.add_instr(Instruction::new(InstructionType::Append(),vec![tmp,r]))?;
-
+            self.context.add_untyped(Instruction::new(InstructionType::Append,vec![tmp,r]))?;
         }
-        self.add_instr(Instruction::new(InstructionType::Star(),vec![reg,tmp]))?;
-        Ok(())
+        Ok(addf!(self,Star,tmp))
+
     }
 
     fn struct_rearrange(&mut self, s: &str, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
@@ -66,7 +70,7 @@ impl<'a> CodeGen<'a> {
                 if !self.regnames.contains_key(id) {
                     return Err(format!("No such variable {:?}",id));
                 }
-                self.typing.get(&self.regnames[id])
+                self.context.get_partial_type(&self.regnames[id])
             },
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
@@ -123,17 +127,14 @@ impl<'a> CodeGen<'a> {
                     self.regnames.insert(id.clone(),self.context.allocate_register(None));
                 }
                 let real_reg = self.regnames[id];
-                let lvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::Alias(),vec![lvalue_reg,real_reg]))?;
+                let lvalue_reg = addf!(self,Alias,real_reg);
                 Ok((lvalue_reg,None,real_reg))
             },
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
-                    let lvalue_reg = self.context.allocate_register(None);
-                    let rvalue_reg = self.context.allocate_register(None);
-                    self.add_instr(Instruction::new(InstructionType::SValue(name.to_string(),f.clone()),vec![lvalue_reg,lvalue_subreg]))?;
-                    self.add_instr(Instruction::new(InstructionType::SValue(name.to_string(),f.clone()),vec![rvalue_reg,rvalue_subreg]))?;
+                    let lvalue_reg = addf!(self,SValue(name.to_string(),f.clone()),lvalue_subreg);
+                    let rvalue_reg = addf!(self,SValue(name.to_string(),f.clone()),rvalue_subreg);
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"dot\" of structs".to_string())
@@ -142,10 +143,8 @@ impl<'a> CodeGen<'a> {
             Expression::Pling(x,f) => {
                 if let ExpressionType::Base(BaseType::EnumType(name)) = self.type_of(x)? {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
-                    let lvalue_reg = self.context.allocate_register(None);
-                    let rvalue_reg = self.context.allocate_register(None);
-                    self.add_instr(Instruction::new(InstructionType::EValue(name.to_string(),f.clone()),vec![lvalue_reg,lvalue_subreg]))?;
-                    self.add_instr(Instruction::new(InstructionType::EValue(name.to_string(),f.clone()),vec![rvalue_reg,rvalue_subreg]))?;
+                    let lvalue_reg = addf!(self,EValue(name.to_string(),f.clone()),lvalue_subreg);
+                    let rvalue_reg = addf!(self,EValue(name.to_string(),f.clone()),rvalue_subreg);
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"pling\" of enums".to_string())
@@ -153,39 +152,28 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Square(x) => {
                 let (lvalue_subreg,_,rvalue_subreg) = self.build_lvalue(x,false,false)?;
-                let lvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::RefSquare(),vec![lvalue_reg,lvalue_subreg]))?;
-                let rvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::Square(),vec![rvalue_reg,rvalue_subreg]))?;
-                let fvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::FilterSquare(),vec![fvalue_reg,rvalue_subreg]))?;
+                let lvalue_reg = addf!(self,RefSquare,lvalue_subreg);
+                let rvalue_reg = addf!(self,Square,rvalue_subreg);
+                let fvalue_reg = addf!(self,FilterSquare,rvalue_subreg);
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             Expression::Filter(x,f) => {
                 let (lvalue_reg,fvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false,false)?;
                 /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
-                let filterreg = self.build_rvalue(f,Some(&rvalue_subreg),None)?;                
-                let fvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::Filter(),vec![fvalue_reg,fvalue_subreg.unwrap(),filterreg]))?;
-                let rvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::Filter(),vec![rvalue_reg,rvalue_subreg,filterreg]))?;
+                let filterreg = self.build_rvalue(f,Some(&rvalue_subreg),None)?;
+                let fvalue_reg = addf!(self,Filter,fvalue_subreg.unwrap(),filterreg);
+                let rvalue_reg = addf!(self,Filter,rvalue_subreg,filterreg);
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             Expression::Bracket(x,f) => {
                 let (lvalue_subreg,_,rvalue_subreg) = self.build_lvalue(x,false,false)?;
-                let lvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::RefSquare(),vec![lvalue_reg,lvalue_subreg]))?;
-                let rvalue_interreg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::Square(),vec![rvalue_interreg,rvalue_subreg]))?;
-                let fvalue_interreg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::FilterSquare(),vec![fvalue_interreg,rvalue_subreg]))?;
-                let atreg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::At(),vec![atreg,rvalue_subreg]))?;
+                let lvalue_reg = addf!(self,RefSquare,lvalue_subreg);
+                let rvalue_interreg = addf!(self,Square,rvalue_subreg);
+                let fvalue_interreg = addf!(self,FilterSquare,rvalue_subreg);
+                let atreg = addf!(self,At,rvalue_subreg);
                 let filterreg = self.build_rvalue(f,Some(&rvalue_interreg),Some(&atreg))?;
-                let fvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::Filter(),vec![fvalue_reg,fvalue_interreg,filterreg]))?;
-                let rvalue_reg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::Filter(),vec![rvalue_reg,rvalue_interreg,filterreg]))?;
+                let fvalue_reg = addf!(self,Filter,fvalue_interreg,filterreg);
+                let rvalue_reg = addf!(self,Filter,rvalue_interreg,filterreg);
                 Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
             },
             _ => return Err("Invalid lvalue".to_string())
@@ -193,116 +181,103 @@ impl<'a> CodeGen<'a> {
     }
 
     fn build_rvalue(&mut self, expr: &Expression, dollar: Option<&Register>, at: Option<&Register>) -> Result<Register,String> {
-        let reg = self.context.allocate_register(None);
-        match expr {
+        Ok(match expr {
             Expression::Identifier(id) => {
                 if !self.regnames.contains_key(id) {
                     return Err(format!("Unset variable {:?}",id));
                 }
                 let real_reg = self.regnames[id];
-                self.add_instr(Instruction::new(InstructionType::Copy(),vec![reg,real_reg]))?;
+                addf!(self,Copy,real_reg)
             },
-            Expression::Number(n) => {
-                self.add_instr(Instruction::new(InstructionType::NumberConst(*n),vec![reg]))?;
-            },
-            Expression::LiteralString(s) => {
-                self.add_instr(Instruction::new(InstructionType::StringConst(s.to_string()),vec![reg]))?;
-            },
-            Expression::LiteralBool(b) => {
-                self.add_instr(Instruction::new(InstructionType::BooleanConst(*b),vec![reg]))?;
-            },
-            Expression::LiteralBytes(b) => {
-                self.add_instr(Instruction::new(InstructionType::BytesConst(b.to_vec()),vec![reg]))?;
-            },
-            Expression::Vector(v) => self.build_vec(v,reg,dollar,at)?,
+            Expression::Number(n) =>        addf!(self,NumberConst(*n)),
+            Expression::LiteralString(s) => addf!(self,StringConst(s.to_string())),
+            Expression::LiteralBool(b) =>   addf!(self,BooleanConst(*b)),
+            Expression::LiteralBytes(b) =>  addf!(self,BytesConst(b.to_vec())),
+            Expression::Vector(v) =>        self.build_vec(v,dollar,at)?,
             Expression::Operator(name,x) => {
-                let mut subregs = vec![reg];
-                for e in x {
-                    let r = self.build_rvalue(e,dollar,at)?;
-                    subregs.push(r);
-                }
-                self.add_instr(Instruction::new(InstructionType::Operator(name.clone()),subregs))?;
-            },
-            Expression::CtorStruct(s,x,n) => {
-                let mut out = vec![reg];
                 let mut subregs = vec![];
                 for e in x {
                     let r = self.build_rvalue(e,dollar,at)?;
                     subregs.push(r);
                 }
-                out.extend(self.struct_rearrange(s,subregs,n)?);
-                self.add_instr(Instruction::new(InstructionType::CtorStruct(s.clone()),out))?;
+                self.context.add_untyped_f(InstructionType::Operator(name.clone()),subregs)?
+            },
+            Expression::CtorStruct(s,x,n) => {
+                let mut subregs = vec![];
+                for e in x {
+                    let r = self.build_rvalue(e,dollar,at)?;
+                    subregs.push(r);
+                }
+                let out = self.struct_rearrange(s,subregs,n)?;
+                self.context.add_untyped_f(InstructionType::CtorStruct(s.clone()),out)?
             },
             Expression::CtorEnum(e,b,x) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                self.add_instr(Instruction::new(InstructionType::CtorEnum(e.clone(),b.clone()),vec![reg,subreg]))?;
+                addf!(self,CtorEnum(e.clone(),b.clone()),subreg)
             },
             Expression::Dot(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                let stype = self.typing.get(&subreg);
+                let stype = self.context.get_partial_type(&subreg);
                 if let ExpressionType::Base(BaseType::StructType(name)) = stype {
-                    self.add_instr(Instruction::new(InstructionType::SValue(name.to_string(),f.clone()),vec![reg,subreg]))?;
+                    addf!(self,SValue(name.to_string(),f.clone()),subreg)
                 } else {
                     return Err(format!("Can only take \"dot\" of structs, not {:?}",stype));
                 }
             },
             Expression::Query(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                let etype = self.typing.get(&subreg);
+                let etype = self.context.get_partial_type(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
-                    self.add_instr(Instruction::new(InstructionType::ETest(name.to_string(),f.clone()),vec![reg,subreg]))?;
+                    addf!(self,ETest(name.to_string(),f.clone()),subreg)
                 } else {
                     return Err("Can only take \"query\" of enums".to_string());
                 }
             },
             Expression::Pling(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                let etype = self.typing.get(&subreg);
+                let etype = self.context.get_partial_type(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
-                    self.add_instr(Instruction::new(InstructionType::EValue(name.to_string(),f.clone()),vec![reg,subreg]))?;
+                    addf!(self,EValue(name.to_string(),f.clone()),subreg)
                 } else {
                     return Err("Can only take \"pling\" of enums".to_string());
                 }
             },
             Expression::Square(x) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                self.add_instr(Instruction::new(InstructionType::Square(),vec![reg,subreg]))?;
+                addf!(self,Square,subreg)
             },
             Expression::Star(x) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                self.add_instr(Instruction::new(InstructionType::Star(),vec![reg,subreg]))?;
+                addf!(self,Star,subreg)
             },
             Expression::Filter(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 /* Unlike in a bracket, @ makes no sense in a filter as the array has already been lost */
                 let filterreg = self.build_rvalue(f,Some(&subreg),None)?;
-                self.add_instr(Instruction::new(InstructionType::Filter(),vec![reg,subreg,filterreg]))?;
+                addf!(self,Filter,subreg,filterreg)
             },
             Expression::Bracket(x,f) => {
                 let subreg = self.build_rvalue(x,dollar,at)?;
-                let atreg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::At(),vec![atreg,subreg]))?;
-                let sq_subreg = self.context.allocate_register(None);
-                self.add_instr(Instruction::new(InstructionType::Square(),vec![sq_subreg,subreg]))?;
+                let atreg = addf!(self,At,subreg);
+                let sq_subreg = addf!(self,Square,subreg);
                 let filterreg = self.build_rvalue(f,Some(&sq_subreg),Some(&atreg))?;
-                self.add_instr(Instruction::new(InstructionType::Filter(),vec![reg,sq_subreg,filterreg]))?;
+                addf!(self,Filter,sq_subreg,filterreg)
             },
             Expression::Dollar => {
                 if let Some(dollar) = dollar {
-                    self.add_instr(Instruction::new(InstructionType::Copy(),vec![reg,*dollar]))?;
+                    addf!(self,Copy,*dollar)
                 } else {
                     return Err("Unexpected $".to_string());
                 }
             },
             Expression::At => {
                 if let Some(at) = at {
-                    self.add_instr(Instruction::new(InstructionType::Copy(),vec![reg,*at]))?;
+                    addf!(self,Copy,*at)
                 } else {
                     return Err("Unexpected @".to_string());
                 }
             }
-        };
-        Ok(reg)
+        })
     }
 
     fn build_stmt(&mut self, stmt: &Statement) -> Result<(),String> {
@@ -329,11 +304,11 @@ impl<'a> CodeGen<'a> {
                 }
             }
         }
-        self.add_instr(Instruction::new(InstructionType::Proc(stmt.0.to_string(),modes),regs))?;
+        self.context.add_untyped(Instruction::new(InstructionType::Proc(stmt.0.to_string(),modes),regs))?;
         Ok(())
     }
 
-    fn go(mut self, stmts: Vec<Statement>) -> Result<GenContext,Vec<String>> {
+    fn go(mut self, stmts: Vec<Statement>) -> Result<GenContext<'a>,Vec<String>> {
         let mut errors = Vec::new();
         for stmt in &stmts {
             let r = self.build_stmt(stmt);
@@ -344,7 +319,7 @@ impl<'a> CodeGen<'a> {
         if errors.len() > 0 {
             Err(errors)
         } else {
-            self.typing.to_model(self.context.xxx_types());
+            self.context.generate_types();
             Ok(self.context)
         }
     }
