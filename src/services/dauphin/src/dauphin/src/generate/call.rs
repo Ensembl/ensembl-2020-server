@@ -11,15 +11,15 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
                     sig.push((modes[i],type_));
                 }
-                context.add_instruction(Instruction::new(InstructionType::Call(name.to_string(),sig),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(name.to_string(),sig),instr.regs.to_vec()));
             },
 
             InstructionType::Operator(name) => {
                 let types = instr.regs.iter().map(|reg| (MemberMode::RValue,context.xxx_types().get(reg).unwrap().clone())).collect();
-                context.add_instruction(Instruction::new(InstructionType::Call(name.to_string(),types),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(name.to_string(),types),instr.regs.to_vec()));
             },
 
-            _ => { context.add_instruction(instr.clone()); }
+            _ => { context.add(instr.clone()); }
         }
     }
     context.phase_finished();

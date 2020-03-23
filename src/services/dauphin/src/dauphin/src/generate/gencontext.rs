@@ -61,7 +61,7 @@ impl<'a> GenContext<'a> {
         self.typing.to_model(&mut self.types);
     }
 
-    pub fn add_instruction(&mut self, instr: Instruction) {
+    pub fn add(&mut self, instr: Instruction) {
         self.output_instrs.push(instr);
     }
 
@@ -73,7 +73,7 @@ impl<'a> GenContext<'a> {
         out
     }
 
-    pub fn add(&mut self, type_: &MemberType, itype: InstructionType, mut regs_in: Vec<Register>) -> Register {
+    pub fn add_f(&mut self, type_: &MemberType, itype: InstructionType, mut regs_in: Vec<Register>) -> Register {
         let dst = self.allocate_register(Some(type_));
         let mut regs = vec![dst];
         regs.append(&mut regs_in);
