@@ -7,7 +7,7 @@ mod typing;
 pub use self::types::{
     ArgumentConstraint, ArgumentExpressionConstraint, BaseType, ExpressionType,
     InstructionConstraint, MemberType, SignatureConstraint, ContainerType,
-    SignatureMemberConstraint, MemberMode
+    SignatureMemberConstraint, MemberMode, MemberDataFlow
 };
 
 pub use self::typing::Typing;

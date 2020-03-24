@@ -144,14 +144,30 @@ pub enum MemberMode {
     FValue
 }
 
+#[derive(Debug,Clone,Copy,PartialEq)]
+pub enum MemberDataFlow {
+    SelfJustifying, /* This call is self-justifying (impure) so all of its registers are justified */
+    JustifiesCall,  /* If this register is justified, so is this call */
+    Normal          /* If this call is justified, so is this register */
+}
+
+impl fmt::Display for MemberDataFlow {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{}",match self {
+            MemberDataFlow::SelfJustifying => "s",
+            MemberDataFlow::JustifiesCall => "j",
+            MemberDataFlow::Normal => "n"
+        })
+    }
+}
+
 impl fmt::Display for MemberMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let x =match self {
+        write!(f,"{}",match self {
             MemberMode::RValue => "R",
             MemberMode::LValue => "L",
             MemberMode::FValue => "F"
-        };
-        write!(f,"{}",x)
+        })
     }
 }
 

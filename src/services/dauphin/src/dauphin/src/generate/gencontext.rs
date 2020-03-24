@@ -33,6 +33,8 @@ impl<'a> GenContext<'a> {
         }
     }
 
+    pub fn get_defstore(&self) -> &DefStore { self.defstore }
+
     pub fn get_instructions(&self) -> Vec<Instruction> {
         self.input_instrs.to_vec()
     }

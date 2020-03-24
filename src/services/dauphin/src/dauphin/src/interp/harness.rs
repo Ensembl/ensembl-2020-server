@@ -2,7 +2,7 @@ use std::collections::{ HashMap };
 use crate::generate::InstructionType;
 use crate::generate::GenContext;
 use crate::model::{ offset, DefStore, LinearPath, Register, RegisterPurpose };
-use crate::typeinf::{ MemberType, MemberMode };
+use crate::typeinf::{ MemberType, MemberMode, MemberDataFlow };
 
 struct HarnessInterp {
     values: HashMap<Option<Register>,Vec<usize>>,
@@ -57,7 +57,7 @@ fn assign_unfiltered(harness: &mut HarnessInterp, regs: &Vec<Register>) {
     }        
 }
 
-fn assign(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType)>, regs: &Vec<Register>) {
+fn assign(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType,MemberDataFlow)>, regs: &Vec<Register>) {
     if types[0].0 == MemberMode::LValue {
         assign_unfiltered(harness,regs);
     } else {
@@ -65,7 +65,7 @@ fn assign(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberM
     }
 }
 
-fn assign_filtered(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType)>, regs: &Vec<Register>) {
+fn assign_filtered(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType,MemberDataFlow)>, regs: &Vec<Register>) {
     let len = (regs.len()-1)/2;
     let filter = regs[0];
     let left_all = &regs[1..len+1];

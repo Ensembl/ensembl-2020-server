@@ -6,8 +6,6 @@ use crate::typeinf::{ BaseType, MemberType };
 use super::gencontext::GenContext;
 use super::instruction::{ Instruction, InstructionType };
 
-use super::optimise::remove_unused_registers;
-
 /* Linearization is the process of converting arbitrarily deep vectors of simple values into multivals. Although a 
  * multival is a sequence of values, as we need to support multivals of single level lists, all lists get additional
  * levels. The previous simplify step has abolished complex, structured types by this point by "pushing in" vecs.
@@ -285,7 +283,6 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
 }
 
 fn linearize_real(context: &mut GenContext) -> Result<BTreeMap<Register,Linearized>,String> {
-    remove_unused_registers(context);
     let subregs = allocate_subregs(context);
     for instr in &context.get_instructions().to_vec() {
         linearize_one(context,&subregs,&instr)?;

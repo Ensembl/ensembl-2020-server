@@ -1,7 +1,7 @@
 use std::fmt;
 
-use crate::model::{ DefStore, Register };
-use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberType, MemberMode };
+use crate::model::{ DefStore, Register, offset };
+use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberType, MemberMode, MemberDataFlow };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
     if ref_ {
@@ -23,7 +23,7 @@ fn fixed(bt: BaseType) -> ArgumentConstraint {
     ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(bt))
 }
 
-#[derive(Clone,PartialEq)]
+#[derive(Clone,PartialEq,Debug)]
 pub enum InstructionType {
     Nil,
     Alias,
@@ -53,7 +53,7 @@ pub enum InstructionType {
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
-    Call(String,Vec<(MemberMode,MemberType)>)
+    Call(String,Vec<(MemberMode,MemberType,MemberDataFlow)>)
 }
 
 impl InstructionType {
@@ -120,6 +120,82 @@ impl InstructionType {
             out.push(suffix);
         }
         out
+    }
+
+    pub fn self_justifying_call(&self) -> bool {
+        match self {
+            InstructionType::Call(_,sigs) => {
+                let mut out = false;
+                for sig in sigs.iter() {
+                    match sig.2 {
+                        MemberDataFlow::SelfJustifying => {
+                            out = true;
+                        },
+                        MemberDataFlow::Normal |
+                        MemberDataFlow::JustifiesCall => {}
+                    }
+                }
+                print!("{:?} : {:?}\n",self,out);
+                out
+            },
+            _ => false
+        }
+    }
+
+    pub fn justifying_registers(&self, defstore: &DefStore) -> Vec<usize> {
+        match self {
+            InstructionType::At |
+            InstructionType::Star |
+            InstructionType::Alias |
+            InstructionType::List |
+            InstructionType::Square |
+            InstructionType::RefSquare |
+            InstructionType::FilterSquare |
+            InstructionType::CtorStruct(_) |
+            InstructionType::CtorEnum(_,_) |
+            InstructionType::SValue(_,_) |
+            InstructionType::EValue(_,_) |
+            InstructionType::ETest(_,_) |
+            InstructionType::Proc(_,_) |
+            InstructionType::Operator(_) =>
+                panic!("Unexpected instruction {:?}",self),
+
+            InstructionType::Nil |
+            InstructionType::Run |
+            InstructionType::Add |
+            InstructionType::Copy |
+            InstructionType::Append |
+            InstructionType::Filter |
+            InstructionType::NumEq |
+            InstructionType::Length |
+            InstructionType::SeqFilter |
+            InstructionType::SeqAt |
+            InstructionType::NumberConst(_) |
+            InstructionType::BooleanConst(_) |
+            InstructionType::StringConst(_) |
+            InstructionType::BytesConst(_) => 
+                vec![0],
+
+            InstructionType::Call(_,sigs) => {
+                let mut out = Vec::new();
+                let mut reg_offset = 0;
+                for sig in sigs.iter() {
+                    let num_regs = offset(defstore,&sig.1).expect("resolving to registers").len();
+                    match sig.2 {
+                        MemberDataFlow::SelfJustifying |
+                        MemberDataFlow::JustifiesCall => {
+                            for i in 0..num_regs {
+                                out.push(reg_offset+i);
+                            }
+                        },
+                        MemberDataFlow::Normal => {}
+                    }
+                    reg_offset += num_regs;
+                }
+                print!("{:?} = {:?}\n",self,out);
+                out
+            },
+        }
     }
 
     pub fn get_constraints(&self, defstore: &DefStore) -> Result<Vec<ArgumentConstraint>,String> {

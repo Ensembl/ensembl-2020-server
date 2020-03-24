@@ -34,10 +34,6 @@ impl TypeModel {
         self.values.get(reg)
     }
 
-    pub fn remove(&mut self, reg: &Register) {
-        self.values.remove(reg);
-    }
-
     pub fn each_register(&self) -> impl Iterator<Item=(&Register,&MemberType)> {
         self.values.iter()
     }
