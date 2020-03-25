@@ -1,13 +1,16 @@
 mod call;
 mod codegen;
+mod cow;
 mod dealias;
 mod gencontext;
 mod instruction;
 mod linearize;
 mod prune;
+mod reusedead;
 mod simplify;
 
 pub use self::call::call;
+pub use self::cow::copy_on_write;
 pub use self::dealias::remove_aliases;
 pub use self::gencontext::GenContext;
 pub use self::codegen::generate_code;

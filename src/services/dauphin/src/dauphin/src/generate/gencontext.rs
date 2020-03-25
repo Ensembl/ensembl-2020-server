@@ -88,5 +88,7 @@ impl<'a> GenContext<'a> {
         self.output_instrs = Vec::new();
     }
 
+    pub fn get_type(&mut self, r: &Register) -> Option<&MemberType> { self.types.get(r) }
+
     pub fn xxx_types(&mut self) -> &mut TypeModel { &mut self.types }
 }

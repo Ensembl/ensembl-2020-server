@@ -45,6 +45,7 @@ mod test {
     use super::super::linearize;
     use super::super::remove_aliases;
 
+    // XXX test pruning, eg fewer lines
     #[test]
     fn prune_smoke() {
         let resolver = FileResolver::new();

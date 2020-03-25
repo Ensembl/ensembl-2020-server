@@ -1,0 +1,11 @@
+proc assign(out _A, _A);
+inline ":=" assign left 14;
+func eq(number,number) becomes boolean;
+inline "==" eq left 5;
+func gt(number,number) becomes boolean;
+inline ">" gt left 6;
+func len(vec(_)) becomes number;
+proc print_vec(_);
+
+x := [[1],[2]];
+print_vec(x);
