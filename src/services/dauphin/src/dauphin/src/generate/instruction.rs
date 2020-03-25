@@ -42,6 +42,7 @@ pub enum InstructionType {
     Add,
     SeqFilter,
     SeqAt,
+    Const(Vec<f64>),
     NumberConst(f64),
     BooleanConst(bool),
     StringConst(String),
@@ -87,7 +88,8 @@ impl InstructionType {
             InstructionType::ETest(_,_) => "etest",
             InstructionType::Proc(_,_) => "proc",
             InstructionType::Operator(_) => "oper",
-            InstructionType::Call(_,_,_) => "call"
+            InstructionType::Call(_,_,_) => "call",
+            InstructionType::Const(_) => "const",
         }.to_string()];
         if let Some(prefixes) = match self {
             InstructionType::CtorStruct(name) => Some(vec![name.to_string()]),
@@ -117,6 +119,7 @@ impl InstructionType {
             InstructionType::BooleanConst(b) => Some(b.to_string()),
             InstructionType::StringConst(s) => Some(format!("\"{}\"",s.to_string())),
             InstructionType::BytesConst(b) => Some(format!("\'{}\'",hex::encode(b))),
+            InstructionType::Const(c) => Some(c.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")),
             _ => None
         } {
             out.push(suffix);
@@ -159,6 +162,7 @@ impl InstructionType {
             InstructionType::Length |
             InstructionType::SeqFilter |
             InstructionType::SeqAt |
+            InstructionType::Const(_) |
             InstructionType::NumberConst(_) |
             InstructionType::BooleanConst(_) |
             InstructionType::StringConst(_) |
@@ -181,7 +185,6 @@ impl InstructionType {
                     }
                     reg_offset += num_regs;
                 }
-                print!("{:?} = {:?}\n",self,out);
                 out
             },
         }
@@ -272,7 +275,7 @@ impl InstructionType {
             InstructionType::At => Ok(vec![fixed(BaseType::NumberType),placeholder(false)]),
             InstructionType::Filter => Ok(vec![placeholder(false),placeholder(false),fixed(BaseType::BooleanType)]),
             InstructionType::Run => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
-            InstructionType::NumberConst(_) => Ok(vec![fixed(BaseType::NumberType)]),
+            InstructionType::NumberConst(_) | InstructionType::Const(_) => Ok(vec![fixed(BaseType::NumberType)]),
             InstructionType::BooleanConst(_) => Ok(vec![fixed(BaseType::BooleanType)]),
             InstructionType::StringConst(_) => Ok(vec![fixed(BaseType::StringType)]),
             InstructionType::BytesConst(_) => Ok(vec![fixed(BaseType::BytesType)]),

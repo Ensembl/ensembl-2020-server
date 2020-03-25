@@ -8,6 +8,7 @@ mod instruction;
 mod linearize;
 mod prune;
 mod reusedead;
+mod runnums;
 mod simplify;
 
 pub use self::assignregs::assign_regs;
@@ -20,4 +21,5 @@ pub use self::instruction::{ Instruction, InstructionType };
 pub use self::linearize::linearize;
 pub use self::prune::prune;
 pub use self::reusedead::reuse_dead;
+pub use self::runnums::run_nums;
 pub use self::simplify::simplify;

@@ -105,6 +105,7 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
         InstructionType::EValue(_,_) |
         InstructionType::ETest(_,_) |
         InstructionType::NumEq |
+        InstructionType::Const(_) |
         InstructionType::NumberConst(_) |
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |
@@ -121,7 +122,6 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
         InstructionType::Star => {
             extend_vertical(&instr.regs,mapping,|regs| {
                 context.add(Instruction::new(instr.itype.clone(),regs));
-                //context.add_untyped_f(instr.itype.clone(),regs)?;
                 Ok(())
             })?
         },

@@ -115,6 +115,7 @@ fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src
 fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match &instr.itype {
         InstructionType::NumEq |
+        InstructionType::Const(_) |
         InstructionType::NumberConst(_) |
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |

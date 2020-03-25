@@ -225,6 +225,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
         match &instr.itype {
             InstructionType::Nil => { harness.insert(&instr.regs[0],vec![]); },
             InstructionType::NumberConst(n) => { harness.insert(&instr.regs[0],vec![*n as usize]); },
+            InstructionType::Const(nn) => { harness.insert(&instr.regs[0],nn.iter().map(|x| *x as usize).collect()); },
             InstructionType::BooleanConst(n) => { harness.insert(&instr.regs[0],vec![if *n {1} else {0}]); },
             InstructionType::StringConst(_) |
             InstructionType::BytesConst(_) =>

@@ -79,6 +79,8 @@ mod test {
     use super::super::linearize;
     use super::super::remove_aliases;
     use super::super::copy_on_write;
+    use super::super::run_nums;
+    use super::super::reuse_dead;
     use super::super::prune;
 
     // XXX test pruning, eg fewer lines
@@ -94,10 +96,14 @@ mod test {
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
+        run_nums(&mut context);
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
+        run_nums(&mut context);
+        reuse_dead(&mut context);
         assign_regs(&mut context);
+        print!("{:?}",context);
         let (_prints,_,strings) = mini_interp(&defstore,&mut context);
         for s in &strings {
             print!("{}\n",s);
