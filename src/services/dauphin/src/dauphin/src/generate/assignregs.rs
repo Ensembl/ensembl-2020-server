@@ -1,7 +1,7 @@
 use std::collections::{ HashMap, HashSet };
 use crate::model::Register;
 use super::gencontext::GenContext;
-use super::instruction::{ Instruction, InstructionType };
+use super::instruction::Instruction;
 
 fn find_first_last_use(context: &mut GenContext) -> HashMap<Register,(usize,usize)> {
     /* find first and last use of every register */
@@ -27,20 +27,6 @@ fn find_first_last_use(context: &mut GenContext) -> HashMap<Register,(usize,usiz
         }
     }
     out
-}
-
-fn calculate_lengths(context: &mut GenContext, first_use: Vec<HashSet<Register>>, last_use: Vec<HashSet<Register>>) -> HashMap<Register,usize> {
-    let mut lengths = HashMap::new();
-    let mut seen_at = HashMap::new();
-    for (i,instr) in context.get_instructions().iter().enumerate() {
-        for reg in &first_use[i] {
-            seen_at.insert(reg,i);
-        }
-        for reg in &last_use[i] {
-            lengths.insert(*reg,i-seen_at.get(&reg).unwrap());
-        }
-    }
-    lengths
 }
 
 fn allocate(regs: Vec<Register>, reg_ranges: HashMap<Register,(usize,usize)>) -> HashMap<Register,Register> {
@@ -69,7 +55,6 @@ fn allocate(regs: Vec<Register>, reg_ranges: HashMap<Register,(usize,usize)>) ->
 
 pub fn assign_regs(context: &mut GenContext) {
     let range = find_first_last_use(context);
-    print!("RANGE: {:?}\n",range);
     let priorities : HashMap<_,_> = range.iter().map(|(k,v)| (*k,v.1-v.0+1)).collect();
     let mut regs : Vec<_> = priorities.keys().cloned().collect();
     regs.sort_by_key(|k| priorities.get(k).unwrap());
@@ -107,25 +92,13 @@ mod test {
         let mut context = generate_code(&defstore,stmts).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
-        print!("{:?}\n",context);
-        print!("LIN\n");
         linearize(&mut context).expect("linearize");
-        print!("{:?}\n",context);
-        print!("RMAL\n");
         remove_aliases(&mut context);
         prune(&mut context);
-        print!("{:?}\n",context);
-        print!("COW\n");
         copy_on_write(&mut context);
-        print!("{:?}\n",context);
-        print!("PRUNE\n");
         prune(&mut context);
-        print!("{:?}\n",context);
         assign_regs(&mut context);
-        print!("ASSIGN\n");
-        print!("{:?}\n",context);
-        let (_prints,values,strings) = mini_interp(&defstore,&mut context);
-        print!("{:?}\n",values);
+        let (_prints,_,strings) = mini_interp(&defstore,&mut context);
         for s in &strings {
             print!("{}\n",s);
         }

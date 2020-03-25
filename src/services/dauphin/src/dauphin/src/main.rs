@@ -13,7 +13,7 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
-use crate::generate::{ call, generate_code, linearize, simplify, remove_aliases, prune, copy_on_write, reuse_dead };
+use crate::generate::{ call, generate_code, linearize, simplify, remove_aliases, prune, copy_on_write, reuse_dead, assign_regs };
 use crate::testsuite::load_testdata;
 use crate::interp::mini_interp;
 
@@ -35,7 +35,7 @@ fn main() {
     prune(&mut context);
     copy_on_write(&mut context);
     prune(&mut context);
-    print!("{:?}\n",context);
     reuse_dead(&mut context);
+    assign_regs(&mut context);
     mini_interp(&defstore,&mut context);
 }
