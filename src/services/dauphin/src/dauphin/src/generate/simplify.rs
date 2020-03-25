@@ -148,7 +148,7 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
                 Ok(())
             })?
         },
-        InstructionType::Call(name,type_) => {
+        InstructionType::Call(name,impure,type_) => {
             let mut new_regs = Vec::new();
             for reg in &instr.regs {
                 if let Some(dests) = mapping.get(&reg) {
@@ -157,7 +157,7 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
                     new_regs.push(reg.clone());
                 }
             }
-            context.add(Instruction::new(InstructionType::Call(name.clone(),type_.clone()),new_regs));
+            context.add(Instruction::new(InstructionType::Call(name.clone(),*impure,type_.clone()),new_regs));
         }
     })
 }

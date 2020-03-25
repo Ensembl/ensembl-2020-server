@@ -3,8 +3,6 @@ use crate::generate::instruction::{ Instruction, InstructionType };
 use crate::model::Register;
 use super::gencontext::GenContext;
 
-struct Value(usize);
-
 struct CurrentValues {
     next_value: usize,
     reg_value: HashMap<Register,usize>,
@@ -22,38 +20,9 @@ impl CurrentValues {
         }
     }
 
-    fn discard_old(&mut self, register: &Register) -> Option<(Register,Register)> {
-        print!("  discarding {:?}\n",register);
-        if let Some(value) = self.reg_value.remove(register) {
-            print!("    value {:?}\n",value);
-            if let Some(spares) = self.spare_regs.get_mut(&value) {
-                print!("      spare (main={:?})\n",self.value_reg.get(&value).unwrap());
-                if spares.remove(register) {
-                    return Some((*register,*self.value_reg.get(&value).unwrap()));
-                }
-            }
-            if let Some(main_register) = self.value_reg.get(&value) {
-                if main_register == register {
-                    print!("      main\n");
-                    self.reg_value.remove(register);
-                    let next_reg = self.spare_regs.get(&value).as_ref().unwrap().iter().next().cloned();
-                    if let Some(next_reg) = next_reg {
-                        print!("      next = {:?}\n",next_reg);
-                        self.value_reg.insert(value,next_reg);
-                        self.spare_regs.get_mut(&value).as_mut().unwrap().remove(&next_reg);
-                        print!("      copy {:?} {:?}\n",next_reg,*register);
-                        return Some((next_reg,*register));
-                    }
-                }
-            }
-        }
-        None
-    }
-
     fn new_value(&mut self, register: &Register) {
         let new_value = self.next_value;
         self.next_value += 1;
-        print!("  new value for {:?} = {:?}\n",register,new_value);
         self.reg_value.insert(*register,new_value);
         self.value_reg.insert(new_value,*register);
         self.spare_regs.insert(new_value,HashSet::new());       
@@ -91,25 +60,8 @@ impl CurrentValues {
         None
     }
 
-    fn invalidate(&mut self, register: &Register) -> Option<(Register,Register)> {
-        let out = if let Some(old_value) = self.reg_value.get(register) {
-            self.discard_old(register)
-        } else {
-            None
-        };
-        let new_value = self.next_value;
-        self.next_value += 1;
-        print!("  new value for {:?} = {:?}\n",register,new_value);
-        self.reg_value.insert(*register,new_value);
-        self.value_reg.insert(new_value,*register);
-        self.spare_regs.insert(new_value,HashSet::new());
-        out
-    }
-
     fn alias(&mut self, alias: &Register, main: &Register) {
-        print!("  alias {:?} -> {:?}\n",alias,main);
         if let Some(ref mut value) = self.reg_value.get_mut(main).cloned() {
-            print!("    value={:?}\n",value);
             self.spare_regs.get_mut(value).as_mut().unwrap().insert(*alias);
             self.reg_value.insert(*alias,*value);
         }
@@ -117,7 +69,7 @@ impl CurrentValues {
 
     fn get_main(&mut self, target: &Register) -> Register {
         if self.reg_value.get(target).is_none() {
-            self.invalidate(target);
+            self.new_value(target);
         }
         *self.value_reg.get(self.reg_value.get(target).unwrap()).unwrap()
     }
@@ -138,12 +90,10 @@ pub fn copy_on_write(context: &mut GenContext) {
             },
             _ => {
                 /* get list of registers which are mutated by call */
-                let mutating_regs = if instr.itype.self_justifying_call() {
-                    instr.regs.clone()
-                } else {
-                    instr.itype.justifying_registers(context.get_defstore())
-                        .iter().map(|x| instr.regs[*x]).collect()
-                };
+                let mutating_regs = instr.itype
+                        .changing_registers(context.get_defstore())
+                        .iter().map(|x| instr.regs[*x]).collect::<Vec<_>>();
+                print!("mutating {:?}\n",mutating_regs);
                 /* If any mutating regs are spare for some value, they need their own value now */
                 for reg in &mutating_regs {
                     if let Some((dst,src)) = values.promote_spare(&reg) {
@@ -202,7 +152,7 @@ mod test {
         copy_on_write(&mut context);
         print!("{:?}\n",context);
         prune(&mut context);
-        let (_prints,values,strings) = mini_interp(&defstore,&mut context);
+        let (_prints,_,strings) = mini_interp(&defstore,&mut context);
         for s in &strings {
             print!("{}\n",s);
         }

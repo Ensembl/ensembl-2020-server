@@ -73,7 +73,7 @@ mod test {
         print!("{:?}\n",context);
         reuse_dead(&mut context);
         print!("{:?}\n",context);
-        let (_prints,values,strings) = mini_interp(&defstore,&mut context);
+        let (_prints,_,strings) = mini_interp(&defstore,&mut context);
         for s in &strings {
             print!("{}\n",s);
         }

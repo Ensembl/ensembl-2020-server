@@ -303,7 +303,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 harness.insert(&instr.regs[0],v);
             },
 
-            InstructionType::Call(name,types) => {
+            InstructionType::Call(name,_,types) => {
                 match &name[..] {
                     "assign" => {
                         assign(defstore,&mut harness,&types,&instr.regs);

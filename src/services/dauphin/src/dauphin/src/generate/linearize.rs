@@ -115,7 +115,6 @@ fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src
 fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match &instr.itype {
         InstructionType::NumEq |
-        InstructionType::Nil |
         InstructionType::NumberConst(_) |
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |
@@ -141,6 +140,18 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
             linear_extend(subregs,&instr.regs[0],&instr.regs[1], move |d,s| {
                 context.add(Instruction::new(instr.itype.clone(),vec![*d,*s]));
             });
+        },
+
+        InstructionType::Nil => {
+            if let Some(lin_src) = subregs.get(&instr.regs[0]) {
+                for index in &lin_src.index {
+                    context.add(Instruction::new(InstructionType::Nil,vec![index.0]));
+                    context.add(Instruction::new(InstructionType::Nil,vec![index.1]));
+                }
+                context.add(Instruction::new(InstructionType::Nil,vec![lin_src.data]));
+            } else {
+                context.add(instr.clone());
+            }
         },
 
         InstructionType::At => {
@@ -237,11 +248,13 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
             } else {
                 let src_len = tmp_number_reg(context);
                 context.add(Instruction::new(InstructionType::Length,vec![src_len,instr.regs[1]]));
-                context.add(Instruction::new(InstructionType::Append,vec![lin_dst.data,instr.regs[1]]));
+                context.add(Instruction::new(InstructionType::Copy,vec![lin_dst.data,instr.regs[1]]));
                 src_len
             };
             let zero_reg = tmp_number_reg(context);
             context.add(Instruction::new(InstructionType::NumberConst(0.),vec![zero_reg]));
+            context.add(Instruction::new(InstructionType::Nil,vec![lin_dst.index[top_level].0]));
+            context.add(Instruction::new(InstructionType::Nil,vec![lin_dst.index[top_level].1]));
             context.add(Instruction::new(InstructionType::Append,vec![lin_dst.index[top_level].0,zero_reg]));
             context.add(Instruction::new(InstructionType::Append,vec![lin_dst.index[top_level].1,src_len]));
         },
@@ -263,7 +276,7 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
                 context.add(instr.clone());
             }
         },
-        InstructionType::Call(name,type_) => {
+        InstructionType::Call(name,impure,type_) => {
             let mut new = Vec::new();
             for r in &instr.regs {
                 if let Some(lin_src) = subregs.get(&r) {
@@ -276,7 +289,7 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
                     new.push(*r);
                 }
             }
-            context.add(Instruction::new(InstructionType::Call(name.clone(),type_.clone()),new));
+            context.add(Instruction::new(InstructionType::Call(name.clone(),*impure,type_.clone()),new));
         },
     }
     Ok(())
@@ -310,7 +323,7 @@ mod test {
         let mut lin = Vec::new();
         let mut norm = Vec::new();
         for instr in instrs {
-            if let InstructionType::Call(s,_) = &instr.itype {
+            if let InstructionType::Call(s,_,_) = &instr.itype {
                 if s == "assign" {
                     if let Some(reg) = subregs.get(&instr.regs[1]) {
                         lin.push(reg);

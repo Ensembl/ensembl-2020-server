@@ -53,7 +53,7 @@ pub enum InstructionType {
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
-    Call(String,Vec<(MemberMode,MemberType,MemberDataFlow)>)
+    Call(String,bool,Vec<(MemberMode,MemberType,MemberDataFlow)>)
 }
 
 impl InstructionType {
@@ -87,7 +87,7 @@ impl InstructionType {
             InstructionType::ETest(_,_) => "etest",
             InstructionType::Proc(_,_) => "proc",
             InstructionType::Operator(_) => "oper",
-            InstructionType::Call(_,_) => "call"
+            InstructionType::Call(_,_,_) => "call"
         }.to_string()];
         if let Some(prefixes) = match self {
             InstructionType::CtorStruct(name) => Some(vec![name.to_string()]),
@@ -101,7 +101,9 @@ impl InstructionType {
                 out.extend(modes.iter().map(|x| x.to_string()).collect::<Vec<_>>());
                 Some(out)
             },            
-            InstructionType::Call(name,types) => {
+            InstructionType::Call(name,impure,types) => {
+                let mut name = name.to_string();
+                if *impure { name.push_str("/i"); }
                 let mut out = vec![name.to_string()];
                 out.extend(types.iter().map(|x| format!("{:?}/{}",x.1,x.0)).collect::<Vec<_>>());
                 Some(out)
@@ -124,25 +126,12 @@ impl InstructionType {
 
     pub fn self_justifying_call(&self) -> bool {
         match self {
-            InstructionType::Call(_,sigs) => {
-                let mut out = false;
-                for sig in sigs.iter() {
-                    match sig.2 {
-                        MemberDataFlow::SelfJustifying => {
-                            out = true;
-                        },
-                        MemberDataFlow::Normal |
-                        MemberDataFlow::JustifiesCall => {}
-                    }
-                }
-                print!("{:?} : {:?}\n",self,out);
-                out
-            },
+            InstructionType::Call(_,impure,_) => *impure,
             _ => false
         }
     }
 
-    pub fn justifying_registers(&self, defstore: &DefStore) -> Vec<usize> {
+    pub fn changing_registers(&self, defstore: &DefStore) -> Vec<usize> {
         match self {
             InstructionType::At |
             InstructionType::Star |
@@ -176,19 +165,19 @@ impl InstructionType {
             InstructionType::BytesConst(_) => 
                 vec![0],
 
-            InstructionType::Call(_,sigs) => {
+            InstructionType::Call(_,_,sigs) => {
                 let mut out = Vec::new();
                 let mut reg_offset = 0;
                 for sig in sigs.iter() {
+                    let mut these_regs = false;
+                    if let MemberDataFlow::JustifiesCall = sig.2 {
+                        these_regs = true;
+                    }
                     let num_regs = offset(defstore,&sig.1).expect("resolving to registers").len();
-                    match sig.2 {
-                        MemberDataFlow::SelfJustifying |
-                        MemberDataFlow::JustifiesCall => {
-                            for i in 0..num_regs {
-                                out.push(reg_offset+i);
-                            }
-                        },
-                        MemberDataFlow::Normal => {}
+                    if these_regs {
+                        for i in 0..num_regs {
+                            out.push(reg_offset+i);
+                        }
                     }
                     reg_offset += num_regs;
                 }
@@ -293,7 +282,7 @@ impl InstructionType {
             InstructionType::Add |
             InstructionType::SeqFilter |
             InstructionType::SeqAt |
-            InstructionType::Call(_,_) =>
+            InstructionType::Call(_,_,_) =>
                 Ok(vec![]),
         }
     }

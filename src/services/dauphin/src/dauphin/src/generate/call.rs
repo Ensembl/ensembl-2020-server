@@ -9,18 +9,22 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                 let mut sig = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
-                    sig.push((modes[i],type_,MemberDataFlow::SelfJustifying));
+                    let flow = match modes[i] {
+                        MemberMode::LValue => MemberDataFlow::JustifiesCall,
+                        _ => MemberDataFlow::Normal
+                    };
+                    sig.push((modes[i],type_,flow));
                 }
-                context.add(Instruction::new(InstructionType::Call(name.to_string(),sig),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(name.to_string(),true,sig),instr.regs.to_vec()));
             },
-
+            
             InstructionType::Operator(name) => {
                 let mut types = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
                     let mode = if i == 0 { MemberDataFlow::JustifiesCall } else { MemberDataFlow::Normal };
                     types.push((MemberMode::RValue,context.xxx_types().get(reg).unwrap().clone(),mode));
                 }
-                context.add(Instruction::new(InstructionType::Call(name.to_string(),types),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(name.to_string(),false,types),instr.regs.to_vec()));
             },
 
             _ => { context.add(instr.clone()); }

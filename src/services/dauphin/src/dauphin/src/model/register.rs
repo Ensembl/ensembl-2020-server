@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 #[derive(Clone,Copy,Hash,PartialEq,Eq,PartialOrd,Ord)]
-pub struct Register(usize);
+pub struct Register(pub usize);
 
 impl fmt::Debug for Register {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
