@@ -13,7 +13,7 @@ extern crate lazy_static;
 
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
-use crate::generate::{ call, generate_code, linearize, simplify, remove_aliases, prune, copy_on_write, reuse_dead, assign_regs, run_nums };
+use crate::generate::generate_and_optimise;
 use crate::testsuite::load_testdata;
 use crate::interp::mini_interp;
 
@@ -27,17 +27,6 @@ fn main() {
     out.push("".to_string()); /* For trailing \n */
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
-    let mut context = generate_code(&defstore,stmts).expect("codegen");
-    call(&mut context).expect("j");
-    simplify(&defstore,&mut context).expect("k");
-    linearize(&mut context).expect("l");
-    remove_aliases(&mut context);
-    run_nums(&mut context);
-    prune(&mut context);
-    copy_on_write(&mut context);
-    prune(&mut context);
-    run_nums(&mut context);
-    reuse_dead(&mut context);
-    assign_regs(&mut context);
+    let mut context = generate_and_optimise(&defstore,stmts).expect("codegen");
     mini_interp(&defstore,&mut context);
 }

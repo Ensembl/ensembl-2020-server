@@ -5,6 +5,7 @@ use crate::model::{ offset, DefStore, LinearPath, Register, RegisterPurpose };
 use crate::typeinf::{ MemberType, MemberMode, MemberDataFlow };
 
 struct HarnessInterp {
+    pending: Option<HashMap<Register,Vec<usize>>>,
     values: HashMap<Option<Register>,Vec<usize>>,
     alias: HashMap<Register,Register>
 }
@@ -12,6 +13,7 @@ struct HarnessInterp {
 impl HarnessInterp {
     fn new() -> HarnessInterp {
         let mut out = HarnessInterp {
+            pending: None,
             values: HashMap::new(),
             alias: HashMap::new()
         };
@@ -32,7 +34,21 @@ impl HarnessInterp {
 
     fn insert(&mut self, r: &Register, v: Vec<usize>) {
         let r = self.resolve(r);
-        self.values.insert(Some(r),v);
+        if let Some(ref mut pending) = self.pending {
+            pending.insert(r,v);
+        } else {
+            self.values.insert(Some(r),v);
+        }
+    }
+
+    fn begin(&mut self) {
+        self.pending = Some(HashMap::new());
+    }
+
+    fn commit(&mut self) {
+        for (r,v) in self.pending.take().unwrap().drain() {
+            self.insert(&r,v);
+        }
     }
 
     fn get_mut<'a>(&'a mut self, r: &Register) -> &'a mut Vec<usize> {
@@ -217,6 +233,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
     let mut strings = Vec::new();
     let mut harness = HarnessInterp::new();
     for instr in &context.get_instructions() {
+        harness.begin();
         for r in instr.get_registers() {
             print!("{:?}={:?}",r,harness.get(&r));
             print!("\n");
@@ -347,6 +364,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             InstructionType::Star =>
                 panic!("Illegal instruction")
         }
+        harness.commit();
         for r in instr.get_registers() {
             print!("{:?}={:?}",r,harness.get(&r));
             print!("\n");

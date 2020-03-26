@@ -13,9 +13,9 @@ mod simplify;
 
 pub use self::assignregs::assign_regs;
 pub use self::call::call;
-pub use self::cow::copy_on_write;
+pub use self::cow::{ copy_on_write, reuse_const };
 pub use self::dealias::remove_aliases;
-pub use self::gencontext::GenContext;
+pub use self::gencontext::{ GenContext, generate_and_optimise };
 pub use self::codegen::generate_code;
 pub use self::instruction::{ Instruction, InstructionType };
 pub use self::linearize::linearize;
