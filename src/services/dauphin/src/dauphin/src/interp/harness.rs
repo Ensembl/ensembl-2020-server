@@ -7,37 +7,23 @@ use crate::typeinf::{ MemberType, MemberMode, MemberDataFlow };
 struct HarnessInterp {
     pending: Option<HashMap<Register,Vec<usize>>>,
     values: HashMap<Option<Register>,Vec<usize>>,
-    alias: HashMap<Register,Register>
 }
 
 impl HarnessInterp {
     fn new() -> HarnessInterp {
         let mut out = HarnessInterp {
             pending: None,
-            values: HashMap::new(),
-            alias: HashMap::new()
+            values: HashMap::new()
         };
         out.values.insert(None,vec![]);
         out
     }
 
-    fn resolve(&self, reg: &Register) -> Register {
-        match self.alias.get(reg) {
-            Some(reg) => self.resolve(reg),
-            None => *reg
-        }
-    }
-
-    fn alias(&mut self, dst: &Register, src: &Register) {
-        self.alias.insert(*dst,*src);
-    }
-
     fn insert(&mut self, r: &Register, v: Vec<usize>) {
-        let r = self.resolve(r);
         if let Some(ref mut pending) = self.pending {
-            pending.insert(r,v);
+            pending.insert(*r,v);
         } else {
-            self.values.insert(Some(r),v);
+            self.values.insert(Some(*r),v);
         }
     }
 
@@ -52,17 +38,49 @@ impl HarnessInterp {
     }
 
     fn get_mut<'a>(&'a mut self, r: &Register) -> &'a mut Vec<usize> {
-        let r = self.resolve(r);
-        self.values.entry(Some(r)).or_insert(vec![])
+        self.values.entry(Some(*r)).or_insert(vec![])
     }
 
     fn get<'a>(&'a self, r: &Register) -> &'a Vec<usize> {
-        let r = self.resolve(r);
-        self.values.get(&Some(r)).unwrap_or(self.values.get(&None).unwrap())
+        self.values.get(&Some(*r)).unwrap_or(self.values.get(&None).unwrap())
     }
 
     fn dump(&mut self) -> HashMap<Register,Vec<usize>> {
         self.values.drain().filter(|(k,_)| k.is_some()).map(|(k,v)| (k.unwrap(),v)).collect()
+    }
+
+    fn copy(&mut self, dst: &Register, src: &Register) {
+        self.values.insert(Some(*dst),self.get(src).to_vec());
+    }
+
+    fn blit(&mut self, dst: &Register, src: &Register, filter: Option<&Register>) {
+        let filter_pos_all = filter.map(|r| self.get(r)).cloned();
+        let src_val = self.get(&src).to_vec();
+        let dst_val = self.get_mut(&dst);
+        let src_len = src_val.len();
+        if let Some(filter_pos_all) = filter_pos_all {
+            for (i,filter_pos) in filter_pos_all.iter().enumerate() {
+                dst_val[*filter_pos] = src_val[i%src_len];
+            }
+        } else {
+            let new_values : Vec<_> = src_val.iter().cloned().collect();
+            dst_val.extend(new_values.iter());     
+        }
+    }
+
+    fn blit_number(&mut self, dst: &Register, src: &Register, filter: Option<&Register>, offset: usize, stride: usize) {
+        let filter_pos_all = filter.map(|r| self.get(r)).cloned();
+        let src_val = self.get(&src).to_vec();
+        let dst_val = self.get_mut(&dst);
+        let src_len = src_val.len();
+        if let Some(filter_pos_all) = filter_pos_all {
+            for (i,filter_pos) in filter_pos_all.iter().enumerate() {
+                dst_val[*filter_pos] = src_val[i%src_len] + offset + (i*stride);
+            }
+        } else {
+            let new_values : Vec<_> = src_val.iter().map(|x| *x+offset).collect();
+            dst_val.extend(new_values.iter());     
+        }
     }
 }
 
@@ -99,7 +117,6 @@ fn assign_filtered(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec
     for (j,purpose) in left_purposes.iter().enumerate() {
         let left = left_all[j];
         let right = right_all[j];
-        let self_right_len = harness.get(&right).len();
         let initial_offset = purpose.get_linear().references()
             .and_then(|p| left_len.get(&p).cloned())
             .unwrap_or(0);
@@ -107,27 +124,29 @@ fn assign_filtered(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec
             .and_then(|p| right_len.get(&p).cloned())
             .unwrap_or(0);
         if purpose.is_top() {
-            for (i,filter_pos) in filter_pos_all.iter().enumerate() {
-                let value = harness.get(&right)[i%self_right_len];
-                match purpose.get_linear() {
-                    LinearPath::Offset(_) => {
-                        let value_offset = initial_offset + (i*copy_offset);
-                        harness.get_mut(&left)[*filter_pos] = value+value_offset;
-                    },
-                    LinearPath::Length(_) => {
-                        harness.get_mut(&left)[*filter_pos] = value;
-                    },
-                    LinearPath::Data => {
-                        harness.get_mut(&left)[*filter_pos] = value;
-                    }
+            match purpose.get_linear() {
+                LinearPath::Offset(_) => {
+                    harness.blit_number(&left,&right,Some(&filter),initial_offset,copy_offset);
+                },
+                LinearPath::Length(_) => {
+                    harness.blit_number(&left,&right,Some(&filter),0,0);
+                },
+                LinearPath::Data => {
+                    harness.blit(&left,&right,Some(&filter));
                 }
             }
-            
         } else {
-            for i in 0..filter_pos_all.len() {
-                let value_offset = initial_offset + (i*copy_offset);
-                let new_values : Vec<_> = harness.get(&right).iter().map(|x| *x+value_offset).collect();
-                harness.get_mut(&left).extend(new_values.iter());
+            match purpose.get_linear() {
+                LinearPath::Offset(_) | LinearPath::Length(_) => {
+                    for i in 0..filter_pos_all.len() {
+                        harness.blit_number(&left,&right,None,initial_offset+i*copy_offset,0);
+                    }
+                },
+                LinearPath::Data => {
+                    for _ in 0..filter_pos_all.len() {
+                        harness.blit(&left,&right,None);
+                    }
+                }
             }
         }
     }
@@ -247,9 +266,8 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             InstructionType::StringConst(_) |
             InstructionType::BytesConst(_) =>
                 panic!("Unimplemented"),
-            InstructionType::Alias => { harness.alias(&instr.regs[0],&instr.regs[1]); },
-            InstructionType::Copy => { let x = harness.get_mut(&instr.regs[1]).to_vec(); harness.insert(&instr.regs[0],x); },
-            InstructionType::Append => { let mut x = harness.get_mut(&instr.regs[1]).to_vec(); harness.get_mut(&instr.regs[0]).append(&mut x); },
+            InstructionType::Copy => { harness.copy(&instr.regs[0],&instr.regs[1]); },
+            InstructionType::Append => { harness.blit(&instr.regs[0],&instr.regs[1],None); },
             InstructionType::Length => { let v = vec![harness.get(&instr.regs[1]).len()]; harness.insert(&instr.regs[0],v); }
             InstructionType::Add => {
                 let h = &mut harness;
@@ -350,6 +368,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                 }
             },
 
+            InstructionType::Alias |
             InstructionType::Proc(_,_) |
             InstructionType::Operator(_) |
             InstructionType::CtorStruct(_) |

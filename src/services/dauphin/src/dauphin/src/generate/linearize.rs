@@ -319,6 +319,7 @@ mod test {
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
     use crate::interp::mini_interp;
+    use super::super::remove_aliases;
 
     fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a BTreeMap<Register,Linearized>) -> (Vec<&'a Linearized>,Vec<Register>) {
         let mut lin = Vec::new();
@@ -350,6 +351,7 @@ mod test {
         print!("{:?}\n",context);
         linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
+        remove_aliases(&mut context);
         let values = mini_interp(&defstore,&mut context);
         print!("{:?}",values);
     }
@@ -368,6 +370,7 @@ mod test {
         print!("{:?}\n",context);
         let subregs = linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
+        remove_aliases(&mut context);
         let (_,values,_) = mini_interp(&defstore,&mut context);
         let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}",values);
@@ -396,6 +399,7 @@ mod test {
         print!("{:?}\n",context);
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
+        remove_aliases(&mut context);
         let (prints,values,strings) = mini_interp(&defstore,&mut context);
         print!("{:?}\n",values);
         for p in &prints {
@@ -442,6 +446,7 @@ mod test {
         print!("{:?}\n",context);
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
+        remove_aliases(&mut context);
         let (prints,values,strings) = mini_interp(&defstore,&mut context);
         print!("{:?}\n",values);
         for p in &prints {
@@ -468,6 +473,7 @@ mod test {
         print!("{:?}\n",context);
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
+        remove_aliases(&mut context);
         let (_prints,values,strings) = mini_interp(&defstore,&mut context);
         print!("{:?}\n",values);
         for s in &strings {
@@ -511,6 +517,7 @@ mod test {
         print!("{:?}\n",instrs);
         let subregs = linearize_real(&mut context).expect("linearize");
         let (lins,_) = find_assigns(&instrs,&subregs);
+        remove_aliases(&mut context);
         let (_,values,_) = mini_interp(&defstore,&mut context);
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(vec![0],values[&lins[0].index[0].0]);
