@@ -1,9 +1,10 @@
 use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
 use crate::model::Register;
+use crate::interp::to_index;
 use crate::generate::{ Instruction, InstructionType };
 
-fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], instr: &Instruction) {
+fn update_values(values: &mut HashMap<Register,Vec<usize>>, changing: &[usize], instr: &Instruction) {
     match &instr.itype {
         InstructionType::Nil => {
             values.insert(instr.regs[0],vec![]);
@@ -25,7 +26,11 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
         },
 
         InstructionType::NumberConst(n) => {
-            values.insert(instr.regs[0],vec![*n]);
+            if let Some(v) = to_index(*n) {
+                values.insert(instr.regs[0],vec![v]);
+            } else {
+                values.remove(&instr.regs[0]);
+            }
         },
 
         InstructionType::Const(nn) => {
@@ -36,7 +41,7 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
             if let Some(src) = values.get(&instr.regs[1]) {
                 let mut value = vec![];
                 for i in 0..src.len() {
-                    value.push(i as f64);
+                    value.push(i);
                 }
                 values.insert(instr.regs[0],value);
             } else {
@@ -49,7 +54,7 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
                 let mut dst = vec![];
                 let mut f = filter.iter();
                 for u in src {
-                    if *f.next().unwrap() > 0. {
+                    if *f.next().unwrap() > 0 {
                         dst.push(*u);
                     }
                 }
@@ -66,7 +71,7 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
                 for a in src.iter() {
                     let b = b_iter.next().unwrap();
                     for i in 0..*b as usize {
-                        dst.push(a+i as f64);
+                        dst.push(a+i);
                     }
                 }
                 values.insert(instr.regs[0],dst);
@@ -97,7 +102,7 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
                 let mut b_iter = bb.iter().cycle();
                 for a in aa {
                     let b = b_iter.next().unwrap();
-                    dst.push(if *a == *b {1.} else {0.});
+                    dst.push(if *a == *b {1} else {0});
                 }
                 values.insert(instr.regs[0],dst);
             } else {
@@ -107,7 +112,7 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
 
         InstructionType::Length => {
             if let Some(src) = values.get(&instr.regs[1]).cloned() {
-                values.insert(instr.regs[0],vec![src.len() as f64]);
+                values.insert(instr.regs[0],vec![src.len()]);
             } else {
                 values.remove(&instr.regs[0]);
             }
@@ -130,7 +135,7 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
                 let mut out = vec![];
                 for b_val in &src {
                     for i in 0..*b_val as usize {
-                        out.push(i as f64);
+                        out.push(i);
                     }
                 }
                 values.insert(instr.regs[0],out);
@@ -147,7 +152,7 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
     }
 }
 
-fn all_known(values: &HashMap<Register,Vec<f64>>, changing: &[usize], instr: &Instruction) -> bool {
+fn all_known(values: &HashMap<Register,Vec<usize>>, changing: &[usize], instr: &Instruction) -> bool {
     let mut out = true;
     for i in changing {
         if !values.contains_key(&instr.regs[*i]) {
@@ -158,12 +163,12 @@ fn all_known(values: &HashMap<Register,Vec<f64>>, changing: &[usize], instr: &In
 }
 
 pub fn run_nums(context: &mut GenContext) {
-    let mut values : HashMap<Register,Vec<f64>> = HashMap::new();
+    let mut values : HashMap<Register,Vec<usize>> = HashMap::new();
     let mut suppressed = HashSet::new();
     for instr in &context.get_instructions() {
         let changing = instr.itype.changing_registers(context.get_defstore());
         /* capture suppressed in/outs now as update_values will trample on them */
-        let mut old_values : HashMap<Register,Vec<f64>> = HashMap::new();
+        let mut old_values : HashMap<Register,Vec<usize>> = HashMap::new();
         for reg in &instr.regs {
             if suppressed.contains(reg) {
                 if let Some(old_value) = values.get(reg) {

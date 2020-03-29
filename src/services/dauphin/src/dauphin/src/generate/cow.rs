@@ -135,8 +135,8 @@ pub fn copy_on_write(context: &mut GenContext) {
 
 #[derive(Debug)]
 struct ConstMatcher {
-    reg_val: HashMap<Register,Vec<i64>>,
-    val_regs: HashMap<Vec<i64>,HashSet<Register>>
+    reg_val: HashMap<Register,Vec<usize>>,
+    val_regs: HashMap<Vec<usize>,HashSet<Register>>
 }
 
 impl ConstMatcher {
@@ -147,19 +147,6 @@ impl ConstMatcher {
         }
     }
 
-    fn hashval(&self, val_in: &[f64]) -> Option<Vec<i64>> {
-        let mut val_out = vec![];
-        for v in val_in {
-            if *v >= 2_i64.pow(53) as f64 || *v <= -2_i64.pow(53) as f64 {
-                return None;
-            }
-            let r = v.round() as i64;
-            if r as f64 != *v { return None; }
-            val_out.push(r);
-        }
-        Some(val_out)
-    }
-
     fn remove(&mut self, register: &Register) {
         if let Some(h) = self.reg_val.get(register).cloned() {
             self.reg_val.remove(register);
@@ -167,19 +154,15 @@ impl ConstMatcher {
         }
     }
 
-    fn add(&mut self, register: &Register, value: &[f64]) {
+    fn add(&mut self, register: &Register, value: &[usize]) {
         self.remove(register);
-        if let Some(h) = self.hashval(value) {
-            self.val_regs.entry(h.clone()).or_insert_with(|| HashSet::new()).insert(*register);
-            self.reg_val.insert(*register,h);
-        }
+        self.val_regs.entry(value.to_vec()).or_insert_with(|| HashSet::new()).insert(*register);
+        self.reg_val.insert(*register,value.to_vec());
     }
 
-    fn get(&mut self, value: &[f64]) -> Option<Register> {
-        if let Some(h) = self.hashval(value) {
-            if let Some(regs) = self.val_regs.get(&h) {
-                return regs.iter().next().cloned();
-            }
+    fn get(&mut self, value: &[usize]) -> Option<Register> {
+        if let Some(regs) = self.val_regs.get(value) {
+            return regs.iter().next().cloned();
         }
         None
     }

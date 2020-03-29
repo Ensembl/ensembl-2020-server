@@ -8,3 +8,4 @@ mod commands {
 }
 
 pub use self::harness::mini_interp;
+pub use self::value::to_index;

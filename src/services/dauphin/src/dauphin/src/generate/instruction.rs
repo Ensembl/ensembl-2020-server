@@ -42,7 +42,7 @@ pub enum InstructionType {
     Add,
     SeqFilter,
     SeqAt,
-    Const(Vec<f64>),
+    Const(Vec<usize>),
     NumberConst(f64),
     BooleanConst(bool),
     StringConst(String),
