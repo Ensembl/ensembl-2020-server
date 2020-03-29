@@ -25,10 +25,9 @@ impl Command for NumberConstCommand {
 
 pub struct ConstCommand(pub(crate) Register,pub(crate) Vec<f64>);
 
-// XXX efficient
 impl Command for ConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.write_numbers(&self.0)?.borrow_mut().extend(self.1.iter());
+        context.set_numbers(&self.0,self.1.to_vec())?;
         Ok(())
     }
 }

@@ -22,7 +22,7 @@ fn update_values(values: &mut HashMap<Register,Vec<f64>>, changing: &[usize], in
             } else {
                 values.remove(&instr.regs[0]);
             }
-        }
+        },
 
         InstructionType::NumberConst(n) => {
             values.insert(instr.regs[0],vec![*n]);
@@ -162,7 +162,6 @@ pub fn run_nums(context: &mut GenContext) {
     let mut suppressed = HashSet::new();
     for instr in &context.get_instructions() {
         let changing = instr.itype.changing_registers(context.get_defstore());
-        print!("{:?}\n",instr);
         /* capture suppressed in/outs now as update_values will trample on them */
         let mut old_values : HashMap<Register,Vec<f64>> = HashMap::new();
         for reg in &instr.regs {
@@ -173,16 +172,13 @@ pub fn run_nums(context: &mut GenContext) {
             }
         }
         update_values(&mut values,&changing,instr);
-        print!("{:?} {:?}\n",values,suppressed);
         if all_known(&values,&changing,instr) && !instr.itype.self_justifying_call() {
-            print!("ALL KNOWN\n");
             for i in changing {
                 suppressed.insert(&instr.regs[i]);
             }
         } else {
             for reg in &instr.regs {
                 if suppressed.contains(reg) {
-                    print!("reg {:?}\n",reg);
                     if let Some(old_value) = old_values.remove(reg) {
                         context.add(Instruction::new(InstructionType::Const(old_value),vec![*reg]));
                     }
@@ -190,7 +186,6 @@ pub fn run_nums(context: &mut GenContext) {
                 }
             }
             for i in changing {
-                print!("unsup {:?}\n",instr.regs[i]);
                 suppressed.remove(&instr.regs[i]);
             }
             context.add(instr.clone());

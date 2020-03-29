@@ -28,6 +28,14 @@ impl<T> ReadWriteValues<T> {
     }
 }
 
+pub fn to_index(value: f64) -> Option<usize> {
+    if value >= 0. && value <= MAX_USIZE as f64 {
+        Some(value as usize)
+    } else {
+        None
+    }
+}
+
 fn indexes_to_numbers(data: &Vec<usize>) -> Result<Vec<f64>,String> {
     data.iter().map(|x| {
         if *x <= MAX_USIZE {
@@ -40,8 +48,8 @@ fn indexes_to_numbers(data: &Vec<usize>) -> Result<Vec<f64>,String> {
 
 fn numbers_to_indexes(data: &Vec<f64>) -> Result<Vec<usize>,String> {
     data.iter().map(|x| {
-        if *x >= 0. && *x <= MAX_USIZE as f64 {
-            Ok(*x as usize)
+        if let Some(x) = to_index(*x) {
+            Ok(x)
         } else {
             Err(format!("Cannot convert {:?} to index",x))
         }
@@ -242,6 +250,11 @@ impl InterpValueData {
         Ok(ReadWriteValues(self.coerce_numbers()?.clone()))
     }
 
+    pub fn set_numbers(&mut self, value: Vec<f64>) -> Result<(),String> {
+        *self = InterpValueData::Numbers(Rc::new(RefCell::new(value)));
+        Ok(())
+    }
+
     pub fn read_indexes(&self) -> Result<ReadOnlyValues<usize>,String> {
         Ok(ReadOnlyValues(self.coerce_indexes()?.clone()))
     }
@@ -249,6 +262,11 @@ impl InterpValueData {
     pub fn write_indexes(&mut self) -> Result<ReadWriteValues<usize>,String> {
         *self = InterpValueData::Indexes(self.coerce_indexes()?);
         Ok(ReadWriteValues(self.coerce_indexes()?.clone()))
+    }
+
+    pub fn set_indexes(&mut self, value: Vec<usize>) -> Result<(),String> {
+        *self = InterpValueData::Indexes(Rc::new(RefCell::new(value)));
+        Ok(())
     }
 
     pub fn read_boolean(&self) -> Result<ReadOnlyValues<bool>,String> {
@@ -260,6 +278,11 @@ impl InterpValueData {
         Ok(ReadWriteValues(self.coerce_boolean()?.clone()))
     }
 
+    pub fn set_boolean(&mut self, value: Vec<bool>) -> Result<(),String> {
+        *self = InterpValueData::Boolean(Rc::new(RefCell::new(value)));
+        Ok(())
+    }
+
     pub fn read_strings(&self) -> Result<ReadOnlyValues<String>,String> {
         Ok(ReadOnlyValues(self.coerce_strings()?.clone()))
     }
@@ -269,6 +292,11 @@ impl InterpValueData {
         Ok(ReadWriteValues(self.coerce_strings()?.clone()))
     }
 
+    pub fn set_strings(&mut self, value: Vec<String>) -> Result<(),String> {
+        *self = InterpValueData::Strings(Rc::new(RefCell::new(value)));
+        Ok(())
+    }
+
     pub fn read_bytes(&self) -> Result<ReadOnlyValues<Vec<u8>>,String> {
         Ok(ReadOnlyValues(self.coerce_bytes()?.clone()))
     }
@@ -276,5 +304,10 @@ impl InterpValueData {
     pub fn write_bytes(&mut self) -> Result<ReadWriteValues<Vec<u8>>,String> {
         *self = InterpValueData::Bytes(self.coerce_bytes()?);
         Ok(ReadWriteValues(self.coerce_bytes()?.clone()))
+    }
+
+    pub fn set_bytes(&mut self, value: Vec<Vec<u8>>) -> Result<(),String> {
+        *self = InterpValueData::Bytes(Rc::new(RefCell::new(value)));
+        Ok(())
     }
 }

@@ -55,6 +55,13 @@ impl<'a> InterpContext<'a> {
         out
     }
 
+    pub fn set_numbers(&mut self, register: &Register, value: Vec<f64>) -> Result<(),String> {
+        let mut sc = self.get(register);
+        sc.write().set_numbers(value)?;
+        self.commits.push(Box::new(sc));
+        Ok(())
+    }
+
     pub fn read_indexes(&mut self, register: &Register) -> Result<ReadOnlyValues<usize>,String> {
         self.get(register).read()?.read_indexes()
     }
@@ -71,6 +78,13 @@ impl<'a> InterpContext<'a> {
         let out = sc.modify()?.write_indexes();
         self.commits.push(Box::new(sc));
         out
+    }
+
+    pub fn set_indexes(&mut self, register: &Register, value: Vec<usize>) -> Result<(),String> {
+        let mut sc = self.get(register);
+        sc.write().set_indexes(value)?;
+        self.commits.push(Box::new(sc));
+        Ok(())
     }
 
     pub fn read_boolean(&mut self, register: &Register) -> Result<ReadOnlyValues<bool>,String> {
@@ -91,6 +105,13 @@ impl<'a> InterpContext<'a> {
         out
     }
 
+    pub fn set_boolean(&mut self, register: &Register, value: Vec<bool>) -> Result<(),String> {
+        let mut sc = self.get(register);
+        sc.write().set_boolean(value)?;
+        self.commits.push(Box::new(sc));
+        Ok(())
+    }
+
     pub fn read_strings(&mut self, register: &Register) -> Result<ReadOnlyValues<String>,String> {
         self.get(register).read()?.read_strings()
     }
@@ -109,6 +130,13 @@ impl<'a> InterpContext<'a> {
         out
     }
 
+    pub fn set_strings(&mut self, register: &Register, value: Vec<String>) -> Result<(),String> {
+        let mut sc = self.get(register);
+        sc.write().set_strings(value)?;
+        self.commits.push(Box::new(sc));
+        Ok(())
+    }
+
     pub fn read_bytes(&mut self, register: &Register) -> Result<ReadOnlyValues<Vec<u8>>,String> {
         self.get(register).read()?.read_bytes()
     }
@@ -125,5 +153,12 @@ impl<'a> InterpContext<'a> {
         let out = sc.modify()?.write_bytes();
         self.commits.push(Box::new(sc));
         out
+    }
+
+    pub fn set_bytes(&mut self, register: &Register, value: Vec<Vec<u8>>) -> Result<(),String> {
+        let mut sc = self.get(register);
+        sc.write().set_bytes(value)?;
+        self.commits.push(Box::new(sc));
+        Ok(())
     }
 }

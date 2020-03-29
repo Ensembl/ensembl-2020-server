@@ -9,8 +9,7 @@
  * the case when the registers are disjoint) then the original array is returned for modification. If there ARE
  * outstanfing reads (which is rare), then a copy is made prior to update. modify must be after any reads or those reads
  * will fail (as the original data has probably been lost). Similarly, there can only be a single modify as the second
- * would also initially require the original contents. set is identical to write in all respects except the value is
- * user-supplied on creation.
+ * would also initially require the original contents.
  * 
  * As committing is probably delegated to a transaction-wide process, it is provided in a non-polymorphic trait so that it
  * can be easily queued with other pending commits.
@@ -65,10 +64,6 @@ impl<'a,T> SuperCow<'a,T> {
         let write = Rc::new(RefCell::new(new_value));
         self.set = Some(write);
         RefMutRefMut::new(self.set.as_ref().unwrap().borrow_mut())
-    }
-
-    pub fn set(&mut self, value: T) {
-        self.set = Some(Rc::new(RefCell::new(value)));
     }
 
     pub fn modify(&mut self) -> Result<RefMutRefMut<T>,String> {
