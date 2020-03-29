@@ -1,55 +1,129 @@
+use std::cell::{ Ref, RefCell, RefMut };
+use std::rc::Rc;
 use std::collections::HashMap;
 use std::iter::{ Iterator };
 use crate::model::Register;
-use super::value::InterpValue;
+use super::supercow::{ SuperCow, SuperCowCommit };
+use super::value::{ InterpNatural, InterpValueData, ReadOnlyValues, ReadWriteValues };
 
-pub struct InterpContext {
-    pending: Option<HashMap<Register,InterpValue>>,
-    values: HashMap<Option<Register>,InterpValue>
+pub struct InterpContext<'a> {
+    values: HashMap<Register,SuperCow<'a,InterpValueData>>,
+    commits: Vec<Box<dyn SuperCowCommit + 'a>>
 }
 
-impl InterpContext {
-    pub fn new() -> InterpContext {
+impl<'a> InterpContext<'a> {
+    pub fn new() -> InterpContext<'a> {
         let mut out = InterpContext {
-            pending: None,
-            values: HashMap::new()
+            values: HashMap::new(),
+            commits: Vec::new()
         };
-        out.values.insert(None,InterpValue::Empty);
         out
     }
 
-    pub fn insert(&mut self, r: &Register, v: InterpValue) {
-        if let Some(ref mut pending) = self.pending {
-            pending.insert(*r,v);
-        } else {
-            self.values.insert(Some(*r),v);
-        }
-    }
-
-    pub fn begin(&mut self) {
-        self.pending = Some(HashMap::new());
+    fn get(&mut self, register: &Register) -> SuperCow<'a,InterpValueData> {
+        self.values.entry(*register).or_insert_with(|| SuperCow::new(|| { InterpValueData::Empty }, 
+                                                    |x| { x.copy() },InterpValueData::Empty)).clone()
     }
 
     pub fn commit(&mut self) {
-        for (r,v) in self.pending.take().unwrap().drain() {
-            self.insert(&r,v);
+        for mut commit in self.commits.drain(..) {
+            commit.commit();
         }
     }
 
-    pub fn get_mut<'a>(&'a mut self, r: &Register) -> &'a mut InterpValue { // XXX txn bug
-        self.values.entry(Some(*r)).or_insert(InterpValue::Empty)
+    pub fn write_empty(&mut self, register: &Register) {
+        let mut sc = self.get(register);
+        sc.write();
+        self.commits.push(Box::new(sc));
     }
 
-    pub fn get<'a>(&'a self, r: &Register) -> &'a InterpValue {
-        self.values.get(&Some(*r)).unwrap_or(self.values.get(&None).unwrap())
+    pub fn read_numbers(&mut self, register: &Register) -> Result<ReadOnlyValues<f64>,String> {
+        self.get(register).read()?.read_numbers()
     }
 
-    pub fn dump(&mut self) -> HashMap<Register,InterpValue> {
-        self.values.drain().filter(|(k,_)| k.is_some()).map(|(k,v)| (k.unwrap(),v)).collect()
+    pub fn write_numbers(&mut self, register: &Register) -> Result<ReadWriteValues<f64>,String> {
+        let mut sc = self.get(register);
+        let out = sc.write().write_numbers();
+        self.commits.push(Box::new(sc));
+        out
     }
 
-    pub fn copy(&mut self, dst: &Register, src: &Register) {
-        let v = self.values.get(&Some(*src)).unwrap_or(self.values.get(&None).unwrap());
-        self.values.insert(Some(*dst),v.clone());
+    pub fn modify_numbers(&mut self, register: &Register) -> Result<ReadWriteValues<f64>,String> {
+        let mut sc = self.get(register);
+        let out = sc.modify()?.write_numbers();
+        self.commits.push(Box::new(sc));
+        out
+    }
+
+    pub fn read_indexes(&mut self, register: &Register) -> Result<ReadOnlyValues<usize>,String> {
+        self.get(register).read()?.read_indexes()
+    }
+
+    pub fn write_indexes(&mut self, register: &Register) -> Result<ReadWriteValues<usize>,String> {
+        let mut sc = self.get(register);
+        let out = sc.write().write_indexes();
+        self.commits.push(Box::new(sc));
+        out
+    }
+
+    pub fn modify_indexes(&mut self, register: &Register) -> Result<ReadWriteValues<usize>,String> {
+        let mut sc = self.get(register);
+        let out = sc.modify()?.write_indexes();
+        self.commits.push(Box::new(sc));
+        out
+    }
+
+    pub fn read_boolean(&mut self, register: &Register) -> Result<ReadOnlyValues<bool>,String> {
+        self.get(register).read()?.read_boolean()
+    }
+
+    pub fn write_boolean(&mut self, register: &Register) -> Result<ReadWriteValues<bool>,String> {
+        let mut sc = self.get(register);
+        let out = sc.write().write_boolean();
+        self.commits.push(Box::new(sc));
+        out
+    }
+
+    pub fn modify_boolean(&mut self, register: &Register) -> Result<ReadWriteValues<bool>,String> {
+        let mut sc = self.get(register);
+        let out = sc.modify()?.write_boolean();
+        self.commits.push(Box::new(sc));
+        out
+    }
+
+    pub fn read_strings(&mut self, register: &Register) -> Result<ReadOnlyValues<String>,String> {
+        self.get(register).read()?.read_strings()
+    }
+
+    pub fn write_strings(&mut self, register: &Register) -> Result<ReadWriteValues<String>,String> {
+        let mut sc = self.get(register);
+        let out = sc.write().write_strings();
+        self.commits.push(Box::new(sc));
+        out
+    }
+
+    pub fn modify_strings(&mut self, register: &Register) -> Result<ReadWriteValues<String>,String> {
+        let mut sc = self.get(register);
+        let out = sc.modify()?.write_strings();
+        self.commits.push(Box::new(sc));
+        out
+    }
+
+    pub fn read_bytes(&mut self, register: &Register) -> Result<ReadOnlyValues<Vec<u8>>,String> {
+        self.get(register).read()?.read_bytes()
+    }
+
+    pub fn write_bytes(&mut self, register: &Register) -> Result<ReadWriteValues<Vec<u8>>,String> {
+        let mut sc = self.get(register);
+        let out = sc.write().write_bytes();
+        self.commits.push(Box::new(sc));
+        out
+    }
+
+    pub fn modify_bytes(&mut self, register: &Register) -> Result<ReadWriteValues<Vec<u8>>,String> {
+        let mut sc = self.get(register);
+        let out = sc.modify()?.write_bytes();
+        self.commits.push(Box::new(sc));
+        out
     }
 }

@@ -8,6 +8,7 @@ mod typeinf;
 
 #[macro_use]
 extern crate lazy_static;
+extern crate owning_ref;
 
 /* This to remove RLS unused warns */
 
