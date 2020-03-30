@@ -26,18 +26,16 @@ use std::rc::Rc;
 use owning_ref::{ RefRef, RefMutRefMut };
 
 #[derive(Clone)]
-pub struct SuperCow<'a,T> {
-    borrowed: Rc<RefCell<bool>>,
-    ctor: Rc<RefCell<dyn (Fn() -> T) + 'a>>,
-    copy: Rc<RefCell<dyn (Fn(&T) -> T) + 'a>>,
+pub struct SuperCow<T> {
+    ctor: Rc<RefCell<dyn (Fn() -> T)>>,
+    copy: Rc<RefCell<dyn (Fn(&T) -> T)>>,
     set: Option<Rc<RefCell<T>>>,
     get: Option<Rc<RefCell<T>>>
 }
 
-impl<'a,T> SuperCow<'a,T> {
-    pub fn new<F,G>(ctor: F, copy: G, data: T) -> SuperCow<'a,T> where F: Fn() -> T + Clone + 'a, G: Fn(&T) -> T + Clone + 'a {
+impl<T> SuperCow<T> {
+    pub fn new<F,G>(ctor: F, copy: G, data: T) -> SuperCow<T> where F: Fn() -> T + Clone + 'static, G: Fn(&T) -> T + Clone + 'static {
         SuperCow {
-            borrowed: Rc::new(RefCell::new(false)),
             ctor: Rc::new(RefCell::new(ctor)),
             copy: Rc::new(RefCell::new(copy)),
             get: Some(Rc::new(RefCell::new(data))),
@@ -45,13 +43,22 @@ impl<'a,T> SuperCow<'a,T> {
         }
     }
 
-    pub fn data_copy(&self) -> SuperCow<'a,T> {
-        SuperCow {
-            borrowed: Rc::new(RefCell::new(true)),
-            ctor: self.ctor.clone(),
-            copy: self.copy.clone(),
-            set: None,
-            get: self.get.clone()
+    pub fn copy(&mut self, other: &SuperCow<T>) -> Result<(),String> {
+        if let Some(get) = other.get.as_ref() {
+            self.set = Some(get.clone());
+            Ok(())
+        } else {
+            Err(format!("Attempt to copy modifying register"))
+        }
+    }
+
+    pub fn copy_and_modify(&mut self, other: &SuperCow<T>) -> Result<RefMutRefMut<T>,String> {
+        if let Some(get) = other.get.as_ref() {
+            let x = Rc::new(RefCell::new(self.copy.borrow_mut()(&get.borrow())));
+            self.set = Some(x);
+            Ok(RefMutRefMut::new(self.set.as_ref().unwrap().borrow_mut()))
+        } else {
+            Err(format!("Attempt to copy modifying register"))
         }
     }
 
@@ -68,10 +75,9 @@ impl<'a,T> SuperCow<'a,T> {
 
     pub fn modify(&mut self) -> Result<RefMutRefMut<T>,String> {
         let mut get = self.get.take().ok_or_else(|| format!("Attempt to modify twice"))?;
-        if *self.borrowed.borrow() {
+        if Rc::strong_count(&get) > 1 {
             let x = Rc::new(RefCell::new(self.copy.borrow_mut()(&get.borrow())));
             get = x;
-            *self.borrowed.borrow_mut() = false;
         }
         if get.try_borrow_mut().is_ok() {
             self.set = Some(get);
@@ -89,7 +95,7 @@ pub trait SuperCowCommit {
     fn commit(&mut self);
 }
 
-impl<'a,T> SuperCowCommit for SuperCow<'a,T> {
+impl<T> SuperCowCommit for SuperCow<T> {
     fn commit(&mut self) {
         if let Some(set) = self.set.take() {
             self.get = Some(set);
