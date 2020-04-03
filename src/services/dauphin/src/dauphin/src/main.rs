@@ -29,5 +29,5 @@ fn main() {
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
     let mut context = generate_and_optimise(&defstore,stmts).expect("codegen");
-    mini_interp(&defstore,&mut context);
+    mini_interp(&mut context);
 }

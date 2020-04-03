@@ -1,6 +1,6 @@
 #alias %2 %1;
 #number %3 1;
-#call:assign/i:number/L:number/R %2 %3;
+#call:assign/i:D/number/L:D/number/R %2 %3;
 #alias %247 %245;
 #alias %476 %473;
 #alias %477 %474;
@@ -21,7 +21,7 @@
 #copy %479 %299;
 #copy %480 %300;
 #copy %481 %301;
-#call:assign/i:stest/L:stest/R %247 %476 %477 %478 %249 %479 %480 %481;
+#call:assign/i:A.D/number,A.A0,A.B0,B.X.D/string,B.Y.D/boolean/L:A.D/number,A.A0,A.B0,B.X.D/string,B.Y.D/boolean/R %247 %476 %477 %478 %249 %479 %480 %481;
 #alias %15 %14;
 #copy %251 %245;
 #copy %482 %473;
@@ -33,7 +33,7 @@
 #number %554 1;
 #numeq %302 %554;
 #filter %18 %304 %555;
-#call:assign/i:boolean/L:boolean/R %15 %18;
+#call:assign/i:D/boolean/L:D/boolean/R %15 %18;
 #alias %253 %245;
 #alias %485 %473;
 #alias %486 %474;
@@ -42,14 +42,14 @@
 #copy %21 %245;
 #nil %22;
 #star %23 %22;
-#call:assign/i:vec(number)/L:vec(number)/R %20 %23;
+#call:assign/i:D/number,A0,B0/L:D/number,A0,B0/R %20 %23;
 #alias %25 %24;
 #copy %255 %245;
 #copy %488 %473;
 #copy %489 %474;
 #copy %490 %475;
 #copy %27 %255;
-#call:assign/i:vec(number)/L:vec(number)/R %25 %27;
+#call:assign/i:D/number,A0,B0/L:D/number,A0,B0/R %25 %27;
 #alias %259 %257;
 #alias %494 %491;
 #alias %495 %492;
@@ -58,8 +58,8 @@
 #copy %497 %473;
 #copy %498 %474;
 #copy %499 %475;
-#call:oper_test:stest/R:stest/R %263 %500 %501 %502 %261 %497 %498 %499;
-#call:assign/i:stest/L:stest/R %259 %494 %495 %496 %263 %500 %501 %502;
+#call:oper_test:A.D/number,A.A0,A.B0,B.X.D/string,B.Y.D/boolean/R:A.D/number,A.A0,A.B0,B.X.D/string,B.Y.D/boolean/R %263 %500 %501 %502 %261 %497 %498 %499;
+#call:assign/i:A.D/number,A.A0,A.B0,B.X.D/string,B.Y.D/boolean/L:A.D/number,A.A0,A.B0,B.X.D/string,B.Y.D/boolean/R %259 %494 %495 %496 %263 %500 %501 %502;
 #alias %267 %265;
 #alias %506 %503;
 #alias %507 %504;
@@ -112,7 +112,7 @@
 #star %518 %509;
 #star %519 %510;
 #star %520 %511;
-#call:assign/i:vec(stest)/L:vec(stest)/R %267 %506 %507 %508 %275 %518 %519 %520;
+#call:assign/i:A.D/number,A.A0,A.B0,A.A1,A.B1,B.X.D/string,B.X.A0,B.X.B0,B.Y.D/boolean,B.Y.A0,B.Y.B0/L:A.D/number,A.A0,A.B0,A.A1,A.B1,B.X.D/string,B.X.A0,B.X.B0,B.Y.D/boolean,B.Y.A0,B.Y.B0/R %267 %506 %507 %508 %275 %518 %519 %520;
 #alias %191 %186;
 #alias %283 %281;
 #alias %530 %527;
@@ -140,7 +140,7 @@
 #number %196 2;
 #copy %199 %54;
 #list %200;
-#call:assign/i:etest3/L:etest3/R %191 %283 %530 %531 %532 %443 %444 %445 %194 %195 %196 %285 %533 %534 %535 %446 %447 %448 %199 %200;
+#call:assign/i:A.A.D/number,A.A.A0,A.A.B0,A.B.X.D/string,A.B.Y.D/boolean,B.X.D/string,B.Y.D/boolean,C.D/boolean,D.D/number,D.A0,D.B0,D.A1,D.B1/L:A.A.D/number,A.A.A0,A.A.B0,A.B.X.D/string,A.B.Y.D/boolean,B.X.D/string,B.Y.D/boolean,C.D/boolean,D.D/number,D.A0,D.B0,D.A1,D.B1/R %191 %283 %530 %531 %532 %443 %444 %445 %194 %195 %196 %285 %533 %534 %535 %446 %447 %448 %199 %200;
 #alias %57 %56;
 #copy %201 %186;
 #copy %287 %281;
@@ -155,7 +155,7 @@
 #number %235 2;
 #numeq %201 %235;
 #filter %59 %204 %236;
-#call:assign/i:boolean/L:boolean/R %57 %59;
+#call:assign/i:D/boolean/L:D/boolean/R %57 %59;
 #alias %61 %60;
 #copy %206 %186;
 #copy %289 %281;
@@ -169,7 +169,7 @@
 #copy %210 %190;
 #number %238 %237 0;
 #numeq %63 %206 %237;
-#call:assign/i:boolean/L:boolean/R %61 %63;
+#call:assign/i:D/boolean/L:D/boolean/R %61 %63;
 #alias %314 %311;
 #alias %315 %312;
 #alias %316 %313;
@@ -200,7 +200,7 @@
 #star %329 %317;
 #star %330 %318;
 #star %331 %319;
-#call:assign/i:vec(etest)/L:vec(etest)/R %314 %315 %316 %329 %330 %331;
+#call:assign/i:X.D/string,X.A0,X.B0,Y.D/boolean,Y.A0,Y.B0/L:X.D/string,X.A0,X.B0,Y.D/boolean,Y.A0,Y.B0/R %314 %315 %316 %329 %330 %331;
 #alias %75 %74;
 #copy %332 %311;
 #copy %333 %312;
@@ -210,7 +210,7 @@
 #square %337 %334;
 #number %557 %556 1;
 #numeq %78 %335 %556;
-#call:assign/i:boolean/L:boolean/R %75 %78;
+#call:assign/i:D/boolean/L:D/boolean/R %75 %78;
 #alias %341 %338;
 #alias %342 %339;
 #alias %343 %340;
@@ -232,7 +232,7 @@
 #star %356 %353;
 #star %357 %354;
 #star %358 %355;
-#call:assign/i:vec(etest)/L:vec(etest)/R %341 %342 %343 %356 %357 %358;
+#call:assign/i:X.D/string,X.A0,X.B0,Y.D/boolean,Y.A0,Y.B0/L:X.D/string,X.A0,X.B0,Y.D/boolean,Y.A0,Y.B0/R %341 %342 %343 %356 %357 %358;
 #alias %362 %359;
 #alias %363 %360;
 #alias %364 %361;
@@ -245,11 +245,11 @@
 #square %370 %367;
 #copy %93 %91;
 #number %94 0;
-#call:eq:boolean/R:number/R:number/R %95 %93 %94;
+#call:eq:D/boolean/R:D/number/R:D/number/R %95 %93 %94;
 #filter %371 %368 %95;
 #filter %372 %369 %95;
 #filter %373 %370 %95;
-#call:assign/i:etest/L:etest/R %362 %363 %364 %371 %372 %373;
+#call:assign/i:X.D/string,Y.D/boolean/L:X.D/string,Y.D/boolean/R %362 %363 %364 %371 %372 %373;
 #alias %216 %211;
 #alias %293 %291;
 #alias %545 %542;
@@ -293,7 +293,7 @@
 #bool %224 false;
 #number %221 3;
 #copy %225 %109;
-#call:assign/i:etest3/L:etest3/R %216 %293 %545 %546 %547 %458 %459 %460 %219 %220 %221 %295 %548 %549 %550 %461 %462 %463 %224 %225;
+#call:assign/i:A.A.D/number,A.A.A0,A.A.B0,A.B.X.D/string,A.B.Y.D/boolean,B.X.D/string,B.Y.D/boolean,C.D/boolean,D.D/number,D.A0,D.B0,D.A1,D.B1/L:A.A.D/number,A.A.A0,A.A.B0,A.B.X.D/string,A.B.Y.D/boolean,B.X.D/string,B.Y.D/boolean,C.D/boolean,D.D/number,D.A0,D.B0,D.A1,D.B1/R %216 %293 %545 %546 %547 %458 %459 %460 %219 %220 %221 %295 %548 %549 %550 %461 %462 %463 %224 %225;
 #alias %112 %111;
 #copy %226 %211;
 #copy %297 %291;
@@ -309,7 +309,7 @@
 #numeq %226 %243;
 #filter %114 %230 %244;
 #square %115 %114;
-#call:assign/i:vec(number)/L:vec(number)/R %112 %115;
+#call:assign/i:D/number,A0,B0/L:D/number,A0,B0/R %112 %115;
 #alias %374 %311;
 #alias %375 %312;
 #alias %376 %313;
@@ -323,7 +323,7 @@
 #at %120 %311;
 #copy %121 %120;
 #number %122 0;
-#call:eq:boolean/R:number/R:number/R %123 %121 %122;
+#call:eq:D/boolean/R:D/number/R:D/number/R %123 %121 %122;
 #filter %124 %119 %123;
 #filter %383 %380 %123;
 #filter %384 %381 %123;
@@ -332,7 +332,7 @@
 #number %386 0;
 #copy %387 %126;
 #bool %388 false;
-#call:assign/i:number/F:etest/L:etest/R %124 %377 %378 %379 %386 %387 %388;
+#call:assign/i:D/number/F:X.D/string,Y.D/boolean/L:X.D/string,Y.D/boolean/R %124 %377 %378 %379 %386 %387 %388;
 #alias %389 %311;
 #alias %390 %312;
 #alias %391 %313;
@@ -350,7 +350,7 @@
 #numeq %395 %562;
 #filter %133 %396 %563;
 #string %134 "boo";
-#call:assign/i:number/F:string/L:string/R %131 %132 %134;
+#call:assign/i:D/number/F:D/string/L:D/string/R %131 %132 %134;
 #alias %401 %398;
 #alias %402 %399;
 #alias %403 %400;
@@ -358,7 +358,7 @@
 #string %405 "";
 #number %404 1;
 #copy %406 %137;
-#call:assign/i:etest/L:etest/R %401 %402 %403 %404 %405 %406;
+#call:assign/i:X.D/string,Y.D/boolean/L:X.D/string,Y.D/boolean/R %401 %402 %403 %404 %405 %406;
 #alias %407 %398;
 #alias %408 %399;
 #alias %409 %400;
@@ -369,7 +369,7 @@
 #numeq %398 %566;
 #filter %141 %400 %567;
 #bool %142 false;
-#call:assign/i:boolean/L:boolean/R %140 %142;
+#call:assign/i:D/boolean/L:D/boolean/R %140 %142;
 #alias %413 %410;
 #alias %414 %411;
 #alias %415 %412;
@@ -400,7 +400,7 @@
 #star %428 %416;
 #star %429 %417;
 #star %430 %418;
-#call:assign/i:vec(etest)/L:vec(etest)/R %413 %414 %415 %428 %429 %430;
+#call:assign/i:X.D/string,X.A0,X.B0,Y.D/boolean,Y.A0,Y.B0/L:X.D/string,X.A0,X.B0,Y.D/boolean,Y.A0,Y.B0/R %413 %414 %415 %428 %429 %430;
 #alias %431 %410;
 #alias %432 %411;
 #alias %433 %412;
@@ -418,7 +418,7 @@
 #numeq %437 %570;
 #filter %158 %439 %571;
 #bool %159 false;
-#call:assign/i:number/F:boolean/L:boolean/R %156 %157 %159;
+#call:assign/i:D/number/F:D/boolean/L:D/boolean/R %156 %157 %159;
 #alias %277 %245;
 #alias %521 %473;
 #alias %522 %474;
@@ -433,7 +433,7 @@
 #number %166 3;
 #append %163 %166;
 #star %167 %163;
-#call:assign/i:vec(number)/L:vec(number)/R %161 %167;
+#call:assign/i:D/number,A0,B0/L:D/number,A0,B0/R %161 %167;
 #alias %279 %245;
 #alias %524 %473;
 #alias %525 %474;
@@ -446,13 +446,13 @@
 #at %174 %170;
 #copy %175 %172;
 #number %176 1;
-#call:gt:boolean/R:number/R:number/R %177 %175 %176;
+#call:gt:D/boolean/R:D/number/R:D/number/R %177 %175 %176;
 #filter %178 %173 %177;
 #filter %179 %172 %177;
 #copy %180 %179;
 #number %181 3;
-#call:lt:boolean/R:number/R:number/R %182 %180 %181;
+#call:lt:D/boolean/R:D/number/R:D/number/R %182 %180 %181;
 #filter %183 %178 %182;
 #filter %184 %179 %182;
 #number %185 5;
-#call:assign/i:number/F:number/L:number/R %183 %171 %185;
+#call:assign/i:D/number/F:D/number/L:D/number/R %183 %171 %185;

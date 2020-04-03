@@ -79,7 +79,7 @@ impl CurrentValues {
 fn process_instruction(context: &mut GenContext, instr: &Instruction, values: &mut CurrentValues, consts: Option<&mut ConstMatcher>) {
     /* get list of registers which are mutated by call */
     let mutating_regs = instr.itype
-            .changing_registers(context.get_defstore())
+            .changing_registers()
             .iter().map(|x| instr.regs[*x]).collect::<Vec<_>>();
     print!("mutating {:?}\n",mutating_regs);
     /* If any mutating regs are spare for some value, they need their own value now */
@@ -237,7 +237,7 @@ mod test {
         print!("{:?}\n",context);
         prune(&mut context);
 
-        let (_prints,_,strings) = mini_interp(&defstore,&mut context);
+        let (_prints,_,strings) = mini_interp(&mut context);
         for s in &strings {
             print!("{}\n",s);
         }
@@ -266,7 +266,6 @@ mod test {
         print!("{:?}\n",context);
         reuse_const(&mut context);
         print!("{:?}\n",context);
-
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
@@ -276,9 +275,7 @@ mod test {
         print!("{:?}\n",context);
         reuse_dead(&mut context);
         assign_regs(&mut context);
-
-
-        let (_prints,_,strings) = mini_interp(&defstore,&mut context);
+        let (_prints,_,strings) = mini_interp(&mut context);
         for s in &strings {
             print!("{}\n",s);
         }

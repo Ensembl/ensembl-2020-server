@@ -352,7 +352,7 @@ mod test {
         linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let values = mini_interp(&defstore,&mut context);
+        let values = mini_interp(&mut context);
         print!("{:?}",values);
     }
 
@@ -371,7 +371,7 @@ mod test {
         let subregs = linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let (_,values,_) = mini_interp(&defstore,&mut context);
+        let (_,values,_) = mini_interp(&mut context);
         let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}",values);
         assert_eq!(vec![1,2],values[&lins[0].data]);
@@ -400,7 +400,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let (prints,values,strings) = mini_interp(&defstore,&mut context);
+        let (prints,values,strings) = mini_interp(&mut context);
         print!("{:?}\n",values);
         for p in &prints {
             print!("{:?}\n",p);
@@ -447,7 +447,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let (prints,values,strings) = mini_interp(&defstore,&mut context);
+        let (prints,values,strings) = mini_interp(&mut context);
         print!("{:?}\n",values);
         for p in &prints {
             print!("{:?}\n",p);
@@ -474,7 +474,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let (_prints,values,strings) = mini_interp(&defstore,&mut context);
+        let (_prints,values,strings) = mini_interp(&mut context);
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
@@ -518,7 +518,7 @@ mod test {
         let subregs = linearize_real(&mut context).expect("linearize");
         let (lins,_) = find_assigns(&instrs,&subregs);
         remove_aliases(&mut context);
-        let (_,values,_) = mini_interp(&defstore,&mut context);
+        let (_,values,_) = mini_interp(&mut context);
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(vec![0],values[&lins[0].index[0].0]);
         assert_eq!(vec![0],values[&lins[0].index[0].1]);

@@ -1,6 +1,7 @@
 use crate::generate::{ Instruction, InstructionType };
 use crate::typeinf::{ MemberMode, MemberDataFlow };
 use super::gencontext::GenContext;
+use crate::model::offset;
 
 pub fn call(context: &mut GenContext) -> Result<(),String> {
     for instr in &context.get_instructions() {
@@ -13,7 +14,8 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                         MemberMode::LValue => MemberDataFlow::JustifiesCall,
                         _ => MemberDataFlow::Normal
                     };
-                    sig.push((modes[i],type_,flow));
+                    let purposes = offset(&context.get_defstore(),&type_)?;
+                    sig.push((modes[i],purposes,flow));
                 }
                 context.add(Instruction::new(InstructionType::Call(name.to_string(),true,sig),instr.regs.to_vec()));
             },
@@ -22,7 +24,9 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                 let mut types = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
                     let mode = if i == 0 { MemberDataFlow::JustifiesCall } else { MemberDataFlow::Normal };
-                    types.push((MemberMode::RValue,context.xxx_types().get(reg).unwrap().clone(),mode));
+                    let type_ = context.xxx_types().get(&reg).unwrap().clone();
+                    let purposes = offset(&context.get_defstore(),&type_)?;
+                    types.push((MemberMode::RValue,purposes,mode));
                 }
                 context.add(Instruction::new(InstructionType::Call(name.to_string(),false,types),instr.regs.to_vec()));
             },

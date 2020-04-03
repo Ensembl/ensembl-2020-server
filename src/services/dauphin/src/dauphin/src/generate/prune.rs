@@ -11,7 +11,7 @@ pub fn prune(context: &mut GenContext) {
         if instr.itype.self_justifying_call() {
             call_justified = true;
         }
-        for idx in instr.itype.changing_registers(context.get_defstore()) {
+        for idx in instr.itype.changing_registers() {
             if justified_regs.contains(&instr.regs[idx]) {
                 call_justified = true;
                 break;
@@ -62,8 +62,7 @@ mod test {
         print!("PRUNE\n");
         prune(&mut context);
         print!("{:?}\n",context);
-        let (_prints,values,strings) = mini_interp(&defstore,&mut context);
-        print!("{:?}\n",values);
+        let (_prints,values,strings) = mini_interp(&mut context);
         for s in &strings {
             print!("{}\n",s);
         }

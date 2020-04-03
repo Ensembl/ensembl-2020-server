@@ -1,8 +1,8 @@
 use std::collections::{ HashMap };
 use crate::generate::InstructionType;
 use crate::generate::GenContext;
-use crate::model::{ offset, DefStore, LinearPath, Register, RegisterPurpose };
-use crate::typeinf::{ MemberType, MemberMode, MemberDataFlow };
+use crate::model::{ LinearPath, Register, RegisterPurpose };
+use crate::typeinf::{ MemberMode, MemberDataFlow };
 
 struct HarnessInterp {
     pending: Option<HashMap<Register,Vec<usize>>>,
@@ -91,21 +91,21 @@ fn assign_unfiltered(harness: &mut HarnessInterp, regs: &Vec<Register>) {
     }        
 }
 
-fn assign(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType,MemberDataFlow)>, regs: &Vec<Register>) {
+fn assign(harness: &mut HarnessInterp, types: &Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>, regs: &Vec<Register>) {
     if types[0].0 == MemberMode::LValue {
         assign_unfiltered(harness,regs);
     } else {
-        assign_filtered(defstore,harness,types,regs);
+        assign_filtered(harness,types,regs);
     }
 }
 
-fn assign_filtered(defstore: &DefStore, harness: &mut HarnessInterp, types: &Vec<(MemberMode,MemberType,MemberDataFlow)>, regs: &Vec<Register>) {
+fn assign_filtered(harness: &mut HarnessInterp, types: &Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>, regs: &Vec<Register>) {
     let len = (regs.len()-1)/2;
     let filter = regs[0];
     let left_all = &regs[1..len+1];
     let right_all = &regs[len+1..];
-    let left_purposes = offset(defstore,&types[1].1).expect("resolving to registers");
-    let right_purposes = offset(defstore,&types[2].1).expect("resolving to registers");
+    let left_purposes = &types[1].1;
+    let right_purposes = &types[2].1;
     /* get current lengths (to calculate offsets) */
     let mut left_len = HashMap::new();
     let mut right_len = HashMap::new();
@@ -200,21 +200,19 @@ fn print_vec_level(out: &mut String, harness: &mut HarnessInterp, offsets: &Vec<
     }
 }
 
-fn print_vec(defstore: &DefStore, harness: &mut HarnessInterp, type_: &MemberType, regs: &Vec<Register>) -> String {
+fn print_vec(harness: &mut HarnessInterp, purposes: &Vec<RegisterPurpose>, regs: &Vec<Register>) -> String {
     let mut out = String::new();
-    let offsets = offset(defstore,type_).expect("resolving to registers");
-    if offsets.len() > 1 {
-        print_vec_level(&mut out,harness,&offsets,regs,(offsets.len()-3)/2,None);
+    if purposes.len() > 1 {
+        print_vec_level(&mut out,harness,&purposes,regs,(purposes.len()-3)/2,None);
     } else {
-        print_vec_bottom(&mut out,harness,&offsets,regs,None);
+        print_vec_bottom(&mut out,harness,&purposes,regs,None);
     }
     out
 }
 
-fn vec_len(defstore: &DefStore, harness: &mut HarnessInterp, type_: &MemberType, regs: &Vec<Register>) {
+fn vec_len(harness: &mut HarnessInterp, purposes: &Vec<RegisterPurpose>, regs: &Vec<Register>) {
     let mut top_reg = None;
-    let offsets = offset(defstore,type_).expect("resolving to registers");
-    for (j,offset) in offsets.iter().enumerate() {
+    for (j,offset) in purposes.iter().enumerate() {
         match offset.get_linear() {
             LinearPath::Length(_) => {
                 if offset.is_top() {
@@ -247,7 +245,7 @@ fn number_binop(harness: &mut HarnessInterp, name: &str, c: &Register, a: &Regis
     harness.insert(c,c_vals);
 }
 
-pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<usize>>>,HashMap<Register,Vec<usize>>,Vec<String>) {
+pub fn mini_interp(context: &GenContext) -> (Vec<Vec<Vec<usize>>>,HashMap<Register,Vec<usize>>,Vec<String>) {
     let mut printed = Vec::new();
     let mut strings = Vec::new();
     let mut harness = HarnessInterp::new();
@@ -342,7 +340,7 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
             InstructionType::Call(name,_,types) => {
                 match &name[..] {
                     "assign" => {
-                        assign(defstore,&mut harness,&types,&instr.regs);
+                        assign(&mut harness,&types,&instr.regs);
                     },
                     "print_regs" => {
                         let mut print = Vec::new();
@@ -354,12 +352,12 @@ pub fn mini_interp(defstore: &DefStore, context: &GenContext) -> (Vec<Vec<Vec<us
                         printed.push(print);
                     },
                     "print_vec" => {
-                        let s = print_vec(defstore,&mut harness,&types[0].1,&instr.regs);
+                        let s = print_vec(&mut harness,&types[0].1,&instr.regs);
                         print!("{}\n",s);
                         strings.push(s);
                     },
                     "len" => {
-                        vec_len(defstore,&mut harness,&types[1].1,&instr.regs);
+                        vec_len(&mut harness,&types[1].1,&instr.regs);
                     },
                     "eq" | "lt" | "gt" => {
                         number_binop(&mut harness,&name,&instr.regs[0],&instr.regs[1],&instr.regs[2]);

@@ -40,24 +40,19 @@ pub struct RegisterPurpose {
 
 impl fmt::Display for RegisterPurpose {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut first = true;
-        for path in &self.complex {
-            if !first { write!(f,".")?; }
-            first = false;
-            write!(f,"{}",path)?;
-        }
-        write!(f,":{}",self.linear)?;
-        match self.linear {
-            LinearPath::Data => write!(f,"/{}",self.base)?,
-            _ => {}
-        }
-        Ok(())
+        let mut parts = self.complex.iter().map(|x| format!("{}",x)).collect::<Vec<_>>();
+        let linear = match self.linear {
+            LinearPath::Data => format!("{}/{}",self.linear,self.base),
+            _ => format!("{}",self.linear)
+        };
+        parts.push(linear);
+        Ok(write!(f,"{}",parts.join("."))?)
     }
 }
 
 // XXX deduplicate from_struct/from_enum by shifting to StructEnum universally
 impl RegisterPurpose {
-    fn vec_from_type(defstore: &DefStore, type_: &MemberType, prefix: &Vec<String>, container: &ContainerType) -> Result<Vec<RegisterPurpose>,()> {
+    fn vec_from_type(defstore: &DefStore, type_: &MemberType, prefix: &Vec<String>, container: &ContainerType) -> Result<Vec<RegisterPurpose>,String> {
         let container = container.merge(&type_.get_container());
         match type_.get_base() {
             BaseType::StructType(name) => {
@@ -96,7 +91,7 @@ impl RegisterPurpose {
         }
     }
 
-    fn from_struct(defstore: &DefStore, se: &StructDef, cpath: &Vec<String>, container: &ContainerType) -> Result<Vec<RegisterPurpose>,()> {
+    fn from_struct(defstore: &DefStore, se: &StructDef, cpath: &Vec<String>, container: &ContainerType) -> Result<Vec<RegisterPurpose>,String> {
         let mut out = Vec::new();
         for name in se.get_names() {
             let mut new_cpath = cpath.to_vec();
@@ -107,7 +102,7 @@ impl RegisterPurpose {
         Ok(out)
     }
 
-    fn from_enum(defstore: &DefStore, se: &EnumDef, cpath: &Vec<String>, container: &ContainerType) -> Result<Vec<RegisterPurpose>,()> {
+    fn from_enum(defstore: &DefStore, se: &EnumDef, cpath: &Vec<String>, container: &ContainerType) -> Result<Vec<RegisterPurpose>,String> {
         let mut out = Vec::new();
         for name in se.get_names() {
             let mut new_cpath = cpath.to_vec();
@@ -118,11 +113,12 @@ impl RegisterPurpose {
         Ok(out)
     }
 
+    pub fn get_complex(&self) -> &Vec<String> { &self.complex }
     pub fn get_linear(&self) -> &LinearPath { &self.linear }
     pub fn is_top(&self) -> bool { self.top }
 }
 
-pub fn offset(defstore: &DefStore, type_: &MemberType) -> Result<Vec<RegisterPurpose>,()> {
+pub fn offset(defstore: &DefStore, type_: &MemberType) -> Result<Vec<RegisterPurpose>,String> {
     RegisterPurpose::vec_from_type(defstore,type_,&vec![],&ContainerType::new_empty())
 }
 
@@ -164,8 +160,8 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let _context = generate_code(&defstore,stmts).expect("codegen");
         let regs = offset(&defstore,&make_type(&defstore,"boolean")).expect("a");
-        assert_eq!(":D/boolean",format_pvec(&regs));
+        assert_eq!("D/boolean",format_pvec(&regs));
         let regs = offset(&defstore,&make_type(&defstore,"vec(etest3)")).expect("b");
-        assert_eq!("A.A:D/number,A.A:A0,A.A:B0,A.A:A1,A.A:B1,A.B.X:D/string,A.B.X:A0,A.B.X:B0,A.B.Y:D/boolean,A.B.Y:A0,A.B.Y:B0,B.X:D/string,B.X:A0,B.X:B0,B.Y:D/boolean,B.Y:A0,B.Y:B0,C:D/boolean,C:A0,C:B0,D:D/number,D:A0,D:B0,D:A1,D:B1,D:A2,D:B2",format_pvec(&regs));
+        assert_eq!("A.A.D/number,A.A.A0,A.A.B0,A.A.A1,A.A.B1,A.B.X.D/string,A.B.X.A0,A.B.X.B0,A.B.Y.D/boolean,A.B.Y.A0,A.B.Y.B0,B.X.D/string,B.X.A0,B.X.B0,B.Y.D/boolean,B.Y.A0,B.Y.B0,C.D/boolean,C.A0,C.B0,D.D/number,D.A0,D.B0,D.A1,D.B1,D.A2,D.B2",format_pvec(&regs));
     }
 }

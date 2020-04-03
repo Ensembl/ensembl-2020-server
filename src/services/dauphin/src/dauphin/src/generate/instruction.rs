@@ -1,7 +1,7 @@
 use std::fmt;
 
-use crate::model::{ DefStore, Register, offset };
-use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberType, MemberMode, MemberDataFlow };
+use crate::model::{ DefStore, Register, RegisterPurpose };
+use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
     if ref_ {
@@ -54,7 +54,7 @@ pub enum InstructionType {
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
-    Call(String,bool,Vec<(MemberMode,MemberType,MemberDataFlow)>)
+    Call(String,bool,Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>)
 }
 
 impl InstructionType {
@@ -107,7 +107,10 @@ impl InstructionType {
                 let mut name = name.to_string();
                 if *impure { name.push_str("/i"); }
                 let mut out = vec![name.to_string()];
-                out.extend(types.iter().map(|x| format!("{:?}/{}",x.1,x.0)).collect::<Vec<_>>());
+                out.extend(types.iter().map(|x| {
+                    let purposes = x.1.iter().map(|y| format!("{}",y)).collect::<Vec<_>>().join(",");
+                    format!("{}/{}",purposes,x.0)
+                }).collect::<Vec<_>>());
                 Some(out)
             },
             _ => None
@@ -134,7 +137,7 @@ impl InstructionType {
         }
     }
 
-    pub fn changing_registers(&self, defstore: &DefStore) -> Vec<usize> {
+    pub fn changing_registers(&self) -> Vec<usize> {
         match self {
             InstructionType::At |
             InstructionType::Star |
@@ -177,7 +180,7 @@ impl InstructionType {
                     if let MemberDataFlow::JustifiesCall = sig.2 {
                         these_regs = true;
                     }
-                    let num_regs = offset(defstore,&sig.1).expect("resolving to registers").len();
+                    let num_regs = sig.1.len();
                     if these_regs {
                         for i in 0..num_regs {
                             out.push(reg_offset+i);

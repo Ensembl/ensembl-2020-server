@@ -166,7 +166,7 @@ pub fn run_nums(context: &mut GenContext) {
     let mut values : HashMap<Register,Vec<usize>> = HashMap::new();
     let mut suppressed = HashSet::new();
     for instr in &context.get_instructions() {
-        let changing = instr.itype.changing_registers(context.get_defstore());
+        let changing = instr.itype.changing_registers();
         /* capture suppressed in/outs now as update_values will trample on them */
         let mut old_values : HashMap<Register,Vec<usize>> = HashMap::new();
         for reg in &instr.regs {
@@ -230,7 +230,7 @@ mod test {
         run_nums(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);
-        let (_prints,values,strings) = mini_interp(&defstore,&mut context);
+        let (_prints,values,strings) = mini_interp(&mut context);
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);

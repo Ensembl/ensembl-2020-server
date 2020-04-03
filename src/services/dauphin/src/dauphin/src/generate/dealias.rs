@@ -60,7 +60,7 @@ mod test {
         print!("BEFORE {:?}\n",context);
         remove_aliases(&mut context);
         print!("AFTER {:?}\n",context);
-        let (_prints,values,strings) = mini_interp(&defstore,&mut context);
+        let (_prints,values,strings) = mini_interp(&mut context);
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
