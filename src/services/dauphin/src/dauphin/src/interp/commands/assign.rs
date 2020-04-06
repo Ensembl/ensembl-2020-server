@@ -1,28 +1,25 @@
+use std::rc::Rc;
 use std::collections::HashMap;
 use crate::model::{ LinearPath, Register, RegisterPurpose };
 use crate::typeinf::{ MemberMode, MemberDataFlow };
 use super::super::context::{InterpContext };
-use super::super::value::{ InterpValueData, InterpNatural, ReadOnlyValues, ReadWriteValues };
+use super::super::value::{ InterpValueData, InterpNatural };
 use super::super::command::Command;
 
-fn blit_typed<T>(dst: ReadWriteValues<T>, src: ReadOnlyValues<T>, filter: Option<&Vec<usize>>) where T: Clone {
+fn blit_typed<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: Option<&Vec<usize>>) where T: Clone {
     if let Some(filter) = filter {
-        let src = src.borrow();
         let src_len = src.len();
-        let mut dst = dst.borrow_mut();
         for (i,filter_pos) in filter.iter().enumerate() {
             dst[*filter_pos] = src[i%src_len].clone();
         }
     } else {
-        let mut new_values : Vec<T> = src.borrow().to_vec();
-        dst.borrow_mut().append(&mut new_values);
+        let mut new_values : Vec<T> = src.to_vec();
+        dst.append(&mut new_values);
     }
 }
 
-fn blit_expanded_typed<T>(dst: ReadWriteValues<T>, src: ReadOnlyValues<T>, filter: &Vec<bool>) where T: Clone {
+fn blit_expanded_typed<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: &Vec<bool>) where T: Clone {
     let filter_len = filter.len();
-    let src = src.borrow();
-    let mut dst = dst.borrow_mut();
     for (i,value) in src.iter().enumerate() {
         if filter[i%filter_len] {
             dst.push(value.clone());
@@ -30,12 +27,10 @@ fn blit_expanded_typed<T>(dst: ReadWriteValues<T>, src: ReadOnlyValues<T>, filte
     }
 }
 
-fn blit_runs_typed<T>(dst: ReadWriteValues<T>, src: ReadOnlyValues<T>, starts: &Vec<usize>, lens: &Vec<usize>) where T: Clone {
+fn blit_runs_typed<T>(dst: &mut Vec<T>, src: &Vec<T>, starts: &Vec<usize>, lens: &Vec<usize>) where T: Clone {
     let starts_len = starts.len();
     let lens_len = lens.len();
-    let src = src.borrow();
     let src_len = src.len();
-    let mut dst = dst.borrow_mut();
     for i in 0..starts_len {
         for j in 0..lens[i%lens_len] {
             dst.push(src[(i+j)%src_len].clone());
@@ -43,7 +38,7 @@ fn blit_runs_typed<T>(dst: ReadWriteValues<T>, src: ReadOnlyValues<T>, starts: &
     }
 }
 
-pub fn coerce_to(dst: &InterpValueData, src: &InterpValueData, prefer_dst: bool) -> Option<InterpNatural> {
+pub fn coerce_to(dst: &InterpValueData, src: &Rc<InterpValueData>, prefer_dst: bool) -> Option<InterpNatural> {
     let src_natural = src.get_natural();
     let dst_natural = dst.get_natural();
     if let InterpNatural::Empty = src_natural { return None; }
@@ -54,63 +49,64 @@ pub fn coerce_to(dst: &InterpValueData, src: &InterpValueData, prefer_dst: bool)
     })
 }
 
-pub fn blit(dst: &mut InterpValueData, src: &InterpValueData, filter_val: Option<&Vec<usize>>) -> Result<(),String> {
-    if let Some(natural) = coerce_to(dst,src,filter_val.is_some()) {
-        match natural {
-            InterpNatural::Empty => {}, /* impossible due to ifs above */
-            InterpNatural::Numbers => { let v = src.read_numbers()?; blit_typed(dst.write_numbers()?,v,filter_val); },
-            InterpNatural::Indexes => { let v = src.read_indexes()?; blit_typed(dst.write_indexes()?,v,filter_val); },
-            InterpNatural::Boolean => { let v = src.read_boolean()?; blit_typed(dst.write_boolean()?,v,filter_val); },
-            InterpNatural::Strings => { let v = src.read_strings()?; blit_typed(dst.write_strings()?,v,filter_val); },
-            InterpNatural::Bytes => { let v = src.read_bytes()?; blit_typed(dst.write_bytes()?,v,filter_val); },
+// If only there were higher-order type bounds in where clauses!
+macro_rules! run_typed {
+    ($dst:ident,$src:ident,$natural:expr,$func:tt) => {
+        match $natural {
+            InterpNatural::Empty => { $dst }, /* impossible due to ifs above */
+            InterpNatural::Numbers => { let s = $src.to_rc_numbers()?; let mut d = $dst.to_numbers()?; $func(&mut d,&s); InterpValueData::Numbers(d) },
+            InterpNatural::Indexes => { let s = $src.to_rc_indexes()?; let mut d = $dst.to_indexes()?; $func(&mut d,&s); InterpValueData::Indexes(d) },
+            InterpNatural::Boolean => { let s = $src.to_rc_boolean()?; let mut d = $dst.to_boolean()?; $func(&mut d,&s); InterpValueData::Boolean(d) },
+            InterpNatural::Strings => { let s = $src.to_rc_strings()?; let mut d = $dst.to_strings()?; $func(&mut d,&s); InterpValueData::Strings(d) },
+            InterpNatural::Bytes => { let s = $src.to_rc_bytes()?; let mut d = $dst.to_bytes()?; $func(&mut d,&s); InterpValueData::Bytes(d) },
         }
-    }
-    Ok(())
+    };
 }
 
-pub fn blit_expanded(dst: &mut InterpValueData, src: &InterpValueData, filter_val: &Vec<bool>) -> Result<(),String> {
-    if let Some(natural) = coerce_to(dst,src,true) {
-        match natural {
-            InterpNatural::Empty => {}, /* impossible due to ifs above */
-            InterpNatural::Numbers => { let v = src.read_numbers()?; blit_expanded_typed(dst.write_numbers()?,v,filter_val); },
-            InterpNatural::Indexes => { let v = src.read_indexes()?; blit_expanded_typed(dst.write_indexes()?,v,filter_val); },
-            InterpNatural::Boolean => { let v = src.read_boolean()?; blit_expanded_typed(dst.write_boolean()?,v,filter_val); },
-            InterpNatural::Strings => { let v = src.read_strings()?; blit_expanded_typed(dst.write_strings()?,v,filter_val); },
-            InterpNatural::Bytes => { let v = src.read_bytes()?; blit_expanded_typed(dst.write_bytes()?,v,filter_val); },
-        }
+pub fn blit(dst: InterpValueData, src: &Rc<InterpValueData>, filter_val: Option<&Vec<usize>>) -> Result<InterpValueData,String> {
+    if let Some(natural) = coerce_to(&dst,src,filter_val.is_some()) {
+        Ok(run_typed!(dst,src,natural,(|d,s| {
+            blit_typed(d,s,filter_val)
+        })))
+    } else {
+        Ok(dst)
     }
-    Ok(())
 }
 
-pub fn blit_runs(dst: &mut InterpValueData, src: &InterpValueData, starts: &Vec<usize>, lens: &Vec<usize>) -> Result<(),String> {
-    if let Some(natural) = coerce_to(dst,src,true) {
-        match natural {
-            InterpNatural::Empty => {}, /* impossible due to ifs above */
-            InterpNatural::Numbers => { let v = src.read_numbers()?; blit_runs_typed(dst.write_numbers()?,v,starts,lens); },
-            InterpNatural::Indexes => { let v = src.read_indexes()?; blit_runs_typed(dst.write_indexes()?,v,starts,lens); },
-            InterpNatural::Boolean => { let v = src.read_boolean()?; blit_runs_typed(dst.write_boolean()?,v,starts,lens); },
-            InterpNatural::Strings => { let v = src.read_strings()?; blit_runs_typed(dst.write_strings()?,v,starts,lens); },
-            InterpNatural::Bytes => { let v = src.read_bytes()?; blit_runs_typed(dst.write_bytes()?,v,starts,lens); },
-        }
+pub fn blit_expanded(dst: InterpValueData, src: &Rc<InterpValueData>, filter_val: &Vec<bool>) -> Result<InterpValueData,String> {
+    if let Some(natural) = coerce_to(&dst,src,true) {
+        Ok(run_typed!(dst,src,natural,(|d,s| {
+            blit_expanded_typed(d,s,filter_val)
+        })))
+    } else {
+        Ok(dst)
     }
-    Ok(())
 }
 
-fn blit_number(dst: &mut InterpValueData, src: &InterpValueData, filter: Option<&Vec<usize>>, offset: usize, stride: usize) -> Result<(),String> {
-    let srcv = src.read_indexes()?;
-    let dstv = dst.write_indexes()?;
-    let src = srcv.borrow();
-    let mut dst = dstv.borrow_mut();
+pub fn blit_runs(dst: InterpValueData, src: &Rc<InterpValueData>, starts: &Vec<usize>, lens: &Vec<usize>) -> Result<InterpValueData,String> {
+    if let Some(natural) = coerce_to(&dst,src,true) {
+        Ok(run_typed!(dst,src,natural,(|d,s| {
+            blit_runs_typed(d,s,starts,lens)
+        })))
+    } else {
+        Ok(dst)
+    }
+}
+
+fn blit_number(dst: InterpValueData, src: &Rc<InterpValueData>, filter: Option<&Vec<usize>>, offset: usize, stride: usize) -> Result<InterpValueData,String> {
+    let srcv = src.to_rc_indexes()?;
+    let mut dstv = dst.to_indexes()?;
+    let src = &srcv;
     if let Some(filter) = filter {
         let src_len = src.len();
         for (i,filter_pos) in filter.iter().enumerate() {
-            dst[*filter_pos] = src[i%src_len] + offset + (i*stride);
+            dstv[*filter_pos] = src[i%src_len] + offset + (i*stride);
         }
     } else {
         let mut new_values = src.iter().map(|x| *x+offset).collect();
-        dst.append(&mut new_values);
+        dstv.append(&mut new_values);
     }
-    Ok(())
+    Ok(InterpValueData::Indexes(dstv))
 }
 
 fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Result<(),String> {
@@ -127,19 +123,18 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
 fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
     let len = (regs.len()-1)/2;
-    let filter_reg = registers.read_indexes(&regs[0])?;
-    let filter = filter_reg.borrow();
+    let filter_reg = registers.get_indexes(&regs[0])?;
+    let filter = &filter_reg;
     let mut right_all_reg = regs[len+1..].iter().map(|x| registers.get(x).clone()).collect::<Vec<_>>();
     let mut right_all = vec![];
     for r in &mut right_all_reg {
-        right_all.push(r.read()?);
+        right_all.push(r.borrow().get_shared()?);
     }
-    let mut left_all_reg = regs[1..len+1].iter().map(|x| registers.get(x).clone()).collect::<Vec<_>>();
+    let mut left_all_reg = regs[1..len].iter().map(|x| registers.get(x).clone()).collect::<Vec<_>>();
     let mut left_all = vec![];
     for r in &mut left_all_reg {
-        let v = r.write();
-        left_all.push(v);
-    }
+        left_all.push(r.borrow().get_shared()?);
+    }    
     let left_purposes = &types[1].1;
     let right_purposes = &types[2].1;
     /* get current lengths (to calculate offsets) */
@@ -149,9 +144,8 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
         left_len.insert(purpose.get_linear(),left_all[j].len());
         right_len.insert(purpose.get_linear(),right_all[j].len());
     }
-    // XXX overlapping writes
     for (j,purpose) in left_purposes.iter().enumerate() {
-        let left = &mut left_all[j];
+        let mut left = left_all_reg[j].borrow_mut().get_exclusive()?;
         let right = &right_all[j];
         let initial_offset = purpose.get_linear().references()
             .and_then(|p| left_len.get(&p).cloned())
@@ -162,33 +156,30 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
         if purpose.is_top() {
             match purpose.get_linear() {
                 LinearPath::Offset(_) => {
-                    blit_number(left,right,Some(&filter),initial_offset,copy_offset)?;
+                    left = blit_number(left,right,Some(&filter),initial_offset,copy_offset)?;
                 },
                 LinearPath::Length(_) => {
-                    blit_number(left,right,Some(&filter),0,0)?;
+                    left = blit_number(left,right,Some(&filter),0,0)?;
                 },
                 LinearPath::Data => {
-                    blit(left,right,Some(&filter))?;
+                    left = blit(left,right,Some(&filter))?;
                 }
             }
         } else {
             match purpose.get_linear() {
                 LinearPath::Offset(_) | LinearPath::Length(_) => {
                     for i in 0..filter.len() {
-                        blit_number(left,right,Some(&filter),initial_offset+i*copy_offset,0)?;
+                        left = blit_number(left,right,Some(&filter),initial_offset+i*copy_offset,0)?;
                     }
                 },
                 LinearPath::Data => {
                     for _ in 0..filter.len() {
-                        blit(left,right,None)?;
+                        left = blit(left,right,None)?;
                     }
                 }
             }
         }
-    }
-    drop(left_all);
-    for r in left_all_reg.drain(..) {
-        registers.add_commit(r);
+        registers.write(&regs[j+1],left);
     }
     Ok(())
 }

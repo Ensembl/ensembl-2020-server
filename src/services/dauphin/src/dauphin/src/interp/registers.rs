@@ -1,175 +1,87 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use crate::model::Register;
 use super::supercow::{ SuperCow, SuperCowCommit };
-use super::value::{ InterpNatural, InterpValueData, ReadOnlyValues, ReadWriteValues };
+use super::value::{ InterpValueData, InterpValueNumbers, InterpValueIndexes, InterpValueBoolean, InterpValueStrings, InterpValueBytes };
 
 pub struct RegisterFile {
-    values: HashMap<Register,SuperCow<InterpValueData>>,
-    commits: Vec<Box<dyn SuperCowCommit + 'static>>
+    values: RefCell<HashMap<Register,Rc<RefCell<SuperCow<InterpValueData>>>>>,
+    commits: Vec<Rc<RefCell<SuperCowCommit>>>
 }
 
 impl RegisterFile {
     pub fn new() -> RegisterFile {
         let mut out = RegisterFile {
-            values: HashMap::new(),
+            values: RefCell::new(HashMap::new()),
             commits: Vec::new()
         };
         out
     }
 
-    pub fn get(&mut self, register: &Register) -> SuperCow<InterpValueData> {
-        self.values.entry(*register).or_insert_with(|| SuperCow::new(|| { InterpValueData::Empty }, 
-                                                    |x| { x.copy() },InterpValueData::Empty)).clone()
+    pub fn get(&self, register: &Register) -> Rc<RefCell<SuperCow<InterpValueData>>> {
+        self.values.borrow_mut().entry(*register).or_insert_with(|| 
+            Rc::new(RefCell::new(SuperCow::new(InterpValueData::Empty,|x| { x.copy() })))
+        ).clone()
     }
 
-    pub fn get_natural(&mut self, register: &Register) -> Result<InterpNatural,String> {
-        Ok(self.get(register).read()?.get_natural())
-    }
-
-    pub fn add_commit<T>(&mut self, sc: T) where T: SuperCowCommit + 'static {
-        self.commits.push(Box::new(sc));
+    pub fn write(&mut self, register: &Register, value: InterpValueData) {
+        let cow = self.get(register);
+        cow.borrow_mut().set(value);
+        self.commits.push(cow);
     }
 
     pub fn commit(&mut self) {
         for mut commit in self.commits.drain(..) {
-            commit.commit();
+            commit.borrow_mut().commit();
         }
     }
 
     pub fn copy(&mut self, dst: &Register, src: &Register) -> Result<(),String> {
+        if src == dst { return Ok(()); }
         let src = self.get(src);
-        let mut dst = self.get(dst);
-        dst.copy(&src)
-    }
-
-    pub fn write_empty(&mut self, register: &Register) {
-        let mut sc = self.get(register);
-        sc.write();
-        self.add_commit(sc);
-    }
-
-    pub fn read_numbers(&mut self, register: &Register) -> Result<ReadOnlyValues<f64>,String> {
-        self.get(register).read()?.read_numbers()
-    }
-
-    pub fn write_numbers(&mut self, register: &Register) -> Result<ReadWriteValues<f64>,String> {
-        let mut sc = self.get(register);
-        let out = sc.write().write_numbers();
-        self.add_commit(sc);
-        out
-    }
-
-    pub fn modify_numbers(&mut self, register: &Register) -> Result<ReadWriteValues<f64>,String> {
-        let mut sc = self.get(register);
-        let out = sc.modify()?.write_numbers();
-        self.add_commit(sc);
-        out
-    }
-
-    pub fn set_numbers(&mut self, register: &Register, value: Vec<f64>) -> Result<(),String> {
-        let mut sc = self.get(register);
-        sc.write().set_numbers(value)?;
-        self.add_commit(sc);
+        let dst = self.get(dst);
+        dst.borrow_mut().copy(&src.borrow());
         Ok(())
     }
 
-    pub fn read_indexes(&mut self, register: &Register) -> Result<ReadOnlyValues<usize>,String> {
-        self.get(register).read()?.read_indexes()
+    pub fn get_numbers(&self, register: &Register) -> Result<InterpValueNumbers,String> {
+        InterpValueData::to_rc_numbers(&self.get(register).borrow().get_shared()?)
     }
 
-    pub fn write_indexes(&mut self, register: &Register) -> Result<ReadWriteValues<usize>,String> {
-        let mut sc = self.get(register);
-        let out = sc.write().write_indexes();
-        self.add_commit(sc);
-        out
+    pub fn take_numbers(&mut self, register: &Register) -> Result<Vec<f64>,String> {
+        Ok(self.get(register).borrow_mut().get_exclusive()?.to_numbers()?)
     }
 
-    pub fn modify_indexes(&mut self, register: &Register) -> Result<ReadWriteValues<usize>,String> {
-        let mut sc = self.get(register);
-        let out = sc.modify()?.write_indexes();
-        self.add_commit(sc);
-        out
+    pub fn get_indexes(&self, register: &Register) -> Result<InterpValueIndexes,String> {
+        InterpValueData::to_rc_indexes(&self.get(register).borrow().get_shared()?)
     }
 
-    pub fn set_indexes(&mut self, register: &Register, value: Vec<usize>) -> Result<(),String> {
-        let mut sc = self.get(register);
-        sc.write().set_indexes(value)?;
-        self.add_commit(sc);
-        Ok(())
+    pub fn take_indexes(&mut self, register: &Register) -> Result<Vec<usize>,String> {
+        Ok(self.get(register).borrow_mut().get_exclusive()?.to_indexes()?)
     }
 
-    pub fn read_boolean(&mut self, register: &Register) -> Result<ReadOnlyValues<bool>,String> {
-        self.get(register).read()?.read_boolean()
+    pub fn get_boolean(&self, register: &Register) -> Result<InterpValueBoolean,String> {
+        InterpValueData::to_rc_boolean(&self.get(register).borrow().get_shared()?)
     }
 
-    pub fn write_boolean(&mut self, register: &Register) -> Result<ReadWriteValues<bool>,String> {
-        let mut sc = self.get(register);
-        let out = sc.write().write_boolean();
-        self.add_commit(sc);
-        out
+    pub fn take_boolean(&mut self, register: &Register) -> Result<Vec<bool>,String> {
+        Ok(self.get(register).borrow_mut().get_exclusive()?.to_boolean()?)
     }
 
-    pub fn modify_boolean(&mut self, register: &Register) -> Result<ReadWriteValues<bool>,String> {
-        let mut sc = self.get(register);
-        let out = sc.modify()?.write_boolean();
-        self.add_commit(sc);
-        out
+    pub fn get_strings(&self, register: &Register) -> Result<InterpValueStrings,String> {
+        InterpValueData::to_rc_strings(&self.get(register).borrow().get_shared()?)
     }
 
-    pub fn set_boolean(&mut self, register: &Register, value: Vec<bool>) -> Result<(),String> {
-        let mut sc = self.get(register);
-        sc.write().set_boolean(value)?;
-        self.add_commit(sc);
-        Ok(())
+    pub fn take_string(&mut self, register: &Register) -> Result<Vec<String>,String> {
+        Ok(self.get(register).borrow_mut().get_exclusive()?.to_strings()?)
     }
 
-    pub fn read_strings(&mut self, register: &Register) -> Result<ReadOnlyValues<String>,String> {
-        self.get(register).read()?.read_strings()
+    pub fn get_bytes(&self, register: &Register) -> Result<InterpValueBytes,String> {
+        InterpValueData::to_rc_bytes(&self.get(register).borrow().get_shared()?)
     }
 
-    pub fn write_strings(&mut self, register: &Register) -> Result<ReadWriteValues<String>,String> {
-        let mut sc = self.get(register);
-        let out = sc.write().write_strings();
-        self.add_commit(sc);
-        out
-    }
-
-    pub fn modify_strings(&mut self, register: &Register) -> Result<ReadWriteValues<String>,String> {
-        let mut sc = self.get(register);
-        let out = sc.modify()?.write_strings();
-        self.add_commit(sc);
-        out
-    }
-
-    pub fn set_strings(&mut self, register: &Register, value: Vec<String>) -> Result<(),String> {
-        let mut sc = self.get(register);
-        sc.write().set_strings(value)?;
-        self.add_commit(sc);
-        Ok(())
-    }
-
-    pub fn read_bytes(&mut self, register: &Register) -> Result<ReadOnlyValues<Vec<u8>>,String> {
-        self.get(register).read()?.read_bytes()
-    }
-
-    pub fn write_bytes(&mut self, register: &Register) -> Result<ReadWriteValues<Vec<u8>>,String> {
-        let mut sc = self.get(register);
-        let out = sc.write().write_bytes();
-        self.add_commit(sc);
-        out
-    }
-
-    pub fn modify_bytes(&mut self, register: &Register) -> Result<ReadWriteValues<Vec<u8>>,String> {
-        let mut sc = self.get(register);
-        let out = sc.modify()?.write_bytes();
-        self.add_commit(sc);
-        out
-    }
-
-    pub fn set_bytes(&mut self, register: &Register, value: Vec<Vec<u8>>) -> Result<(),String> {
-        let mut sc = self.get(register);
-        sc.write().set_bytes(value)?;
-        self.add_commit(sc);
-        Ok(())
+    pub fn take_bytes(&mut self, register: &Register) -> Result<Vec<Vec<u8>>,String> {
+        Ok(self.get(register).borrow_mut().get_exclusive()?.to_bytes()?)
     }
 }

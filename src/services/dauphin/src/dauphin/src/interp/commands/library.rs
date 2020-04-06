@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 use super::super::context::{InterpContext };
-use super::super::value::{ InterpValueData, InterpNatural, ReadOnlyValues, ReadWriteValues };
+use super::super::value::{ InterpNatural, InterpValueData };
 use super::super::command::Command;
 use crate::model::{ LinearPath, Register, RegisterPurpose };
-use super::assign::{ blit, blit_expanded, blit_runs, coerce_to };
+use super::assign::coerce_to;
 use super::super::stream::StreamContents;
 use crate::typeinf::{ MemberMode, MemberDataFlow };
 
@@ -23,8 +24,7 @@ impl Command for LenCommand {
                 _ => {}
             }
         }
-        let lens = registers.read_indexes(top_reg.unwrap())?;
-        registers.set_indexes(&self.1[0],lens.borrow().to_vec())?;
+        registers.copy(&self.1[0],top_reg.ok_or_else(|| format!("Not a list"))?);
         Ok(())
     }
 }
@@ -52,23 +52,19 @@ pub struct InterpBinBoolCommand(pub(crate) InterpBinBoolOp, pub(crate) Vec<(Memb
 impl Command for InterpBinBoolCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
-        let a = registers.read_numbers(&self.2[1])?;
-        let b = registers.read_numbers(&self.2[2])?;
-        let c = registers.write_boolean(&self.2[0])?;
-        let mut c = c.borrow_mut();
-        let b = b.borrow();
+        let a = registers.get_numbers(&self.2[1])?;
+        let b = &registers.get_numbers(&self.2[2])?;
+        let mut c = vec![];
         let b_len = b.len();
-        for (i,a_val) in a.borrow().iter().enumerate() {
+        for (i,a_val) in a.iter().enumerate() {
             c.push(self.0.evaluate(*a_val,b[i%b_len]));
         }
+        registers.write(&self.2[0],InterpValueData::Boolean(c));
         Ok(())
     }
 }
 
-fn eq<T>(c: ReadWriteValues<bool>, a: ReadOnlyValues<T>, b: ReadOnlyValues<T>) where T: PartialEq {
-    let a = a.borrow();
-    let b = b.borrow();
-    let mut c = c.borrow_mut();
+fn eq<T>(c: &mut Vec<bool>, a: &[T], b: &[T]) where T: PartialEq {
     let b_len = b.len();
     for (i,av) in a.iter().enumerate() {
         c.push(av == &b[i%b_len]);
@@ -81,20 +77,21 @@ impl Command for EqCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
         let a = registers.get(&self.1[1]);
-        let a = a.read()?;
+        let a = a.borrow().get_shared()?;
         let b = registers.get(&self.1[2]);
-        let b = b.read()?;
-        let c = registers.write_boolean(&self.1[0])?;
+        let b = b.borrow().get_shared()?;
+        let mut c = vec![];
         if let Some(natural) = coerce_to(&a,&b,true) {
             match natural {
                 InterpNatural::Empty => {},
-                InterpNatural::Numbers => { let a = a.read_numbers()?; let b = b.read_numbers()?; eq(c,a,b); },
-                InterpNatural::Indexes => { let a = a.read_indexes()?; let b = b.read_indexes()?; eq(c,a,b); },
-                InterpNatural::Boolean => { let a = a.read_boolean()?; let b = b.read_boolean()?; eq(c,a,b); },
-                InterpNatural::Strings => { let a = a.read_strings()?; let b = b.read_strings()?; eq(c,a,b); },
-                InterpNatural::Bytes => { let a = a.read_bytes()?; let b = b.read_bytes()?; eq(c,a,b); },
+                InterpNatural::Numbers => { eq(&mut c,&a.to_rc_numbers()?,&b.to_rc_numbers()?); },
+                InterpNatural::Indexes => { eq(&mut c,&a.to_rc_indexes()?,&b.to_rc_indexes()?); },
+                InterpNatural::Boolean => { eq(&mut c,&a.to_rc_boolean()?,&b.to_rc_boolean()?); },
+                InterpNatural::Strings => { eq(&mut c,&a.to_rc_strings()?,&b.to_rc_strings()?); },
+                InterpNatural::Bytes =>   { eq(&mut c,&a.to_rc_bytes()?,  &b.to_rc_bytes()?); },
             }
         }
+        registers.write(&self.1[0],InterpValueData::Boolean(c));
         Ok(())
     }
 }
@@ -104,33 +101,40 @@ pub struct PrintRegsCommand(pub(crate) Vec<(MemberMode,Vec<RegisterPurpose>,Memb
 impl Command for PrintRegsCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         for r in &self.1 {
-            let v = StreamContents::Data(context.registers().get(r).read()?.copy());
+            let v = StreamContents::Data(context.registers().get(r).borrow().get_shared()?.copy());
             context.stream_add(v);
         }
         Ok(())
     }
 }
 
-fn print_value<T>(data: &ReadOnlyValues<T>, start: usize, len: usize) -> String where T: std::fmt::Display {
+fn print_value<T>(data: &[T], start: usize, len: usize) -> String where T: std::fmt::Display {
     let mut out = Vec::new();
-    let data = data.borrow();
     for index in start..start+len {
         out.push(data[index].to_string());
     }
     out.join(", ")
 }
 
+fn print_bytes<T>(data: &[Vec<T>], start: usize, len: usize) -> String where T: std::fmt::Display {
+    let mut out = vec![];
+    for index in start..start+len {
+        out.push(format!("[{}]",data[index].iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")));
+    }
+    out.join(", ")
+}
+
 fn print_register(context: &mut InterpContext, reg: &Register, restrict: Option<(usize,usize)>) -> Result<String,String> {
     let value = context.registers().get(reg);
-    let value = value.read()?;
+    let value = value.borrow().get_shared()?;
     let (start,len) = restrict.unwrap_or_else(|| { (0,value.len()) });
     Ok(match value.get_natural() {
         InterpNatural::Empty => { String::new() },
-        InterpNatural::Numbers => { print_value(&value.read_numbers()?, start, len) },
-        InterpNatural::Indexes => { print_value(&value.read_indexes()?, start, len) },
-        InterpNatural::Boolean => { print_value(&value.read_boolean()?, start, len) },
-        InterpNatural::Strings => { print_value(&value.read_boolean()?, start, len) },
-        InterpNatural::Bytes => { print_value(&value.read_boolean()?, start, len) },
+        InterpNatural::Numbers => { print_value(&value.to_rc_numbers()?, start, len) },
+        InterpNatural::Indexes => { print_value(&value.to_rc_indexes()?, start, len) },
+        InterpNatural::Boolean => { print_value(&value.to_rc_boolean()?, start, len) },
+        InterpNatural::Strings => { print_value(&value.to_rc_strings()?, start, len) },
+        InterpNatural::Bytes => { print_bytes(&value.to_rc_bytes()?, start, len) },
     })
 }
 
@@ -158,10 +162,8 @@ fn print_level(context: &mut InterpContext, purposes: &[&RegisterPurpose], regs:
                 _ => {}
             }
         }
-        let starts = context.registers().read_indexes(&regs[offset_reg.unwrap()])?;
-        let lens = context.registers().read_indexes(&regs[len_reg.unwrap()])?;
-        let starts = &starts.borrow();
-        let lens = &lens.borrow();
+        let starts = &context.registers().get_indexes(&regs[offset_reg.unwrap()])?;
+        let lens = &context.registers().get_indexes(&regs[len_reg.unwrap()])?;
         let lens_len = lens.len();
         let (a,b) = restrict.unwrap_or((0,lens_len));
         let mut members = Vec::new();
