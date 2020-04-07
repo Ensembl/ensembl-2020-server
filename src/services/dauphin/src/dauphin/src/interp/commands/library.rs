@@ -1,7 +1,6 @@
 use std::collections::HashMap;
-use std::rc::Rc;
 use super::super::context::{InterpContext };
-use super::super::value::{ InterpNatural, InterpValueData };
+use crate::interp::{ InterpNatural, InterpValue };
 use super::super::command::Command;
 use crate::model::{ LinearPath, Register, RegisterPurpose };
 use super::assign::coerce_to;
@@ -59,7 +58,7 @@ impl Command for InterpBinBoolCommand {
         for (i,a_val) in a.iter().enumerate() {
             c.push(self.0.evaluate(*a_val,b[i%b_len]));
         }
-        registers.write(&self.2[0],InterpValueData::Boolean(c));
+        registers.write(&self.2[0],InterpValue::Boolean(c));
         Ok(())
     }
 }
@@ -84,14 +83,14 @@ impl Command for EqCommand {
         if let Some(natural) = coerce_to(&a,&b,true) {
             match natural {
                 InterpNatural::Empty => {},
-                InterpNatural::Numbers => { eq(&mut c,&a.to_rc_numbers()?,&b.to_rc_numbers()?); },
-                InterpNatural::Indexes => { eq(&mut c,&a.to_rc_indexes()?,&b.to_rc_indexes()?); },
-                InterpNatural::Boolean => { eq(&mut c,&a.to_rc_boolean()?,&b.to_rc_boolean()?); },
-                InterpNatural::Strings => { eq(&mut c,&a.to_rc_strings()?,&b.to_rc_strings()?); },
-                InterpNatural::Bytes =>   { eq(&mut c,&a.to_rc_bytes()?,  &b.to_rc_bytes()?); },
+                InterpNatural::Numbers => { eq(&mut c,&a.to_rc_numbers()?.0,&b.to_rc_numbers()?.0); },
+                InterpNatural::Indexes => { eq(&mut c,&a.to_rc_indexes()?.0,&b.to_rc_indexes()?.0); },
+                InterpNatural::Boolean => { eq(&mut c,&a.to_rc_boolean()?.0,&b.to_rc_boolean()?.0); },
+                InterpNatural::Strings => { eq(&mut c,&a.to_rc_strings()?.0,&b.to_rc_strings()?.0); },
+                InterpNatural::Bytes =>   { eq(&mut c,&a.to_rc_bytes()?.0,  &b.to_rc_bytes()?.0); },
             }
         }
-        registers.write(&self.1[0],InterpValueData::Boolean(c));
+        registers.write(&self.1[0],InterpValue::Boolean(c));
         Ok(())
     }
 }
@@ -113,7 +112,7 @@ fn print_value<T>(data: &[T], start: usize, len: usize) -> String where T: std::
     for index in start..start+len {
         out.push(data[index].to_string());
     }
-    out.join(", ")
+    out.join(",")
 }
 
 fn print_bytes<T>(data: &[Vec<T>], start: usize, len: usize) -> String where T: std::fmt::Display {
@@ -121,7 +120,7 @@ fn print_bytes<T>(data: &[Vec<T>], start: usize, len: usize) -> String where T: 
     for index in start..start+len {
         out.push(format!("[{}]",data[index].iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")));
     }
-    out.join(", ")
+    out.join(",")
 }
 
 fn print_register(context: &mut InterpContext, reg: &Register, restrict: Option<(usize,usize)>) -> Result<String,String> {
@@ -130,15 +129,15 @@ fn print_register(context: &mut InterpContext, reg: &Register, restrict: Option<
     let (start,len) = restrict.unwrap_or_else(|| { (0,value.len()) });
     Ok(match value.get_natural() {
         InterpNatural::Empty => { String::new() },
-        InterpNatural::Numbers => { print_value(&value.to_rc_numbers()?, start, len) },
-        InterpNatural::Indexes => { print_value(&value.to_rc_indexes()?, start, len) },
-        InterpNatural::Boolean => { print_value(&value.to_rc_boolean()?, start, len) },
-        InterpNatural::Strings => { print_value(&value.to_rc_strings()?, start, len) },
-        InterpNatural::Bytes => { print_bytes(&value.to_rc_bytes()?, start, len) },
+        InterpNatural::Numbers => { print_value(&value.to_rc_numbers()?.0, start, len) },
+        InterpNatural::Indexes => { print_value(&value.to_rc_indexes()?.0, start, len) },
+        InterpNatural::Boolean => { print_value(&value.to_rc_boolean()?.0, start, len) },
+        InterpNatural::Strings => { print_value(&value.to_rc_strings()?.0, start, len) },
+        InterpNatural::Bytes => { print_bytes(&value.to_rc_bytes()?.0, start, len) },
     })
 }
 
-fn print_base(context: &mut InterpContext, purposes: &[&RegisterPurpose], regs: &[Register], indexes: &[usize], restrict: Option<(usize,usize)>) -> Result<String,String> {
+fn print_base(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: &[Register], indexes: &[usize], restrict: Option<(usize,usize)>) -> Result<String,String> {
     let mut data_reg = None;
     for j in indexes {
         match purposes[*j].get_linear() {
@@ -149,7 +148,7 @@ fn print_base(context: &mut InterpContext, purposes: &[&RegisterPurpose], regs: 
     print_register(context,&regs[data_reg.unwrap()],restrict)
 }
 
-fn print_level(context: &mut InterpContext, purposes: &[&RegisterPurpose], regs: &[Register], level_in: i64, indexes: &[usize], restrict: Option<(usize,usize)>) -> Result<String,String> {
+fn print_level(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: &[Register], level_in: i64, indexes: &[usize], restrict: Option<(usize,usize)>) -> Result<String,String> {
     if level_in > -1 {
         let level = level_in as usize;
         /* find registers for level */
@@ -164,32 +163,33 @@ fn print_level(context: &mut InterpContext, purposes: &[&RegisterPurpose], regs:
         }
         let starts = &context.registers().get_indexes(&regs[offset_reg.unwrap()])?;
         let lens = &context.registers().get_indexes(&regs[len_reg.unwrap()])?;
+        print!("starts={:?} lens={:?} restrict={:?}\n",starts.to_vec(),lens.to_vec(),restrict);
         let lens_len = lens.len();
         let (a,b) = restrict.unwrap_or((0,lens_len));
         let mut members = Vec::new();
         for index in a..a+b {
             members.push(print_level(context,purposes,regs,level_in-1,indexes,Some((starts[index],lens[index%lens_len])))?);
         }
-        Ok(format!("[{}]",members.join(",")))
+        Ok(format!("{}",members.iter().map(|x| format!("[{}]",x)).collect::<Vec<_>>().join(",")))
     } else {
         print_base(context,purposes,regs,indexes,restrict)
     }
 }
 
-fn print_array(context: &mut InterpContext, purposes: &[&RegisterPurpose], regs: &[Register], indexes: &[usize]) -> Result<String,String> {
+fn print_array(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: &[Register], indexes: &[usize]) -> Result<String,String> {
     let mut top_level = -1_i64;
-    for index in indexes {
-        let purpose = purposes[*index];
+    for purpose in purposes.iter() {
         if purpose.is_top() {
             if let LinearPath::Offset(top) = purpose.get_linear() {
                 top_level = *top as i64;
             }
         }
     }
+    print!("top_level={}\nindexes={:?}\npurposes={:?}\n",top_level,indexes,purposes);
     print_level(context,purposes,regs,top_level,indexes,None)
 }
 
-fn print_complex(context: &mut InterpContext, purposes: &[&RegisterPurpose], regs: &[Register], complex: &[String], indexes: &[usize], is_complex: bool) -> Result<String,String> {
+fn print_complex(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: &[Register], complex: &[String], indexes: &[usize], is_complex: bool) -> Result<String,String> {
     if is_complex {
         Ok(format!("{}: {}",complex.join("."),print_array(context,purposes,regs,indexes)?))
     } else {
@@ -197,7 +197,7 @@ fn print_complex(context: &mut InterpContext, purposes: &[&RegisterPurpose], reg
     }
 }
 
-fn print_vec(context: &mut InterpContext, purposes: &Vec<&RegisterPurpose>, regs: &Vec<Register>) -> Result<String,String> {
+fn print_vec(context: &mut InterpContext, purposes: &Vec<RegisterPurpose>, regs: &Vec<Register>) -> Result<String,String> {
     let mut out : Vec<String> = vec![];
     let mut complexes : HashMap<Vec<String>,Vec<usize>> = HashMap::new();
     let mut is_complex = false;
@@ -218,8 +218,10 @@ pub struct PrintVecCommand(pub(crate) Vec<(MemberMode,Vec<RegisterPurpose>,Membe
 
 impl Command for PrintVecCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let purposes = self.0.iter().map(|x| &x.1[0]).collect::<Vec<_>>();
+        let purposes = &self.0[0].1;
+        print!("purposes/A {:?}\n",purposes);
         let v = StreamContents::String(print_vec(context,&purposes,&self.1)?);
+        print!("STREAM ADD {:?}\n",print_vec(context,&purposes,&self.1)?);
         context.stream_add(v);
         Ok(())
     }

@@ -30,7 +30,11 @@ impl<T> SuperCow<T> {
     }
 
     pub fn set(&mut self, value: T) {
-        self.set = Some(Rc::new(value));
+        self.set_rc(Rc::new(value));
+    }
+
+    pub fn set_rc(&mut self, value: Rc<T>) {
+        self.set = Some(value);
     }
 }
 

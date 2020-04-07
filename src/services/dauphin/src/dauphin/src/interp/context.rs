@@ -1,4 +1,4 @@
-use super::registers::RegisterFile;
+use crate::interp::RegisterFile;
 use super::stream::{ Stream, StreamContents };
 
 pub struct InterpContext {

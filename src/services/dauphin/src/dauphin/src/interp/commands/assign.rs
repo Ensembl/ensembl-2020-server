@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::model::{ LinearPath, Register, RegisterPurpose };
 use crate::typeinf::{ MemberMode, MemberDataFlow };
 use super::super::context::{InterpContext };
-use super::super::value::{ InterpValueData, InterpNatural };
+use crate::interp::{ InterpValue, InterpNatural };
 use super::super::command::Command;
 
 fn blit_typed<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: Option<&Vec<usize>>) where T: Clone {
@@ -33,12 +33,12 @@ fn blit_runs_typed<T>(dst: &mut Vec<T>, src: &Vec<T>, starts: &Vec<usize>, lens:
     let src_len = src.len();
     for i in 0..starts_len {
         for j in 0..lens[i%lens_len] {
-            dst.push(src[(i+j)%src_len].clone());
+            dst.push(src[(starts[i]+j)%src_len].clone());
         }
     }
 }
 
-pub fn coerce_to(dst: &InterpValueData, src: &Rc<InterpValueData>, prefer_dst: bool) -> Option<InterpNatural> {
+pub fn coerce_to(dst: &InterpValue, src: &Rc<InterpValue>, prefer_dst: bool) -> Option<InterpNatural> {
     let src_natural = src.get_natural();
     let dst_natural = dst.get_natural();
     if let InterpNatural::Empty = src_natural { return None; }
@@ -54,16 +54,16 @@ macro_rules! run_typed {
     ($dst:ident,$src:ident,$natural:expr,$func:tt) => {
         match $natural {
             InterpNatural::Empty => { $dst }, /* impossible due to ifs above */
-            InterpNatural::Numbers => { let s = $src.to_rc_numbers()?; let mut d = $dst.to_numbers()?; $func(&mut d,&s); InterpValueData::Numbers(d) },
-            InterpNatural::Indexes => { let s = $src.to_rc_indexes()?; let mut d = $dst.to_indexes()?; $func(&mut d,&s); InterpValueData::Indexes(d) },
-            InterpNatural::Boolean => { let s = $src.to_rc_boolean()?; let mut d = $dst.to_boolean()?; $func(&mut d,&s); InterpValueData::Boolean(d) },
-            InterpNatural::Strings => { let s = $src.to_rc_strings()?; let mut d = $dst.to_strings()?; $func(&mut d,&s); InterpValueData::Strings(d) },
-            InterpNatural::Bytes => { let s = $src.to_rc_bytes()?; let mut d = $dst.to_bytes()?; $func(&mut d,&s); InterpValueData::Bytes(d) },
+            InterpNatural::Numbers => { let s = $src.to_rc_numbers()?.0; let mut d = $dst.to_numbers()?; $func(&mut d,&s); InterpValue::Numbers(d) },
+            InterpNatural::Indexes => { let s = $src.to_rc_indexes()?.0; let mut d = $dst.to_indexes()?; $func(&mut d,&s); InterpValue::Indexes(d) },
+            InterpNatural::Boolean => { let s = $src.to_rc_boolean()?.0; let mut d = $dst.to_boolean()?; $func(&mut d,&s); InterpValue::Boolean(d) },
+            InterpNatural::Strings => { let s = $src.to_rc_strings()?.0; let mut d = $dst.to_strings()?; $func(&mut d,&s); InterpValue::Strings(d) },
+            InterpNatural::Bytes => { let s = $src.to_rc_bytes()?.0; let mut d = $dst.to_bytes()?; $func(&mut d,&s); InterpValue::Bytes(d) },
         }
     };
 }
 
-pub fn blit(dst: InterpValueData, src: &Rc<InterpValueData>, filter_val: Option<&Vec<usize>>) -> Result<InterpValueData,String> {
+pub fn blit(dst: InterpValue, src: &Rc<InterpValue>, filter_val: Option<&Vec<usize>>) -> Result<InterpValue,String> {
     if let Some(natural) = coerce_to(&dst,src,filter_val.is_some()) {
         Ok(run_typed!(dst,src,natural,(|d,s| {
             blit_typed(d,s,filter_val)
@@ -73,7 +73,7 @@ pub fn blit(dst: InterpValueData, src: &Rc<InterpValueData>, filter_val: Option<
     }
 }
 
-pub fn blit_expanded(dst: InterpValueData, src: &Rc<InterpValueData>, filter_val: &Vec<bool>) -> Result<InterpValueData,String> {
+pub fn blit_expanded(dst: InterpValue, src: &Rc<InterpValue>, filter_val: &Vec<bool>) -> Result<InterpValue,String> {
     if let Some(natural) = coerce_to(&dst,src,true) {
         Ok(run_typed!(dst,src,natural,(|d,s| {
             blit_expanded_typed(d,s,filter_val)
@@ -83,7 +83,7 @@ pub fn blit_expanded(dst: InterpValueData, src: &Rc<InterpValueData>, filter_val
     }
 }
 
-pub fn blit_runs(dst: InterpValueData, src: &Rc<InterpValueData>, starts: &Vec<usize>, lens: &Vec<usize>) -> Result<InterpValueData,String> {
+pub fn blit_runs(dst: InterpValue, src: &Rc<InterpValue>, starts: &Vec<usize>, lens: &Vec<usize>) -> Result<InterpValue,String> {
     if let Some(natural) = coerce_to(&dst,src,true) {
         Ok(run_typed!(dst,src,natural,(|d,s| {
             blit_runs_typed(d,s,starts,lens)
@@ -93,8 +93,8 @@ pub fn blit_runs(dst: InterpValueData, src: &Rc<InterpValueData>, starts: &Vec<u
     }
 }
 
-fn blit_number(dst: InterpValueData, src: &Rc<InterpValueData>, filter: Option<&Vec<usize>>, offset: usize, stride: usize) -> Result<InterpValueData,String> {
-    let srcv = src.to_rc_indexes()?;
+fn blit_number(dst: InterpValue, src: &Rc<InterpValue>, filter: Option<&Vec<usize>>, offset: usize, stride: usize) -> Result<InterpValue,String> {
+    let srcv = src.to_rc_indexes()?.0;
     let mut dstv = dst.to_indexes()?;
     let src = &srcv;
     if let Some(filter) = filter {
@@ -106,7 +106,7 @@ fn blit_number(dst: InterpValueData, src: &Rc<InterpValueData>, filter: Option<&
         let mut new_values = src.iter().map(|x| *x+offset).collect();
         dstv.append(&mut new_values);
     }
-    Ok(InterpValueData::Indexes(dstv))
+    Ok(InterpValue::Indexes(dstv))
 }
 
 fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Result<(),String> {
@@ -130,7 +130,7 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
     for r in &mut right_all_reg {
         right_all.push(r.borrow().get_shared()?);
     }
-    let mut left_all_reg = regs[1..len].iter().map(|x| registers.get(x).clone()).collect::<Vec<_>>();
+    let mut left_all_reg = regs[1..len+1].iter().map(|x| registers.get(x).clone()).collect::<Vec<_>>();
     let mut left_all = vec![];
     for r in &mut left_all_reg {
         left_all.push(r.borrow().get_shared()?);
@@ -169,7 +169,7 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
             match purpose.get_linear() {
                 LinearPath::Offset(_) | LinearPath::Length(_) => {
                     for i in 0..filter.len() {
-                        left = blit_number(left,right,Some(&filter),initial_offset+i*copy_offset,0)?;
+                        left = blit_number(left,right,None,initial_offset+i*copy_offset,0)?;
                     }
                 },
                 LinearPath::Data => {

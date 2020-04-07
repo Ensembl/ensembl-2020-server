@@ -1,6 +1,5 @@
 use super::super::context::{InterpContext };
-//use super::super::value::InterpValueData;
-use super::super::value::InterpValueData;
+use crate::interp::InterpValue;
 use super::super::command::Command;
 use crate::model::Register;
 use super::assign::{ blit, blit_expanded, blit_runs };
@@ -10,7 +9,7 @@ pub struct NilCommand(pub(crate) Register);
 // XXX read is coerce
 impl Command for NilCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValueData::Empty);
+        context.registers().write(&self.0,InterpValue::Empty);
         Ok(())
     }
 }
@@ -19,7 +18,7 @@ pub struct NumberConstCommand(pub(crate) Register,pub(crate) f64);
 
 impl Command for NumberConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValueData::Numbers(vec![self.1]));
+        context.registers().write(&self.0,InterpValue::Numbers(vec![self.1]));
         Ok(())
     }
 }
@@ -28,7 +27,7 @@ pub struct ConstCommand(pub(crate) Register,pub(crate) Vec<usize>);
 
 impl Command for ConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValueData::Indexes(self.1.to_vec()));
+        context.registers().write(&self.0,InterpValue::Indexes(self.1.to_vec()));
         Ok(())
     }
 }
@@ -37,7 +36,7 @@ pub struct BooleanConstCommand(pub(crate) Register,pub(crate) bool);
 
 impl Command for BooleanConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValueData::Boolean(vec![self.1]));
+        context.registers().write(&self.0,InterpValue::Boolean(vec![self.1]));
         Ok(())
     }
 }
@@ -46,7 +45,7 @@ pub struct StringConstCommand(pub(crate) Register,pub(crate) String);
 
 impl Command for StringConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValueData::Strings(vec![self.1.to_string()]));
+        context.registers().write(&self.0,InterpValue::Strings(vec![self.1.to_string()]));
         Ok(())
     }
 }
@@ -55,7 +54,7 @@ pub struct BytesConstCommand(pub(crate) Register,pub(crate) Vec<u8>);
 
 impl Command for BytesConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValueData::Bytes(vec![self.1.to_vec()]));
+        context.registers().write(&self.0,InterpValue::Bytes(vec![self.1.to_vec()]));
         Ok(())
     }
 }
@@ -88,7 +87,7 @@ impl Command for LengthCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
         let len = registers.get(&self.1).borrow().get_shared()?.len();
-        registers.write(&self.0,InterpValueData::Indexes(vec![len]));
+        registers.write(&self.0,InterpValue::Indexes(vec![len]));
         Ok(())
     }
 }
@@ -104,7 +103,7 @@ impl Command for AddCommand {
         for i in 0..dst.len() {
             dst[i] += src[i%src_len];
         }
-        registers.write(&self.0,InterpValueData::Indexes(dst));
+        registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
     }
 }
@@ -119,7 +118,7 @@ impl Command for AtCommand {
         for i in 0..src.len() {
             dst.push(i);
         }
-        registers.write(&self.0,InterpValueData::Indexes(dst));
+        registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
     }
 }
@@ -136,7 +135,7 @@ impl Command for NumEqCommand {
         for i in 0..src1.len() {
             dst[i] = src1[i] == src2[i%src2len];
         }
-        registers.write(&self.0,InterpValueData::Boolean(dst));
+        registers.write(&self.0,InterpValue::Boolean(dst));
         Ok(())
     }
 }
@@ -148,10 +147,8 @@ impl Command for FilterCommand {
         let registers = context.registers();
         let filter = registers.get_boolean(&self.2)?;
         let src = registers.get(&self.1);
-        let dstr = registers.get(&self.0);
         let src = src.borrow().get_shared()?;
-        let dst = dstr.borrow_mut().get_exclusive()?;
-        registers.write(&self.0,blit_expanded(dst,&src,&filter)?);
+        registers.write(&self.0,blit_expanded(InterpValue::Empty,&src,&filter)?);
         Ok(())
     }
 }
@@ -171,7 +168,7 @@ impl Command for RunCommand {
                 dst.push(start[i]+j);
             }
         }
-        registers.write(&self.0,InterpValueData::Indexes(dst));
+        registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
     }
 }
@@ -184,10 +181,8 @@ impl Command for SeqFilterCommand {
         let src = registers.get(&self.1);
         let start = registers.get_indexes(&self.2)?;
         let len = registers.get_indexes(&self.3)?;
-        let dst = registers.get(&self.0);
         let src = src.borrow().get_shared()?;
-        let dst = dst.borrow_mut().get_exclusive()?;
-        registers.write(&self.0,blit_runs(dst,&src,&start,&len)?);
+        registers.write(&self.0,blit_runs(InterpValue::Empty,&src,&start,&len)?);
         Ok(())
     }
 }
@@ -204,7 +199,7 @@ impl Command for SeqAtCommand {
                 dst.push(j);
             }
         }
-        registers.write(&self.0,InterpValueData::Indexes(dst));
+        registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
     }
 }

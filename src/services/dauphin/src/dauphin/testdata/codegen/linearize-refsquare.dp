@@ -13,7 +13,6 @@ x[len($)>1] := [0];
 print_vec(x);
 x[@>1] := [9,9,9];
 print_vec(x);
-
 y := [1,2,3];
 y[] := 0;
 print_vec(y);

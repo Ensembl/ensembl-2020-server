@@ -1,8 +1,8 @@
-use super::value::InterpValueData;
+use crate::interp::InterpValue;
 
 pub enum StreamContents {
     String(String),
-    Data(InterpValueData),
+    Data(InterpValue),
 }
 
 pub struct Stream {

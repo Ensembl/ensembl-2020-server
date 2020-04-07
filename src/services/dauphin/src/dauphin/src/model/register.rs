@@ -12,6 +12,13 @@ impl fmt::Debug for Register {
     }
 }
 
+impl fmt::Display for Register {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"%{}",self.0)?;
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 struct RegisterAllocatorImpl {
     index: usize
