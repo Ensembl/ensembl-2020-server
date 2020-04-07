@@ -1,0 +1,678 @@
+openapi: 3.0.1
+info:
+  title: Ensembl - 2020
+  description: The genome-browser API for 2020.ensembl.org
+  contact:
+    email: kamal@ebi.ac.uk
+  version: 0.0.1
+servers:
+- url: https://2020.ensembl.org
+- url: http://2020.ensembl.org
+tags:
+- name: api
+  description: genome-browser API
+paths:
+  /browser/config:
+    get:
+      tags:
+      - api
+      summary: Broswer configuration
+      description: Returns a browser configuration
+      responses:
+        200:
+          description: Get genome-browser configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrowserConfig'
+      security:
+      - api_key: []
+  /browser/config/{version}:
+    get:
+      tags:
+      - api
+      summary: Broswer configuration
+      description: Returns a browser configuration
+      parameters:
+      - name : version
+        in : path
+        description: genome-browser config version
+        required: false
+        scema:
+          type: integer
+          default: 1
+      responses:
+        200:
+          description: Get specific version of genome-browser configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrowserConfig'
+  /api/genome/info/:
+    get:
+      tags:
+      - api
+      summary: Returns information about particular genome
+      description: Returns a single genome
+      parameters:
+      - name: genome_id
+        in: query
+        description: ID of genome to return
+        required: true
+        schema:
+          type: string
+          default: homo_sapiens_GCA_000001405_27
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  genome_info:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Genome'
+        400:
+          description: Invalid Genome ID
+          content: {}
+        404:
+          description: Genome not found
+          content: {}
+      security:
+      - api_key: []
+  /api/popular_genomes/:
+    get:
+      tags:
+      - api
+      summary: Get popular genomes
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  popular_species:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Genome'
+        400:
+          description: Invalid Genome ID
+          content: {}
+        404:
+          description: Genome not found
+          content: {}
+      security:
+      - api_key: []
+  /api/alternative_assemblies/:
+    get:
+      tags:
+      - api
+      summary: Get alternative assemblies for given genome
+      description: ""
+      parameters:
+      - name: genome_id
+        in: query
+        description: ID of genome to return
+        required: true
+        schema:
+          type: string
+          default: homo_sapiens_GCA_000001405_27
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alternate_assemblies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Assembly'
+        400:
+          description: Invalid Genome ID
+          content: {}
+        404:
+          description: Alternate assemblies not found
+          content: {}
+      security:
+      - api_key: []
+  /api/genome/track_categories/:
+    get:
+      tags:
+      - api
+      summary: Get track ctegories for given genome
+      description: Returns track categories for given genome
+      parameters:
+      - name: genome_id
+        in: query
+        description: genome_id for which track categories are requested
+        required: true
+        schema:
+          type: string
+          default: homo_sapiens_GCA_000001405_27
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  track_categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TrackCategory'
+        400:
+          description: Invalid Genome ID
+          content: {}
+        404:
+          description: Genome ID not found
+          content: {}
+      security:
+      - api_key: [] 
+  /api/object/info/:
+    get:
+      tags:
+      - api
+      summary: Get object info for given object_id
+      description: Returns info for given object
+      parameters:
+      - name: object_id
+        in: query
+        description: object_id
+        required: true
+        schema:
+          type: string
+          default: homo_sapiens_GCA_000001405_27:gene:ENSG00000139618
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+        400:
+          description: Invalid Genome ID
+          content: {}
+        404:
+          description: Genome ID not found
+          content: {}
+      security:
+      - api_key: []
+  /api/feature/info/:
+    get:
+      tags:
+      - api
+      summary: Get full information about a feature
+      parameters:
+      - name: feature_id
+        in: query
+        description: feature_id
+        required: true
+        schema:
+          type: string
+          default: triticum_aestivum_GCA_900519105_1:gene:TraesCS3D02G273600
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureResponse'
+              examples:
+                gene-success:
+                  $ref: '#/components/examples/feature-info-gene-success'
+                transcript-success:
+                  $ref: '#/components/examples/feature-info-transcript-success'
+        400:
+          description: Invalid feature ID
+          content: {}
+        404:
+          description: Could not find feature_id
+          content: {}
+      security:
+      - api_key: []
+  /api/feature/focus_feature/:
+    get:
+      tags:
+      - api
+      summary: Get focus feature and list of features associated with it
+      parameters:
+      - name: feature_id
+        in: query
+        description: feature_id
+        required: true
+        schema:
+          type: string
+          default: triticum_aestivum_GCA_900519105_1:gene:TraesCS3D02G273600
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FocusFeatureResponse'
+              examples:
+                gene-success:
+                  $ref: '#/components/examples/focus-feature-gene-success'
+                transcript-success:
+                  $ref: '#/components/examples/focus-feature-transcript-success'
+        400:
+          description: Invalid feature_id
+          content: {}
+        404:
+          description: Could not find feature_id
+          content: {}
+      security:
+      - api_key: []
+components:
+  schemas:
+    BrowserConfig:
+      type: object
+      properties:
+        api: 
+          type: object
+        assets: 
+          type: object
+        bytcodes: 
+          type: object
+        sticks: 
+          type: object
+        tracks:
+          type: object
+        data-url:
+          type: string
+          example: './data/1'
+        debug-url:
+          type: string
+          example: './data/1'
+        endpoints:
+          type: string
+          example: './data/1'
+        jumper-url:
+          type: string
+          example: "./locale"
+    Genome:
+      type: object
+      properties:
+        alternative_assemblies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assembly'
+        assembly_accession:
+          type: string
+          example: GCA_000001405.27
+        assembly_name:
+          type: string
+          example: GRCh38.p12
+        common_name:
+          type: string
+          example: Human
+        division:
+          type: array
+          items:
+            $ref: '#/components/schemas/Division/properties/division_name'
+        example_objects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Object/properties/object_id'
+        genome_id:
+          type: string
+          example: homo_sapiens_GCA_000001405_27
+        image:
+          type: string
+          example: http://2020.ensembl.org/static/genome_images/homo_sapiens_GCA_000001405_27.svg
+        is_available:
+          type: boolean
+          example: true
+        is_strain:
+          type: boolean
+          example: false
+        popular_order:
+          type: integer
+          format: int32
+          example: 0
+        production_name:
+          type: string
+          example: homo_sapiens
+        reference_genome_id:
+          type: string
+          example: null
+        scientific_name:
+          type: string
+          example: Homo sapiens
+    Division:
+      type: object
+      properties:
+        division_name:
+          type: string
+          example: EnsemblVertebrates
+    Assembly:
+      type: object
+      properties:
+        assembly_name:
+          type: string
+          example: GRCh37.p13
+        genome_id:
+          type: string
+          example: homo_sapiens_GCA_000001405_14
+    TrackCategory:
+      type: object
+      properties:
+        track_category_id:
+          type: string
+          example: genes-transcripts
+        label:
+          type: string
+          example: Genes & transcripts
+        track_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Track'
+        types:
+          type: array
+          items:
+            type: string
+            enum:
+            - Genomic
+            - Variation
+            - Expression
+    Track:
+      type: object
+      properties:
+        track_id:
+          type: string
+          example: track:gene-pc-fwd
+        label:
+          type: string
+          example: Protein coding genes
+        color:
+          type: string
+          example: GREY
+        additional_info:
+          type: string
+          example: Forward strand
+    Object:
+      type: object
+      properties:
+        bio_type:
+          type: string
+          example: "Protein Coding"
+        description:
+          type: string
+          example: "BRCA2 DNA repair associated"
+        genome_id:
+          type: string
+          example: '#components/schemas/Genome/properties/genome_id'
+        label:
+          type: string
+          example: "BRCA2"
+        location:
+          $ref: '#/components/schemas/Location'
+        object_id:
+          type: string
+          example: "homo_sapiens_GCA_000001405_27:gene:ENSG00000139618"
+        object_type:
+          type: string
+          example: "gene"
+        stable_id:
+          type: string
+          example: "ENSG00000139618"
+        strand:
+          type: string
+          example: "forward"
+        version_stable_id:
+          type: string
+          example: "ENSG00000139618.15"
+    FeatureResponse:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/GeneFeature'
+        - $ref: '#/components/schemas/TranscriptFeature'
+    GeneFeature:
+      type: object
+      properties:
+        feature_id:
+          type: string
+          example: "homo_sapiens_GCA_000001405_27:gene:ENSG00000139618"
+        feature_code:
+          type: string
+          example: "gene"
+        bio_type_code:
+          type: string
+          example: "Protein Coding"
+        feature_description:
+          type: string
+          example: "BRCA2 DNA repair associated"
+        genome_id:
+          type: string
+          example: '#components/schemas/Genome/properties/genome_id'
+        feature_label:
+          type: string
+          example: "BRCA2"
+        slice:
+          $ref: '#/components/schemas/Slice'
+        location:
+          $ref: '#/components/schemas/FeatureLocation'
+        stable_id:
+          type: string
+          example: "ENSG00000139618"
+        associated_features:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptFeature'
+        version_stable_id:
+          type: string
+          example: "ENSG00000139618.15"    
+    TranscriptFeature:
+      type: object
+      properties:
+        feature_id:
+          type: string
+          example: "triticum_aestivum_GCA_900519105_1:transcript:TraesCS3D02G273600"
+        feature_code:
+          type: string
+          example: "transcript"
+        bio_type_code:
+          $ref: '#/components/schemas/BiotypeCode'
+        feature_description:
+          type: string
+          example: "BRCA2 DNA repair associated"
+        genome_id:
+          type: string
+          example: '#components/schemas/Genome/properties/genome_id'
+        feature_label:
+          type: string
+          example: "BRCA2"
+        slice:
+          $ref: '#/components/schemas/Slice'
+        location:
+          $ref: '#/components/schemas/FeatureLocation'
+        stable_id:
+          type: string
+          example: "ENSG00000139618"
+        support_level_code:
+          $ref: '#/components/schemas/SuportLevel'
+        version_stable_id:
+          type: string
+          example: "ENSG00000139618.15"    
+    Location:
+      type: object
+      properties:
+        chromosome:
+          type: string
+          example: "14"
+        start:
+          type: integer
+          format: int64
+          example: 32400266
+        end:
+          type: integer
+          format: int64
+          example: 32315086
+    Slice:
+      type: object
+      properties:
+        location:
+          $ref: '#/components/schemas/FeatureLocation'
+        region:
+          $ref: '#/components/schemas/Region'
+    Region:
+      type: object
+      properties:
+        region_name:
+          type: string
+          example: "3D"
+        region_code:
+          type: string
+          example: "chromosome"
+    FeatureLocation:
+      type: object
+      properties:
+        strand:
+          $ref: '#/components/schemas/Strand'
+        start:
+          type: integer
+          format: int64
+          example: 32400266
+        end:
+          type: integer
+          format: int64
+          example: 32315086
+    Strand:
+      type: string
+      enum:
+        - FORWARD
+        - REVERSE
+        - BOTH
+    SuportLevel:
+      type: string
+      enum:
+        - CANONICAL
+        - MANE_SELECT
+    BiotypeCode:
+      type: string
+      enum:
+        - PROTEIN_CODING
+        - NON_CODING
+    FocusFeatureResponse:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/FocusGeneFeature'
+        - $ref: '#/components/schemas/FocusTranscriptFeature'
+    FocusGeneFeature:
+      associated_features: 
+        type: array
+        items:
+          $ref: '#/components/schemas/TranscriptFeature'
+      $ref: '#/components/schemas/GeneFeature'
+    FocusTranscriptFeature:
+      $ref: '#/components/schemas/TranscriptFeature'
+  examples:
+    focus-feature-gene-success:
+      value:
+        feature_id: triticum_aestivum_GCA_900519105_1:gene:TraesCS3D02G273600
+        feature_code: gene
+        biotype_code: Protein Coding
+        genome_id: triticum_aestivum_GCA_900519105_1
+        feature_label: TraesCS3D02G273600
+        slice: 
+          {
+          location:  
+            {
+              strand: REVERSE,
+              start: 379535906,
+              end: 379539827  
+            },
+          region:
+            {
+              region_name: 3D,
+              region_code: chromosome
+            }
+          }
+        stable_id: TraesCS3D02G273600
+        associated_features: 
+          [ 
+            { feature_id: triticum_aestivum_GCA_900519105_1:transcript:TraesCS3D02G273600, }
+          ]
+        versioned_stable_id: 
+    focus-feature-transcript-success:
+      value:
+        feature_id: triticum_aestivum_GCA_900519105_1:transcript:TraesCS3D02G273600
+        feature_code: transcript
+        biotype_code: Protein Coding
+        genome_id: triticum_aestivum_GCA_900519105_1
+        feature_label: TraesCS3D02G273600
+        slice: {
+                location:  
+                  {
+                    strand: REVERSE,
+                    start: 379535906,
+                    end: 379539827
+                  },
+                region:
+                  {
+                    region_name: 3D,
+                    region_code: chromosome
+                  }
+                }
+        stable_id: TraesCS3D02G273600
+        support_level_code: CANONICAL
+        associated_features: 
+          {
+            gene: { feature_id: triticum_aestivum_GCA_900519105_1:gene:TraesCS3D02G273600, },
+            transcripts : [{ feature_id: triticum_aestivum_GCA_900519105_1:transcript:TraesCS3D02G273600, }]
+          }
+        versioned_stable_id: 
+    feature-info-gene-success:
+      value:
+        feature_id: triticum_aestivum_GCA_900519105_1:gene:TraesCS3D02G273600
+        feature_code: gene
+        biotype_code: Protein Coding
+        feature_description: Heat shock protein 101
+        genome_id: triticum_aestivum_GCA_900519105_1
+        feature_label: TraesCS3D02G273600
+        slice: {
+                location:  
+                  {
+                    strand: REVERSE,
+                    start: 379535906,
+                    end: 379539827
+                  },
+                region:
+                  {
+                    region_name: 3D,
+                    region_code: chromosome
+                  }
+                }
+        stable_id: TraesCS3D02G273600
+        versioned_stable_id: 
+    feature-info-transcript-success:
+      value:
+        feature_id: triticum_aestivum_GCA_900519105_1:transcript:TraesCS3D02G273600
+        feature_code: transcript
+        biotype_code: Protein Coding
+        feature_description: Heat shock protein 101
+        genome_id: triticum_aestivum_GCA_900519105_1
+        feature_label: TraesCS3D02G273600
+        slice: {
+                location:  
+                  {
+                    strand: REVERSE,
+                    start: 379535906,
+                    end: 379539827
+                  },
+                region:
+                  {
+                    region_name: 3D,
+                    region_code: chromosome
+                  }
+                }
+        stable_id: TraesCS3D02G273600
+        support_level_code: CANONICAL
+        versioned_stable_id: 
