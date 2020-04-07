@@ -1,4 +1,3 @@
-//use super::value::InterpValueData;
 use super::value::InterpValueData;
 
 pub enum StreamContents {

@@ -186,9 +186,9 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
 
 fn assign(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>, regs: &Vec<Register>) -> Result<(),String> {
     if types[0].0 == MemberMode::LValue {
-        assign_unfiltered(context,regs);
+        assign_unfiltered(context,regs)?;
     } else {
-        assign_filtered(context,types,regs);
+        assign_filtered(context,types,regs)?;
     }
     Ok(())
 }

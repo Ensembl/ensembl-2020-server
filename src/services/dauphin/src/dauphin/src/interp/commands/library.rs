@@ -24,7 +24,7 @@ impl Command for LenCommand {
                 _ => {}
             }
         }
-        registers.copy(&self.1[0],top_reg.ok_or_else(|| format!("Not a list"))?);
+        registers.copy(&self.1[0],top_reg.ok_or_else(|| format!("Not a list"))?)?;
         Ok(())
     }
 }

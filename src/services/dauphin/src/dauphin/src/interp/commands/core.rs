@@ -64,7 +64,7 @@ pub struct CopyCommand(pub(crate) Register,pub(crate) Register);
 
 impl Command for CopyCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().copy(&self.0,&self.1);
+        context.registers().copy(&self.0,&self.1)?;
         Ok(())
     }
 }
@@ -75,8 +75,8 @@ impl Command for AppendCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
         let src = registers.get(&self.1).borrow().get_shared()?;
-        let mut dstr = registers.get(&self.0);
-        let mut dst = dstr.borrow_mut().get_exclusive()?;
+        let dstr = registers.get(&self.0);
+        let dst = dstr.borrow_mut().get_exclusive()?;
         registers.write(&self.0,blit(dst,&src,None)?);
         Ok(())
     }
@@ -148,9 +148,9 @@ impl Command for FilterCommand {
         let registers = context.registers();
         let filter = registers.get_boolean(&self.2)?;
         let src = registers.get(&self.1);
-        let mut dstr = registers.get(&self.0);
+        let dstr = registers.get(&self.0);
         let src = src.borrow().get_shared()?;
-        let mut dst = dstr.borrow_mut().get_exclusive()?;
+        let dst = dstr.borrow_mut().get_exclusive()?;
         registers.write(&self.0,blit_expanded(dst,&src,&filter)?);
         Ok(())
     }

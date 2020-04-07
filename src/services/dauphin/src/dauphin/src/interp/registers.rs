@@ -7,7 +7,7 @@ use super::value::{ InterpValueData, InterpValueNumbers, InterpValueIndexes, Int
 
 pub struct RegisterFile {
     values: RefCell<HashMap<Register,Rc<RefCell<SuperCow<InterpValueData>>>>>,
-    commits: Vec<Rc<RefCell<SuperCowCommit>>>
+    commits: Vec<Rc<RefCell<dyn SuperCowCommit>>>
 }
 
 impl RegisterFile {

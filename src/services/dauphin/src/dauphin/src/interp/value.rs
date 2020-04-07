@@ -146,11 +146,11 @@ impl InterpValueData {
     pub fn get_natural(&self) -> InterpNatural {
         match self {
             InterpValueData::Empty => InterpNatural::Empty,
-            InterpValueData::Numbers(n) => InterpNatural::Numbers,
-            InterpValueData::Indexes(n) => InterpNatural::Indexes,
-            InterpValueData::Boolean(n) => InterpNatural::Boolean,
-            InterpValueData::Strings(n) => InterpNatural::Strings,
-            InterpValueData::Bytes(n) => InterpNatural::Bytes,
+            InterpValueData::Numbers(_) => InterpNatural::Numbers,
+            InterpValueData::Indexes(_) => InterpNatural::Indexes,
+            InterpValueData::Boolean(_) => InterpNatural::Boolean,
+            InterpValueData::Strings(_) => InterpNatural::Strings,
+            InterpValueData::Bytes(_) => InterpNatural::Bytes,
         }
     }
 
