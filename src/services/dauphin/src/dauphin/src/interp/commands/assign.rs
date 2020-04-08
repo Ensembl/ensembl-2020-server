@@ -161,7 +161,7 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
                 LinearPath::Length(_) => {
                     left = blit_number(left,right,Some(&filter),0,0)?;
                 },
-                LinearPath::Data => {
+                LinearPath::Data | LinearPath::Selector => {
                     left = blit(left,right,Some(&filter))?;
                 }
             }
@@ -172,7 +172,7 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
                         left = blit_number(left,right,None,initial_offset+i*copy_offset,0)?;
                     }
                 },
-                LinearPath::Data => {
+                LinearPath::Data | LinearPath::Selector => {
                     for _ in 0..filter.len() {
                         left = blit(left,right,None)?;
                     }

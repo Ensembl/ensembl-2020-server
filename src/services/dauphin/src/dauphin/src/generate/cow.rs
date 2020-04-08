@@ -237,7 +237,7 @@ mod test {
         print!("{:?}\n",context);
         prune(&mut context);
 
-        let (_prints,_,strings) = mini_interp(&mut context).expect("x");
+        let (_,strings) = mini_interp(&mut context).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -275,7 +275,7 @@ mod test {
         print!("{:?}\n",context);
         reuse_dead(&mut context);
         assign_regs(&mut context);
-        let (_prints,_,strings) = mini_interp(&mut context).expect("x");
+        let (_,strings) = mini_interp(&mut context).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

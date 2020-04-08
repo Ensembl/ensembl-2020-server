@@ -62,7 +62,7 @@ mod test {
         print!("PRUNE\n");
         prune(&mut context);
         print!("{:?}\n",context);
-        let (_prints,_values,strings) = mini_interp(&mut context).expect("x");
+        let (_values,strings) = mini_interp(&mut context).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

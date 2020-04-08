@@ -104,7 +104,7 @@ mod test {
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_prints,_,strings) = mini_interp(&mut context).expect("x");
+        let (_,strings) = mini_interp(&mut context).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

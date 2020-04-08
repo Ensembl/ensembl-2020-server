@@ -230,7 +230,7 @@ mod test {
         run_nums(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);
-        let (_prints,values,strings) = mini_interp(&mut context).expect("x");
+        let (values,strings) = mini_interp(&mut context).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);

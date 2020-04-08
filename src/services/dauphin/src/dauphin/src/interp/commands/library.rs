@@ -109,6 +109,7 @@ impl Command for PrintRegsCommand {
 
 fn print_value<T>(data: &[T], start: usize, len: usize) -> String where T: std::fmt::Display {
     let mut out = Vec::new();
+    print!("print_value({};{};{})\n",data.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","),start,len);
     for index in start..start+len {
         out.push(data[index].to_string());
     }
@@ -125,10 +126,12 @@ fn print_bytes<T>(data: &[Vec<T>], start: usize, len: usize) -> String where T: 
 
 fn print_register(context: &mut InterpContext, reg: &Register, restrict: Option<(usize,usize)>) -> Result<String,String> {
     let value = context.registers().get(reg);
+    print!("A\n");
     let value = value.borrow().get_shared()?;
+    print!("print_register({}) = {:?}\n",reg,value);
     let (start,len) = restrict.unwrap_or_else(|| { (0,value.len()) });
     Ok(match value.get_natural() {
-        InterpNatural::Empty => { String::new() },
+        InterpNatural::Empty => { "[]".to_string() },
         InterpNatural::Numbers => { print_value(&value.to_rc_numbers()?.0, start, len) },
         InterpNatural::Indexes => { print_value(&value.to_rc_indexes()?.0, start, len) },
         InterpNatural::Boolean => { print_value(&value.to_rc_boolean()?.0, start, len) },
@@ -141,7 +144,7 @@ fn print_base(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: &
     let mut data_reg = None;
     for j in indexes {
         match purposes[*j].get_linear() {
-            LinearPath::Data => { data_reg = Some(*j); },
+            LinearPath::Data | LinearPath::Selector => { data_reg = Some(*j); },
             _ => {}
         }
     }
@@ -154,6 +157,7 @@ fn print_level(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: 
         /* find registers for level */
         let mut offset_reg = None;
         let mut len_reg = None;
+        print!("purposes {:?} level={}\n",purposes,level);
         for j in indexes {
             match purposes[*j].get_linear() {
                 LinearPath::Offset(v) if level == *v => { offset_reg = Some(*j); },
@@ -161,6 +165,7 @@ fn print_level(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: 
                 _ => {}
             }
         }
+        print!("offset={:?} length={:?}\n",offset_reg,len_reg);
         let starts = &context.registers().get_indexes(&regs[offset_reg.unwrap()])?;
         let lens = &context.registers().get_indexes(&regs[len_reg.unwrap()])?;
         print!("starts={:?} lens={:?} restrict={:?}\n",starts.to_vec(),lens.to_vec(),restrict);
@@ -172,13 +177,15 @@ fn print_level(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: 
         }
         Ok(format!("{}",members.iter().map(|x| format!("[{}]",x)).collect::<Vec<_>>().join(",")))
     } else {
+        print!("print_base indexes={:?} restrict={:?}\n",indexes,restrict);
         print_base(context,purposes,regs,indexes,restrict)
     }
 }
 
 fn print_array(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: &[Register], indexes: &[usize]) -> Result<String,String> {
     let mut top_level = -1_i64;
-    for purpose in purposes.iter() {
+    for i in indexes {
+        let purpose = &purposes[*i];
         if purpose.is_top() {
             if let LinearPath::Offset(top) = purpose.get_linear() {
                 top_level = *top as i64;
@@ -186,12 +193,16 @@ fn print_array(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: 
         }
     }
     print!("top_level={}\nindexes={:?}\npurposes={:?}\n",top_level,indexes,purposes);
-    print_level(context,purposes,regs,top_level,indexes,None)
+    let mut out = print_level(context,purposes,regs,top_level,indexes,None)?;
+    if out.len() == 0 { out = "-".to_string() }
+    Ok(out)
 }
 
 fn print_complex(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: &[Register], complex: &[String], indexes: &[usize], is_complex: bool) -> Result<String,String> {
     if is_complex {
-        Ok(format!("{}: {}",complex.join("."),print_array(context,purposes,regs,indexes)?))
+        print!("complex: {:?}\n",complex);
+        let name = if complex.len() > 0 { complex.join(".") } else { "*".to_string() };
+        Ok(format!("{}: {}",name,print_array(context,purposes,regs,indexes)?))
     } else {
         print_array(context,purposes,regs,indexes)
     }
@@ -206,7 +217,10 @@ fn print_vec(context: &mut InterpContext, purposes: &Vec<RegisterPurpose>, regs:
         if complex.len() > 0 { is_complex = true; }
         complexes.entry(complex).or_insert_with(|| { vec![] }).push(i);
     }
-    for (complex,indexes) in complexes.iter() {
+    let mut complex_keys = complexes.keys().map(|x| x.to_vec()).collect::<Vec<_>>();
+    complex_keys.sort();
+    for complex in complex_keys.iter() {
+        let indexes = complexes.get(complex).unwrap();
         out.push(print_complex(context,purposes,regs,complex,indexes,is_complex)?);
     }
     let mut out = out.join("; ");
@@ -219,9 +233,7 @@ pub struct PrintVecCommand(pub(crate) Vec<(MemberMode,Vec<RegisterPurpose>,Membe
 impl Command for PrintVecCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let purposes = &self.0[0].1;
-        print!("purposes/A {:?}\n",purposes);
         let v = StreamContents::String(print_vec(context,&purposes,&self.1)?);
-        print!("STREAM ADD {:?}\n",print_vec(context,&purposes,&self.1)?);
         context.stream_add(v);
         Ok(())
     }

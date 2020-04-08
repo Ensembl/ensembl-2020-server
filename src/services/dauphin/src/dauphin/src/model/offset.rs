@@ -5,6 +5,7 @@ use crate::typeinf::{ BaseType, ContainerType, MemberType };
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub enum LinearPath {
+    Selector,
     Data,
     Offset(usize),
     Length(usize)
@@ -23,6 +24,7 @@ impl LinearPath {
 impl fmt::Display for LinearPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            LinearPath::Selector => write!(f,"S"),
             LinearPath::Data => write!(f,"D"),
             LinearPath::Offset(n) => write!(f,"A{}",n),
             LinearPath::Length(n) => write!(f,"B{}",n)
@@ -103,7 +105,12 @@ impl RegisterPurpose {
     }
 
     fn from_enum(defstore: &DefStore, se: &EnumDef, cpath: &Vec<String>, container: &ContainerType) -> Result<Vec<RegisterPurpose>,String> {
-        let mut out = Vec::new();
+        let mut out = vec![RegisterPurpose {
+            complex: cpath.to_vec(),
+            linear: LinearPath::Selector,
+            base: BaseType::NumberType,
+            top: true
+        }];
         for name in se.get_names() {
             let mut new_cpath = cpath.to_vec();
             new_cpath.push(name.to_string());
@@ -162,6 +169,6 @@ mod test {
         let regs = offset(&defstore,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("D/boolean",format_pvec(&regs));
         let regs = offset(&defstore,&make_type(&defstore,"vec(etest3)")).expect("b");
-        assert_eq!("A.A.D/number,A.A.A0,A.A.B0,A.A.A1,A.A.B1,A.B.X.D/string,A.B.X.A0,A.B.X.B0,A.B.Y.D/boolean,A.B.Y.A0,A.B.Y.B0,B.X.D/string,B.X.A0,B.X.B0,B.Y.D/boolean,B.Y.A0,B.Y.B0,C.D/boolean,C.A0,C.B0,D.D/number,D.A0,D.B0,D.A1,D.B1,D.A2,D.B2",format_pvec(&regs));
+        assert_eq!("S,A.A.D/number,A.A.A0,A.A.B0,A.A.A1,A.A.B1,A.B.S,A.B.X.D/string,A.B.X.A0,A.B.X.B0,A.B.Y.D/boolean,A.B.Y.A0,A.B.Y.B0,B.S,B.X.D/string,B.X.A0,B.X.B0,B.Y.D/boolean,B.Y.A0,B.Y.B0,C.D/boolean,C.A0,C.B0,D.D/number,D.A0,D.B0,D.A1,D.B1,D.A2,D.B2",format_pvec(&regs));
     }
 }

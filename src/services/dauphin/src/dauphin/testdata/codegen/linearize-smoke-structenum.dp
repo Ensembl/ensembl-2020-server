@@ -66,4 +66,4 @@ an etest3 has register structure:
 */
 
 a := etest3:C true;
-print_regs(a);
+print_vec(a);
