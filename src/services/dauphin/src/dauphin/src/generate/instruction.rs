@@ -24,6 +24,26 @@ fn fixed(bt: BaseType) -> ArgumentConstraint {
 }
 
 #[derive(Clone,PartialEq,Debug)]
+pub enum InstructionSuperType {
+    Nil,
+    Copy,
+    Append,
+    Filter,
+    Run,
+    NumEq,
+    Length,
+    Add,
+    SeqFilter,
+    SeqAt,
+    Const,
+    NumberConst,
+    BooleanConst,
+    StringConst,
+    BytesConst,
+    Call
+}
+
+#[derive(Clone,PartialEq,Debug)]
 pub enum InstructionType {
     Nil,
     Alias,

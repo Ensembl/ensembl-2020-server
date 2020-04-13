@@ -144,7 +144,7 @@ fn print_base(context: &mut InterpContext, purposes: &[RegisterPurpose], regs: &
     let mut data_reg = None;
     for j in indexes {
         match purposes[*j].get_linear() {
-            LinearPath::Data | LinearPath::Selector => { data_reg = Some(*j); },
+            LinearPath::Data => { data_reg = Some(*j); },
             _ => {}
         }
     }

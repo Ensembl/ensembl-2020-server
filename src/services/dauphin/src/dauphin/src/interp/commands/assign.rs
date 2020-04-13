@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 use crate::model::{ LinearPath, Register, RegisterPurpose };
-use crate::typeinf::{ MemberMode, MemberDataFlow };
 use super::super::context::{InterpContext };
 use crate::interp::{ InterpValue, InterpNatural };
 use super::super::command::Command;
@@ -120,7 +119,7 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
 
 
 /// XXX ban multi-Lvalue
-fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>, regs: &Vec<Register>) -> Result<(),String> {
+fn assign_filtered(context: &mut InterpContext, purposes: &Vec<Vec<RegisterPurpose>>, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
     let len = (regs.len()-1)/2;
     let filter_reg = registers.get_indexes(&regs[0])?;
@@ -135,8 +134,8 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
     for r in &mut left_all_reg {
         left_all.push(r.borrow().get_shared()?);
     }    
-    let left_purposes = &types[1].1;
-    let right_purposes = &types[2].1;
+    let left_purposes = &purposes[1];
+    let right_purposes = &purposes[2];
     /* get current lengths (to calculate offsets) */
     let mut left_len = HashMap::new();
     let mut right_len = HashMap::new();
@@ -161,7 +160,7 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
                 LinearPath::Length(_) => {
                     left = blit_number(left,right,Some(&filter),0,0)?;
                 },
-                LinearPath::Data | LinearPath::Selector => {
+                LinearPath::Data => {
                     left = blit(left,right,Some(&filter))?;
                 }
             }
@@ -172,7 +171,7 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
                         left = blit_number(left,right,None,initial_offset+i*copy_offset,0)?;
                     }
                 },
-                LinearPath::Data | LinearPath::Selector => {
+                LinearPath::Data => {
                     for _ in 0..filter.len() {
                         left = blit(left,right,None)?;
                     }
@@ -184,20 +183,20 @@ fn assign_filtered(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<Regi
     Ok(())
 }
 
-fn assign(context: &mut InterpContext, types: &Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>, regs: &Vec<Register>) -> Result<(),String> {
-    if types[0].0 == MemberMode::LValue {
-        assign_unfiltered(context,regs)?;
+fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<Vec<RegisterPurpose>>, regs: &Vec<Register>) -> Result<(),String> {
+    if filtered {
+        assign_filtered(context,purposes,regs)?;
     } else {
-        assign_filtered(context,types,regs)?;
+        assign_unfiltered(context,regs)?;
     }
     Ok(())
 }
 
-pub struct AssignCommand(pub(crate) Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>,pub(crate) Vec<Register>);
+pub struct AssignCommand(pub(crate) bool, pub(crate) Vec<Vec<RegisterPurpose>>, pub(crate) Vec<Register>);
 
 impl Command for AssignCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        assign(context,&self.0,&self.1)?;
+        assign(context,self.0,&self.1,&self.2)?;
         Ok(())
     }
 }

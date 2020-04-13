@@ -444,7 +444,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let (values,strings) = mini_interp(&mut context).expect("x");
+        let (_values,strings) = mini_interp(&mut context).expect("x");
         assert_eq!("{ *: 2; A.A: -; A.B: 0; A.B.X: 0; A.B.Y: -; B: 0; B.X: 0; B.Y: -; C: true; D: - }",strings[0]);
     }
 

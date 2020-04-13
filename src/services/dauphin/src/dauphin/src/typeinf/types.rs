@@ -146,8 +146,8 @@ pub enum MemberMode {
 
 #[derive(Debug,Clone,Copy,PartialEq)]
 pub enum MemberDataFlow {
-    JustifiesCall,  /* If this register is justified, so is this call */
-    Normal          /* If this call is justified, so is this register */
+    JustifiesCall,  /* If this register is justified, so is this call (ie out or in/out) */
+    Normal          /* If this call is justified, so is this register (ie in) */
 }
 
 impl fmt::Display for MemberDataFlow {

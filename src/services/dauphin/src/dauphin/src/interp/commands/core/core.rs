@@ -1,61 +1,57 @@
-use super::super::context::{InterpContext };
+use crate::interp::context::{InterpContext };
 use crate::interp::InterpValue;
-use super::super::command::Command;
+use crate::interp::command::{ Command, CommandSchema, CommandType };
 use crate::model::Register;
-use super::assign::{ blit, blit_expanded, blit_runs };
+use crate::interp::commands::assign::{ blit, blit_expanded, blit_runs };
+use crate::generate::{ Instruction, InstructionSuperType };
+use serde_cbor::Value as CborValue;
+
+// XXX read is coerce
+
+struct InstrPlainCommand(InstructionSuperType,u8,usize,Box<dyn Fn(&[Register]) -> Result<Box<dyn Command>,String>>);
+
+impl CommandType for InstrPlainCommand {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            opcode: self.1,
+            values: self.2,
+            instructions: vec![self.0.clone()],
+            commands: vec![]
+        }
+    }
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        (self.3)(&it.regs)
+    }
+
+    fn deserialise(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+        (self.3)(&(0..self.2).map(|x| Register::deserialize(&value[x])).collect::<Result<Vec<_>,String>>()?)
+    }
+}
+
+fn core_commands() {
+    let nil_command = InstrPlainCommand(InstructionSuperType::Nil,0,1,Box::new(|x| Ok(Box::new(NilCommand(x[0])))));
+    /* 1-5 used in consts */
+    let copy_command = InstrPlainCommand(InstructionSuperType::Copy,6,2,Box::new(|x| Ok(Box::new(CopyCommand(x[0],x[1])))));
+    let append_command = InstrPlainCommand(InstructionSuperType::Append,7,2,Box::new(|x| Ok(Box::new(AppendCommand(x[0],x[1])))));
+    let length_command = InstrPlainCommand(InstructionSuperType::Length,8,2,Box::new(|x| Ok(Box::new(LengthCommand(x[0],x[1])))));
+    let add_command = InstrPlainCommand(InstructionSuperType::Add,9,2,Box::new(|x| Ok(Box::new(AddCommand(x[0],x[1])))));
+    let numeq_command = InstrPlainCommand(InstructionSuperType::Add,10,3,Box::new(|x| Ok(Box::new(NumEqCommand(x[0],x[1],x[2])))));
+    let filter_command = InstrPlainCommand(InstructionSuperType::Add,11,3,Box::new(|x| Ok(Box::new(FilterCommand(x[0],x[1],x[2])))));
+    let run_command = InstrPlainCommand(InstructionSuperType::Add,12,3,Box::new(|x| Ok(Box::new(RunCommand(x[0],x[1],x[2])))));
+    let seqfilter_command = InstrPlainCommand(InstructionSuperType::Add,13,4,Box::new(|x| Ok(Box::new(SeqFilterCommand(x[0],x[1],x[2],x[3])))));
+    let seqat_command = InstrPlainCommand(InstructionSuperType::Add,14,2,Box::new(|x| Ok(Box::new(SeqAtCommand(x[0],x[1])))));
+}
 
 pub struct NilCommand(pub(crate) Register);
 
-// XXX read is coerce
 impl Command for NilCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers().write(&self.0,InterpValue::Empty);
         Ok(())
     }
-}
 
-pub struct NumberConstCommand(pub(crate) Register,pub(crate) f64);
-
-impl Command for NumberConstCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Numbers(vec![self.1]));
-        Ok(())
-    }
-}
-
-pub struct ConstCommand(pub(crate) Register,pub(crate) Vec<usize>);
-
-impl Command for ConstCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Indexes(self.1.to_vec()));
-        Ok(())
-    }
-}
-
-pub struct BooleanConstCommand(pub(crate) Register,pub(crate) bool);
-
-impl Command for BooleanConstCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Boolean(vec![self.1]));
-        Ok(())
-    }
-}
-
-pub struct StringConstCommand(pub(crate) Register,pub(crate) String);
-
-impl Command for StringConstCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Strings(vec![self.1.to_string()]));
-        Ok(())
-    }
-}
-
-pub struct BytesConstCommand(pub(crate) Register,pub(crate) Vec<u8>);
-
-impl Command for BytesConstCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Bytes(vec![self.1.to_vec()]));
-        Ok(())
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise()])
     }
 }
 
@@ -65,6 +61,10 @@ impl Command for CopyCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers().copy(&self.0,&self.1)?;
         Ok(())
+    }
+
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise()])
     }
 }
 
@@ -79,6 +79,10 @@ impl Command for AppendCommand {
         registers.write(&self.0,blit(dst,&src,None)?);
         Ok(())
     }
+
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise()])
+    }
 }
 
 pub struct LengthCommand(pub(crate) Register,pub(crate) Register);
@@ -89,6 +93,10 @@ impl Command for LengthCommand {
         let len = registers.get(&self.1).borrow().get_shared()?.len();
         registers.write(&self.0,InterpValue::Indexes(vec![len]));
         Ok(())
+    }
+
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise()])
     }
 }
 
@@ -106,20 +114,9 @@ impl Command for AddCommand {
         registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
     }
-}
 
-pub struct AtCommand(pub(crate) Register,pub(crate) Register);
-
-impl Command for AtCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
-        let src = &registers.get_indexes(&self.1)?;
-        let mut dst = vec![];
-        for i in 0..src.len() {
-            dst.push(i);
-        }
-        registers.write(&self.0,InterpValue::Indexes(dst));
-        Ok(())
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise()])
     }
 }
 
@@ -138,6 +135,10 @@ impl Command for NumEqCommand {
         registers.write(&self.0,InterpValue::Boolean(dst));
         Ok(())
     }
+
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise()])
+    }
 }
 
 pub struct FilterCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register);
@@ -150,6 +151,10 @@ impl Command for FilterCommand {
         let src = src.borrow().get_shared()?;
         registers.write(&self.0,blit_expanded(InterpValue::Empty,&src,&filter)?);
         Ok(())
+    }
+
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise()])
     }
 }
 
@@ -171,6 +176,10 @@ impl Command for RunCommand {
         registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
     }
+
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise()])
+    }
 }
 
 pub struct SeqFilterCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register, pub(crate) Register);
@@ -184,6 +193,10 @@ impl Command for SeqFilterCommand {
         let src = src.borrow().get_shared()?;
         registers.write(&self.0,blit_runs(InterpValue::Empty,&src,&start,&len)?);
         Ok(())
+    }
+
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise(),self.3.serialise()])
     }
 }
 
@@ -201,5 +214,9 @@ impl Command for SeqAtCommand {
         }
         registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
+    }
+
+    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialise(),self.1.serialise()])
     }
 }

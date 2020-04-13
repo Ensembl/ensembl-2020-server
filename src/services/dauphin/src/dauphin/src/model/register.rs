@@ -1,9 +1,24 @@
 use std::fmt;
 use std::rc::Rc;
 use std::cell::RefCell;
+use serde_cbor::Value as CborValue;
 
 #[derive(Clone,Copy,Hash,PartialEq,Eq,PartialOrd,Ord)]
 pub struct Register(pub usize);
+
+impl Register {
+    pub fn deserialize(v: &CborValue) -> Result<Register,String> {
+        if let CborValue::Integer(r) = v {
+            Ok(Register(*r as usize))
+        } else {
+            Err("bad cbor, expected register".to_string())
+        }
+    }
+
+    pub fn serialise(&self) -> CborValue {
+        CborValue::Integer(self.0 as i128)
+    }
+}
 
 impl fmt::Debug for Register {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

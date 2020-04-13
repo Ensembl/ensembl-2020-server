@@ -17,7 +17,7 @@ pub use self::cow::{ copy_on_write, reuse_const };
 pub use self::dealias::remove_aliases;
 pub use self::gencontext::{ GenContext, generate_and_optimise };
 pub use self::codegen::generate_code;
-pub use self::instruction::{ Instruction, InstructionType };
+pub use self::instruction::{ Instruction, InstructionType, InstructionSuperType };
 pub use self::linearize::linearize;
 pub use self::prune::prune;
 pub use self::reusedead::reuse_dead;

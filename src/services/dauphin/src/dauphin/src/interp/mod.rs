@@ -3,7 +3,10 @@ mod context;
 mod harness;
 mod stream;
 mod commands {
-    pub mod core;
+    pub mod core {
+        pub mod consts;
+        pub mod core;
+    }
     pub mod assign;
     pub mod library;
 }
