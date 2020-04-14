@@ -11,58 +11,13 @@ C (1/bool)
 D (3/number)
 
 
-* (discrim)
-+ D/number
-+ A0
-+ B0
-
-A.A
-+ A.A.D/number
-+ A.A.A0
-+ A.A.B0
-+ A.A.A1
-+ A.A.B1
-
-A.B (discrim)
-+ A.B.D/number
-+ A.B.A0
-+ A.B.B0
-
-A.B.X
-+ A.B.X.D/string
-+ A.B.X.A0
-+ A.B.X.B0
-
-A.B.Y
-+ A.B.Y.D/boolean
-+ A.B.Y.A0
-+ A.B.Y.B0
-
-B (discrim)
-+ B.D/number
-+ B.A0
-+ B.B0
-
-B.X
-+ B.X.D/string
-+ B.X.A0
-+ B.X.B0
-
-B.Y
-+ B.Y.D/boolean
-+ B.Y.A0
-+ B.Y.B0
-
-C
-+ C.D/boolean
-+ C.A0
-+ C.B0
-
-D
-+ D.D/number
-+ D.A0
-+ D.B0
-+ D.A1
-+ D.B1
-+ D.A2
-+ D.B2
++ <1:number>
++ A.A<2:number>
++ A.B<1:number>
++ A.B.X<1:string>
++ A.B.Y<1:boolean>
++ B<1:number>
++ B.X<1:string>
++ B.Y<1:boolean>
++ C<1:boolean>
++ D<3:number>

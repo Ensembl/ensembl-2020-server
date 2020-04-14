@@ -332,7 +332,6 @@ pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),Stri
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use super::super::call;
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };

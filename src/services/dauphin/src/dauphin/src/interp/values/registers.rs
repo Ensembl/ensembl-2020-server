@@ -51,6 +51,12 @@ impl RegisterFile {
         ).clone()
     }
 
+    pub fn len(&self, register: &Register) -> Result<usize,String> {
+        let reg = self.get(register);
+        let reg = reg.borrow().get_shared()?;
+        Ok(reg.len())
+    }
+
     pub fn write(&mut self, register: &Register, value: InterpValue) {
         let cow = self.get(register);
         cow.borrow_mut().set(value);

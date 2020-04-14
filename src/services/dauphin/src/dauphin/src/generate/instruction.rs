@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::model::{ DefStore, Register, RegisterPurpose };
+use crate::model::{ DefStore, Register, VectorRegisters };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
@@ -80,7 +80,7 @@ pub enum InstructionType {
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
-    Call(String,bool,Vec<(MemberMode,Vec<RegisterPurpose>,MemberDataFlow)>)
+    Call(String,bool,Vec<(MemberMode,Vec<VectorRegisters>,MemberDataFlow)>)
 }
 
 impl InstructionType {
@@ -214,7 +214,7 @@ impl InstructionType {
                     if let MemberDataFlow::JustifiesCall = sig.2 {
                         these_regs = true;
                     }
-                    let num_regs = sig.1.len();
+                    let num_regs = sig.1.iter().map(|x| x.register_count()).sum();
                     if these_regs {
                         for i in 0..num_regs {
                             out.push(reg_offset+i);

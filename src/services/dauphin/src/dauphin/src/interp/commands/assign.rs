@@ -1,6 +1,6 @@
 use std::rc::Rc;
-use std::collections::HashMap;
-use crate::model::{ LinearPath, Register, RegisterPurpose };
+use crate::model::{ Register, VectorRegisters };
+use crate::interp::values::registers::RegisterFile;
 use super::super::context::{InterpContext };
 use crate::interp::{ InterpValue, InterpNatural };
 use super::super::command::Command;
@@ -118,8 +118,19 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
 }
 
 
+fn assign_reg<T>(registers: &mut RegisterFile, regs: &[Register], left_idx: usize, right_idx: usize, cb: T) -> Result<(),String> 
+        where T: Fn(InterpValue,&Rc<InterpValue>) -> Result<InterpValue,String> {
+    let right = registers.get(&regs[right_idx]);
+    let right = right.borrow().get_shared()?;
+    let left = registers.get(&regs[left_idx]);
+    let left = left.borrow_mut().get_exclusive()?;
+    let left = cb(left,&right)?;
+    registers.write(&regs[left_idx],left);
+    Ok(())
+}
+
 /// XXX ban multi-Lvalue
-fn assign_filtered(context: &mut InterpContext, purposes: &Vec<Vec<RegisterPurpose>>, regs: &Vec<Register>) -> Result<(),String> {
+fn assign_filtered(context: &mut InterpContext, assignments: &Vec<Vec<VectorRegisters>>, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
     let len = (regs.len()-1)/2;
     let filter_reg = registers.get_indexes(&regs[0])?;
@@ -133,57 +144,64 @@ fn assign_filtered(context: &mut InterpContext, purposes: &Vec<Vec<RegisterPurpo
     let mut left_all = vec![];
     for r in &mut left_all_reg {
         left_all.push(r.borrow().get_shared()?);
-    }    
-    let left_purposes = &purposes[1];
-    let right_purposes = &purposes[2];
-    /* get current lengths (to calculate offsets) */
-    let mut left_len = HashMap::new();
-    let mut right_len = HashMap::new();
-    for (j,purpose) in right_purposes.iter().enumerate() {
-        left_len.insert(purpose.get_linear(),left_all[j].len());
-        right_len.insert(purpose.get_linear(),right_all[j].len());
     }
-    for (j,purpose) in left_purposes.iter().enumerate() {
-        let mut left = left_all_reg[j].borrow_mut().get_exclusive()?;
-        let right = &right_all[j];
-        let initial_offset = purpose.get_linear().references()
-            .and_then(|p| left_len.get(&p).cloned())
-            .unwrap_or(0);
-        let copy_offset = purpose.get_linear().references()
-            .and_then(|p| right_len.get(&p).cloned())
-            .unwrap_or(0);
-        if purpose.is_top() {
-            match purpose.get_linear() {
-                LinearPath::Offset(_) => {
-                    left = blit_number(left,right,Some(&filter),initial_offset,copy_offset)?;
-                },
-                LinearPath::Length(_) => {
-                    left = blit_number(left,right,Some(&filter),0,0)?;
-                },
-                LinearPath::Data => {
-                    left = blit(left,right,Some(&filter))?;
-                }
+    let mut left_start = 1;
+    let mut right_start = (regs.len()+1)/2;
+    /* get lengths while we can be gurarnteed a shared borrow */
+    let mut prep = vec![];
+    for a_idx in 0..assignments[1].len() {
+        let a_left = &assignments[1][a_idx];
+        let a_right = &assignments[2][a_idx];
+        let depth = a_left.depth();
+        let mut do_filter : Option<&Vec<usize>> = Some(filter);
+        for level in (0..depth).rev() {
+            /* how long are the lower registers? */
+            let left_lower = left_start + if level > 0 { a_left.level_offset(level-1).unwrap() } else { a_left.data() };
+            let left_lower_len = registers.len(&regs[left_lower])?;
+            let right_lower = right_start + if level > 0 { a_right.level_offset(level-1).unwrap() } else { a_right.data() };
+            let right_lower_len = registers.len(&regs[right_lower])?;
+            let left_self = left_start + a_left.level_offset(level).unwrap();
+            let right_self = right_start + a_right.level_offset(level).unwrap();            
+            prep.push((left_self,right_self,do_filter,Some((left_lower_len,right_lower_len)),level == depth-1));
+            let left_self = left_start + a_left.level_length(level).unwrap();
+            let right_self = right_start + a_right.level_length(level).unwrap();            
+            prep.push((left_self,right_self,do_filter,Some((0,0)),level == depth-1));
+            do_filter = None;
+        }
+        let left_self = left_start + a_left.data();
+        let right_self = right_start + a_right.data();
+        prep.push((left_self,right_self,do_filter,None,depth == 0));
+        left_start += a_left.register_count();
+        right_start += a_right.register_count();
+    }
+    /* now do it */
+    for (left_self,right_self,our_filter,gait,top) in prep {
+        if let Some((ref start,ref stride)) = gait {
+            if top {
+                assign_reg(registers,regs,left_self,right_self, |left,right| {
+                    blit_number(left,&right,our_filter,*start,*stride)
+                })?;
+            } else {
+                assign_reg(registers,regs,left_self,right_self, |mut left,right| {
+                    for i in 0..filter.len() {
+                        left = blit_number(left,right,None,start+i*stride,0)?;
+                    }
+                    Ok(left)
+                })?;
             }
         } else {
-            match purpose.get_linear() {
-                LinearPath::Offset(_) | LinearPath::Length(_) => {
-                    for i in 0..filter.len() {
-                        left = blit_number(left,right,None,initial_offset+i*copy_offset,0)?;
-                    }
-                },
-                LinearPath::Data => {
-                    for _ in 0..filter.len() {
-                        left = blit(left,right,None)?;
-                    }
+            assign_reg(registers,regs,left_self,right_self, |mut left,right| {
+                for _ in 0..filter.len() {
+                    left = blit(left,right,our_filter)?;
                 }
-            }
+                Ok(left)
+            })?;
         }
-        registers.write(&regs[j+1],left);
     }
     Ok(())
 }
 
-fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<Vec<RegisterPurpose>>, regs: &Vec<Register>) -> Result<(),String> {
+fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<Vec<VectorRegisters>>, regs: &Vec<Register>) -> Result<(),String> {
     if filtered {
         assign_filtered(context,purposes,regs)?;
     } else {
@@ -192,7 +210,7 @@ fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<Vec<Regist
     Ok(())
 }
 
-pub struct AssignCommand(pub(crate) bool, pub(crate) Vec<Vec<RegisterPurpose>>, pub(crate) Vec<Register>);
+pub struct AssignCommand(pub(crate) bool, pub(crate) Vec<Vec<VectorRegisters>>, pub(crate) Vec<Register>);
 
 impl Command for AssignCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {

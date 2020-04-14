@@ -4,126 +4,90 @@ use super::structenum::{ EnumDef, StructDef };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
-pub enum LinearPath {
-    Data,
-    Offset(usize),
-    Length(usize)
-}
-
-impl LinearPath {
-    pub fn references(&self) -> Option<LinearPath> {
-        match self {
-            LinearPath::Offset(0) => Some(LinearPath::Data),
-            LinearPath::Offset(n) => Some(LinearPath::Offset(n-1)),
-            _ => None
-        }
-    }
-}
-
-impl fmt::Display for LinearPath {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LinearPath::Data => write!(f,"D"),
-            LinearPath::Offset(n) => write!(f,"A{}",n),
-            LinearPath::Length(n) => write!(f,"B{}",n)
-        }
-    }
-}
-
-#[derive(Debug,Clone,PartialEq,Eq,Hash)]
-pub struct RegisterPurpose {
+pub struct VectorRegisters {
     complex: Vec<String>,
-    linear: LinearPath,
-    base: BaseType,
-    top: bool
+    depth: usize,
+    base: BaseType    
 }
 
-impl fmt::Display for RegisterPurpose {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut parts = self.complex.iter().map(|x| format!("{}",x)).collect::<Vec<_>>();
-        let linear = match self.linear {
-            LinearPath::Data => format!("{}/{}",self.linear,self.base),
-            _ => format!("{}",self.linear)
-        };
-        parts.push(linear);
-        Ok(write!(f,"{}",parts.join("."))?)
-    }
-}
-
-// XXX deduplicate from_struct/from_enum by shifting to StructEnum universally
-impl RegisterPurpose {
-    fn register_sequence(prefix: &[String], base: BaseType, levels: usize) -> Vec<RegisterPurpose> {
-        let mut out = Vec::new();
-        out.push(RegisterPurpose {
-            complex: prefix.to_vec(),
-            linear: LinearPath::Data,
-            base,
-            top: levels == 0
-        });
-        for i in 0..levels {
-            let top = i == levels-1;
-            out.push(RegisterPurpose {
-                complex: prefix.to_vec(),
-                linear: LinearPath::Offset(i),
-                base: BaseType::NumberType,
-                top
-            });
-            out.push(RegisterPurpose {
-                complex: prefix.to_vec(),
-                linear: LinearPath::Length(i),
-                base: BaseType::NumberType,
-                top
-            });
-        }
-        out
+impl VectorRegisters {
+    pub fn get_complex(&self) -> &Vec<String> {
+        &self.complex
     }
 
-    fn vec_from_type(defstore: &DefStore, type_: &MemberType, prefix: &[String], container: &ContainerType) -> Result<Vec<RegisterPurpose>,String> {
+    pub fn depth(&self) -> usize { self.depth }
+
+    pub fn data(&self) -> usize { 0 }
+
+    pub fn level_offset(&self, level: usize) -> Option<usize> {
+        if self.depth > level { Some(level*2+1) } else { None }
+    }
+
+    pub fn level_length(&self, level: usize) -> Option<usize> {
+        if self.depth > level { Some(level*2+2) } else { None }
+    }
+
+    pub fn register_count(&self) -> usize { self.depth*2+1 }
+
+    fn vec_from_type(defstore: &DefStore, type_: &MemberType, prefix: &[String], container: &ContainerType) -> Result<Vec<VectorRegisters>,String> {
         let container = container.merge(&type_.get_container());
         match type_.get_base() {
             BaseType::StructType(name) => {
                 let struct_ = defstore.get_struct(&name).unwrap();
-                RegisterPurpose::from_struct(defstore,struct_,prefix,&container)
+                VectorRegisters::from_struct(defstore,struct_,prefix,&container)
             },
             BaseType::EnumType(name) => {
                 let enum_ = defstore.get_enum(&name).unwrap();
-                RegisterPurpose::from_enum(defstore,enum_,prefix,&container)
+                VectorRegisters::from_enum(defstore,enum_,prefix,&container)
             },
             base => {
-                Ok(RegisterPurpose::register_sequence(prefix,base,container.depth()))
+                Ok(vec![VectorRegisters {
+                    complex: prefix.to_vec(),
+                    base,
+                    depth: container.depth()
+                }])
             }
         }
     }
 
-    fn from_struct(defstore: &DefStore, se: &StructDef, cpath: &[String], container: &ContainerType) -> Result<Vec<RegisterPurpose>,String> {
+    fn from_struct(defstore: &DefStore, se: &StructDef, cpath: &[String], container: &ContainerType) -> Result<Vec<VectorRegisters>,String> {
         let mut out = Vec::new();
         for name in se.get_names() {
             let mut new_cpath = cpath.to_vec();
             new_cpath.push(name.to_string());
             let type_ = se.get_member_type(name).unwrap();
-            out.append(&mut RegisterPurpose::vec_from_type(defstore,&type_,&new_cpath,container)?);
+            out.append(&mut VectorRegisters::vec_from_type(defstore,&type_,&new_cpath,container)?);
         }
         Ok(out)
     }
 
-    fn from_enum(defstore: &DefStore, se: &EnumDef, cpath: &[String], container: &ContainerType) -> Result<Vec<RegisterPurpose>,String> {
-        let mut out = RegisterPurpose::register_sequence(cpath,BaseType::NumberType,container.depth());
+    fn from_enum(defstore: &DefStore, se: &EnumDef, cpath: &[String], container: &ContainerType) -> Result<Vec<VectorRegisters>,String> {
+        let mut out = vec![VectorRegisters {
+            complex: cpath.to_vec(),
+            base: BaseType::NumberType,
+            depth: container.depth()
+        }];
         for name in se.get_names() {
             let mut new_cpath = cpath.to_vec();
             new_cpath.push(name.to_string());
             let type_ = se.get_branch_type(name).unwrap();
-            out.append(&mut RegisterPurpose::vec_from_type(defstore,&type_,&new_cpath,container)?);
+            out.append(&mut VectorRegisters::vec_from_type(defstore,&type_,&new_cpath,container)?);
         }
         Ok(out)
     }
+}
 
-    pub fn get_complex(&self) -> &Vec<String> { &self.complex }
-    pub fn get_linear(&self) -> &LinearPath { &self.linear }
-    pub fn is_top(&self) -> bool { self.top }
-}   
+impl fmt::Display for VectorRegisters {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let parts = self.complex.iter().map(|x| format!("{}",x)).collect::<Vec<_>>();
+        Ok(write!(f,"{}<{}:{:?}>",parts.join("."),self.depth,self.base)?)
+    }
+}
 
-pub fn offset(defstore: &DefStore, type_: &MemberType) -> Result<Vec<RegisterPurpose>,String> {
-    RegisterPurpose::vec_from_type(defstore,type_,&vec![],&ContainerType::new_empty())
+// XXX deduplicate from_struct/from_enum by shifting to StructEnum universally
+
+pub fn get_assignments(defstore: &DefStore, type_: &MemberType) -> Result<Vec<VectorRegisters>,String> {
+    VectorRegisters::vec_from_type(defstore,type_,&vec![],&ContainerType::new_empty())
 }
 
 #[cfg(test)]
@@ -152,16 +116,16 @@ mod test {
         parse_type(&mut lexer,defstore).expect("bad type")
     }
 
-    fn format_pvec(pp: &Vec<RegisterPurpose>) -> String {
+    fn format_pvec(ass: &Vec<VectorRegisters>) -> String {
         let mut first = true;
         let mut out = String::new();
-        for p in pp {
+        for a in ass {
             if first {
                 first = false;
             } else {
                 out.push_str(",");
             }
-            out.push_str(&p.to_string());
+            out.push_str(&a.to_string());
         }
         out
     }
@@ -187,9 +151,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let _context = generate_code(&defstore,stmts).expect("codegen");
-        let regs = offset(&defstore,&make_type(&defstore,"boolean")).expect("a");
-        assert_eq!("D/boolean",format_pvec(&regs));
-        let regs = offset(&defstore,&make_type(&defstore,"vec(etest3)")).expect("b");
+        let regs = get_assignments(&defstore,&make_type(&defstore,"boolean")).expect("a");
+        assert_eq!("<0:boolean>",format_pvec(&regs));
+        let regs = get_assignments(&defstore,&make_type(&defstore,"vec(etest3)")).expect("b");
         assert_eq!(load_cmp("offset-smoke.out"),format_pvec(&regs));
     }
 
@@ -201,7 +165,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
-        let regs = offset(&defstore,&make_type(&defstore,"stest")).expect("b");
+        let regs = get_assignments(&defstore,&make_type(&defstore,"stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");

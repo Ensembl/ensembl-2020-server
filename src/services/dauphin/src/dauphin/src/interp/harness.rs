@@ -12,7 +12,7 @@ use crate::interp::commands::core::core::{
 use crate::interp::commands::core::consts::{
     NumberConstCommand, ConstCommand, BooleanConstCommand, StringConstCommand, BytesConstCommand
 };
-use crate::typeinf::{ MemberMode, MemberDataFlow };
+use crate::typeinf::MemberMode;
 
 use crate::interp::commands::library::{
      LenCommand, EqCommand, InterpBinBoolCommand, InterpBinBoolOp, PrintVecCommand, PrintRegsCommand,
@@ -64,14 +64,14 @@ fn instruction_to_command(instr: &Instruction) -> Box<dyn Command> {
         InstructionType::Call(name,_,types) => {
             match &name[..] {
                 "assign" => { Box::new(AssignCommand(types[0].0 != MemberMode::LValue,types.iter().map(|x| x.1.to_vec()).collect(),instr.regs.to_vec())) },
-                "print_regs" => { Box::new(PrintRegsCommand(types.to_vec(),instr.regs.to_vec())) },
+                "print_regs" => { Box::new(PrintRegsCommand(instr.regs.to_vec())) },
                 "print_vec" => { Box::new(PrintVecCommand(types.to_vec(),instr.regs.to_vec())) },
                 "len" => { Box::new(LenCommand(types.to_vec(),instr.regs.to_vec())) },
                 "eq" => { Box::new(EqCommand(types.to_vec(),instr.regs.to_vec())) },
-                "lt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Lt,types.to_vec(),instr.regs.to_vec())) },
-                "gt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Gt,types.to_vec(),instr.regs.to_vec())) },
-                "lteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::LtEq,types.to_vec(),instr.regs.to_vec())) },
-                "gteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::GtEq,types.to_vec(),instr.regs.to_vec())) },
+                "lt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Lt,instr.regs.to_vec())) },
+                "gt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Gt,instr.regs.to_vec())) },
+                "lteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::LtEq,instr.regs.to_vec())) },
+                "gteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::GtEq,instr.regs.to_vec())) },
                 "assert" => { Box::new(AssertCommand(instr.regs[0],instr.regs[1])) }
                 _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
             }

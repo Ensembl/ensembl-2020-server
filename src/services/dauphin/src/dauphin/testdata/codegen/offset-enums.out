@@ -13,62 +13,13 @@ struct stest {
     N: etest
 };
 
-M (1)
-
-+ M.D/number
-+ M.A0
-+ M.B0
-
-M.A (1)
-
-+ M.A.D/number
-+ M.A.A0
-+ M.A.B0
-
-M.A.X/boolean (1)
-
-+ M.A.X.D/boolean
-+ M.A.X.A0
-+ M.A.X.B0
-
-M.A.Y/bytes (1)
-
-+ M.A.Y.D/bytes
-+ M.A.Y.A0
-+ M.A.Y.B0
-
-M.B (2)
-
-+ M.B.D/number
-+ M.B.A0
-+ M.B.B0
-+ M.B.A1
-+ M.B.B1
-
-M.B.X/boolean (2)
-
-+ M.B.X.D/boolean
-+ M.B.X.A0
-+ M.B.X.B0
-+ M.B.X.A1
-+ M.B.X.B1
-
-M.B.Y/bytes (2)
-
-+ M.B.Y.D/bytes
-+ M.B.Y.A0
-+ M.B.Y.B0
-+ M.B.Y.A1
-+ M.B.Y.B1
-
-N (0)
-
-+ N.D/number
-
-N.X/boolean (0)
-
-+ N.X.D/boolean
-
-N.Y/bytes (0)
-
-+ N.Y.D/bytes
++ M<1:number>
++ M.A<1:number>
++ M.A.X<1:boolean>
++ M.A.Y<1:bytes>
++ M.B<2:number>
++ M.B.X<2:boolean>
++ M.B.Y<2:bytes>
++ N<0:number>
++ N.X<0:boolean>
++ N.Y<0:bytes>
