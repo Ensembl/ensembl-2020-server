@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::model::{ Register, VectorRegisters };
+use crate::model::{ Register, VectorRegisters, ComplexRegisters };
 use crate::interp::values::registers::RegisterFile;
 use super::super::context::{InterpContext };
 use crate::interp::{ InterpValue, InterpNatural };
@@ -130,7 +130,7 @@ fn assign_reg<T>(registers: &mut RegisterFile, regs: &[Register], left_idx: usiz
 }
 
 /// XXX ban multi-Lvalue
-fn assign_filtered(context: &mut InterpContext, assignments: &Vec<Vec<VectorRegisters>>, regs: &Vec<Register>) -> Result<(),String> {
+fn assign_filtered(context: &mut InterpContext, complexes: &Vec<ComplexRegisters>, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
     let len = (regs.len()-1)/2;
     let filter_reg = registers.get_indexes(&regs[0])?;
@@ -149,9 +149,11 @@ fn assign_filtered(context: &mut InterpContext, assignments: &Vec<Vec<VectorRegi
     let mut right_start = (regs.len()+1)/2;
     /* get lengths while we can be gurarnteed a shared borrow */
     let mut prep = vec![];
-    for a_idx in 0..assignments[1].len() {
-        let a_left = &assignments[1][a_idx];
-        let a_right = &assignments[2][a_idx];
+    let assignments1 = complexes[1].iter().map(|x| x.1.clone()).collect::<Vec<_>>();
+    let assignments2 = complexes[2].iter().map(|x| x.1.clone()).collect::<Vec<_>>();
+    for a_idx in 0..assignments1.len() {
+        let a_left = &assignments1[a_idx];
+        let a_right = &assignments2[a_idx];
         let depth = a_left.depth();
         let mut do_filter : Option<&Vec<usize>> = Some(filter);
         for level in (0..depth).rev() {
@@ -201,7 +203,7 @@ fn assign_filtered(context: &mut InterpContext, assignments: &Vec<Vec<VectorRegi
     Ok(())
 }
 
-fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<Vec<VectorRegisters>>, regs: &Vec<Register>) -> Result<(),String> {
+fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<ComplexRegisters>, regs: &Vec<Register>) -> Result<(),String> {
     if filtered {
         assign_filtered(context,purposes,regs)?;
     } else {
@@ -210,7 +212,7 @@ fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<Vec<Vector
     Ok(())
 }
 
-pub struct AssignCommand(pub(crate) bool, pub(crate) Vec<Vec<VectorRegisters>>, pub(crate) Vec<Register>);
+pub struct AssignCommand(pub(crate) bool, pub(crate) Vec<ComplexRegisters>, pub(crate) Vec<Register>);
 
 impl Command for AssignCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {

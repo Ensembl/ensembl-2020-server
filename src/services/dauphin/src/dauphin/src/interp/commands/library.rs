@@ -2,20 +2,23 @@ use std::collections::HashMap;
 use super::super::context::{InterpContext };
 use crate::interp::{ InterpNatural, InterpValue };
 use super::super::command::Command;
-use crate::model::{ Register, VectorRegisters };
+use crate::model::{ Register, VectorRegisters, ComplexRegisters };
 use super::assign::coerce_to;
 use super::super::stream::StreamContents;
 use crate::typeinf::{ MemberMode, MemberDataFlow };
 
-pub struct LenCommand(pub(crate) Vec<(MemberMode,Vec<VectorRegisters>,MemberDataFlow)>,pub(crate) Vec<Register>);
+pub struct LenCommand(pub(crate) ComplexRegisters,pub(crate) Vec<Register>);
 
 impl Command for LenCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
-        let ass = &self.0[1].1[0];
-        if let Some(top_length) = ass.level_length(ass.depth()-1) {
-            registers.copy(&self.1[0],&self.1[top_length+1])?;
-            Ok(())
+        if let Some((_,ass)) = &self.0.iter().next() {
+            if let Some(top_length) = ass.level_length(ass.depth()-1) {
+                registers.copy(&self.1[0],&self.1[top_length+1])?;
+                Ok(())
+            } else {
+                Err("len on non-list".to_string())
+            }
         } else {
             Err("len on non-list".to_string())
         }
@@ -64,14 +67,14 @@ fn eq<T>(c: &mut Vec<bool>, a: &[T], b: &[T]) where T: PartialEq {
     }
 }
 
-pub struct EqCommand(pub(crate) Vec<(MemberMode,Vec<VectorRegisters>,MemberDataFlow)>,pub(crate) Vec<Register>);
+pub struct EqCommand(pub(crate) Vec<Register>);
 
 impl Command for EqCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
-        let a = registers.get(&self.1[1]);
+        let a = registers.get(&self.0[1]);
         let a = a.borrow().get_shared()?;
-        let b = registers.get(&self.1[2]);
+        let b = registers.get(&self.0[2]);
         let b = b.borrow().get_shared()?;
         let mut c = vec![];
         if let Some(natural) = coerce_to(&a,&b,true) {
@@ -84,7 +87,7 @@ impl Command for EqCommand {
                 InterpNatural::Bytes =>   { eq(&mut c,&a.to_rc_bytes()?.0,  &b.to_rc_bytes()?.0); },
             }
         }
-        registers.write(&self.1[0],InterpValue::Boolean(c));
+        registers.write(&self.0[0],InterpValue::Boolean(c));
         Ok(())
     }
 }
@@ -171,12 +174,12 @@ fn print_complex(context: &mut InterpContext, assignment: &VectorRegisters, regs
     }
 }
 
-fn print_vec(context: &mut InterpContext, assignments: &[VectorRegisters], regs: &Vec<Register>) -> Result<String,String> {
+fn print_vec(context: &mut InterpContext, complex: &ComplexRegisters, regs: &Vec<Register>) -> Result<String,String> {
     let mut out : Vec<String> = vec![];
     let mut complexes : HashMap<Vec<String>,(usize,VectorRegisters)> = HashMap::new();
     let mut is_complex = false;
     let mut start = 0;
-    for a in assignments {
+    for (_,a) in complex.iter() {
         let complex = a.get_complex().to_vec();
         if complex.len() > 0 { is_complex = true; }
         complexes.insert(complex,(start,a.clone()));
@@ -193,12 +196,11 @@ fn print_vec(context: &mut InterpContext, assignments: &[VectorRegisters], regs:
     Ok(out)
 }
 
-pub struct PrintVecCommand(pub(crate) Vec<(MemberMode,Vec<VectorRegisters>,MemberDataFlow)>,pub(crate) Vec<Register>);
+pub struct PrintVecCommand(pub(crate) ComplexRegisters,pub(crate) Vec<Register>);
 
 impl Command for PrintVecCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let purposes = &self.0[0].1;
-        let v = StreamContents::String(print_vec(context,&purposes,&self.1)?);
+        let v = StreamContents::String(print_vec(context,&self.0,&self.1)?);
         context.stream_add(v);
         Ok(())
     }

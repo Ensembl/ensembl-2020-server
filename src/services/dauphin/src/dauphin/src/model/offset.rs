@@ -1,7 +1,62 @@
+use std::collections::HashMap;  // XXX to hashbrown
 use std::fmt;
 use super::definitionstore::DefStore;
 use super::structenum::{ EnumDef, StructDef };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
+
+#[derive(Clone,Debug,PartialEq)]
+pub struct ComplexRegisters {
+    order: Vec<Vec<String>>,
+    vectors: HashMap<Vec<String>,VectorRegisters>
+}
+
+impl fmt::Display for ComplexRegisters {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = self.iter().map(|x| x.1.to_string()).collect::<Vec<_>>().join(",");
+        write!(f,"{}",s)
+    }
+}
+
+impl ComplexRegisters {
+    pub fn new() -> ComplexRegisters {
+        ComplexRegisters {
+            order: Vec::new(),
+            vectors: HashMap::new()
+        }
+    }
+
+    fn add(&mut self, complex: Vec<String>, vr: VectorRegisters) {
+        self.order.push(complex.to_vec());
+        self.vectors.insert(complex,vr);
+    }
+
+    pub fn iter<'a>(&'a self) -> ComplexRegistersIterator<'a> {
+        ComplexRegistersIterator {
+            cr: self,
+            index: 0
+        }
+    }
+}
+
+pub struct ComplexRegistersIterator<'a> {
+    cr: &'a ComplexRegisters,
+    index: usize
+}
+
+impl<'a> Iterator for ComplexRegistersIterator<'a> {
+    type Item = (&'a Vec<String>,&'a VectorRegisters);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.cr.order.len() {
+            let name = &self.cr.order[self.index];
+            if let Some(out) = self.cr.vectors.get(name) {
+                self.index += 1;
+                return Some((name,out));
+            }
+        }
+        None
+    }
+}
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct VectorRegisters {
@@ -29,51 +84,51 @@ impl VectorRegisters {
 
     pub fn register_count(&self) -> usize { self.depth*2+1 }
 
-    fn vec_from_type(defstore: &DefStore, type_: &MemberType, prefix: &[String], container: &ContainerType) -> Result<Vec<VectorRegisters>,String> {
+    fn vec_from_type(out: &mut ComplexRegisters, defstore: &DefStore, type_: &MemberType, prefix: &[String], container: &ContainerType) -> Result<(),String> {
         let container = container.merge(&type_.get_container());
         match type_.get_base() {
             BaseType::StructType(name) => {
                 let struct_ = defstore.get_struct(&name).unwrap();
-                VectorRegisters::from_struct(defstore,struct_,prefix,&container)
+                VectorRegisters::from_struct(out,defstore,struct_,prefix,&container)
             },
             BaseType::EnumType(name) => {
                 let enum_ = defstore.get_enum(&name).unwrap();
-                VectorRegisters::from_enum(defstore,enum_,prefix,&container)
+                VectorRegisters::from_enum(out,defstore,enum_,prefix,&container)
             },
             base => {
-                Ok(vec![VectorRegisters {
+                out.add(prefix.to_vec(),VectorRegisters {
                     complex: prefix.to_vec(),
                     base,
                     depth: container.depth()
-                }])
+                });
+                Ok(())
             }
         }
     }
 
-    fn from_struct(defstore: &DefStore, se: &StructDef, cpath: &[String], container: &ContainerType) -> Result<Vec<VectorRegisters>,String> {
-        let mut out = Vec::new();
+    fn from_struct(out: &mut ComplexRegisters, defstore: &DefStore, se: &StructDef, cpath: &[String], container: &ContainerType) -> Result<(),String> {
         for name in se.get_names() {
             let mut new_cpath = cpath.to_vec();
             new_cpath.push(name.to_string());
             let type_ = se.get_member_type(name).unwrap();
-            out.append(&mut VectorRegisters::vec_from_type(defstore,&type_,&new_cpath,container)?);
+            VectorRegisters::vec_from_type(out,defstore,&type_,&new_cpath,container)?;
         }
-        Ok(out)
+        Ok(())
     }
 
-    fn from_enum(defstore: &DefStore, se: &EnumDef, cpath: &[String], container: &ContainerType) -> Result<Vec<VectorRegisters>,String> {
-        let mut out = vec![VectorRegisters {
+    fn from_enum(out: &mut ComplexRegisters, defstore: &DefStore, se: &EnumDef, cpath: &[String], container: &ContainerType) -> Result<(),String> {
+        out.add(cpath.to_vec(),VectorRegisters {
             complex: cpath.to_vec(),
             base: BaseType::NumberType,
             depth: container.depth()
-        }];
+        });
         for name in se.get_names() {
             let mut new_cpath = cpath.to_vec();
             new_cpath.push(name.to_string());
             let type_ = se.get_branch_type(name).unwrap();
-            out.append(&mut VectorRegisters::vec_from_type(defstore,&type_,&new_cpath,container)?);
+            VectorRegisters::vec_from_type(out,defstore,&type_,&new_cpath,container)?;
         }
-        Ok(out)
+        Ok(())
     }
 }
 
@@ -86,8 +141,10 @@ impl fmt::Display for VectorRegisters {
 
 // XXX deduplicate from_struct/from_enum by shifting to StructEnum universally
 
-pub fn get_assignments(defstore: &DefStore, type_: &MemberType) -> Result<Vec<VectorRegisters>,String> {
-    VectorRegisters::vec_from_type(defstore,type_,&vec![],&ContainerType::new_empty())
+pub fn get_assignments(defstore: &DefStore, type_: &MemberType) -> Result<ComplexRegisters,String> {
+    let mut out = ComplexRegisters::new();
+    VectorRegisters::vec_from_type(&mut out, defstore,type_,&vec![],&ContainerType::new_empty())?;
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -116,10 +173,10 @@ mod test {
         parse_type(&mut lexer,defstore).expect("bad type")
     }
 
-    fn format_pvec(ass: &Vec<VectorRegisters>) -> String {
+    fn format_pvec(ass: &ComplexRegisters) -> String {
         let mut first = true;
         let mut out = String::new();
-        for a in ass {
+        for (_,a) in ass.iter() {
             if first {
                 first = false;
             } else {

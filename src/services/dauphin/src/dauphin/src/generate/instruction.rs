@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::model::{ DefStore, Register, VectorRegisters };
+use crate::model::{ DefStore, Register, VectorRegisters, ComplexRegisters };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
@@ -80,7 +80,7 @@ pub enum InstructionType {
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
-    Call(String,bool,Vec<(MemberMode,Vec<VectorRegisters>,MemberDataFlow)>)
+    Call(String,bool,Vec<(MemberMode,ComplexRegisters,MemberDataFlow)>)
 }
 
 impl InstructionType {
@@ -138,7 +138,7 @@ impl InstructionType {
                 if *impure { name.push_str("/i"); }
                 let mut out = vec![name.to_string()];
                 out.extend(types.iter().map(|x| {
-                    let purposes = x.1.iter().map(|y| format!("{}",y)).collect::<Vec<_>>().join(",");
+                    let purposes = x.1.to_string();
                     format!("{}/{}",purposes,x.0)
                 }).collect::<Vec<_>>());
                 Some(out)
@@ -214,7 +214,7 @@ impl InstructionType {
                     if let MemberDataFlow::JustifiesCall = sig.2 {
                         these_regs = true;
                     }
-                    let num_regs = sig.1.iter().map(|x| x.register_count()).sum();
+                    let num_regs = sig.1.iter().map(|x| x.1.register_count()).sum();
                     if these_regs {
                         for i in 0..num_regs {
                             out.push(reg_offset+i);
