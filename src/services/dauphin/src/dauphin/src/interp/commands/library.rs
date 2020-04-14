@@ -238,3 +238,19 @@ impl Command for PrintVecCommand {
         Ok(())
     }
 }
+
+pub struct AssertCommand(pub(crate) Register, pub(crate) Register);
+
+impl Command for AssertCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let registers = context.registers();
+        let a = &registers.get_boolean(&self.0)?;
+        let b = &registers.get_boolean(&self.1)?;
+        for i in 0..a.len() {
+            if a[i] != b[i] {
+                return Err(format!("assertion failed index={}!",i));
+            }
+        }
+        Ok(())
+    }
+}

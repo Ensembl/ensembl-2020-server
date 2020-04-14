@@ -133,6 +133,16 @@ mod test {
     use crate::parser::{ Parser, parse_type };
     use crate::generate::generate_code;
     use crate::testsuite::load_testdata;
+    use crate::generate::call;
+    use crate::generate::simplify;
+    use crate::generate::linearize;
+    use crate::generate::remove_aliases;
+    use crate::generate::copy_on_write;
+    use crate::generate::run_nums;
+    use crate::generate::reuse_dead;
+    use crate::generate::prune;
+    use crate::generate::assign_regs;
+    use crate::interp::mini_interp;
 
     // XXX move to common test utils
     fn make_type(defstore: &DefStore, name: &str) -> MemberType {
@@ -156,6 +166,19 @@ mod test {
         out
     }
 
+    fn load_cmp(filename: &str) -> String {
+        let outdata = load_testdata(&["codegen",filename]).ok().unwrap();
+        let mut seq = vec![];
+        for line in outdata.split("\n") {
+            if line.starts_with("+") {
+                if let Some(part) = line.split_ascii_whitespace().nth(1) {
+                    seq.push(part);
+                }
+            }
+        }
+        seq.join(",")
+    }
+
     #[test]
     fn offset_smoke() {
         let resolver = FileResolver::new();
@@ -167,16 +190,35 @@ mod test {
         let regs = offset(&defstore,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("D/boolean",format_pvec(&regs));
         let regs = offset(&defstore,&make_type(&defstore,"vec(etest3)")).expect("b");
-        let outdata = load_testdata(&["codegen","offset-smoke.out"]).ok().unwrap();
-        let mut seq = vec![];
-        for line in outdata.split("\n") {
-            if line.starts_with("+") {
-                if let Some(part) = line.split_ascii_whitespace().nth(1) {
-                    seq.push(part);
-                }
-            }
+        assert_eq!(load_cmp("offset-smoke.out"),format_pvec(&regs));
+    }
+
+    #[test]
+    fn offset_enums() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/offset-enums.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let regs = offset(&defstore,&make_type(&defstore,"stest")).expect("b");
+        assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
+        call(&mut context).expect("j");
+        simplify(&defstore,&mut context).expect("k");
+        linearize(&mut context).expect("linearize");
+        remove_aliases(&mut context);
+        print!("{:?}",context);
+        run_nums(&mut context);
+        prune(&mut context);
+        copy_on_write(&mut context);
+        prune(&mut context);
+        run_nums(&mut context);
+        reuse_dead(&mut context);
+        assign_regs(&mut context);
+        print!("{:?}",context);
+        let (_,strings) = mini_interp(&mut context).expect("x");
+        for s in &strings {
+            print!("{}\n",s);
         }
-        let seq = seq.join(",");
-        assert_eq!(seq,format_pvec(&regs));
     }
 }

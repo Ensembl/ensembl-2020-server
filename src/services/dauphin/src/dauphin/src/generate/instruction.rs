@@ -30,7 +30,9 @@ pub enum InstructionSuperType {
     Append,
     Filter,
     Run,
+    At,
     NumEq,
+    ReFilter,
     Length,
     Add,
     SeqFilter,
@@ -58,6 +60,7 @@ pub enum InstructionType {
     Filter,
     Run,
     NumEq,
+    ReFilter,
     Length,
     Add,
     SeqFilter,
@@ -70,7 +73,10 @@ pub enum InstructionType {
     CtorStruct(String),
     CtorEnum(String,String),
     SValue(String,String),
+    RefSValue(String,String),
     EValue(String,String),
+    RefEValue(String,String),
+    FilterEValue(String,String),
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
@@ -93,6 +99,7 @@ impl InstructionType {
             InstructionType::Filter => "filter",
             InstructionType::Run => "run",
             InstructionType::NumEq => "numeq",
+            InstructionType::ReFilter => "refilter",
             InstructionType::Length => "length",
             InstructionType::Add => "add",
             InstructionType::SeqFilter => "seqfilter",
@@ -104,7 +111,10 @@ impl InstructionType {
             InstructionType::CtorStruct(_) => "struct",
             InstructionType::CtorEnum(_,_) => "enum",
             InstructionType::SValue(_,_) => "svalue",
+            InstructionType::RefSValue(_,_) => "refsvalue",
             InstructionType::EValue(_,_) => "evalue",
+            InstructionType::FilterEValue(_,_) => "frevalue",
+            InstructionType::RefEValue(_,_) => "refevalue",
             InstructionType::ETest(_,_) => "etest",
             InstructionType::Proc(_,_) => "proc",
             InstructionType::Operator(_) => "oper",
@@ -159,7 +169,6 @@ impl InstructionType {
 
     pub fn changing_registers(&self) -> Vec<usize> {
         match self {
-            InstructionType::At |
             InstructionType::Star |
             InstructionType::Alias |
             InstructionType::List |
@@ -169,18 +178,23 @@ impl InstructionType {
             InstructionType::CtorStruct(_) |
             InstructionType::CtorEnum(_,_) |
             InstructionType::SValue(_,_) |
+            InstructionType::RefSValue(_,_) |
             InstructionType::EValue(_,_) |
+            InstructionType::RefEValue(_,_) |
+            InstructionType::FilterEValue(_,_) |
             InstructionType::ETest(_,_) |
             InstructionType::Proc(_,_) |
             InstructionType::Operator(_) =>
                 panic!("Unexpected instruction {:?}",self),
 
+            InstructionType::At |
             InstructionType::Nil |
             InstructionType::Run |
             InstructionType::Add |
             InstructionType::Copy |
             InstructionType::Append |
             InstructionType::Filter |
+            InstructionType::ReFilter |
             InstructionType::NumEq |
             InstructionType::Length |
             InstructionType::SeqFilter |
@@ -241,12 +255,39 @@ impl InstructionType {
                 ])
             },
 
+            InstructionType::RefSValue(stype,field) => {
+                let exprdecl = defstore.get_struct(stype).ok_or_else(|| format!("No such struct {:?}",stype))?;
+                let dtype = exprdecl.get_member_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
+                Ok(vec![
+                    ArgumentConstraint::Reference(dtype.to_argumentexpressionconstraint()),
+                    ArgumentConstraint::Reference(ArgumentExpressionConstraint::Base(BaseType::StructType(stype.to_string())))
+                ])
+            },
+
             InstructionType::EValue(etype,field) => {
                 let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
                 let dtype = exprdecl.get_branch_type(field).ok_or_else(|| format!("No such branch {:?}",field))?;
                 Ok(vec![
                     ArgumentConstraint::NonReference(dtype.to_argumentexpressionconstraint()),
                     ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(etype.to_string())))
+                ])
+            },
+
+            InstructionType::FilterEValue(etype,field) => {
+                let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
+                let dtype = exprdecl.get_branch_type(field).ok_or_else(|| format!("No such branch {:?}",field))?;
+                Ok(vec![
+                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
+                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(etype.to_string())))
+                ])
+            },
+
+            InstructionType::RefEValue(etype,field) => {
+                let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
+                let dtype = exprdecl.get_branch_type(field).ok_or_else(|| format!("No such branch {:?}",field))?;
+                Ok(vec![
+                    ArgumentConstraint::Reference(dtype.to_argumentexpressionconstraint()),
+                    ArgumentConstraint::Reference(ArgumentExpressionConstraint::Base(BaseType::EnumType(etype.to_string())))
                 ])
             },
 
@@ -302,6 +343,7 @@ impl InstructionType {
             InstructionType::BooleanConst(_) => Ok(vec![fixed(BaseType::BooleanType)]),
             InstructionType::StringConst(_) => Ok(vec![fixed(BaseType::StringType)]),
             InstructionType::BytesConst(_) => Ok(vec![fixed(BaseType::BytesType)]),
+            InstructionType::ReFilter => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
 
             InstructionType::NumEq |
             InstructionType::Length |

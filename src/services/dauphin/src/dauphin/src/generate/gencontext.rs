@@ -42,7 +42,7 @@ impl<'a> GenContext<'a> {
     }
 
     pub fn add_untyped(&mut self, instr: Instruction) -> Result<(),String> {
-        self.typing.add(&instr.get_constraint(&self.defstore)?)?;
+        self.typing.add(&instr.get_constraint(&self.defstore)?).map_err(|x| format!("{} while adding {:?}",x,instr))?;
         self.output_instrs.push(instr);
         Ok(())
     }
@@ -52,8 +52,7 @@ impl<'a> GenContext<'a> {
         let mut regs = vec![dst];
         regs.append(&mut regs_in);
         let instr = Instruction::new(itype,regs);
-        self.typing.add(&instr.get_constraint(&self.defstore)?)?;
-        self.output_instrs.push(instr);
+        self.add_untyped(instr)?;
         Ok(dst)
     }
 
@@ -75,14 +74,6 @@ impl<'a> GenContext<'a> {
             self.types.add(&out,type_);
         }
         out
-    }
-
-    pub fn add_f(&mut self, type_: &MemberType, itype: InstructionType, mut regs_in: Vec<Register>) -> Register {
-        let dst = self.allocate_register(Some(type_));
-        let mut regs = vec![dst];
-        regs.append(&mut regs_in);
-        self.output_instrs.push(Instruction::new(itype,regs));
-        dst
     }
 
     pub fn phase_finished(&mut self) {

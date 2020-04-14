@@ -24,6 +24,28 @@ use super::gencontext::GenContext;
  * instructions are extended in the same way and are handled in a common function.
  */
 
+macro_rules! instr {
+    ($context:expr,$type:ident,$($regs:expr),*) => {
+        $context.add(Instruction::new(InstructionType::$type,vec![$($regs),*]));
+    };
+}
+
+macro_rules! allocate {
+    ($context:expr,$type:ident) => {
+        $context.allocate_register(Some(&MemberType::Base(BaseType::$type)))
+    };
+}
+
+macro_rules! instr_f {
+    ($context:expr,$type:ident,$itype:ident,$($regs:expr),*) => {
+        {
+            let x = allocate!($context,$type);
+            instr!($context,$itype,x,$($regs),*);
+            x
+        }
+    };
+}
+
 fn allocate_registers(context: &mut GenContext, member_types: &Vec<MemberType>, with_index: bool, container_type: ContainerType) -> Vec<Register> {
     let mut out = Vec::new();
     if with_index {
@@ -58,7 +80,7 @@ fn extend_vertical<F>(in_: &Vec<Register>, mapping: &HashMap<Register,Vec<Regist
 /* Some easy value for unused enum branches */
 fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<(),String> {
     match type_ {
-        MemberType::Vec(_) =>  context.add(Instruction::new(InstructionType::List,vec![*reg])),
+        MemberType::Vec(_) =>  instr!(context,List,*reg),
         MemberType::Base(b) => match b {
             BaseType::BooleanType => context.add(Instruction::new(InstructionType::BooleanConst(false),vec![*reg])),
             BaseType::StringType => context.add(Instruction::new(InstructionType::StringConst(String::new()),vec![*reg])),
@@ -102,9 +124,13 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
         InstructionType::CtorStruct(_) |
         InstructionType::CtorEnum(_,_) |
         InstructionType::SValue(_,_) |
+        InstructionType::RefSValue(_,_) |
         InstructionType::EValue(_,_) |
+        InstructionType::RefEValue(_,_) |
+        InstructionType::FilterEValue(_,_) |
         InstructionType::ETest(_,_) |
         InstructionType::NumEq |
+        InstructionType::ReFilter |
         InstructionType::Const(_) |
         InstructionType::NumberConst(_) |
         InstructionType::BooleanConst(_) |
@@ -128,15 +154,15 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
 
         InstructionType::FilterSquare => {
             if let Some(srcs) = mapping.get(&instr.regs[1]) {
-                context.add(Instruction::new(InstructionType::FilterSquare,vec![instr.regs[0],srcs[0]]));
+                instr!(context,FilterSquare,instr.regs[0],srcs[0]);
             } else {
-                context.add(Instruction::new(InstructionType::FilterSquare,vec![instr.regs[0],instr.regs[1]]));
+                instr!(context,FilterSquare,instr.regs[0],instr.regs[1]);
             }
         },
 
         InstructionType::At => {
             if let Some(srcs) = mapping.get(&instr.regs[1]) {
-                context.add(Instruction::new(InstructionType::At,vec![instr.regs[0],srcs[0]]));
+                instr!(context,At,instr.regs[0],srcs[0]);
             } else {
                 context.add(instr.clone());
             }
@@ -144,7 +170,7 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
 
         InstructionType::Filter => {
             extend_vertical(&vec![instr.regs[0],instr.regs[1]],mapping,|r| {
-                context.add(Instruction::new(InstructionType::Filter,vec![r[0],r[1],instr.regs[2]]));
+                instr!(context,Filter,r[0],r[1],instr.regs[2]);
                 Ok(())
             })?
         },
@@ -171,7 +197,7 @@ fn extend_struct_instr(obj_name: &str, context: &mut GenContext, decl: &StructDe
             if name == obj_name {
                 let dests = mapping.get(&instr.regs[0]).ok_or_else(|| "missing register".to_string())?;
                 for i in 1..instr.regs.len() {
-                    context.add(Instruction::new(InstructionType::Copy,vec![dests[i-1],instr.regs[i]]));
+                    instr!(context,Copy,dests[i-1],instr.regs[i]);
                 }
             } else {
                 context.add(instr.clone());
@@ -181,7 +207,13 @@ fn extend_struct_instr(obj_name: &str, context: &mut GenContext, decl: &StructDe
         InstructionType::SValue(name,field) if name == obj_name => {
             let dests = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
             let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| "missing register".to_string())?;
-            context.add(Instruction::new(InstructionType::Copy,vec![instr.regs[0],dests[pos]]));
+            instr!(context,Copy,instr.regs[0],dests[pos]);
+        },
+
+        InstructionType::RefSValue(name,field) if name == obj_name => {
+            let dests = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
+            let pos = decl.get_names().iter().position(|n| n==field).ok_or_else(|| "missing register".to_string())?;
+            instr!(context,Alias,instr.regs[0],dests[pos]);
         },
 
         _ => extend_common(context,instr,mapping)?
@@ -198,7 +230,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
                 for i in 1..dests.len() {
                     if i-1 == pos {
                         context.add(Instruction::new(InstructionType::NumberConst((i-1) as f64),vec![dests[0]]));
-                        context.add(Instruction::new(InstructionType::Copy,vec![dests[i],instr.regs[1]]));
+                        instr!(context,Copy,dests[i],instr.regs[1]);
                     } else {
                         let type_ = context.xxx_types().get(&dests[i]).ok_or_else(|| "missing register".to_string())?.clone();
                         build_nil(context,defstore,&dests[i],&type_)?;
@@ -209,22 +241,37 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &s
             }
         },
 
+        InstructionType::FilterEValue(name,field) if name == obj_name => {
+            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
+            let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
+            let posreg = allocate!(context,NumberType);
+            context.add(Instruction::new(InstructionType::NumberConst(pos as f64),vec![posreg]));
+            let seq = instr_f!(context,NumberType,At,srcs[0]);
+            let filter = instr_f!(context,BooleanType,NumEq,srcs[0],posreg);
+            instr!(context,Filter,instr.regs[0],seq,filter);
+        },
+
         InstructionType::EValue(name,field) if name == obj_name => {
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
-            let posreg = context.allocate_register(Some(&MemberType::Base(BaseType::NumberType)));
+            let posreg = allocate!(context,NumberType);
             context.add(Instruction::new(InstructionType::NumberConst(pos as f64),vec![posreg]));
-            let filter = context.allocate_register(Some(&MemberType::Base(BaseType::BooleanType)));
-            context.add(Instruction::new(InstructionType::NumEq,vec![srcs[0],posreg]));
-            context.add(Instruction::new(InstructionType::Filter,vec![instr.regs[0],srcs[pos+1],filter]));
+            let filter = instr_f!(context,BooleanType,NumEq,srcs[0],posreg);
+            instr!(context,Filter,instr.regs[0],srcs[pos+1],filter);
+        },
+
+        InstructionType::RefEValue(name,field) if name == obj_name => {
+            let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
+            let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
+            instr!(context,Alias,instr.regs[0],srcs[pos+1]);
         },
 
         InstructionType::ETest(name,field) if name == obj_name => {
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
-            let posreg = context.allocate_register(Some(&MemberType::Base(BaseType::NumberType)));
-            context.add_f(&MemberType::Base(BaseType::NumberType),InstructionType::NumberConst(pos as f64),vec![posreg]);
-            context.add(Instruction::new(InstructionType::NumEq,vec![instr.regs[0],srcs[0],posreg]));
+            let posreg = allocate!(context,NumberType);
+            context.add(Instruction::new(InstructionType::NumberConst(pos as f64),vec![posreg]));
+            instr!(context,NumEq,instr.regs[0],srcs[0],posreg);
         },
 
         _ => extend_common(context,instr,mapping)?
@@ -291,6 +338,16 @@ mod test {
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
     use crate::testsuite::load_testdata;
+    use crate::generate::simplify;
+    use crate::generate::linearize;
+    use crate::generate::remove_aliases;
+    use crate::generate::copy_on_write;
+    use crate::generate::run_nums;
+    use crate::generate::reuse_dead;
+    use crate::generate::prune;
+    use crate::generate::assign_regs;
+    use crate::interp::mini_interp;
+
 
     // XXX common
     fn compare_instrs(a: &Vec<String>,b: &Vec<String>) {
@@ -339,5 +396,84 @@ mod test {
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
+    }
+
+    #[test]
+    fn simplify_enum_lvalue() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/enum-lvalue.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
+        simplify(&defstore,&mut context).expect("k");
+        linearize(&mut context).expect("linearize");
+        remove_aliases(&mut context);
+        run_nums(&mut context);
+        prune(&mut context);
+        copy_on_write(&mut context);
+        prune(&mut context);
+        run_nums(&mut context);
+        reuse_dead(&mut context);
+        assign_regs(&mut context);
+        print!("{:?}",context);
+        let (_,strings) = mini_interp(&mut context).expect("x");
+        for s in &strings {
+            print!("{}\n",s);
+        }  
+    }
+
+    #[test]
+    fn simplify_struct_lvalue() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/struct-lvalue.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        call(&mut context).expect("j");
+        simplify(&defstore,&mut context).expect("k");
+        linearize(&mut context).expect("linearize");
+        remove_aliases(&mut context);
+        run_nums(&mut context);
+        prune(&mut context);
+        copy_on_write(&mut context);
+        prune(&mut context);
+        run_nums(&mut context);
+        reuse_dead(&mut context);
+        assign_regs(&mut context);
+        print!("{:?}",context);
+        let (_,strings) = mini_interp(&mut context).expect("x");
+        for s in &strings {
+            print!("{}\n",s);
+        }
+    }
+
+    #[test]
+    fn simplify_both_lvalue() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/both-lvalue.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        print!("{:?}\n",context);
+        call(&mut context).expect("j");
+        simplify(&defstore,&mut context).expect("k");
+        linearize(&mut context).expect("linearize");
+        remove_aliases(&mut context);
+        run_nums(&mut context);
+        prune(&mut context);
+        copy_on_write(&mut context);
+        prune(&mut context);
+        run_nums(&mut context);
+        reuse_dead(&mut context);
+        assign_regs(&mut context);
+        print!("{:?}",context);
+        let (_,strings) = mini_interp(&mut context).expect("x");
+        for s in &strings {
+            print!("{}\n",s);
+        }  
     }
 }

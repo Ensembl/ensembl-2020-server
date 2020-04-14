@@ -102,7 +102,7 @@ impl<'a> CodeGen<'a> {
                     return Err(format!("{:?} is not a structure",expr));
                 }
             },
-            Expression::Square(x) => {
+            Expression::Square(x) | Expression::Bracket(x,_) => {
                 if let ExpressionType::Vec(subtype) = self.type_of(x)? {
                     subtype.as_ref().clone()
                 } else {
@@ -133,7 +133,7 @@ impl<'a> CodeGen<'a> {
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
-                    let lvalue_reg = addf!(self,SValue(name.to_string(),f.clone()),lvalue_subreg);
+                    let lvalue_reg = addf!(self,RefSValue(name.to_string(),f.clone()),lvalue_subreg);
                     let rvalue_reg = addf!(self,SValue(name.to_string(),f.clone()),rvalue_subreg);
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
@@ -142,10 +142,14 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Pling(x,f) => {
                 if let ExpressionType::Base(BaseType::EnumType(name)) = self.type_of(x)? {
-                    let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
-                    let lvalue_reg = addf!(self,EValue(name.to_string(),f.clone()),lvalue_subreg);
+                    let (lvalue_subreg,fvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
+                    let lvalue_reg = addf!(self,RefEValue(name.to_string(),f.clone()),lvalue_subreg);
+                    let mut fvalue_reg = addf!(self,FilterEValue(name.to_string(),f.clone()),rvalue_subreg);
+                    if let Some(fvalue_subreg) = fvalue_subreg {
+                        fvalue_reg = addf!(self,ReFilter,fvalue_subreg,fvalue_reg);
+                    }
                     let rvalue_reg = addf!(self,EValue(name.to_string(),f.clone()),rvalue_subreg);
-                    Ok((lvalue_reg,fvalue_reg,rvalue_reg))
+                    Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
                 } else {
                     Err("Can only take \"pling\" of enums".to_string())
                 }
@@ -361,6 +365,7 @@ mod test {
         let gencontext = generate_code(&defstore,stmts).expect("codegen");
         let cmds : Vec<String> = gencontext.get_instructions().iter().map(|e| format!("{:?}",e)).collect();
         let outdata = load_testdata(&["codegen","generate-smoke2.out"]).ok().unwrap();
+        print!("{}",cmds.join(""));
         assert_eq!(outdata,cmds.join(""));
     }
 

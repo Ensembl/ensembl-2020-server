@@ -115,6 +115,7 @@ fn linear_extend<F>(subregs: &BTreeMap<Register,Linearized>, dst: &Register, src
 fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearized> , instr: &Instruction) -> Result<(),String> {
     match &instr.itype {
         InstructionType::NumEq |
+        InstructionType::ReFilter |
         InstructionType::Const(_) |
         InstructionType::NumberConst(_) |
         InstructionType::BooleanConst(_) |
@@ -127,7 +128,10 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
         InstructionType::CtorStruct(_) |
         InstructionType::CtorEnum(_,_) |
         InstructionType::SValue(_,_) |
+        InstructionType::RefSValue(_,_) |
         InstructionType::EValue(_,_) |
+        InstructionType::RefEValue(_,_) |
+        InstructionType::FilterEValue(_,_) |
         InstructionType::ETest(_,_) |
         InstructionType::Run |
         InstructionType::Length |

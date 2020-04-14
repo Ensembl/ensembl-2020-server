@@ -7,7 +7,7 @@ use crate::interp::context::InterpContext;
 use crate::interp::command::Command;
 use crate::interp::commands::core::core::{
     CopyCommand, AppendCommand, LengthCommand, AddCommand, NumEqCommand, FilterCommand, RunCommand,
-    SeqFilterCommand, SeqAtCommand, NilCommand
+    SeqFilterCommand, SeqAtCommand, NilCommand, AtCommand, ReFilterCommand
 };
 use crate::interp::commands::core::consts::{
     NumberConstCommand, ConstCommand, BooleanConstCommand, StringConstCommand, BytesConstCommand
@@ -15,7 +15,8 @@ use crate::interp::commands::core::consts::{
 use crate::typeinf::{ MemberMode, MemberDataFlow };
 
 use crate::interp::commands::library::{
-     LenCommand, EqCommand, InterpBinBoolCommand, InterpBinBoolOp, PrintVecCommand, PrintRegsCommand
+     LenCommand, EqCommand, InterpBinBoolCommand, InterpBinBoolOp, PrintVecCommand, PrintRegsCommand,
+     AssertCommand
 };
 use crate::interp::commands::assign::AssignCommand;
 use crate::interp::{ InterpValue, StreamContents };
@@ -35,8 +36,8 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
     let mut out = HashMap::new();
     for (r,iv) in ic.registers().export()?.iter() {
         let iv = Rc::new(iv.copy());
-        let v = InterpValue::to_rc_indexes(&iv)?.0;
-        out.insert(*r,v.to_vec());
+        let v = InterpValue::to_rc_indexes(&iv).map(|x| x.0.to_vec()).unwrap_or(vec![]);
+        out.insert(*r,v);
     }
     Ok(out)
 }
@@ -54,10 +55,12 @@ fn instruction_to_command(instr: &Instruction) -> Box<dyn Command> {
         InstructionType::Length => { Box::new(LengthCommand(instr.regs[0],instr.regs[1])) },
         InstructionType::Add => { Box::new(AddCommand(instr.regs[0],instr.regs[1])) },
         InstructionType::NumEq => { Box::new(NumEqCommand(instr.regs[0],instr.regs[1],instr.regs[2])) },
+        InstructionType::ReFilter => { Box::new(ReFilterCommand(instr.regs[0],instr.regs[1],instr.regs[2])) },
         InstructionType::Filter => { Box::new(FilterCommand(instr.regs[0],instr.regs[1],instr.regs[2])) },
         InstructionType::Run => { Box::new(RunCommand(instr.regs[0],instr.regs[1],instr.regs[2])) },
         InstructionType::SeqFilter => { Box::new(SeqFilterCommand(instr.regs[0],instr.regs[1],instr.regs[2],instr.regs[3])) },
         InstructionType::SeqAt => { Box::new(SeqAtCommand(instr.regs[0],instr.regs[1])) },
+        InstructionType::At => { Box::new(AtCommand(instr.regs[0],instr.regs[1])) },
         InstructionType::Call(name,_,types) => {
             match &name[..] {
                 "assign" => { Box::new(AssignCommand(types[0].0 != MemberMode::LValue,types.iter().map(|x| x.1.to_vec()).collect(),instr.regs.to_vec())) },
@@ -69,6 +72,7 @@ fn instruction_to_command(instr: &Instruction) -> Box<dyn Command> {
                 "gt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Gt,types.to_vec(),instr.regs.to_vec())) },
                 "lteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::LtEq,types.to_vec(),instr.regs.to_vec())) },
                 "gteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::GtEq,types.to_vec(),instr.regs.to_vec())) },
+                "assert" => { Box::new(AssertCommand(instr.regs[0],instr.regs[1])) }
                 _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
             }
         },
@@ -78,13 +82,15 @@ fn instruction_to_command(instr: &Instruction) -> Box<dyn Command> {
         InstructionType::CtorStruct(_) |
         InstructionType::CtorEnum(_,_) |
         InstructionType::SValue(_,_) |
+        InstructionType::RefSValue(_,_) |
         InstructionType::EValue(_,_) |
+        InstructionType::RefEValue(_,_) |
+        InstructionType::FilterEValue(_,_) |
         InstructionType::ETest(_,_) |
         InstructionType::List |
         InstructionType::Square |
         InstructionType::RefSquare |
         InstructionType::FilterSquare |
-        InstructionType::At |
         InstructionType::Star =>
             panic!("Illegal instruction")
     }

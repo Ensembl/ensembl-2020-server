@@ -91,16 +91,18 @@ fn strings_to_bytes(data: &Vec<String>) -> Result<Vec<Vec<u8>>,String> {
 }
 
 fn bytes_to_indexes(data: &Vec<Vec<u8>>) -> Result<Vec<usize>,String> {
+    if data.len() == 0 { return Ok(vec![]); }
     data.iter().map(|x| {
         if x.len() > 0 {
             Ok(x[0] as usize)
         } else {
-            Err(format!("cannot convert {:?} into index",x))
+            Err(format!("cannot convert {:?} into indexes",x))
         }
     }).collect()
 }
 
 fn indexes_to_bytes(data: &Vec<usize>) -> Result<Vec<Vec<u8>>,String> {
+    if data.len() == 0 { return Ok(vec![]); }
     data.iter().map(|x| {
         if *x < 256 {
             Ok(vec![*x as u8])
