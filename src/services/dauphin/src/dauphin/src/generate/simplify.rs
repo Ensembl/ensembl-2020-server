@@ -336,7 +336,7 @@ mod test {
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
-    use crate::testsuite::load_testdata;
+    use crate::test::files::load_testdata;
     use crate::generate::simplify;
     use crate::generate::linearize;
     use crate::generate::remove_aliases;

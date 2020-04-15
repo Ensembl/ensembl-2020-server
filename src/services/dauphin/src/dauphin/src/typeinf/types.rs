@@ -1,5 +1,6 @@
 use std::fmt;
-use crate::model::Register;
+use crate::model::{ Register, cbor_int };
+use serde_cbor::Value as CborValue;
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
 pub enum BaseType {
@@ -10,6 +11,28 @@ pub enum BaseType {
     StructType(String),
     EnumType(String),
     Invalid
+}
+
+impl BaseType {
+    pub fn serialize(&self) -> Result<CborValue,String> {
+        Ok(match self {
+            BaseType::StringType => CborValue::Integer(0),
+            BaseType::BytesType => CborValue::Integer(1),
+            BaseType::NumberType => CborValue::Integer(2),
+            BaseType::BooleanType => CborValue::Integer(3),
+            _ => Err("cannot serialize complex basetypes")?
+        })
+    }
+
+    pub fn deserialize(cbor: &CborValue) -> Result<BaseType,String> {
+        Ok(match cbor_int(cbor,Some(3))? {
+            0 => BaseType::StringType,
+            1 => BaseType::BytesType,
+            2 => BaseType::NumberType,
+            3 => BaseType::BooleanType,
+            _ => panic!("cbor_int failed")
+        })
+    }
 }
 
 impl fmt::Debug for BaseType {
@@ -144,10 +167,47 @@ pub enum MemberMode {
     FValue
 }
 
+impl MemberMode {
+    pub fn deserialize(cbor: &CborValue) -> Result<MemberMode,String> {
+        Ok(match cbor_int(cbor,Some(2))? {
+            0 => MemberMode::RValue,
+            1 => MemberMode::LValue,
+            2 => MemberMode::FValue,
+            _ => panic!("cbor_int failed")
+        })
+    }
+
+    pub fn serialize(&self) -> CborValue {
+        match self {
+            MemberMode::RValue => CborValue::Integer(0),
+            MemberMode::LValue => CborValue::Integer(1),
+            MemberMode::FValue => CborValue::Integer(2)
+        }
+    }
+}
+
 #[derive(Debug,Clone,Copy,PartialEq)]
 pub enum MemberDataFlow {
     JustifiesCall,  /* If this register is justified, so is this call (ie out or in/out) */
     Normal          /* If this call is justified, so is this register (ie in) */
+}
+
+// XXX remove data-flow from sig
+impl MemberDataFlow {
+    pub fn deserialize(cbor: &CborValue) -> Result<MemberDataFlow,String> {
+        Ok(match cbor_int(cbor,Some(2))? {
+            0 => MemberDataFlow::JustifiesCall,
+            1 => MemberDataFlow::Normal,
+            _ => panic!("cbor_int failed")
+        })
+    }
+
+    pub fn serialize(&self) -> CborValue {
+        match self {
+            MemberDataFlow::JustifiesCall => CborValue::Integer(0),
+            MemberDataFlow::Normal => CborValue::Integer(1)
+        }
+    }
 }
 
 impl fmt::Display for MemberDataFlow {

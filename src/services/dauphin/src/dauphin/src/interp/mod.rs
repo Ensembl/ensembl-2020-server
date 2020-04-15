@@ -3,6 +3,9 @@ mod context;
 mod harness;
 mod stream;
 mod commands {
+    pub mod common {
+        pub mod commontype;
+    }
     pub mod core {
         pub mod consts;
         pub mod core;

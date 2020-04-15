@@ -90,7 +90,7 @@ impl Lexer {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::testsuite::load_testdata;
+    use crate::test::files::load_testdata;
 
     #[test]
     fn smoke() {

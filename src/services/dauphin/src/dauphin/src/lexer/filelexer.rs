@@ -56,7 +56,7 @@ impl FileLexer {
 mod test {
     use super::super::token::Token;
     use super::*;
-    use crate::testsuite::load_testdata;
+    use crate::test::files::load_testdata;
     use std::str::FromStr;
     use std::rc::Rc;
     use super::super::fileresolver::FileResolver;

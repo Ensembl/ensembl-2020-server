@@ -5,43 +5,24 @@ use crate::model::Register;
 use crate::interp::commands::assign::{ blit, blit_expanded, blit_runs };
 use crate::generate::{ Instruction, InstructionSuperType };
 use serde_cbor::Value as CborValue;
+use super::super::common::commontype::BuiltinCommandType;
 
 // XXX read is coerce
 
-struct InstrPlainCommand(InstructionSuperType,u8,usize,Box<dyn Fn(&[Register]) -> Result<Box<dyn Command>,String>>);
-
-impl CommandType for InstrPlainCommand {
-    fn get_schema(&self) -> CommandSchema {
-        CommandSchema {
-            opcode: self.1,
-            values: self.2,
-            instructions: vec![self.0.clone()],
-            commands: vec![]
-        }
-    }
-    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        (self.3)(&it.regs)
-    }
-
-    fn deserialise(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        (self.3)(&(0..self.2).map(|x| Register::deserialize(&value[x])).collect::<Result<Vec<_>,String>>()?)
-    }
-}
-
 fn core_commands() {
-    let nil_command = InstrPlainCommand(InstructionSuperType::Nil,0,1,Box::new(|x| Ok(Box::new(NilCommand(x[0])))));
+    let nil_command = BuiltinCommandType::new(InstructionSuperType::Nil,0,1,Box::new(|x| Ok(Box::new(NilCommand(x[0])))));
     /* 1-5 used in consts */
-    let copy_command = InstrPlainCommand(InstructionSuperType::Copy,6,2,Box::new(|x| Ok(Box::new(CopyCommand(x[0],x[1])))));
-    let append_command = InstrPlainCommand(InstructionSuperType::Append,7,2,Box::new(|x| Ok(Box::new(AppendCommand(x[0],x[1])))));
-    let length_command = InstrPlainCommand(InstructionSuperType::Length,8,2,Box::new(|x| Ok(Box::new(LengthCommand(x[0],x[1])))));
-    let add_command = InstrPlainCommand(InstructionSuperType::Add,9,2,Box::new(|x| Ok(Box::new(AddCommand(x[0],x[1])))));
-    let numeq_command = InstrPlainCommand(InstructionSuperType::NumEq,10,3,Box::new(|x| Ok(Box::new(NumEqCommand(x[0],x[1],x[2])))));
-    let filter_command = InstrPlainCommand(InstructionSuperType::Filter,11,3,Box::new(|x| Ok(Box::new(FilterCommand(x[0],x[1],x[2])))));
-    let run_command = InstrPlainCommand(InstructionSuperType::Run,12,3,Box::new(|x| Ok(Box::new(RunCommand(x[0],x[1],x[2])))));
-    let seqfilter_command = InstrPlainCommand(InstructionSuperType::SeqFilter,13,4,Box::new(|x| Ok(Box::new(SeqFilterCommand(x[0],x[1],x[2],x[3])))));
-    let seqat_command = InstrPlainCommand(InstructionSuperType::SeqAt,14,2,Box::new(|x| Ok(Box::new(SeqAtCommand(x[0],x[1])))));
-    let at_command = InstrPlainCommand(InstructionSuperType::At,15,2,Box::new(|x| Ok(Box::new(AtCommand(x[0],x[1])))));
-    let both_command = InstrPlainCommand(InstructionSuperType::ReFilter,16,3,Box::new(|x| Ok(Box::new(ReFilterCommand(x[0],x[1],x[2])))));
+    let copy_command = BuiltinCommandType::new(InstructionSuperType::Copy,6,2,Box::new(|x| Ok(Box::new(CopyCommand(x[0],x[1])))));
+    let append_command = BuiltinCommandType::new(InstructionSuperType::Append,7,2,Box::new(|x| Ok(Box::new(AppendCommand(x[0],x[1])))));
+    let length_command = BuiltinCommandType::new(InstructionSuperType::Length,8,2,Box::new(|x| Ok(Box::new(LengthCommand(x[0],x[1])))));
+    let add_command = BuiltinCommandType::new(InstructionSuperType::Add,9,2,Box::new(|x| Ok(Box::new(AddCommand(x[0],x[1])))));
+    let numeq_command = BuiltinCommandType::new(InstructionSuperType::NumEq,10,3,Box::new(|x| Ok(Box::new(NumEqCommand(x[0],x[1],x[2])))));
+    let filter_command = BuiltinCommandType::new(InstructionSuperType::Filter,11,3,Box::new(|x| Ok(Box::new(FilterCommand(x[0],x[1],x[2])))));
+    let run_command = BuiltinCommandType::new(InstructionSuperType::Run,12,3,Box::new(|x| Ok(Box::new(RunCommand(x[0],x[1],x[2])))));
+    let seqfilter_command = BuiltinCommandType::new(InstructionSuperType::SeqFilter,13,4,Box::new(|x| Ok(Box::new(SeqFilterCommand(x[0],x[1],x[2],x[3])))));
+    let seqat_command = BuiltinCommandType::new(InstructionSuperType::SeqAt,14,2,Box::new(|x| Ok(Box::new(SeqAtCommand(x[0],x[1])))));
+    let at_command = BuiltinCommandType::new(InstructionSuperType::At,15,2,Box::new(|x| Ok(Box::new(AtCommand(x[0],x[1])))));
+    let both_command = BuiltinCommandType::new(InstructionSuperType::ReFilter,16,3,Box::new(|x| Ok(Box::new(ReFilterCommand(x[0],x[1],x[2])))));
 }
 
 pub struct NilCommand(pub(crate) Register);
@@ -52,8 +33,8 @@ impl Command for NilCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize()])
     }
 }
 
@@ -65,8 +46,8 @@ impl Command for CopyCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 }
 
@@ -82,8 +63,8 @@ impl Command for AppendCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 }
 
@@ -97,8 +78,8 @@ impl Command for LengthCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 }
 
@@ -117,8 +98,8 @@ impl Command for AddCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 }
 
@@ -137,8 +118,8 @@ impl Command for ReFilterCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 }
 
@@ -158,8 +139,8 @@ impl Command for NumEqCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 }
 
@@ -175,8 +156,8 @@ impl Command for FilterCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 }
 
@@ -199,8 +180,8 @@ impl Command for RunCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 }
 
@@ -232,8 +213,8 @@ impl Command for SeqFilterCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise(),self.2.serialise(),self.3.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize(),self.3.serialize()])
     }
 }
 
@@ -253,7 +234,7 @@ impl Command for SeqAtCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),self.1.serialise()])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 }

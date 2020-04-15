@@ -12,12 +12,12 @@ pub struct CommandSchema {
 pub trait CommandType {
     fn get_schema(&self) -> CommandSchema;
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String>;
-    fn deserialise(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String>;
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String>;
 }
 
 pub trait Command {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Err("unimplemented".to_string())
     }
 }

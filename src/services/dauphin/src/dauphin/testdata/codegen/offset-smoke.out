@@ -20,4 +20,4 @@ D (3/number)
 + B.X<1:string>
 + B.Y<1:boolean>
 + C<1:boolean>
-+ D<3:number>
++ D<3:number>/R

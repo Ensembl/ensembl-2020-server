@@ -1,7 +1,7 @@
 use std::fmt;
 
-use crate::model::{ DefStore, Register, VectorRegisters, ComplexRegisters };
-use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
+use crate::model::{ DefStore, Register, RegisterSignature };
+use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
     if ref_ {
@@ -80,7 +80,7 @@ pub enum InstructionType {
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
-    Call(String,bool,Vec<(MemberMode,ComplexRegisters,MemberDataFlow)>)
+    Call(String,bool,RegisterSignature)
 }
 
 impl InstructionType {
@@ -137,10 +137,7 @@ impl InstructionType {
                 let mut name = name.to_string();
                 if *impure { name.push_str("/i"); }
                 let mut out = vec![name.to_string()];
-                out.extend(types.iter().map(|x| {
-                    let purposes = x.1.to_string();
-                    format!("{}/{}",purposes,x.0)
-                }).collect::<Vec<_>>());
+                out.extend(types.iter().map(|x| x.to_string()).collect::<Vec<_>>());
                 Some(out)
             },
             _ => None
@@ -210,12 +207,8 @@ impl InstructionType {
                 let mut out = Vec::new();
                 let mut reg_offset = 0;
                 for sig in sigs.iter() {
-                    let mut these_regs = false;
-                    if let MemberDataFlow::JustifiesCall = sig.2 {
-                        these_regs = true;
-                    }
-                    let num_regs = sig.1.iter().map(|x| x.1.register_count()).sum();
-                    if these_regs {
+                    let num_regs = sig.iter().map(|x| x.1.register_count()).sum();
+                    if sig.justifies_call() {
                         for i in 0..num_regs {
                             out.push(reg_offset+i);
                         }

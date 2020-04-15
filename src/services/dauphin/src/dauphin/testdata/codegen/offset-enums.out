@@ -22,4 +22,4 @@ struct stest {
 + M.B.Y<2:bytes>
 + N<0:number>
 + N.X<0:boolean>
-+ N.Y<0:bytes>
++ N.Y<0:bytes>/R

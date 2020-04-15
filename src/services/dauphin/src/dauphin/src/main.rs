@@ -3,8 +3,12 @@ mod interp;
 mod lexer;
 mod model;
 mod parser;
-mod testsuite;
 mod typeinf;
+
+mod test {
+    pub mod cbor;
+    pub mod files;
+}
 
 #[macro_use]
 extern crate lazy_static;
@@ -16,7 +20,7 @@ extern crate serde_cbor;
 use crate::lexer::{ FileResolver, Lexer };
 use crate::parser::Parser;
 use crate::generate::generate_and_optimise;
-use crate::testsuite::load_testdata;
+use crate::test::files::load_testdata;
 use crate::interp::mini_interp;
 
 fn main() {

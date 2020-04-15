@@ -342,7 +342,7 @@ mod test {
     use super::*;
     use crate::lexer::{ FileResolver, Lexer };
     use crate::parser::Parser;
-    use crate::testsuite::load_testdata;
+    use crate::test::files::load_testdata;
 
     fn run_pass(filename: &str) -> Result<(),Vec<String>> {
         let resolver = FileResolver::new();

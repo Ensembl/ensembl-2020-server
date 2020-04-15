@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::model::{ Register, VectorRegisters, ComplexRegisters };
+use crate::model::{ Register, RegisterSignature };
 use crate::interp::values::registers::RegisterFile;
 use super::super::context::{InterpContext };
 use crate::interp::{ InterpValue, InterpNatural };
@@ -117,7 +117,6 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
     Ok(())
 }
 
-
 fn assign_reg<T>(registers: &mut RegisterFile, regs: &[Register], left_idx: usize, right_idx: usize, cb: T) -> Result<(),String> 
         where T: Fn(InterpValue,&Rc<InterpValue>) -> Result<InterpValue,String> {
     let right = registers.get(&regs[right_idx]);
@@ -130,80 +129,69 @@ fn assign_reg<T>(registers: &mut RegisterFile, regs: &[Register], left_idx: usiz
 }
 
 /// XXX ban multi-Lvalue
-fn assign_filtered(context: &mut InterpContext, complexes: &Vec<ComplexRegisters>, regs: &Vec<Register>) -> Result<(),String> {
+fn assign_filtered(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
-    let len = (regs.len()-1)/2;
     let filter_reg = registers.get_indexes(&regs[0])?;
     let filter = &filter_reg;
-    let mut right_all_reg = regs[len+1..].iter().map(|x| registers.get(x).clone()).collect::<Vec<_>>();
-    let mut right_all = vec![];
-    for r in &mut right_all_reg {
-        right_all.push(r.borrow().get_shared()?);
-    }
-    let mut left_all_reg = regs[1..len+1].iter().map(|x| registers.get(x).clone()).collect::<Vec<_>>();
-    let mut left_all = vec![];
-    for r in &mut left_all_reg {
-        left_all.push(r.borrow().get_shared()?);
-    }
-    let mut left_start = 1;
-    let mut right_start = (regs.len()+1)/2;
     /* get lengths while we can be gurarnteed a shared borrow */
-    let mut prep = vec![];
-    let assignments1 = complexes[1].iter().map(|x| x.1.clone()).collect::<Vec<_>>();
-    let assignments2 = complexes[2].iter().map(|x| x.1.clone()).collect::<Vec<_>>();
+    let assignments1 = sig[1].iter().map(|x| x.1.clone()).collect::<Vec<_>>();
+    let assignments2 = sig[2].iter().map(|x| x.1.clone()).collect::<Vec<_>>();
+    let mut lengths = vec![];
     for a_idx in 0..assignments1.len() {
         let a_left = &assignments1[a_idx];
         let a_right = &assignments2[a_idx];
         let depth = a_left.depth();
-        let mut do_filter : Option<&Vec<usize>> = Some(filter);
-        for level in (0..depth).rev() {
+        let mut level_lengths = vec![];
+        for level in 0..depth {
             /* how long are the lower registers? */
-            let left_lower = left_start + if level > 0 { a_left.level_offset(level-1).unwrap() } else { a_left.data() };
-            let left_lower_len = registers.len(&regs[left_lower])?;
-            let right_lower = right_start + if level > 0 { a_right.level_offset(level-1).unwrap() } else { a_right.data() };
-            let right_lower_len = registers.len(&regs[right_lower])?;
-            let left_self = left_start + a_left.level_offset(level).unwrap();
-            let right_self = right_start + a_right.level_offset(level).unwrap();            
-            prep.push((left_self,right_self,do_filter,Some((left_lower_len,right_lower_len)),level == depth-1));
-            let left_self = left_start + a_left.level_length(level).unwrap();
-            let right_self = right_start + a_right.level_length(level).unwrap();            
-            prep.push((left_self,right_self,do_filter,Some((0,0)),level == depth-1));
-            do_filter = None;
+            let left_lower_len = registers.len(&regs[a_left.lower_pos(level)])?;
+            let right_lower_len = registers.len(&regs[a_right.lower_pos(level)])?;
+            level_lengths.push((left_lower_len,right_lower_len));
         }
-        let left_self = left_start + a_left.data();
-        let right_self = right_start + a_right.data();
-        prep.push((left_self,right_self,do_filter,None,depth == 0));
-        left_start += a_left.register_count();
-        right_start += a_right.register_count();
+        lengths.push(level_lengths);
     }
     /* now do it */
-    for (left_self,right_self,our_filter,gait,top) in prep {
-        if let Some((ref start,ref stride)) = gait {
-            if top {
-                assign_reg(registers,regs,left_self,right_self, |left,right| {
+    let mut our_filter : Option<&Vec<usize>> = Some(filter);
+    for a_idx in 0..assignments1.len() {
+        let a_left = &assignments1[a_idx];
+        let a_right = &assignments2[a_idx];
+        let depth = a_left.depth();
+        for level in (0..depth).rev() {
+            let (start,stride) = &lengths[a_idx][level];
+            if level == a_left.depth()-1 {
+                assign_reg(registers,regs,a_left.offset_pos(level)?,a_right.offset_pos(level)?, |left,right| {
                     blit_number(left,&right,our_filter,*start,*stride)
                 })?;
+                assign_reg(registers,regs,a_left.length_pos(level)?,a_right.length_pos(level)?, |left,right| {
+                    blit_number(left,&right,our_filter,0,0)
+                })?;
             } else {
-                assign_reg(registers,regs,left_self,right_self, |mut left,right| {
+                assign_reg(registers,regs,a_left.offset_pos(level)?,a_right.offset_pos(level)?, |mut left,right| {
                     for i in 0..filter.len() {
                         left = blit_number(left,right,None,start+i*stride,0)?;
                     }
                     Ok(left)
                 })?;
+                assign_reg(registers,regs,a_left.length_pos(level)?,a_right.length_pos(level)?, |mut left,right| {
+                    for _ in 0..filter.len() {
+                        left = blit_number(left,right,None,0,0)?;
+                    }
+                    Ok(left)
+                })?;
             }
-        } else {
-            assign_reg(registers,regs,left_self,right_self, |mut left,right| {
-                for _ in 0..filter.len() {
-                    left = blit(left,right,our_filter)?;
-                }
-                Ok(left)
-            })?;
+            our_filter = None;
         }
+        assign_reg(registers,regs,a_left.data_pos(),a_right.data_pos(), |mut left,right| {
+            for _ in 0..filter.len() {
+                left = blit(left,right,our_filter)?;
+            }
+            Ok(left)
+        })?;
     }
     Ok(())
 }
 
-fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<ComplexRegisters>, regs: &Vec<Register>) -> Result<(),String> {
+fn assign(context: &mut InterpContext, filtered: bool, purposes: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
     if filtered {
         assign_filtered(context,purposes,regs)?;
     } else {
@@ -212,7 +200,7 @@ fn assign(context: &mut InterpContext, filtered: bool, purposes: &Vec<ComplexReg
     Ok(())
 }
 
-pub struct AssignCommand(pub(crate) bool, pub(crate) Vec<ComplexRegisters>, pub(crate) Vec<Register>);
+pub struct AssignCommand(pub(crate) bool, pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
 impl Command for AssignCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {

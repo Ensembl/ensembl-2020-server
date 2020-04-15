@@ -63,10 +63,10 @@ fn instruction_to_command(instr: &Instruction) -> Box<dyn Command> {
         InstructionType::At => { Box::new(AtCommand(instr.regs[0],instr.regs[1])) },
         InstructionType::Call(name,_,types) => {
             match &name[..] {
-                "assign" => { Box::new(AssignCommand(types[0].0 != MemberMode::LValue,types.iter().map(|x| x.1.clone()).collect(),instr.regs.to_vec())) },
+                "assign" => { Box::new(AssignCommand(types[0].get_mode() != MemberMode::LValue,types.clone(),instr.regs.to_vec())) },
                 "print_regs" => { Box::new(PrintRegsCommand(instr.regs.to_vec())) },
-                "print_vec" => { Box::new(PrintVecCommand(types[0].1.clone(),instr.regs.to_vec())) },
-                "len" => { Box::new(LenCommand(types[1].1.clone(),instr.regs.to_vec())) },
+                "print_vec" => { Box::new(PrintVecCommand(types.clone(),instr.regs.to_vec())) },
+                "len" => { Box::new(LenCommand(types.clone(),instr.regs.to_vec())) },
                 "eq" => { Box::new(EqCommand(instr.regs.to_vec())) },
                 "lt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Lt,instr.regs.to_vec())) },
                 "gt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Gt,instr.regs.to_vec())) },

@@ -1,5 +1,5 @@
 #[cfg(test)]
-use crate::testsuite::load_testdata;
+use crate::test::files::load_testdata;
 
 use super::charsource::{ CharSource, StringCharSource };
 use super::preamble::PREAMBLE;

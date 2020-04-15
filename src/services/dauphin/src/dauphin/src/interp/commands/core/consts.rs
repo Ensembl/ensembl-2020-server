@@ -30,7 +30,7 @@ impl CommandType for NumberConstCommandType {
         Ok(Box::new(NumberConstCommand(it.regs[0],force_branch!(it.itype,InstructionType,NumberConst))))
     }
 
-    fn deserialise(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(NumberConstCommand(Register::deserialize(&value[0])?,force_branch!(value[1],CborValue,Float))))
     }
 }
@@ -43,8 +43,8 @@ impl Command for NumberConstCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),CborValue::Float(self.1)])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),CborValue::Float(self.1)])
     }
 }
 
@@ -63,7 +63,7 @@ impl CommandType for ConstCommandType {
         Ok(Box::new(ConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,Const).to_vec())))
     }
 
-    fn deserialise(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
         let v = force_branch!(&value[1],CborValue,Array);
         let v = v.iter().map(|x| { Ok(*force_branch!(x,CborValue,Integer) as usize) }).collect::<Result<Vec<usize>,String>>()?;
         Ok(Box::new(ConstCommand(Register::deserialize(&value[0])?,v)))
@@ -78,9 +78,9 @@ impl Command for ConstCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
         let v = self.1.iter().map(|x| CborValue::Integer(*x as i128)).collect();
-        Ok(vec![self.0.serialise(),CborValue::Array(v)])
+        Ok(vec![self.0.serialize(),CborValue::Array(v)])
     }
 }
 
@@ -99,7 +99,7 @@ impl CommandType for BooleanConstCommandType {
         Ok(Box::new(BooleanConstCommand(it.regs[0],force_branch!(it.itype,InstructionType,BooleanConst))))
     }
 
-    fn deserialise(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(BooleanConstCommand(Register::deserialize(&value[0])?,force_branch!(value[1],CborValue,Bool))))
     }
 }
@@ -112,8 +112,8 @@ impl Command for BooleanConstCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),CborValue::Bool(self.1)])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),CborValue::Bool(self.1)])
     }
 }
 
@@ -132,7 +132,7 @@ impl CommandType for StringConstCommandType {
         Ok(Box::new(StringConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,StringConst).to_string())))
     }
 
-    fn deserialise(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
         let v = force_branch!(&value[1],CborValue,Text).to_string();
         Ok(Box::new(StringConstCommand(Register::deserialize(&value[0])?,v)))
     }
@@ -146,8 +146,8 @@ impl Command for StringConstCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),CborValue::Text(self.1.to_string())])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),CborValue::Text(self.1.to_string())])
     } 
 }
 
@@ -166,7 +166,7 @@ impl CommandType for BytesConstCommandType {
         Ok(Box::new(BytesConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,BytesConst).to_vec())))
     }
 
-    fn deserialise(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
         let v = force_branch!(&value[1],CborValue,Bytes).to_vec();
         Ok(Box::new(BytesConstCommand(Register::deserialize(&value[0])?,v)))
     }
@@ -180,7 +180,7 @@ impl Command for BytesConstCommand {
         Ok(())
     }
 
-    fn serialise(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialise(),CborValue::Bytes(self.1.to_vec())])
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),CborValue::Bytes(self.1.to_vec())])
     } 
 }

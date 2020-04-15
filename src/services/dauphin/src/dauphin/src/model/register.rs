@@ -15,7 +15,7 @@ impl Register {
         }
     }
 
-    pub fn serialise(&self) -> CborValue {
+    pub fn serialize(&self) -> CborValue {
         CborValue::Integer(self.0 as i128)
     }
 }

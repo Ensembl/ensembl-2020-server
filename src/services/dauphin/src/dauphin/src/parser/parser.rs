@@ -77,7 +77,7 @@ impl Parser {
 mod test {
     use super::*;
     use crate::lexer::FileResolver;
-    use crate::testsuite::load_testdata;
+    use crate::test::files::load_testdata;
 
     fn last_statement(p: &mut Parser) -> Result<ParserStatement,ParseError> {
         let mut prev = Err(ParseError::new("unexpected EOF",&mut p.lexer));

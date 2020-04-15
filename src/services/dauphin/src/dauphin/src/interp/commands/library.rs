@@ -2,23 +2,19 @@ use std::collections::HashMap;
 use super::super::context::{InterpContext };
 use crate::interp::{ InterpNatural, InterpValue };
 use super::super::command::Command;
-use crate::model::{ Register, VectorRegisters, ComplexRegisters };
+use crate::model::{ Register, VectorRegisters, RegisterSignature };
 use super::assign::coerce_to;
 use super::super::stream::StreamContents;
-use crate::typeinf::{ MemberMode, MemberDataFlow };
 
-pub struct LenCommand(pub(crate) ComplexRegisters,pub(crate) Vec<Register>);
+pub struct LenCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
 impl Command for LenCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
-        if let Some((_,ass)) = &self.0.iter().next() {
-            if let Some(top_length) = ass.level_length(ass.depth()-1) {
-                registers.copy(&self.1[0],&self.1[top_length+1])?;
-                Ok(())
-            } else {
-                Err("len on non-list".to_string())
-            }
+        if let Some((_,ass)) = &self.0[1].iter().next() {
+            let reg = ass.length_pos(ass.depth()-1)?;
+            registers.copy(&self.1[0],&self.1[reg])?;
+            Ok(())
         } else {
             Err("len on non-list".to_string())
         }
@@ -134,69 +130,61 @@ fn print_register(context: &mut InterpContext, reg: &Register, restrict: Option<
     })
 }
 
-fn print_base(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], reg_start: usize, restrict: Option<(usize,usize)>) -> Result<String,String> {
-    let data_reg = reg_start + assignment.data();
+fn print_base(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], restrict: Option<(usize,usize)>) -> Result<String,String> {
+    let data_reg = assignment.data_pos();
     print_register(context,&regs[data_reg],restrict)
 }
 
-fn print_level(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], level_in: i64, reg_start: usize, restrict: Option<(usize,usize)>) -> Result<String,String> {
+fn print_level(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], level_in: i64, restrict: Option<(usize,usize)>) -> Result<String,String> {
     if level_in > -1 {
         let level = level_in as usize;
         /* find registers for level */
-        let offset_reg = reg_start + assignment.level_offset(level).ok_or_else(|| format!("Excess level"))?;
-        let len_reg = reg_start + assignment.level_length(level).ok_or_else(|| format!("Excess level"))?;
+        let offset_reg = assignment.offset_pos(level)?;
+        let len_reg = assignment.length_pos(level)?;
         let starts = &context.registers().get_indexes(&regs[offset_reg])?;
         let lens = &context.registers().get_indexes(&regs[len_reg])?;
         let lens_len = lens.len();
         let (a,b) = restrict.unwrap_or((0,lens_len));
         let mut members = Vec::new();
         for index in a..a+b {
-            members.push(print_level(context,assignment,regs,level_in-1,reg_start,Some((starts[index],lens[index%lens_len])))?);
+            members.push(print_level(context,assignment,regs,level_in-1,Some((starts[index],lens[index%lens_len])))?);
         }
         Ok(format!("{}",members.iter().map(|x| format!("[{}]",x)).collect::<Vec<_>>().join(",")))
     } else {
-        print_base(context,assignment,regs,reg_start,restrict)
+        print_base(context,assignment,regs,restrict)
     }
 }
 
-fn print_array(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], reg_start: usize) -> Result<String,String> {
-    let mut out = print_level(context,assignment,regs,assignment.depth() as i64-1,reg_start,None)?;
+fn print_array(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register]) -> Result<String,String> {
+    let mut out = print_level(context,assignment,regs,assignment.depth() as i64-1,None)?;
     if out.len() == 0 { out = "-".to_string() }
     Ok(out)
 }
 
-fn print_complex(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], complex: &[String], reg_start: usize, is_complex: bool) -> Result<String,String> {
+fn print_complex(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], complex: &[String], is_complex: bool) -> Result<String,String> {
     if is_complex {
         let name = if complex.len() > 0 { complex.join(".") } else { "*".to_string() };
-        Ok(format!("{}: {}",name,print_array(context,assignment,regs,reg_start)?))
+        Ok(format!("{}: {}",name,print_array(context,assignment,regs)?))
     } else {
-        print_array(context,assignment,regs,reg_start)
+        print_array(context,assignment,regs)
     }
 }
 
-fn print_vec(context: &mut InterpContext, complex: &ComplexRegisters, regs: &Vec<Register>) -> Result<String,String> {
+fn print_vec(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<String,String> {
     let mut out : Vec<String> = vec![];
-    let mut complexes : HashMap<Vec<String>,(usize,VectorRegisters)> = HashMap::new();
     let mut is_complex = false;
-    let mut start = 0;
-    for (_,a) in complex.iter() {
-        let complex = a.get_complex().to_vec();
+    for (complex,a) in sig[0].iter() {
         if complex.len() > 0 { is_complex = true; }
-        complexes.insert(complex,(start,a.clone()));
-        start += a.register_count();
     }
-    let mut complex_keys = complexes.keys().map(|x| x.to_vec()).collect::<Vec<_>>();
-    complex_keys.sort();
-    for complex in complex_keys.iter() {
-        let indexes = complexes.get(complex).unwrap();
-        out.push(print_complex(context,&indexes.1,regs,complex,indexes.0,is_complex)?);
+    for (complex,a) in sig[0].iter() {
+        out.push(print_complex(context,&a,regs,&complex,is_complex)?);
     }
     let mut out = out.join("; ");
     if is_complex { out = format!("{{ {} }}",out); }
     Ok(out)
 }
 
-pub struct PrintVecCommand(pub(crate) ComplexRegisters,pub(crate) Vec<Register>);
+pub struct PrintVecCommand(pub(crate) RegisterSignature,pub(crate) Vec<Register>);
 
 impl Command for PrintVecCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
