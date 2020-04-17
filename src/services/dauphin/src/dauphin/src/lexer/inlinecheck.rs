@@ -1,22 +1,19 @@
-/* Despite looking like a parser concern, operators are lexer tokens and so the validity of an
- * operator is a lexer tihng and so a left-ro-tight thing. This means that prefix operators, which
- * can occur whenever an expression is expected, are distinct from infix or postfix operators which
- * occur after an expression and extend it. However infix and postfix operators are essentially
- * equivalent in terms of detection, differeing only in what happens next after detection.
- * 
- * NO operator may contain "//"" slash-star or ";". The former are comment characters and the latter
- * is the statement terminsation character which is used to fast-forward through eroneous statements.
- * No operator can contain whitespace nor be empty.
- * 
- * Avioding bracketing ambiguiity: Operators may not be defined such that a sequence of them may
- * be bracketed ambiguosuly. To achieve this none may be a prefix of any other. This condition may
- * be later relaxed while maintaining the assurance.
- * 
- * Let A/N be alphanumerics or underscore.
- * 
- * It must begin #%*+-/<=>\^`{|}~&*" or !?. followed by a non-A/N. Alternatively, it may be bracketed on 
- * the outside with () or [] if it contains only such characters. Additionally, if bracketed may begin
- * with !?. Note that &[ and * themselves are registered as operators in the preamble.
+/* 
+ *  See the NOTICE file distributed with this work for additional information
+ *  regarding copyright ownership.
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may 
+ *  not use this file except in compliance with the License. You may obtain a
+ *  copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ *  
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *  
+ *  vscode-fold=1
  */
 
 use super::inlinetokens::InlineTokens;
