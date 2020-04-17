@@ -14,6 +14,7 @@ mod test {
 extern crate lazy_static;
 extern crate owning_ref;
 extern crate serde_cbor;
+extern crate crc;
 
 /* This to remove RLS unused warns */
 

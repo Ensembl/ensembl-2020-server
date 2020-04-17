@@ -3,7 +3,7 @@ use crate::model::{ Register, RegisterSignature };
 use crate::interp::values::registers::RegisterFile;
 use super::super::context::{InterpContext };
 use crate::interp::{ InterpValue, InterpNatural };
-use super::super::command::Command;
+use crate::interp::commandsets::Command;
 
 fn blit_typed<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: Option<&Vec<usize>>) where T: Clone {
     if let Some(filter) = filter {

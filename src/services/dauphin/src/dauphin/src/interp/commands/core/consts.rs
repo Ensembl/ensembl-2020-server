@@ -1,10 +1,11 @@
 use crate::interp::context::{InterpContext };
 use crate::interp::InterpValue;
-use crate::interp::command::{ Command, CommandSchema, CommandType };
+use crate::interp::commandsets::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet };
 use crate::model::Register;
 use crate::generate::{ Instruction, InstructionType, InstructionSuperType };
 use serde_cbor::Value as CborValue;
 
+// XXX factor
 macro_rules! force_branch {
     ($value:expr,$ty:ident,$branch:ident) => {
         if let $ty::$branch(v) = $value {
@@ -20,10 +21,8 @@ pub struct NumberConstCommandType();
 impl CommandType for NumberConstCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            opcode: 1,
             values: 2,
-            instructions: vec![InstructionSuperType::NumberConst],
-            commands: vec![]
+            trigger: CommandTrigger::Instruction(InstructionSuperType::NumberConst),
         }
     }
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
@@ -53,10 +52,8 @@ pub struct ConstCommandType();
 impl CommandType for ConstCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            opcode: 2,
             values: 2,
-            instructions: vec![InstructionSuperType::Const],
-            commands: vec![]
+            trigger: CommandTrigger::Instruction(InstructionSuperType::Const)
         }
     }
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
@@ -89,10 +86,8 @@ pub struct BooleanConstCommandType();
 impl CommandType for BooleanConstCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            opcode: 3,
             values: 2,
-            instructions: vec![InstructionSuperType::BooleanConst],
-            commands: vec![]
+            trigger: CommandTrigger::Instruction(InstructionSuperType::BooleanConst)
         }
     }
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
@@ -122,10 +117,8 @@ pub struct StringConstCommandType();
 impl CommandType for StringConstCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            opcode: 4,
             values: 2,
-            instructions: vec![InstructionSuperType::StringConst],
-            commands: vec![]
+            trigger: CommandTrigger::Instruction(InstructionSuperType::StringConst)
         }
     }
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
@@ -156,10 +149,8 @@ pub struct BytesConstCommandType();
 impl CommandType for BytesConstCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            opcode: 5,
             values: 2,
-            instructions: vec![InstructionSuperType::BytesConst],
-            commands: vec![]
+            trigger: CommandTrigger::Instruction(InstructionSuperType::BytesConst)
         }
     }
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
@@ -183,4 +174,13 @@ impl Command for BytesConstCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),CborValue::Bytes(self.1.to_vec())])
     } 
+}
+
+pub(super) fn const_commands(set: &mut CommandSet) -> Result<(),String> {
+    set.push("number",0,NumberConstCommandType())?;
+    set.push("const",1,ConstCommandType())?;
+    set.push("boolean",2,BooleanConstCommandType())?;
+    set.push("string",3,StringConstCommandType())?;
+    set.push("bytes",4,BytesConstCommandType())?;
+    Ok(())
 }

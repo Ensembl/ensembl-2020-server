@@ -20,7 +20,7 @@ impl VectorRegisters {
 
     pub fn deserialize(cbor: &CborValue) -> Result<VectorRegisters,String> {
         let data = cbor_array(cbor,2,false)?;
-        Ok(VectorRegisters::new(cbor_int(&data[0],None)?,BaseType::deserialize(&data[1])?))
+        Ok(VectorRegisters::new(cbor_int(&data[0],None)? as usize,BaseType::deserialize(&data[1])?))
     }
 
     pub fn serialize(&self) -> Result<CborValue,String> {

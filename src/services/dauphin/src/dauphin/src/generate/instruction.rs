@@ -23,7 +23,7 @@ fn fixed(bt: BaseType) -> ArgumentConstraint {
     ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(bt))
 }
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Clone,Copy,PartialEq,Debug,Hash,Eq)]
 pub enum InstructionSuperType {
     Nil,
     Copy,

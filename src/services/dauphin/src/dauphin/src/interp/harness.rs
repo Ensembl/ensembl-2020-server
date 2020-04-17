@@ -4,7 +4,7 @@ use crate::generate::{ Instruction, InstructionType };
 use crate::generate::GenContext;
 use crate::model::Register;
 use crate::interp::context::InterpContext;
-use crate::interp::command::Command;
+use crate::interp::commandsets::Command;
 use crate::interp::commands::core::core::{
     CopyCommand, AppendCommand, LengthCommand, AddCommand, NumEqCommand, FilterCommand, RunCommand,
     SeqFilterCommand, SeqAtCommand, NilCommand, AtCommand, ReFilterCommand
@@ -14,9 +14,12 @@ use crate::interp::commands::core::consts::{
 };
 use crate::typeinf::MemberMode;
 
-use crate::interp::commands::library::{
-     LenCommand, EqCommand, InterpBinBoolCommand, InterpBinBoolOp, PrintVecCommand, PrintRegsCommand,
-     AssertCommand
+use crate::interp::commands::library::library::{
+     LenCommand, PrintVecCommand, PrintRegsCommand, AssertCommand
+};
+use crate::interp::commands::library::eq::EqCommand;
+use crate::interp::commands::library::numops::{
+    InterpBinBoolCommand, InterpBinBoolOp, 
 };
 use crate::interp::commands::assign::AssignCommand;
 use crate::interp::{ InterpValue, StreamContents };
@@ -67,11 +70,11 @@ fn instruction_to_command(instr: &Instruction) -> Box<dyn Command> {
                 "print_regs" => { Box::new(PrintRegsCommand(instr.regs.to_vec())) },
                 "print_vec" => { Box::new(PrintVecCommand(types.clone(),instr.regs.to_vec())) },
                 "len" => { Box::new(LenCommand(types.clone(),instr.regs.to_vec())) },
-                "eq" => { Box::new(EqCommand(instr.regs.to_vec())) },
-                "lt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Lt,instr.regs.to_vec())) },
-                "gt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Gt,instr.regs.to_vec())) },
-                "lteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::LtEq,instr.regs.to_vec())) },
-                "gteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::GtEq,instr.regs.to_vec())) },
+                "eq" => { Box::new(EqCommand(instr.regs[0],instr.regs[1],instr.regs[2])) },
+                "lt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Lt,instr.regs[0],instr.regs[1],instr.regs[2])) },
+                "gt" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::Gt,instr.regs[0],instr.regs[1],instr.regs[2])) },
+                "lteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::LtEq,instr.regs[0],instr.regs[1],instr.regs[2])) },
+                "gteq" => { Box::new(InterpBinBoolCommand(InterpBinBoolOp::GtEq,instr.regs[0],instr.regs[1],instr.regs[2])) },
                 "assert" => { Box::new(AssertCommand(instr.regs[0],instr.regs[1])) }
                 _ => { panic!("Bad mini-interp instruction {:?}",instr); }        
             }

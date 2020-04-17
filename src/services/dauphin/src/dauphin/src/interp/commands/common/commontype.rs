@@ -1,19 +1,18 @@
-use crate::interp::command::{ Command, CommandSchema, CommandType };
+use crate::interp::commandsets::{ Command, CommandSchema, CommandType, CommandTrigger };
 use crate::model::Register;
 use crate::generate::{ Instruction, InstructionSuperType };
 use serde_cbor::Value as CborValue;
 
 pub struct BuiltinCommandType {
     supertype: InstructionSuperType,
-    opcode: u8,
     values: usize,
     ctor: Box<dyn Fn(&[Register]) -> Result<Box<dyn Command>,String>>
 }
 
 impl BuiltinCommandType {
-    pub fn new(supertype: InstructionSuperType, opcode: u8, values: usize, ctor: Box<dyn Fn(&[Register]) -> Result<Box<dyn Command>,String>>) -> BuiltinCommandType {
+    pub fn new(supertype: InstructionSuperType, values: usize, ctor: Box<dyn Fn(&[Register]) -> Result<Box<dyn Command>,String>>) -> BuiltinCommandType {
         BuiltinCommandType {
-            supertype, opcode, values, ctor
+            supertype, values, ctor
         }
     }
 }
@@ -21,10 +20,8 @@ impl BuiltinCommandType {
 impl CommandType for BuiltinCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            opcode: self.opcode,
             values: self.values,
-            instructions: vec![self.supertype.clone()],
-            commands: vec![]
+            trigger: CommandTrigger::Instruction(self.supertype)
         }
     }
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {

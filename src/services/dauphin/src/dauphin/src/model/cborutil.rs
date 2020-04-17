@@ -1,12 +1,12 @@
 use serde_cbor::Value as CborValue;
 
-pub fn cbor_int(cbor: &CborValue, max: Option<usize>) -> Result<usize,String> {
+pub fn cbor_int(cbor: &CborValue, max: Option<i128>) -> Result<i128,String>  {
     match cbor {
         CborValue::Integer(x) => {
             if let Some(max) = max {
-                if *x >= 0 && *x as usize <= max { return Ok(*x as usize); }
+                if *x >= 0 && *x <= max { return Ok(*x); }
             } else {
-                return Ok(*x as usize);
+                return Ok(*x);
             }
         },
         _ => {}

@@ -1,10 +1,36 @@
-use std::collections::HashMap;
-use super::super::context::{InterpContext };
-use crate::interp::{ InterpNatural, InterpValue };
-use super::super::command::Command;
-use crate::model::{ Register, VectorRegisters, RegisterSignature };
-use super::assign::coerce_to;
-use super::super::stream::StreamContents;
+use crate::interp::context::{InterpContext };
+use crate::interp::InterpNatural;
+use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array };
+use crate::interp::stream::StreamContents;
+use crate::interp::commandsets::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId };
+use crate::generate::{ Instruction, InstructionType };
+use serde_cbor::Value as CborValue;
+use super::numops::library_numops_commands;
+use super::eq::library_eq_command;
+
+pub struct LenCommandType();
+
+impl CommandType for LenCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 3,
+            trigger: CommandTrigger::Command("len".to_string())
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,sig) = &it.itype {
+            Ok(Box::new(LenCommand(sig.clone(),it.regs.clone())))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
+        Ok(Box::new(LenCommand(RegisterSignature::deserialize(&value[0],false)?,regs)))
+    }
+}
 
 pub struct LenCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
@@ -19,72 +45,33 @@ impl Command for LenCommand {
             Err("len on non-list".to_string())
         }
     }
-}
 
-pub(crate) enum InterpBinBoolOp {
-    Lt,
-    LtEq,
-    Gt,
-    GtEq
-}
-
-impl InterpBinBoolOp {
-    fn evaluate(&self, a: f64, b: f64) -> bool {
-        match self {
-            InterpBinBoolOp::Lt => a < b,
-            InterpBinBoolOp::LtEq => a <= b,
-            InterpBinBoolOp::Gt => a > b,
-            InterpBinBoolOp::GtEq => a >= b
-        }
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false)?])
     }
 }
 
-pub struct InterpBinBoolCommand(pub(crate) InterpBinBoolOp, pub(crate) Vec<Register>);
+pub struct PrintRegsCommandType();
 
-impl Command for InterpBinBoolCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
-        let a = registers.get_numbers(&self.1[1])?;
-        let b = &registers.get_numbers(&self.1[2])?;
-        let mut c = vec![];
-        let b_len = b.len();
-        for (i,a_val) in a.iter().enumerate() {
-            c.push(self.0.evaluate(*a_val,b[i%b_len]));
+impl CommandType for PrintRegsCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 1,
+            trigger: CommandTrigger::Command("print_regs".to_string())
         }
-        registers.write(&self.1[0],InterpValue::Boolean(c));
-        Ok(())
     }
-}
 
-fn eq<T>(c: &mut Vec<bool>, a: &[T], b: &[T]) where T: PartialEq {
-    let b_len = b.len();
-    for (i,av) in a.iter().enumerate() {
-        c.push(av == &b[i%b_len]);
-    }
-}
-
-pub struct EqCommand(pub(crate) Vec<Register>);
-
-impl Command for EqCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
-        let a = registers.get(&self.0[1]);
-        let a = a.borrow().get_shared()?;
-        let b = registers.get(&self.0[2]);
-        let b = b.borrow().get_shared()?;
-        let mut c = vec![];
-        if let Some(natural) = coerce_to(&a,&b,true) {
-            match natural {
-                InterpNatural::Empty => {},
-                InterpNatural::Numbers => { eq(&mut c,&a.to_rc_numbers()?.0,&b.to_rc_numbers()?.0); },
-                InterpNatural::Indexes => { eq(&mut c,&a.to_rc_indexes()?.0,&b.to_rc_indexes()?.0); },
-                InterpNatural::Boolean => { eq(&mut c,&a.to_rc_boolean()?.0,&b.to_rc_boolean()?.0); },
-                InterpNatural::Strings => { eq(&mut c,&a.to_rc_strings()?.0,&b.to_rc_strings()?.0); },
-                InterpNatural::Bytes =>   { eq(&mut c,&a.to_rc_bytes()?.0,  &b.to_rc_bytes()?.0); },
-            }
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,sig) = &it.itype {
+            Ok(Box::new(PrintRegsCommand(it.regs.clone())))
+        } else {
+            Err("unexpected instruction".to_string())
         }
-        registers.write(&self.0[0],InterpValue::Boolean(c));
-        Ok(())
+    }
+    
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
+        Ok(Box::new(PrintRegsCommand(regs)))
     }
 }
 
@@ -97,6 +84,10 @@ impl Command for PrintRegsCommand {
             context.stream_add(v);
         }
         Ok(())
+    }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![CborValue::Array(self.0.iter().map(|x| x.serialize()).collect())])
     }
 }
 
@@ -184,6 +175,30 @@ fn print_vec(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Re
     Ok(out)
 }
 
+pub struct PrintVecCommandType();
+
+impl CommandType for PrintVecCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 2,
+            trigger: CommandTrigger::Command("print_vec".to_string())
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,sig) = &it.itype {
+            Ok(Box::new(PrintVecCommand(sig.clone(),it.regs.clone())))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
+        Ok(Box::new(PrintVecCommand(RegisterSignature::deserialize(&value[0],false)?,regs)))
+    }
+}
+
 pub struct PrintVecCommand(pub(crate) RegisterSignature,pub(crate) Vec<Register>);
 
 impl Command for PrintVecCommand {
@@ -191,6 +206,33 @@ impl Command for PrintVecCommand {
         let v = StreamContents::String(print_vec(context,&self.0,&self.1)?);
         context.stream_add(v);
         Ok(())
+    }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false)?])
+    }
+}
+
+pub struct AssertCommandType();
+
+impl CommandType for AssertCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 2,
+            trigger: CommandTrigger::Command("assert".to_string())
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,_) = &it.itype {
+            Ok(Box::new(AssertCommand(it.regs[0],it.regs[1])))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(AssertCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?)))
     }
 }
 
@@ -208,4 +250,20 @@ impl Command for AssertCommand {
         }
         Ok(())
     }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize()])
+    }
+}
+
+fn library_commands() -> Result<CommandSet,String> {
+    let set_id = CommandSetId::new("library",(0,0),0x967A857B859BF666);
+    let mut set = CommandSet::new(&set_id);
+    set.push("len",1,LenCommandType())?;
+    set.push("print_regs",2,PrintRegsCommandType())?;
+    set.push("print_vec",3,PrintVecCommandType())?;
+    set.push("assert",4,AssertCommandType())?;
+    library_numops_commands(&mut set)?;
+    library_eq_command(&mut set)?;
+    Ok(set)
 }

@@ -1,29 +1,14 @@
 use crate::interp::context::{InterpContext };
 use crate::interp::InterpValue;
-use crate::interp::command::{ Command, CommandSchema, CommandType };
+use crate::interp::commandsets::{ Command, CommandSet, CommandSetId };
 use crate::model::Register;
 use crate::interp::commands::assign::{ blit, blit_expanded, blit_runs };
-use crate::generate::{ Instruction, InstructionSuperType };
+use crate::generate::InstructionSuperType;
 use serde_cbor::Value as CborValue;
 use super::super::common::commontype::BuiltinCommandType;
+use super::consts::const_commands;
 
 // XXX read is coerce
-
-fn core_commands() {
-    let nil_command = BuiltinCommandType::new(InstructionSuperType::Nil,0,1,Box::new(|x| Ok(Box::new(NilCommand(x[0])))));
-    /* 1-5 used in consts */
-    let copy_command = BuiltinCommandType::new(InstructionSuperType::Copy,6,2,Box::new(|x| Ok(Box::new(CopyCommand(x[0],x[1])))));
-    let append_command = BuiltinCommandType::new(InstructionSuperType::Append,7,2,Box::new(|x| Ok(Box::new(AppendCommand(x[0],x[1])))));
-    let length_command = BuiltinCommandType::new(InstructionSuperType::Length,8,2,Box::new(|x| Ok(Box::new(LengthCommand(x[0],x[1])))));
-    let add_command = BuiltinCommandType::new(InstructionSuperType::Add,9,2,Box::new(|x| Ok(Box::new(AddCommand(x[0],x[1])))));
-    let numeq_command = BuiltinCommandType::new(InstructionSuperType::NumEq,10,3,Box::new(|x| Ok(Box::new(NumEqCommand(x[0],x[1],x[2])))));
-    let filter_command = BuiltinCommandType::new(InstructionSuperType::Filter,11,3,Box::new(|x| Ok(Box::new(FilterCommand(x[0],x[1],x[2])))));
-    let run_command = BuiltinCommandType::new(InstructionSuperType::Run,12,3,Box::new(|x| Ok(Box::new(RunCommand(x[0],x[1],x[2])))));
-    let seqfilter_command = BuiltinCommandType::new(InstructionSuperType::SeqFilter,13,4,Box::new(|x| Ok(Box::new(SeqFilterCommand(x[0],x[1],x[2],x[3])))));
-    let seqat_command = BuiltinCommandType::new(InstructionSuperType::SeqAt,14,2,Box::new(|x| Ok(Box::new(SeqAtCommand(x[0],x[1])))));
-    let at_command = BuiltinCommandType::new(InstructionSuperType::At,15,2,Box::new(|x| Ok(Box::new(AtCommand(x[0],x[1])))));
-    let both_command = BuiltinCommandType::new(InstructionSuperType::ReFilter,16,3,Box::new(|x| Ok(Box::new(ReFilterCommand(x[0],x[1],x[2])))));
-}
 
 pub struct NilCommand(pub(crate) Register);
 
@@ -237,4 +222,23 @@ impl Command for SeqAtCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
+}
+
+fn core_commands() -> Result<CommandSet,String> {
+    let set_id = CommandSetId::new("core",(0,0),0xD99E736DBD9EB7C5);
+    let mut set = CommandSet::new(&set_id);
+    const_commands(&mut set)?;
+    set.push("nil",5,BuiltinCommandType::new(InstructionSuperType::Nil,1,Box::new(|x| Ok(Box::new(NilCommand(x[0]))))))?;
+    set.push("copy",6,BuiltinCommandType::new(InstructionSuperType::Copy,2,Box::new(|x| Ok(Box::new(CopyCommand(x[0],x[1]))))))?;
+    set.push("append",7,BuiltinCommandType::new(InstructionSuperType::Append,2,Box::new(|x| Ok(Box::new(AppendCommand(x[0],x[1]))))))?;
+    set.push("length",8,BuiltinCommandType::new(InstructionSuperType::Length,2,Box::new(|x| Ok(Box::new(LengthCommand(x[0],x[1]))))))?;
+    set.push("add",9,BuiltinCommandType::new(InstructionSuperType::Add,2,Box::new(|x| Ok(Box::new(AddCommand(x[0],x[1]))))))?;
+    set.push("numeq",10,BuiltinCommandType::new(InstructionSuperType::NumEq,3,Box::new(|x| Ok(Box::new(NumEqCommand(x[0],x[1],x[2]))))))?;
+    set.push("filter",11,BuiltinCommandType::new(InstructionSuperType::Filter,3,Box::new(|x| Ok(Box::new(FilterCommand(x[0],x[1],x[2]))))))?;
+    set.push("run",12,BuiltinCommandType::new(InstructionSuperType::Run,3,Box::new(|x| Ok(Box::new(RunCommand(x[0],x[1],x[2]))))))?;
+    set.push("seqfilter",13,BuiltinCommandType::new(InstructionSuperType::SeqFilter,4,Box::new(|x| Ok(Box::new(SeqFilterCommand(x[0],x[1],x[2],x[3]))))))?;
+    set.push("seqat",14,BuiltinCommandType::new(InstructionSuperType::SeqAt,2,Box::new(|x| Ok(Box::new(SeqAtCommand(x[0],x[1]))))))?;
+    set.push("at",15,BuiltinCommandType::new(InstructionSuperType::At,2,Box::new(|x| Ok(Box::new(AtCommand(x[0],x[1]))))))?;
+    set.push("refilter",16,BuiltinCommandType::new(InstructionSuperType::ReFilter,3,Box::new(|x| Ok(Box::new(ReFilterCommand(x[0],x[1],x[2]))))))?;
+    Ok(set)
 }
