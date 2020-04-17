@@ -12,8 +12,6 @@
  *  
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *  
- *  vscode-fold=1
  */
 
 use std::collections::HashSet;
@@ -62,6 +60,8 @@ impl StructEnumDef {
             member_types: member_types.clone()
         })
     }
+
+    //
 
     pub fn name(&self) -> &str { &self.name }
     pub fn get_names(&self) -> &Vec<String> { &self.names }
