@@ -134,8 +134,8 @@ impl ComplexRegisters {
                 let enum_ = defstore.get_enum(&name).unwrap();
                 self.from_enum(defstore,enum_,prefix,&container)
             },
-            base => {
-                self.add(prefix.to_vec(),VectorRegisters::new(container.depth(),base));
+            _ => {
+                self.add(prefix.to_vec(),VectorRegisters::new(container.depth()));
                 Ok(())
             }
         }
@@ -152,7 +152,7 @@ impl ComplexRegisters {
     }
 
     fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &[String], container: &ContainerType) -> Result<(),String> {
-        self.add(cpath.to_vec(),VectorRegisters::new(container.depth(),BaseType::NumberType));
+        self.add(cpath.to_vec(),VectorRegisters::new(container.depth()));
         for name in se.get_names() {
             let mut new_cpath = cpath.to_vec();
             new_cpath.push(name.to_string());

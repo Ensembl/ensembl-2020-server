@@ -11,13 +11,13 @@ C (1/bool)
 D (3/number)
 
 
-+ <1:number>
-+ A.A<2:number>
-+ A.B<1:number>
-+ A.B.X<1:string>
-+ A.B.Y<1:boolean>
-+ B<1:number>
-+ B.X<1:string>
-+ B.Y<1:boolean>
-+ C<1:boolean>
-+ D<3:number>/R
++ <1>
++ A.A<2>
++ A.B<1>
++ A.B.X<1>
++ A.B.Y<1>
++ B<1>
++ B.X<1>
++ B.Y<1>
++ C<1>
++ D<3>/R

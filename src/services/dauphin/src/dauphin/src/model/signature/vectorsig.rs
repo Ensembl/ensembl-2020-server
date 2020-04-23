@@ -15,32 +15,29 @@
  */
 
 use std::fmt;
-use crate::typeinf::BaseType;
 use serde_cbor::Value as CborValue;
-use crate::model::{ cbor_int, cbor_array };
+use crate::model::cbor_int;
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct VectorRegisters {
     start: usize,
-    depth: usize,
-    base: BaseType    
+    depth: usize
 }
 
 impl VectorRegisters {
-    pub(super) fn new(depth: usize, base: BaseType) -> VectorRegisters {
+    pub(super) fn new(depth: usize) -> VectorRegisters {
         VectorRegisters {
-            depth, base,
+            depth,
             start: 0
         }
     }
 
     pub fn deserialize(cbor: &CborValue) -> Result<VectorRegisters,String> {
-        let data = cbor_array(cbor,2,false)?;
-        Ok(VectorRegisters::new(cbor_int(&data[0],None)? as usize,BaseType::deserialize(&data[1])?))
+        Ok(VectorRegisters::new(cbor_int(&cbor,None)? as usize))
     }
 
     pub fn serialize(&self) -> Result<CborValue,String> {
-        Ok(CborValue::Array(vec![CborValue::Integer(self.depth as i128),self.base.serialize()?]))
+        Ok(CborValue::Integer(self.depth as i128))
     }
 
     pub(super) fn add_start(&mut self, start: usize) {
@@ -75,6 +72,6 @@ impl VectorRegisters {
 
 impl fmt::Display for VectorRegisters {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Ok(write!(f,"<{}:{:?}>",self.depth,self.base)?)
+        Ok(write!(f,"<{}>",self.depth)?)
     }
 }
