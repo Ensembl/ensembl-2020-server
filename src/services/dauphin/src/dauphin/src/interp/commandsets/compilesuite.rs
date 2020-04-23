@@ -69,7 +69,7 @@ impl CommandCompileSuite {
 mod test {
     use super::*;
     use super::super::{ CommandSetId, CommandTrigger };
-    use crate::interp::commands::core::consts::{ ConstCommandType, NumberConstCommandType };
+    use crate::commands::{ ConstCommandType, NumberConstCommandType };
     use crate::generate::InstructionSuperType;
     use crate::test::cbor::cbor_cmp;
 

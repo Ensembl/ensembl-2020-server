@@ -14,11 +14,10 @@
  *  limitations under the License.
  */
 
-use crate::interp::context::{InterpContext };
 use crate::interp::InterpValue;
-use crate::interp::commandsets::{ Command, CommandSet, CommandSetId };
+use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext };
 use crate::model::Register;
-use crate::interp::commands::assign::{ blit, blit_expanded, blit_runs };
+use crate::commands::library::assign::{ blit, blit_expanded, blit_runs };
 use crate::generate::InstructionSuperType;
 use serde_cbor::Value as CborValue;
 use super::super::common::commontype::BuiltinCommandType;
@@ -199,6 +198,10 @@ impl Command for AtCommand {
         registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
     }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize()])
+    }
 }
 
 pub struct SeqFilterCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register, pub(crate) Register);
@@ -240,7 +243,7 @@ impl Command for SeqAtCommand {
     }
 }
 
-fn core_commands() -> Result<CommandSet,String> {
+pub fn make_core() -> Result<CommandSet,String> {
     let set_id = CommandSetId::new("core",(0,0),0xD99E736DBD9EB7C5);
     let mut set = CommandSet::new(&set_id);
     const_commands(&mut set)?;

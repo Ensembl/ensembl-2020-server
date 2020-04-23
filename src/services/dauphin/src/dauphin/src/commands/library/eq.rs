@@ -14,11 +14,10 @@
  *  limitations under the License.
  */
 
-use crate::interp::context::{InterpContext };
 use crate::interp::{ InterpNatural, InterpValue };
 use crate::model::Register;
-use crate::interp::commands::assign::coerce_to;
-use crate::interp::commandsets::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet };
+use super::assign::coerce_to;
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
 use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
 
@@ -28,19 +27,19 @@ impl CommandType for EqCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 3,
-            trigger: CommandTrigger::Command("assert".to_string())
+            trigger: CommandTrigger::Command("eq".to_string())
         }
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,sig) = &it.itype {
+        if let InstructionType::Call(_,_,_) = &it.itype {
             Ok(Box::new(EqCommand(it.regs[0],it.regs[1],it.regs[2])))
         } else {
             Err("unexpected instruction".to_string())
         }
     }
     
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(EqCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?)))
     }
 }
@@ -74,6 +73,10 @@ impl Command for EqCommand {
         }
         registers.write(&self.0,InterpValue::Boolean(c));
         Ok(())
+    }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 }
 

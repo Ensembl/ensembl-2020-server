@@ -14,15 +14,14 @@
  *  limitations under the License.
  */
 
-use crate::interp::context::{InterpContext };
 use crate::interp::InterpValue;
 use crate::model::Register;
-use crate::interp::commandsets::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
 use crate::generate::Instruction;
 use serde_cbor::Value as CborValue;
 
 #[derive(Copy,Clone)]
-pub(crate) enum InterpBinBoolOp {
+pub enum InterpBinBoolOp {
     Lt,
     LtEq,
     Gt,
@@ -63,7 +62,7 @@ impl CommandType for InterpBinBoolCommandType {
         Ok(Box::new(InterpBinBoolCommand(self.0,it.regs[0],it.regs[1],it.regs[2])))
     }
     
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(InterpBinBoolCommand(
             self.0,
             Register::deserialize(&value[0])?,

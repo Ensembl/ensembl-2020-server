@@ -26,10 +26,10 @@ fn hexdump_line(index: usize, data: &[u8]) -> String {
             out.push_str("   ");
         }
         if i == 8 {
-            out.push_str("   ");
+            out.push_str(" ");
         }
     }
-    out.push_str("   ");
+    out.push_str(" ");
     for i in 0..16 {
         if i < data.len() {
             if data[i] > 0x20 && data[i] < 0x7f {

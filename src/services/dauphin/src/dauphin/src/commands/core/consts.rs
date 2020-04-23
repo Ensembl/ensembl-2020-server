@@ -14,9 +14,8 @@
  *  limitations under the License.
  */
 
-use crate::interp::context::{InterpContext };
 use crate::interp::InterpValue;
-use crate::interp::commandsets::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet };
+use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet };
 use crate::model::Register;
 use crate::generate::{ Instruction, InstructionType, InstructionSuperType };
 use serde_cbor::Value as CborValue;
@@ -45,8 +44,8 @@ impl CommandType for NumberConstCommandType {
         Ok(Box::new(NumberConstCommand(it.regs[0],force_branch!(it.itype,InstructionType,NumberConst))))
     }
 
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NumberConstCommand(Register::deserialize(&value[0])?,force_branch!(value[1],CborValue,Float))))
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(NumberConstCommand(Register::deserialize(&value[0])?,*force_branch!(value[1],CborValue,Float))))
     }
 }
 
@@ -76,7 +75,7 @@ impl CommandType for ConstCommandType {
         Ok(Box::new(ConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,Const).to_vec())))
     }
 
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         let v = force_branch!(&value[1],CborValue,Array);
         let v = v.iter().map(|x| { Ok(*force_branch!(x,CborValue,Integer) as usize) }).collect::<Result<Vec<usize>,String>>()?;
         Ok(Box::new(ConstCommand(Register::deserialize(&value[0])?,v)))
@@ -110,8 +109,8 @@ impl CommandType for BooleanConstCommandType {
         Ok(Box::new(BooleanConstCommand(it.regs[0],force_branch!(it.itype,InstructionType,BooleanConst))))
     }
 
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(BooleanConstCommand(Register::deserialize(&value[0])?,force_branch!(value[1],CborValue,Bool))))
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(BooleanConstCommand(Register::deserialize(&value[0])?,*force_branch!(value[1],CborValue,Bool))))
     }
 }
 
@@ -141,8 +140,8 @@ impl CommandType for StringConstCommandType {
         Ok(Box::new(StringConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,StringConst).to_string())))
     }
 
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        let v = force_branch!(&value[1],CborValue,Text).to_string();
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let v = force_branch!(value[1],CborValue,Text).to_string();
         Ok(Box::new(StringConstCommand(Register::deserialize(&value[0])?,v)))
     }
 }
@@ -173,8 +172,8 @@ impl CommandType for BytesConstCommandType {
         Ok(Box::new(BytesConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,BytesConst).to_vec())))
     }
 
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        let v = force_branch!(&value[1],CborValue,Bytes).to_vec();
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let v = force_branch!(value[1],CborValue,Bytes).to_vec();
         Ok(Box::new(BytesConstCommand(Register::deserialize(&value[0])?,v)))
     }
 }

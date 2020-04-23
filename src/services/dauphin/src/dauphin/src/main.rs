@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+mod commands;
 mod generate;
 mod interp;
 mod lexer;

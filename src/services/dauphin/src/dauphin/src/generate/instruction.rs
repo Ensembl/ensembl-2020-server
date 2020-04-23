@@ -100,6 +100,30 @@ pub enum InstructionType {
 }
 
 impl InstructionType {
+    pub fn supertype(&self) -> Result<InstructionSuperType,String> {
+        Ok(match self {
+            InstructionType::Nil => InstructionSuperType::Nil,
+            InstructionType::Copy => InstructionSuperType::Copy,
+            InstructionType::Append => InstructionSuperType::Append,
+            InstructionType::Filter => InstructionSuperType::Filter,
+            InstructionType::Run => InstructionSuperType::Run,
+            InstructionType::At => InstructionSuperType::At,
+            InstructionType::NumEq => InstructionSuperType::NumEq,
+            InstructionType::ReFilter => InstructionSuperType::ReFilter,
+            InstructionType::Length => InstructionSuperType::Length,
+            InstructionType::Add => InstructionSuperType::Add,
+            InstructionType::SeqFilter => InstructionSuperType::SeqFilter,
+            InstructionType::SeqAt => InstructionSuperType::SeqAt,
+            InstructionType::Const(_) => InstructionSuperType::Const,
+            InstructionType::NumberConst(_) => InstructionSuperType::NumberConst,
+            InstructionType::BooleanConst(_) => InstructionSuperType::BooleanConst,
+            InstructionType::StringConst(_) => InstructionSuperType::StringConst,
+            InstructionType::BytesConst(_) => InstructionSuperType::BytesConst,
+            InstructionType::Call(_,_,_) => InstructionSuperType::Call,
+            _ => Err(format!("instruction has no supertype"))?
+        })
+    }
+
     pub fn get_name(&self) -> Vec<String> {
         let mut out = vec![match self {
             InstructionType::Nil => "nil",
@@ -282,9 +306,7 @@ impl InstructionType {
                 ])
             },
 
-            InstructionType::FilterEValue(etype,field) => {
-                let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
-                let dtype = exprdecl.get_branch_type(field).ok_or_else(|| format!("No such branch {:?}",field))?;
+            InstructionType::FilterEValue(etype,_) => {
                 Ok(vec![
                     ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
                     ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(etype.to_string())))

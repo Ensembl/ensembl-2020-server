@@ -161,7 +161,6 @@ impl ComplexRegisters {
         }
         Ok(())
     }
-
 }
 
 pub struct ComplexRegistersIterator<'a> {

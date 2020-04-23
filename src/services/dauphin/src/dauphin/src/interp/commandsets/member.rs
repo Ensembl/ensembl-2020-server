@@ -46,7 +46,7 @@ impl CommandSuiteMember {
 mod test {
     use super::*;
     use super::super::{ CommandSetId, CommandTrigger };
-    use crate::interp::commands::core::consts::ConstCommandType;
+    use crate::commands::ConstCommandType;
     use crate::generate::InstructionSuperType;
 
     #[test]

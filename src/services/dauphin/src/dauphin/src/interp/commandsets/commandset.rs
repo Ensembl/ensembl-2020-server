@@ -89,7 +89,7 @@ impl CommandSet {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::interp::commands::core::consts::{
+    use crate::commands::{
         ConstCommandType, NumberConstCommandType, BooleanConstCommandType, StringConstCommandType
     };
     use crate::generate::InstructionSuperType;

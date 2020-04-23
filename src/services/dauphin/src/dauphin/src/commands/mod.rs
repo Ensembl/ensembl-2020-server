@@ -14,22 +14,23 @@
  *  limitations under the License.
  */
 
-mod cborutil;
-mod definition;
-mod definitionstore;
-mod register;
-mod structenum;
-mod signature {
-    pub mod signature;
-    pub mod complexsig;
-    pub mod vectorsig;
+mod common {
+    pub(super) mod commontype;
+}
+mod core {
+    pub(super) mod consts;
+    pub(super) mod core;
+}
+mod library {
+    pub(super) mod assign; // XXX unexport
+    pub(super) mod library;
+    mod numops;
+    mod eq;
 }
 
-pub use self::definition::{ Inline, InlineMode, ExprMacro, StmtMacro, ProcDecl, FuncDecl };
-pub use self::definitionstore::DefStore;
-pub use self::signature::signature::RegisterSignature;
-pub use self::signature::complexsig::ComplexRegisters;
-pub use self::signature::vectorsig::VectorRegisters;
-pub use self::register::{ Register, RegisterAllocator };
-pub use self::structenum::{ StructDef, EnumDef };
-pub use self::cborutil::{ cbor_int, cbor_array, cbor_bool, cbor_string, cbor_map, cbor_entry };
+// XXX unexport
+pub use self::core::consts::{
+    ConstCommandType, NumberConstCommandType, BooleanConstCommandType, StringConstCommandType
+};
+pub use self::core::core::make_core;
+pub use self::library::library::make_library;

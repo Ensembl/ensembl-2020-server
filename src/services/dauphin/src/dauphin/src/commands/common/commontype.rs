@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use crate::interp::commandsets::{ Command, CommandSchema, CommandType, CommandTrigger };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger };
 use crate::model::Register;
 use crate::generate::{ Instruction, InstructionSuperType };
 use serde_cbor::Value as CborValue;
@@ -44,7 +44,7 @@ impl CommandType for BuiltinCommandType {
         (self.ctor)(&it.regs)
     }
 
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        (self.ctor)(&(0..self.values).map(|x| Register::deserialize(&value[x])).collect::<Result<Vec<_>,String>>()?)
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        (self.ctor)(&(0..self.values).map(|x| Register::deserialize(value[x])).collect::<Result<Vec<_>,String>>()?)
     }
 }

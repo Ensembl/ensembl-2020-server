@@ -30,6 +30,13 @@ pub fn cbor_int(cbor: &CborValue, max: Option<i128>) -> Result<i128,String>  {
     Err(format!("bad cbor: expected int, unexpected {:?}",cbor))
 }
 
+pub fn cbor_bool(cbor: &CborValue) -> Result<bool,String> {
+    match cbor {
+        CborValue::Bool(x) => Ok(*x),
+        _ => Err(format!("bad cbor: expected bool, unexpected {:?}",cbor))
+    }
+}
+
 pub fn cbor_string(cbor: &CborValue) -> Result<String,String> {
     match cbor {
         CborValue::Text(x) => Ok(x.to_string()),
@@ -37,11 +44,31 @@ pub fn cbor_string(cbor: &CborValue) -> Result<String,String> {
     }
 }
 
-pub fn cbor_array(cbor: &CborValue, len: usize, or_more: bool) -> Result<Vec<CborValue>,String> {
+pub fn cbor_map<'a>(cbor: &'a CborValue, keys: &[&str]) -> Result<Vec<&'a CborValue>,String> {
+    let mut out = vec![];
+    match cbor {
+        CborValue::Map(m) => {
+            for key in keys {
+                out.push(m.get(&CborValue::Text(key.to_string())).ok_or_else(|| format!("cbor: missing key {}",key))?);
+            }
+        },
+        _ => { return Err(format!("bad cbor: expected map, unexpected {:?}",cbor)); }
+    }
+    Ok(out)
+}
+
+pub fn cbor_entry<'a>(cbor: &'a CborValue, key: &str) -> Result<Option<&'a CborValue>,String> {
+    Ok(match cbor {
+        CborValue::Map(m) => m.get(&CborValue::Text(key.to_string())),
+        _ => { return Err(format!("bad cbor: expected map, unexpected {:?}",cbor)); }
+    })
+}
+
+pub fn cbor_array<'a>(cbor: &'a CborValue, len: usize, or_more: bool) -> Result<&'a Vec<CborValue>,String> {
     match cbor {
         CborValue::Array(a) => {
             if a.len() == len || (a.len() >= len && or_more) {
-                return Ok(a.to_vec());
+                return Ok(a);
             }
         },
         _ => {}

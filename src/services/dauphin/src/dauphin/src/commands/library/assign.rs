@@ -16,10 +16,12 @@
 
 use std::rc::Rc;
 use crate::model::{ Register, RegisterSignature };
-use crate::interp::values::registers::RegisterFile;
-use super::super::context::{InterpContext };
 use crate::interp::{ InterpValue, InterpNatural };
-use crate::interp::commandsets::Command;
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, RegisterFile };
+use crate::generate::{ Instruction, InstructionType };
+use serde_cbor::Value as CborValue;
+use crate::model::{ cbor_array, cbor_bool };
+use crate::typeinf::MemberMode;
 
 fn blit_typed<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: Option<&Vec<usize>>) where T: Clone {
     if let Some(filter) = filter {
@@ -216,6 +218,31 @@ fn assign(context: &mut InterpContext, filtered: bool, purposes: &RegisterSignat
     Ok(())
 }
 
+pub struct AssignCommandType();
+
+impl CommandType for AssignCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 3,
+            trigger: CommandTrigger::Command("assign".to_string())
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,sig) = &it.itype {
+            Ok(Box::new(AssignCommand(sig[0].get_mode() != MemberMode::LValue,sig.clone(),it.regs.to_vec())))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[2],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
+        let sig = RegisterSignature::deserialize(&value[1],false)?;
+        Ok(Box::new(AssignCommand(cbor_bool(&value[0])?,sig,regs)))
+    }
+}
+
 pub struct AssignCommand(pub(crate) bool, pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
 impl Command for AssignCommand {
@@ -223,4 +250,14 @@ impl Command for AssignCommand {
         assign(context,self.0,&self.1,&self.2)?;
         Ok(())
     }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        let regs = CborValue::Array(self.2.iter().map(|x| x.serialize()).collect());
+        Ok(vec![CborValue::Bool(self.0),self.1.serialize(false)?,regs])
+    }
+}
+
+pub(super) fn library_assign_commands(set: &mut CommandSet) -> Result<(),String> {
+    set.push("assign",9,AssignCommandType())?;
+    Ok(())
 }

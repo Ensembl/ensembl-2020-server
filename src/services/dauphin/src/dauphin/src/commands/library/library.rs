@@ -14,22 +14,21 @@
  *  limitations under the License.
  */
 
-use crate::interp::context::{InterpContext };
 use crate::interp::InterpNatural;
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array };
-use crate::interp::stream::StreamContents;
-use crate::interp::commandsets::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents };
 use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
 use super::eq::library_eq_command;
+use super::assign::library_assign_commands;
 
 pub struct LenCommandType();
 
 impl CommandType for LenCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            values: 3,
+            values: 2,
             trigger: CommandTrigger::Command("len".to_string())
         }
     }
@@ -42,9 +41,9 @@ impl CommandType for LenCommandType {
         }
     }
     
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
-        Ok(Box::new(LenCommand(RegisterSignature::deserialize(&value[0],false)?,regs)))
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
+        Ok(Box::new(LenCommand(RegisterSignature::deserialize(&value[1],false)?,regs)))
     }
 }
 
@@ -78,15 +77,15 @@ impl CommandType for PrintRegsCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,sig) = &it.itype {
+        if let InstructionType::Call(_,_,_) = &it.itype {
             Ok(Box::new(PrintRegsCommand(it.regs.clone())))
         } else {
             Err("unexpected instruction".to_string())
         }
     }
     
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
         Ok(Box::new(PrintRegsCommand(regs)))
     }
 }
@@ -179,10 +178,7 @@ fn print_complex(context: &mut InterpContext, assignment: &VectorRegisters, regs
 
 fn print_vec(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<String,String> {
     let mut out : Vec<String> = vec![];
-    let mut is_complex = false;
-    for (complex,a) in sig[0].iter() {
-        if complex.len() > 0 { is_complex = true; }
-    }
+    let is_complex = sig[0].iter().count() > 1;
     for (complex,a) in sig[0].iter() {
         out.push(print_complex(context,&a,regs,&complex,is_complex)?);
     }
@@ -209,9 +205,9 @@ impl CommandType for PrintVecCommandType {
         }
     }
     
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
-        Ok(Box::new(PrintVecCommand(RegisterSignature::deserialize(&value[0],false)?,regs)))
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
+        Ok(Box::new(PrintVecCommand(RegisterSignature::deserialize(&value[1],true)?,regs)))
     }
 }
 
@@ -225,7 +221,7 @@ impl Command for PrintVecCommand {
     }
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false)?])
+        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(true)?])
     }
 }
 
@@ -247,7 +243,7 @@ impl CommandType for AssertCommandType {
         }
     }
     
-    fn deserialize(&self, value: &[CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(AssertCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?)))
     }
 }
@@ -272,14 +268,15 @@ impl Command for AssertCommand {
     }
 }
 
-fn library_commands() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("library",(0,0),0x967A857B859BF666);
+pub fn make_library() -> Result<CommandSet,String> {
+    let set_id = CommandSetId::new("library",(0,0),0xDF2394EC2FBAF53);
     let mut set = CommandSet::new(&set_id);
+    library_eq_command(&mut set)?;
     set.push("len",1,LenCommandType())?;
     set.push("print_regs",2,PrintRegsCommandType())?;
     set.push("print_vec",3,PrintVecCommandType())?;
     set.push("assert",4,AssertCommandType())?;
     library_numops_commands(&mut set)?;
-    library_eq_command(&mut set)?;
+    library_assign_commands(&mut set)?;
     Ok(set)
 }
