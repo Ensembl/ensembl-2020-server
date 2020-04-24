@@ -75,7 +75,6 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}\n",context);
-        print!("PRUNE\n");
         prune(&mut context);
         print!("{:?}\n",context);
         let (_values,strings) = mini_interp(&mut context).expect("x");

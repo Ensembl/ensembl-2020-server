@@ -17,7 +17,7 @@
 use std::fmt;
 
 use crate::model::{ DefStore, Register, RegisterSignature };
-use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode };
+use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
     if ref_ {
@@ -96,7 +96,7 @@ pub enum InstructionType {
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
-    Call(String,bool,RegisterSignature)
+    Call(String,bool,RegisterSignature,Vec<MemberDataFlow>)
 }
 
 impl InstructionType {
@@ -119,7 +119,7 @@ impl InstructionType {
             InstructionType::BooleanConst(_) => InstructionSuperType::BooleanConst,
             InstructionType::StringConst(_) => InstructionSuperType::StringConst,
             InstructionType::BytesConst(_) => InstructionSuperType::BytesConst,
-            InstructionType::Call(_,_,_) => InstructionSuperType::Call,
+            InstructionType::Call(_,_,_,_) => InstructionSuperType::Call,
             _ => Err(format!("instruction has no supertype"))?
         })
     }
@@ -158,7 +158,7 @@ impl InstructionType {
             InstructionType::ETest(_,_) => "etest",
             InstructionType::Proc(_,_) => "proc",
             InstructionType::Operator(_) => "oper",
-            InstructionType::Call(_,_,_) => "call",
+            InstructionType::Call(_,_,_,_) => "call",
             InstructionType::Const(_) => "const",
         }.to_string()];
         if let Some(prefixes) = match self {
@@ -173,7 +173,7 @@ impl InstructionType {
                 out.extend(modes.iter().map(|x| x.to_string()).collect::<Vec<_>>());
                 Some(out)
             },            
-            InstructionType::Call(name,impure,types) => {
+            InstructionType::Call(name,impure,types,_) => {
                 let mut name = name.to_string();
                 if *impure { name.push_str("/i"); }
                 let mut out = vec![name.to_string()];
@@ -199,7 +199,7 @@ impl InstructionType {
 
     pub fn self_justifying_call(&self) -> bool {
         match self {
-            InstructionType::Call(_,impure,_) => *impure,
+            InstructionType::Call(_,impure,_,_) => *impure,
             _ => false
         }
     }
@@ -243,14 +243,14 @@ impl InstructionType {
             InstructionType::BytesConst(_) => 
                 vec![0],
 
-            InstructionType::Call(_,_,sigs) => {
+            InstructionType::Call(_,_,sigs,dataflow) => {
                 let mut out = Vec::new();
                 let mut reg_offset = 0;
-                for sig in sigs.iter() {
+                for (i,sig) in sigs.iter().enumerate() {
                     let num_regs = sig.iter().map(|x| x.1.register_count()).sum();
-                    if sig.justifies_call() {
-                        for i in 0..num_regs {
-                            out.push(reg_offset+i);
+                    if let MemberDataFlow::JustifiesCall = dataflow[i] {
+                        for j in 0..num_regs {
+                            out.push(reg_offset+j);
                         }
                     }
                     reg_offset += num_regs;
@@ -381,7 +381,7 @@ impl InstructionType {
             InstructionType::Add |
             InstructionType::SeqFilter |
             InstructionType::SeqAt |
-            InstructionType::Call(_,_,_) =>
+            InstructionType::Call(_,_,_,_) =>
                 Ok(vec![]),
         }
     }

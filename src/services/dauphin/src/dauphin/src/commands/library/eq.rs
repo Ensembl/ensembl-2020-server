@@ -32,7 +32,7 @@ impl CommandType for EqCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,_) = &it.itype {
+        if let InstructionType::Call(_,_,_,_) = &it.itype {
             Ok(Box::new(EqCommand(it.regs[0],it.regs[1],it.regs[2])))
         } else {
             Err("unexpected instruction".to_string())

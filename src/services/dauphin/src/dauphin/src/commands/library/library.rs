@@ -34,7 +34,7 @@ impl CommandType for LenCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,sig) = &it.itype {
+        if let InstructionType::Call(_,_,sig,_) = &it.itype {
             Ok(Box::new(LenCommand(sig.clone(),it.regs.clone())))
         } else {
             Err("unexpected instruction".to_string())
@@ -77,7 +77,7 @@ impl CommandType for PrintRegsCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,_) = &it.itype {
+        if let InstructionType::Call(_,_,_,_) = &it.itype {
             Ok(Box::new(PrintRegsCommand(it.regs.clone())))
         } else {
             Err("unexpected instruction".to_string())
@@ -198,7 +198,7 @@ impl CommandType for PrintVecCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,sig) = &it.itype {
+        if let InstructionType::Call(_,_,sig,_) = &it.itype {
             Ok(Box::new(PrintVecCommand(sig.clone(),it.regs.clone())))
         } else {
             Err("unexpected instruction".to_string())
@@ -236,7 +236,7 @@ impl CommandType for AssertCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,_) = &it.itype {
+        if let InstructionType::Call(_,_,_,_) = &it.itype {
             Ok(Box::new(AssertCommand(it.regs[0],it.regs[1])))
         } else {
             Err("unexpected instruction".to_string())

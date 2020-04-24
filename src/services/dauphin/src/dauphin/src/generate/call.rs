@@ -24,25 +24,27 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
         match &instr.itype {
             InstructionType::Proc(name,modes) => {
                 let mut rs = RegisterSignature::new();
+                let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
-                    let flow = match modes[i] {
+                    flows.push(match modes[i] {
                         MemberMode::LValue => MemberDataFlow::JustifiesCall,
                         _ => MemberDataFlow::Normal
-                    };
-                    rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_,flow)?);
+                    });                    
+                    rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_/*,flow*/)?);
                 }
-                context.add(Instruction::new(InstructionType::Call(name.to_string(),true,rs),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(name.to_string(),true,rs,flows),instr.regs.to_vec()));
             },
             
             InstructionType::Operator(name) => {
                 let mut rs = RegisterSignature::new();
+                let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
-                    let mode = if i == 0 { MemberDataFlow::JustifiesCall } else { MemberDataFlow::Normal };
+                    flows.push(if i == 0 { MemberDataFlow::JustifiesCall } else { MemberDataFlow::Normal });
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
-                    rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::RValue,&type_,mode)?);
+                    rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::RValue,&type_/*,mode*/)?);
                 }
-                context.add(Instruction::new(InstructionType::Call(name.to_string(),false,rs),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(name.to_string(),false,rs,flows),instr.regs.to_vec()));
             },
 
             _ => { context.add(instr.clone()); }

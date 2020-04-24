@@ -297,7 +297,7 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
                 context.add(instr.clone());
             }
         },
-        InstructionType::Call(name,impure,type_) => {
+        InstructionType::Call(name,impure,type_,flow) => {
             let mut new = Vec::new();
             for r in &instr.regs {
                 if let Some(lin_src) = subregs.get(&r) {
@@ -310,7 +310,7 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
                     new.push(*r);
                 }
             }
-            context.add(Instruction::new(InstructionType::Call(name.clone(),*impure,type_.clone()),new));
+            context.add(Instruction::new(InstructionType::Call(name.clone(),*impure,type_.clone(),flow.clone()),new));
         },
     }
     Ok(())
@@ -345,7 +345,7 @@ mod test {
         let mut lin = Vec::new();
         let mut norm = Vec::new();
         for instr in instrs {
-            if let InstructionType::Call(s,_,_) = &instr.itype {
+            if let InstructionType::Call(s,_,_,_) = &instr.itype {
                 if s == "assign" {
                     if let Some(reg) = subregs.get(&instr.regs[1]) {
                         lin.push(reg);

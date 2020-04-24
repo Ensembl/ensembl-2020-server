@@ -33,7 +33,7 @@ impl CompilerLink {
     }
 
     pub fn compile_instruction(&self, instr: &Instruction) -> Result<(u32,CommandSchema,Box<dyn Command>),String> {
-        let (ct,opcode) = if let InstructionType::Call(name,_,_) = &instr.itype {
+        let (ct,opcode) = if let InstructionType::Call(name,_,_,_) = &instr.itype {
             self.cs.get_by_trigger(&CommandTrigger::Command(name.to_string()))?
         } else {
             self.cs.get_by_trigger(&CommandTrigger::Instruction(instr.itype.supertype()?))?

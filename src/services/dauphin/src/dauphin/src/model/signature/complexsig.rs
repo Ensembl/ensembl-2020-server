@@ -14,20 +14,19 @@
  *  limitations under the License.
  */
 
-use std::collections::HashMap;  // XXX to hashbrown
+use std::collections::HashMap;
 use std::fmt;
 use super::super::definitionstore::DefStore;
 use super::super::structenum::{ EnumDef, StructDef };
 use super::vectorsig::VectorRegisters;
 use crate::model::{ cbor_array, cbor_string };
-use crate::typeinf::{ BaseType, ContainerType, MemberType, MemberMode, MemberDataFlow };
+use crate::typeinf::{ BaseType, ContainerType, MemberType, MemberMode };
 use serde_cbor::Value as CborValue;
 
 #[derive(Clone,Debug,PartialEq)]
 pub struct ComplexRegisters {
     start: usize,
     mode: MemberMode,
-    flow: MemberDataFlow,
     order: Vec<Vec<String>>,
     vectors: HashMap<Vec<String>,VectorRegisters>
 }
@@ -43,25 +42,25 @@ impl fmt::Display for ComplexRegisters {
 }
 
 impl ComplexRegisters {
-    fn new_empty(mode: MemberMode, flow: MemberDataFlow) -> ComplexRegisters {
+    fn new_empty(mode: MemberMode) -> ComplexRegisters {
         ComplexRegisters {
-            mode, flow,
+            mode,
             start: 0,
             order: Vec::new(),
             vectors: HashMap::new()
         }
     }
 
-    pub fn new(defstore: &DefStore, mode: MemberMode, type_: &MemberType, flow: MemberDataFlow) -> Result<ComplexRegisters,String> {
-        let mut out = ComplexRegisters::new_empty(mode,flow);
+    pub fn new(defstore: &DefStore, mode: MemberMode, type_: &MemberType) -> Result<ComplexRegisters,String> {
+        let mut out = ComplexRegisters::new_empty(mode);
         out.vec_from_type(defstore,type_,&vec![],&ContainerType::new_empty())?;
         Ok(out)
     }
 
     pub fn deserialize(cbor: &CborValue, named: bool) -> Result<ComplexRegisters,String> {
-        let data = cbor_array(cbor,2,true)?;
-        let mut out = ComplexRegisters::new_empty(MemberMode::deserialize(&data[0])?,MemberDataFlow::deserialize(&data[1])?);
-        for (i,member) in cbor_array(&data[2],0,true)?.iter().enumerate() {
+        let data = cbor_array(cbor,1,true)?;
+        let mut out = ComplexRegisters::new_empty(MemberMode::deserialize(&data[0])?);
+        for (i,member) in cbor_array(&data[1],0,true)?.iter().enumerate() {
             if named {
                 let entry = cbor_array(member,2,false)?;
                 let name = cbor_array(&entry[0],0,true)?.iter().map(|x| cbor_string(x)).collect::<Result<Vec<_>,_>>()?;
@@ -89,7 +88,7 @@ impl ComplexRegisters {
                 regs.push(self.vectors.get(complex).as_ref().unwrap().serialize()?);
             }
         }
-        Ok(CborValue::Array(vec![self.mode.serialize(),self.flow.serialize(),CborValue::Array(regs)]))
+        Ok(CborValue::Array(vec![self.mode.serialize(),CborValue::Array(regs)]))
     }
 
     pub fn add_start(&mut self, start: usize) {
@@ -100,10 +99,6 @@ impl ComplexRegisters {
     }
 
     pub fn get_mode(&self) -> MemberMode { self.mode }
-
-    pub fn justifies_call(&self) -> bool {
-        if let MemberDataFlow::JustifiesCall = self.flow { true } else { false }
-    }
 
     fn add(&mut self, complex: Vec<String>, mut vr: VectorRegisters) {
         vr.add_start(self.start);

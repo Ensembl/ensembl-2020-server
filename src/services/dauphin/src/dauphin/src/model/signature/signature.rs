@@ -109,7 +109,7 @@ mod test {
     use crate::interp::mini_interp;
     use crate::test::cbor::cbor_cmp;
     use crate::model::{ DefStore };
-    use crate::typeinf::{ MemberType, MemberMode, MemberDataFlow };
+    use crate::typeinf::{ MemberType, MemberMode };
 
     // XXX move to common test utils
     fn make_type(defstore: &DefStore, name: &str) -> MemberType {
@@ -144,9 +144,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let _context = generate_code(&defstore,stmts).expect("codegen");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean"),MemberDataFlow::Normal).expect("a");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")/*,MemberDataFlow::Normal*/).expect("a");
         assert_eq!("<0>/R",format_pvec(&regs));
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(etest3)"),MemberDataFlow::Normal).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(etest3)")/*,MemberDataFlow::Normal*/).expect("b");
         assert_eq!(load_cmp("offset-smoke.out"),format_pvec(&regs));
     }
 
@@ -158,7 +158,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"stest"),MemberDataFlow::Normal).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"stest")/*,MemberDataFlow::Normal*/).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
@@ -187,7 +187,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let _context = generate_code(&defstore,stmts).expect("codegen");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(etest3)"),MemberDataFlow::Normal).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(etest3)")/*,MemberDataFlow::Normal*/).expect("b");
         let named = regs.serialize(true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");
         let cr2 = ComplexRegisters::deserialize(&named,true).expect("cbor d");
@@ -197,7 +197,6 @@ mod test {
         let cr2 = ComplexRegisters::deserialize(&anon,false).expect("cbor e");
         assert_ne!(cr2,regs);
         assert_eq!(MemberMode::RValue,cr2.get_mode());
-        assert!(!cr2.justifies_call());
         let vs_in = regs.iter().map(|x| x.1).cloned().collect::<Vec<_>>();
         let vs_out = cr2.iter().map(|x| x.1).cloned().collect::<Vec<_>>();
         assert_eq!(vs_in.len(),vs_out.len());
