@@ -145,7 +145,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let _context = generate_code(&defstore,stmts).expect("codegen");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")/*,MemberDataFlow::Normal*/).expect("a");
-        assert_eq!("<0>/R",format_pvec(&regs));
+        assert_eq!("*<0>/R",format_pvec(&regs));
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(etest3)")/*,MemberDataFlow::Normal*/).expect("b");
         assert_eq!(load_cmp("offset-smoke.out"),format_pvec(&regs));
     }

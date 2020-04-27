@@ -14,13 +14,14 @@
  *  limitations under the License.
  */
 
+use std::rc::Rc;
 use crate::interp::InterpValue;
 use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext };
 use crate::model::Register;
-use crate::commands::library::assign::{ blit, blit_expanded, blit_runs };
 use crate::generate::InstructionSuperType;
 use serde_cbor::Value as CborValue;
 use super::super::common::commontype::BuiltinCommandType;
+use super::super::common::blit::{ coerce_to };
 use super::consts::const_commands;
 
 // XXX read is coerce
@@ -53,13 +54,27 @@ impl Command for CopyCommand {
 
 pub struct AppendCommand(pub(crate) Register,pub(crate) Register);
 
+fn append_typed<T>(dst: &mut Vec<T>, src: &Vec<T>) where T: Clone {
+    dst.append(&mut src.clone());
+}
+
+fn append(dst: InterpValue, src: &Rc<InterpValue>) -> Result<InterpValue,String> {
+    if let Some(natural) = coerce_to(&dst,src,false) {
+        Ok(run_typed2!(dst,src,natural,(|d,s| {
+            append_typed(d,s)
+        })))
+    } else {
+        Ok(dst)
+    }
+}
+
 impl Command for AppendCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
         let src = registers.get(&self.1).borrow().get_shared()?;
         let dstr = registers.get(&self.0);
         let dst = dstr.borrow_mut().get_exclusive()?;
-        registers.write(&self.0,blit(dst,&src,None)?);
+        registers.write(&self.0,append(dst,&src)?);
         Ok(())
     }
 
@@ -144,15 +159,34 @@ impl Command for NumEqCommand {
     }
 }
 
+fn filter_typed<T>(dst: &mut Vec<T>, src: &[T], filter: &[bool]) where T: Clone {
+    let filter_len = filter.len();
+    for (i,value) in src.iter().enumerate() {
+        if filter[i%filter_len] {
+            dst.push(value.clone());
+        }
+    }
+}
+
+pub fn filter(src: &Rc<InterpValue>, filter_val: &[bool]) -> Result<InterpValue,String> {
+    if let Some(natural) = coerce_to(&InterpValue::Empty,src,true) {
+        Ok(run_typed2!(InterpValue::Empty,src,natural,(|d,s| {
+            filter_typed(d,s,filter_val)
+        })))
+    } else {
+        Ok(InterpValue::Empty)
+    }
+}
+
 pub struct FilterCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register);
 
 impl Command for FilterCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
-        let filter = registers.get_boolean(&self.2)?;
+        let filter_val = registers.get_boolean(&self.2)?;
         let src = registers.get(&self.1);
         let src = src.borrow().get_shared()?;
-        registers.write(&self.0,blit_expanded(InterpValue::Empty,&src,&filter)?);
+        registers.write(&self.0,filter(&src,&filter_val)?);
         Ok(())
     }
 
@@ -204,6 +238,27 @@ impl Command for AtCommand {
     }
 }
 
+fn seq_filter_typed<T>(dst: &mut Vec<T>, src: &[T], starts: &[usize], lens: &[usize]) where T: Clone {
+    let starts_len = starts.len();
+    let lens_len = lens.len();
+    let src_len = src.len();
+    for i in 0..starts_len {
+        for j in 0..lens[i%lens_len] {
+            dst.push(src[(starts[i]+j)%src_len].clone());
+        }
+    }
+}
+
+fn seq_filter(src: &Rc<InterpValue>, starts: &[usize], lens: &[usize]) -> Result<InterpValue,String> {
+    if let Some(natural) = coerce_to(&InterpValue::Empty,src,true) {
+        Ok(run_typed2!(InterpValue::Empty,src,natural,(|d,s| {
+            seq_filter_typed(d,s,starts,lens)
+        })))
+    } else {
+        Ok(InterpValue::Empty)
+    }
+}
+
 pub struct SeqFilterCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register, pub(crate) Register);
 
 impl Command for SeqFilterCommand {
@@ -213,7 +268,7 @@ impl Command for SeqFilterCommand {
         let start = registers.get_indexes(&self.2)?;
         let len = registers.get_indexes(&self.3)?;
         let src = src.borrow().get_shared()?;
-        registers.write(&self.0,blit_runs(InterpValue::Empty,&src,&start,&len)?);
+        registers.write(&self.0,seq_filter(&src,&start,&len)?);
         Ok(())
     }
 

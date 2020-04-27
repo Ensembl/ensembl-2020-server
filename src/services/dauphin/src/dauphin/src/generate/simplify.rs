@@ -390,13 +390,11 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
-        print!("e {:?}\n",context.get_instructions().len());
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
         let cmds : Vec<String> = context.get_instructions().iter().map(|e| format!("{:?}",e)).collect();
         compare_instrs(&cmds,&outdata.split("\n").map(|x| x.to_string()).collect());
-        print!("{:?}\n",context);
     }
 
     #[test]
@@ -407,10 +405,8 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
-        print!("{:?}\n",context);
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
-        print!("{:?}\n",context);
     }
 
     #[test]

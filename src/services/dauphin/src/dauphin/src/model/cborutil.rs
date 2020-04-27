@@ -16,6 +16,40 @@
 
 use serde_cbor::Value as CborValue;
 
+#[derive(Debug,PartialEq)]
+pub enum CborType {
+    Integer,
+    Bool,
+    Text,
+    Map,
+    Tag,
+    Array,
+    Null,
+    Float,
+    Bytes
+}
+
+pub fn cbor_type(cbor: &CborValue, allowed: Option<&[CborType]>) -> Result<CborType,String> {
+    let out = match cbor {
+        CborValue::Integer(_) => CborType::Integer,
+        CborValue::Bool(_) => CborType::Bool,
+        CborValue::Text(_) => CborType::Text,
+        CborValue::Map(_) => CborType::Map,
+        CborValue::Tag(_,_) => CborType::Tag,
+        CborValue::Array(_) => CborType::Array,
+        CborValue::Null => CborType::Null,
+        CborValue::Float(_) => CborType::Float,
+        CborValue::Bytes(_) => CborType::Bytes,
+        _ => { return Err(format!("unexpected cbort type (hidden")) }
+    };
+    if let Some(allowed) = allowed {
+        if !allowed.contains(&out) {
+            return Err(format!("unexpected cbor type: {:?}",out));
+        }
+    }
+    Ok(out)
+}
+
 pub fn cbor_int(cbor: &CborValue, max: Option<i128>) -> Result<i128,String>  {
     match cbor {
         CborValue::Integer(x) => {

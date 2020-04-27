@@ -31,7 +31,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                         MemberMode::LValue => MemberDataFlow::JustifiesCall,
                         _ => MemberDataFlow::Normal
                     });                    
-                    rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_/*,flow*/)?);
+                    rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_)?);
                 }
                 context.add(Instruction::new(InstructionType::Call(name.to_string(),true,rs,flows),instr.regs.to_vec()));
             },
@@ -42,7 +42,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                 for (i,reg) in instr.regs.iter().enumerate() {
                     flows.push(if i == 0 { MemberDataFlow::JustifiesCall } else { MemberDataFlow::Normal });
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
-                    rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::RValue,&type_/*,mode*/)?);
+                    rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::RValue,&type_)?);
                 }
                 context.add(Instruction::new(InstructionType::Call(name.to_string(),false,rs,flows),instr.regs.to_vec()));
             },

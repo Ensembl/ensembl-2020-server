@@ -15,7 +15,7 @@
  */
 
 use crate::interp::InterpNatural;
-use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array };
+use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents };
 use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
@@ -167,10 +167,9 @@ fn print_array(context: &mut InterpContext, assignment: &VectorRegisters, regs: 
     Ok(out)
 }
 
-fn print_complex(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], complex: &[String], is_complex: bool) -> Result<String,String> {
+fn print_complex(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], complex: &ComplexPath, is_complex: bool) -> Result<String,String> {
     if is_complex {
-        let name = if complex.len() > 0 { complex.join(".") } else { "*".to_string() };
-        Ok(format!("{}: {}",name,print_array(context,assignment,regs)?))
+        Ok(format!("{}: {}",complex.to_string(),print_array(context,assignment,regs)?))
     } else {
         print_array(context,assignment,regs)
     }

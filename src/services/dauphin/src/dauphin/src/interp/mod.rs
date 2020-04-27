@@ -42,7 +42,7 @@ mod values {
 
 }
 pub use self::harness::mini_interp;
-pub use self::values::value::{ to_index, InterpValue, InterpNatural };
+pub use self::values::value::{ to_index, InterpValue, InterpNatural, InterpValueNumbers, InterpValueIndexes };
 pub use self::values::registers::RegisterFile;
 pub use self::stream::StreamContents;
 pub use self::commandsets::{ CommandSet, CommandSetId, CommandInterpretSuite, CommandCompileSuite, CommandSuiteBuilder, Command, CommandSchema, CommandTrigger, CommandType };

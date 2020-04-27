@@ -18,8 +18,9 @@ use std::collections::HashMap;
 use std::fmt;
 use super::super::definitionstore::DefStore;
 use super::super::structenum::{ EnumDef, StructDef };
+use super::complexpath::ComplexPath;
 use super::vectorsig::VectorRegisters;
-use crate::model::{ cbor_array, cbor_string };
+use crate::model::cbor_array;
 use crate::typeinf::{ BaseType, ContainerType, MemberType, MemberMode };
 use serde_cbor::Value as CborValue;
 
@@ -27,14 +28,14 @@ use serde_cbor::Value as CborValue;
 pub struct ComplexRegisters {
     start: usize,
     mode: MemberMode,
-    order: Vec<Vec<String>>,
-    vectors: HashMap<Vec<String>,VectorRegisters>
+    order: Vec<ComplexPath>,
+    vectors: HashMap<ComplexPath,VectorRegisters>
 }
 
 impl fmt::Display for ComplexRegisters {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = self.iter().map(|x| {
-            let parts = x.0.iter().map(|x| format!("{}",x)).collect::<Vec<_>>().join(".");
+            let parts = x.0.to_string();
             format!("{}{}",parts,x.1.to_string())
         }).collect::<Vec<_>>().join(",");
         write!(f,"{}/{}",s,self.mode)
@@ -53,22 +54,23 @@ impl ComplexRegisters {
 
     pub fn new(defstore: &DefStore, mode: MemberMode, type_: &MemberType) -> Result<ComplexRegisters,String> {
         let mut out = ComplexRegisters::new_empty(mode);
-        out.vec_from_type(defstore,type_,&vec![],&ContainerType::new_empty())?;
+        out.vec_from_type(defstore,type_,&ComplexPath::new_empty(),&ContainerType::new_empty())?;
         Ok(out)
     }
 
     pub fn deserialize(cbor: &CborValue, named: bool) -> Result<ComplexRegisters,String> {
         let data = cbor_array(cbor,1,true)?;
         let mut out = ComplexRegisters::new_empty(MemberMode::deserialize(&data[0])?);
-        for (i,member) in cbor_array(&data[1],0,true)?.iter().enumerate() {
+        for member in cbor_array(&data[1],0,true)?.iter() {
             if named {
                 let entry = cbor_array(member,2,false)?;
-                let name = cbor_array(&entry[0],0,true)?.iter().map(|x| cbor_string(x)).collect::<Result<Vec<_>,_>>()?;
+                let name = ComplexPath::deserialize(&entry[0])?;
                 let vs = VectorRegisters::deserialize(&entry[1])?;
                 out.add(name,vs);
             } else {
                 let vs = VectorRegisters::deserialize(&member)?;
-                out.add(vec![format!("anon-{}",i)],vs);
+                let anon = ComplexPath::new_anon();
+                out.add(anon,vs);
             }
         }
         Ok(out)
@@ -79,7 +81,7 @@ impl ComplexRegisters {
         if named {
             for complex in &self.order {
                 regs.push(CborValue::Array(vec![
-                    CborValue::Array(complex.iter().map(|x| CborValue::Text(x.to_string())).collect()),
+                    complex.serialize()?,
                     self.vectors.get(complex).as_ref().unwrap().serialize()?
                 ]));
             }
@@ -100,10 +102,10 @@ impl ComplexRegisters {
 
     pub fn get_mode(&self) -> MemberMode { self.mode }
 
-    fn add(&mut self, complex: Vec<String>, mut vr: VectorRegisters) {
+    fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters) {
         vr.add_start(self.start);
         self.start += vr.register_count();
-        self.order.push(complex.to_vec());
+        self.order.push(complex.clone());
         self.vectors.insert(complex,vr);
     }
 
@@ -118,39 +120,37 @@ impl ComplexRegisters {
         self.iter().map(|x| x.1.register_count()).sum()
     }
 
-    pub(super) fn vec_from_type(&mut self, defstore: &DefStore, type_: &MemberType, prefix: &[String], container: &ContainerType) -> Result<(),String> {
+    pub(super) fn vec_from_type(&mut self, defstore: &DefStore, type_: &MemberType, path: &ComplexPath, container: &ContainerType) -> Result<(),String> {
         let container = container.merge(&type_.get_container());
         match type_.get_base() {
             BaseType::StructType(name) => {
                 let struct_ = defstore.get_struct(&name).unwrap();
-                self.from_struct(defstore,struct_,prefix,&container)
+                self.from_struct(defstore,struct_,path,&container)
             },
             BaseType::EnumType(name) => {
                 let enum_ = defstore.get_enum(&name).unwrap();
-                self.from_enum(defstore,enum_,prefix,&container)
+                self.from_enum(defstore,enum_,path,&container)
             },
             _ => {
-                self.add(prefix.to_vec(),VectorRegisters::new(container.depth()));
+                self.add(path.clone(),VectorRegisters::new(container.depth()));
                 Ok(())
             }
         }
     }
 
-    fn from_struct(&mut self, defstore: &DefStore, se: &StructDef, cpath: &[String], container: &ContainerType) -> Result<(),String> {
+    fn from_struct(&mut self, defstore: &DefStore, se: &StructDef, cpath: &ComplexPath, container: &ContainerType) -> Result<(),String> {
         for name in se.get_names() {
-            let mut new_cpath = cpath.to_vec();
-            new_cpath.push(name.to_string());
+            let new_cpath = cpath.add(name);
             let type_ = se.get_member_type(name).unwrap();
             self.vec_from_type(defstore,&type_,&new_cpath,container)?;
         }
         Ok(())
     }
 
-    fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &[String], container: &ContainerType) -> Result<(),String> {
-        self.add(cpath.to_vec(),VectorRegisters::new(container.depth()));
+    fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &ComplexPath, container: &ContainerType) -> Result<(),String> {
+        self.add(cpath.clone(),VectorRegisters::new(container.depth()));
         for name in se.get_names() {
-            let mut new_cpath = cpath.to_vec();
-            new_cpath.push(name.to_string());
+            let new_cpath = cpath.add(name);
             let type_ = se.get_branch_type(name).unwrap();
             self.vec_from_type(defstore,&type_,&new_cpath,container)?;
         }
@@ -164,7 +164,7 @@ pub struct ComplexRegistersIterator<'a> {
 }
 
 impl<'a> Iterator for ComplexRegistersIterator<'a> {
-    type Item = (&'a Vec<String>,&'a VectorRegisters);
+    type Item = (&'a ComplexPath,&'a VectorRegisters);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.cr.order.len() {

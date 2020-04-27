@@ -25,7 +25,7 @@ pub struct VectorRegisters {
 }
 
 impl VectorRegisters {
-    pub(super) fn new(depth: usize) -> VectorRegisters {
+    pub fn new(depth: usize) -> VectorRegisters {
         VectorRegisters {
             depth,
             start: 0

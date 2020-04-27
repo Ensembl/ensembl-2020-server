@@ -15,68 +15,60 @@
  */
 
 use crate::interp::{ InterpNatural, InterpValue };
-use crate::model::Register;
-use super::assign::coerce_to;
+use crate::model::{ Register, RegisterSignature };
+use super::super::common::blit::coerce_to;
+use super::super::common::vectorcmp::{ SharedVec, compare };
+use super::super::common::vectorsource::RegisterVectorSource;
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
 use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
+use crate::model::{ cbor_array, cbor_bool };
 
 pub struct EqCommandType();
 
 impl CommandType for EqCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            values: 3,
+            values: 2,
             trigger: CommandTrigger::Command("eq".to_string())
         }
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,_,_) = &it.itype {
-            Ok(Box::new(EqCommand(it.regs[0],it.regs[1],it.regs[2])))
+        if let InstructionType::Call(_,_,sig,_) = &it.itype {
+            Ok(Box::new(EqCommand(sig.clone(),it.regs.to_vec())))
         } else {
             Err("unexpected instruction".to_string())
         }
     }
     
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(EqCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?)))
+        let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
+        let sig = RegisterSignature::deserialize(&value[0],false)?;
+        Ok(Box::new(EqCommand(sig,regs)))
     }
 }
 
-fn eq<T>(c: &mut Vec<bool>, a: &[T], b: &[T]) where T: PartialEq {
-    let b_len = b.len();
-    for (i,av) in a.iter().enumerate() {
-        c.push(av == &b[i%b_len]);
-    }
-}
-
-pub struct EqCommand(pub(crate) Register, pub(crate) Register, pub(crate) Register);
+pub struct EqCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
 impl Command for EqCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
-        let a = registers.get(&self.1);
-        let a = a.borrow().get_shared()?;
-        let b = registers.get(&self.2);
-        let b = b.borrow().get_shared()?;
-        let mut c = vec![];
-        if let Some(natural) = coerce_to(&a,&b,true) {
-            match natural {
-                InterpNatural::Empty => {},
-                InterpNatural::Numbers => { eq(&mut c,&a.to_rc_numbers()?.0,&b.to_rc_numbers()?.0); },
-                InterpNatural::Indexes => { eq(&mut c,&a.to_rc_indexes()?.0,&b.to_rc_indexes()?.0); },
-                InterpNatural::Boolean => { eq(&mut c,&a.to_rc_boolean()?.0,&b.to_rc_boolean()?.0); },
-                InterpNatural::Strings => { eq(&mut c,&a.to_rc_strings()?.0,&b.to_rc_strings()?.0); },
-                InterpNatural::Bytes =>   { eq(&mut c,&a.to_rc_bytes()?.0,  &b.to_rc_bytes()?.0); },
-            }
+        let vs = RegisterVectorSource::new(&self.1);
+        let cr_a = &self.0[1];
+        let cr_b = &self.0[2];
+        // XXX need info on vec/struct ordering
+        for (vr_a,vr_b) in cr_a.iter().zip(cr_b.iter()) {
+            let a = SharedVec::new(context,&vs,vr_a.1)?;
+            let b = SharedVec::new(context,&vs,vr_b.1)?;
+            let out = compare(&a,&b)?;
+            context.registers().write(&self.1[0],InterpValue::Boolean(out));
         }
-        registers.write(&self.0,InterpValue::Boolean(c));
         Ok(())
     }
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
+        let regs = CborValue::Array(self.1.iter().map(|x| x.serialize()).collect());
+        Ok(vec![self.0.serialize(false)?,regs])
     }
 }
 

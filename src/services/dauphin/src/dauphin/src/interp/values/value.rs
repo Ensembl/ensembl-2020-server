@@ -140,6 +140,7 @@ pub enum InterpValue {
 
 macro_rules! interp_value {
     ($type:ident,$branch: tt,$inner:ty) => {
+        #[derive(Clone)]
         pub struct $type(Rc<InterpValue>);
 
         impl Deref for $type {
