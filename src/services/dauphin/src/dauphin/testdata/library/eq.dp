@@ -8,6 +8,8 @@ proc assert(boolean,boolean);
 func eq(_A,_A) becomes boolean;
 inline "==" eq left 5;
 
+struct A { x: vec(number), y: vec(number) };
+
 assert(3==3,true);
 assert(3==4,false);
 assert([1]==[1],true);
@@ -41,3 +43,21 @@ z2 := [[[1,2,3],[4,5,6]],
 assert(z==z2,false);
 z[@==2] := x;
 assert(z==z2,true);
+
+a := A { x: [1,2,3], y: [4,5,6] };
+b := A { x: [1,2,3], y: [4,5,6] };
+c := A { x: [0,0,0], y: [4,5,6] };
+d := A { x: [1,2,3], y: [0,0,0] };
+assert(a.x==[1,2,3],true);
+assert(a==b,true);
+assert([a,a]==[b,b],true);
+assert(a==c,false);
+assert(a==d,false);
+c.x := [1,2,3];
+assert(a==c,true);
+c.x := [1,2];
+assert(a==c,false);
+c.x := a.x;
+assert(a==c,true);
+assert([a,a]==[b],false);
+assert([a,a][]==[b][],true);

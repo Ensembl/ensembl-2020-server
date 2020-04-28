@@ -54,6 +54,14 @@ impl ComplexRegisters {
         }
     }
 
+    pub fn get_root_path(&self) -> Result<&ComplexPath,String> {
+        self.order.get(0).ok_or_else(|| format!("no root present"))
+    }
+
+    pub fn get_vec_depth(&self, path: &ComplexPath) -> Result<usize,String> {
+        Ok(self.vec_depth.get(path).ok_or_else(|| format!("no depth present"))?.clone())
+    }
+
     pub fn new(defstore: &DefStore, mode: MemberMode, type_: &MemberType) -> Result<ComplexRegisters,String> {
         let mut out = ComplexRegisters::new_empty(mode);
         out.vec_from_type(defstore,type_,&ComplexPath::new_empty(),&ContainerType::new_empty())?;

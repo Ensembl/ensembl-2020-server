@@ -58,6 +58,18 @@ impl CurrentValues {
         None
     }
 
+    fn shadowed(&mut self, register: &Register) -> bool {
+        if let Some(value) = self.reg_value.get(register) {
+            let main_reg = *self.value_reg.get(value).unwrap();
+            if main_reg == *register {
+                if let Some(spares) = self.spare_regs.get(value) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     fn invalidate_main(&mut self, register: &Register) -> Option<(Register,Register)> {
         if let Some(value) = self.reg_value.get(register) {
             let main_reg = *self.value_reg.get(value).unwrap();
@@ -201,17 +213,17 @@ pub fn reuse_const(context: &mut GenContext) {
     let mut consts = ConstMatcher::new();
     let instrs = context.get_instructions();
     for instr in instrs {
-        print!("instruction: {:?}\n",instr);
         match &instr.itype {
             InstructionType::Const(nn) => {
+                let mut skip = false;
                 if let Some(reg) = consts.get(nn) {
-                    print!("FOUND! in {:?}\n",reg);
-                    if let Some((dst,src)) = values.invalidate_main(&instr.regs[0]) {
-                        context.add(Instruction::new(InstructionType::Copy,vec![dst,src]));
+                    if !values.shadowed(&reg) {
+                        values.alias(&instr.regs[0],&reg);
+                        consts.copy(&instr.regs[0],&reg);
+                        skip = true;
                     }
-                    values.alias(&instr.regs[0],&reg);
-                    consts.copy(&instr.regs[0],&reg);
-                } else {
+                }
+                if !skip {
                     process_instruction(context,&instr,&mut values, Some(&mut consts));
                     consts.add(&instr.regs[0],nn);
                 }
@@ -220,7 +232,6 @@ pub fn reuse_const(context: &mut GenContext) {
                 process_instruction(context,&instr,&mut values, Some(&mut consts));
             }
         }
-        print!("consts: {:?}\n",consts);
     }
     context.phase_finished();
 }

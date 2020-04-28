@@ -44,7 +44,7 @@ impl CommandType for EqCommandType {
     
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let sig = RegisterSignature::deserialize(&value[0],false,false)?;
+        let sig = RegisterSignature::deserialize(&value[0],false,true)?;
         Ok(Box::new(EqCommand(sig,regs)))
     }
 }
@@ -56,19 +56,29 @@ impl Command for EqCommand {
         let vs = RegisterVectorSource::new(&self.1);
         let cr_a = &self.0[1];
         let cr_b = &self.0[2];
-        // XXX need info on vec/struct ordering
+        let mut out : Option<Vec<bool>> = None;
         for (vr_a,vr_b) in cr_a.iter().zip(cr_b.iter()) {
             let a = SharedVec::new(context,&vs,vr_a.1)?;
             let b = SharedVec::new(context,&vs,vr_b.1)?;
-            let out = compare(&a,&b)?;
-            context.registers().write(&self.1[0],InterpValue::Boolean(out));
+            let more = compare(&a,&b)?;
+            if let Some(ref mut out) = out {
+                let out_len = out.len();
+                for (i,value) in more.iter().enumerate() {
+                    if !value {
+                        out[i%out_len] = false;
+                    }
+                }
+            } else {
+                out = Some(more);
+            }
         }
+        context.registers().write(&self.1[0],InterpValue::Boolean(out.unwrap_or_else(|| vec![])));
         Ok(())
     }
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         let regs = CborValue::Array(self.1.iter().map(|x| x.serialize()).collect());
-        Ok(vec![self.0.serialize(false,false)?,regs])
+        Ok(vec![self.0.serialize(false,true)?,regs])
     }
 }
 
