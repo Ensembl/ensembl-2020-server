@@ -19,6 +19,7 @@ use crate::generate::instruction::{ Instruction, InstructionType };
 use crate::model::Register;
 use super::gencontext::GenContext;
 
+#[derive(Debug)]
 struct CurrentValues {
     next_value: usize,
     reg_value: HashMap<Register,usize>,
@@ -139,6 +140,9 @@ pub fn copy_on_write(context: &mut GenContext) {
         print!("instruction: {:?}\n",instr);
         match &instr.itype {
             InstructionType::Copy => {
+                if let Some((dst,src)) = values.invalidate_main(&instr.regs[0]) {
+                    context.add(Instruction::new(InstructionType::Copy,vec![dst,src]));
+                }
                 values.alias(&instr.regs[0],&instr.regs[1]);
             },
             _ => {
@@ -202,6 +206,9 @@ pub fn reuse_const(context: &mut GenContext) {
             InstructionType::Const(nn) => {
                 if let Some(reg) = consts.get(nn) {
                     print!("FOUND! in {:?}\n",reg);
+                    if let Some((dst,src)) = values.invalidate_main(&instr.regs[0]) {
+                        context.add(Instruction::new(InstructionType::Copy,vec![dst,src]));
+                    }
                     values.alias(&instr.regs[0],&reg);
                     consts.copy(&instr.regs[0],&reg);
                 } else {
@@ -231,8 +238,7 @@ mod test {
     use super::super::remove_aliases;
     use super::super::prune;
     use super::super::run_nums;
-    use super::super::reuse_dead;
-    use super::super::assign_regs;
+    use super::super::generate::generate;
 
     #[test]
     fn cow_smoke() {
@@ -268,35 +274,11 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        linearize(&mut context).expect("linearize");
-        remove_aliases(&mut context);
-        run_nums(&mut context);
-        prune(&mut context);
-        copy_on_write(&mut context);
-        prune(&mut context);
-        run_nums(&mut context);
-        reuse_dead(&mut context);
-        assign_regs(&mut context);
-        print!("{:?}\n",context);
-        reuse_const(&mut context);
-        print!("{:?}\n",context);
-        prune(&mut context);
-        copy_on_write(&mut context);
-        prune(&mut context);
-        print!("{:?}\n",context);
-        print!("RUN NUMS\n");
-        run_nums(&mut context);
-        print!("{:?}\n",context);
-        reuse_dead(&mut context);
-        assign_regs(&mut context);
+        generate(&mut context,&defstore).expect("j");
         let (_,strings) = mini_interp(&mut context).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
         assert_eq!(vec!["[[0],[2],[0],[4]]","[[0],[2],[9,9,9],[9,9,9]]","[0,0,0]","[[0],[2],[8,9,9],[9,9,9]]"],strings);
     }
-
-
 }

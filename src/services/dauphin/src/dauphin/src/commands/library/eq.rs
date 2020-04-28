@@ -44,7 +44,7 @@ impl CommandType for EqCommandType {
     
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let sig = RegisterSignature::deserialize(&value[0],false)?;
+        let sig = RegisterSignature::deserialize(&value[0],false,false)?;
         Ok(Box::new(EqCommand(sig,regs)))
     }
 }
@@ -68,11 +68,34 @@ impl Command for EqCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         let regs = CborValue::Array(self.1.iter().map(|x| x.serialize()).collect());
-        Ok(vec![self.0.serialize(false)?,regs])
+        Ok(vec![self.0.serialize(false,false)?,regs])
     }
 }
 
 pub(super) fn library_eq_command(set: &mut CommandSet) -> Result<(),String> {
     set.push("eq",0,EqCommandType())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::lexer::{ FileResolver, Lexer };
+    use crate::parser::{ Parser };
+    use crate::generate::{ generate_code, generate };
+    use crate::interp::mini_interp;
+
+    #[test]
+    fn eq_smoke() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:library/eq.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        generate(&mut context,&defstore).expect("j");
+        let (_,strings) = mini_interp(&mut context).expect("x");
+        for s in &strings {
+            print!("{}\n",s);
+        }
+    }
 }

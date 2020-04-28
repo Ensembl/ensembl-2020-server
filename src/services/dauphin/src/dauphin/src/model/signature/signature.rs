@@ -48,13 +48,13 @@ impl RegisterSignature {
         }
     }
 
-    pub fn serialize(&self, named: bool) -> Result<CborValue,String> {
-        Ok(CborValue::Array(self.args.iter().map(|x| x.serialize(named)).collect::<Result<Vec<_>,_>>()?))
+    pub fn serialize(&self, named: bool, depth: bool) -> Result<CborValue,String> {
+        Ok(CborValue::Array(self.args.iter().map(|x| x.serialize(named,depth)).collect::<Result<Vec<_>,_>>()?))
     }
 
-    pub fn deserialize(cbor: &CborValue, named: bool) -> Result<RegisterSignature,String> {
+    pub fn deserialize(cbor: &CborValue, named: bool, depth: bool) -> Result<RegisterSignature,String> {
         let mut out = RegisterSignature::new();
-        for cr in cbor_array(cbor,0,true)?.iter().map(|x| ComplexRegisters::deserialize(x,named)).collect::<Result<Vec<_>,_>>()? {
+        for cr in cbor_array(cbor,0,true)?.iter().map(|x| ComplexRegisters::deserialize(x,named,depth)).collect::<Result<Vec<_>,_>>()? {
             out.add(cr);
         }
         Ok(out)
@@ -188,13 +188,13 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let _context = generate_code(&defstore,stmts).expect("codegen");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(etest3)")/*,MemberDataFlow::Normal*/).expect("b");
-        let named = regs.serialize(true).expect("cbor a");
+        let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");
-        let cr2 = ComplexRegisters::deserialize(&named,true).expect("cbor d");
+        let cr2 = ComplexRegisters::deserialize(&named,true,true).expect("cbor d");
         assert_eq!(cr2,regs);
-        let anon = regs.serialize(false).expect("cbor c");
+        let anon = regs.serialize(false,false).expect("cbor c");
         cbor_cmp(&anon,"cbor-signature-unnamed.out");
-        let cr2 = ComplexRegisters::deserialize(&anon,false).expect("cbor e");
+        let cr2 = ComplexRegisters::deserialize(&anon,false,false).expect("cbor e");
         assert_ne!(cr2,regs);
         assert_eq!(MemberMode::RValue,cr2.get_mode());
         let vs_in = regs.iter().map(|x| x.1).cloned().collect::<Vec<_>>();

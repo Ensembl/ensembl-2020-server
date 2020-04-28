@@ -20,7 +20,7 @@ use super::super::definitionstore::DefStore;
 use super::super::structenum::{ EnumDef, StructDef };
 use super::complexpath::ComplexPath;
 use super::vectorsig::VectorRegisters;
-use crate::model::cbor_array;
+use crate::model::{ cbor_array, cbor_int };
 use crate::typeinf::{ BaseType, ContainerType, MemberType, MemberMode };
 use serde_cbor::Value as CborValue;
 
@@ -29,7 +29,8 @@ pub struct ComplexRegisters {
     start: usize,
     mode: MemberMode,
     order: Vec<ComplexPath>,
-    vectors: HashMap<ComplexPath,VectorRegisters>
+    vectors: HashMap<ComplexPath,VectorRegisters>,
+    vec_depth: HashMap<ComplexPath,usize>
 }
 
 impl fmt::Display for ComplexRegisters {
@@ -48,7 +49,8 @@ impl ComplexRegisters {
             mode,
             start: 0,
             order: Vec::new(),
-            vectors: HashMap::new()
+            vectors: HashMap::new(),
+            vec_depth: HashMap::new()
         }
     }
 
@@ -58,39 +60,46 @@ impl ComplexRegisters {
         Ok(out)
     }
 
-    pub fn deserialize(cbor: &CborValue, named: bool) -> Result<ComplexRegisters,String> {
+    pub fn deserialize(cbor: &CborValue, named: bool, depth: bool) -> Result<ComplexRegisters,String> {
         let data = cbor_array(cbor,1,true)?;
         let mut out = ComplexRegisters::new_empty(MemberMode::deserialize(&data[0])?);
-        for member in cbor_array(&data[1],0,true)?.iter() {
-            if named {
-                let entry = cbor_array(member,2,false)?;
-                let name = ComplexPath::deserialize(&entry[0])?;
-                let vs = VectorRegisters::deserialize(&entry[1])?;
-                out.add(name,vs);
+        let mut mult = 1;
+        let mut named_off = 2;
+        if depth { mult +=1; named_off += 1; }
+        if named { mult +=1; }
+        let len = (data.len()-1)/mult;
+        if len*mult+1 != data.len() {
+            return Err(format!("malformed complexregisters cbor"));
+        }
+        for i in 0..len {
+            let vs = VectorRegisters::deserialize(&data[i*mult+1])?;
+            let depth = if depth {
+                cbor_int(&data[i*mult+2],None)? as usize
             } else {
-                let vs = VectorRegisters::deserialize(&member)?;
-                let anon = ComplexPath::new_anon();
-                out.add(anon,vs);
-            }
+                0
+            };
+            let path = if named {
+                ComplexPath::deserialize(&data[i*mult+named_off])?
+            } else {
+                ComplexPath::new_anon()
+            };
+            out.add(path,vs,depth);
         }
         Ok(out)
     }
 
-    pub fn serialize(&self, named: bool) -> Result<CborValue,String> {
-        let mut regs = vec![];
-        if named {
-            for complex in &self.order {
-                regs.push(CborValue::Array(vec![
-                    complex.serialize()?,
-                    self.vectors.get(complex).as_ref().unwrap().serialize()?
-                ]));
+    pub fn serialize(&self, named: bool, depth: bool) -> Result<CborValue,String> {
+        let mut regs = vec![self.mode.serialize()];
+        for complex in &self.order {
+            regs.push(self.vectors.get(complex).as_ref().unwrap().serialize()?);
+            if depth {
+                regs.push(CborValue::Integer(**self.vec_depth.get(complex).as_ref().unwrap() as i128));
             }
-        } else {
-            for complex in &self.order {
-                regs.push(self.vectors.get(complex).as_ref().unwrap().serialize()?);
+            if named {
+                regs.push(complex.serialize()?);
             }
         }
-        Ok(CborValue::Array(vec![self.mode.serialize(),CborValue::Array(regs)]))
+        Ok(CborValue::Array(regs))
     }
 
     pub fn add_start(&mut self, start: usize) {
@@ -102,11 +111,12 @@ impl ComplexRegisters {
 
     pub fn get_mode(&self) -> MemberMode { self.mode }
 
-    fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters) {
+    fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters, vec_depth: usize) {
         vr.add_start(self.start);
         self.start += vr.register_count();
         self.order.push(complex.clone());
-        self.vectors.insert(complex,vr);
+        self.vectors.insert(complex.clone(),vr);
+        self.vec_depth.insert(complex,vec_depth);
     }
 
     pub fn iter<'a>(&'a self) -> ComplexRegistersIterator<'a> {
@@ -132,7 +142,7 @@ impl ComplexRegisters {
                 self.from_enum(defstore,enum_,path,&container)
             },
             _ => {
-                self.add(path.clone(),VectorRegisters::new(container.depth()));
+                self.add(path.clone(),VectorRegisters::new(container.depth()),container.depth());
                 Ok(())
             }
         }
@@ -148,7 +158,7 @@ impl ComplexRegisters {
     }
 
     fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &ComplexPath, container: &ContainerType) -> Result<(),String> {
-        self.add(cpath.clone(),VectorRegisters::new(container.depth()));
+        self.add(cpath.clone(),VectorRegisters::new(container.depth()),container.depth());
         for name in se.get_names() {
             let new_cpath = cpath.add(name);
             let type_ = se.get_branch_type(name).unwrap();

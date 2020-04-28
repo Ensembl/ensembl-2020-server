@@ -76,7 +76,7 @@ impl CommandType for AssignCommandType {
     
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         let regs = cbor_array(&value[2],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let sig = RegisterSignature::deserialize(&value[1],false)?;
+        let sig = RegisterSignature::deserialize(&value[1],false,false)?;
         Ok(Box::new(AssignCommand(cbor_bool(&value[0])?,sig,regs)))
     }
 }
@@ -91,7 +91,7 @@ impl Command for AssignCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         let regs = CborValue::Array(self.2.iter().map(|x| x.serialize()).collect());
-        Ok(vec![CborValue::Bool(self.0),self.1.serialize(false)?,regs])
+        Ok(vec![CborValue::Bool(self.0),self.1.serialize(false,false)?,regs])
     }
 }
 

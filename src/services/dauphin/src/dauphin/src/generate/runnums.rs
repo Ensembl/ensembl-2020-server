@@ -97,7 +97,7 @@ fn update_values(values: &mut HashMap<Register,Vec<usize>>, changing: &[usize], 
         },
 
         InstructionType::SeqFilter => {
-            if let (Some(src),Some(start),Some(len)) = (values.get(&instr.regs[1]),values.get(&instr.regs[2]),values.get(&instr.regs[2])) {
+            if let (Some(src),Some(start),Some(len)) = (values.get(&instr.regs[1]),values.get(&instr.regs[2]),values.get(&instr.regs[3])) {
                 let mut dst = vec![];
                 let mut b_iter = len.iter();
                 for a in start.iter() {

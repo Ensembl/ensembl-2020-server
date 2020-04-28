@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use std::ops::Deref;
+use std::fmt::Debug;
 use std::rc::Rc;
 use crate::interp::InterpContext;
 use crate::interp::{ InterpValue, InterpValueIndexes, InterpValueNumbers };
@@ -22,6 +22,7 @@ use crate::model::VectorRegisters;
 use super::vectorsource::VectorSource;
 use super::super::common::blit::coerce_to;
 
+#[derive(Debug)]
 pub struct SharedVec {
     vr:  VectorRegisters,
     structure: Vec<(InterpValueIndexes,InterpValueIndexes)>,
@@ -61,53 +62,44 @@ impl SharedVec {
     }
 }
 
-fn compare_work<T>(a: &SharedVec, a_off: (usize,usize), a_data: &[T], b: &SharedVec, b_off: (usize,usize), b_data: &[T], level: Option<usize>) -> Result<bool,String>
+fn compare_work<T>(a: &SharedVec, a_off: (usize,usize), a_data: &[T], b: &SharedVec, b_off: (usize,usize), b_data: &[T], level: usize) -> Result<bool,String>
         where T: PartialEq {
-    if let Some(level) = level {
-        if a_off.1 != b_off.1 { return Ok(false); }
-        if level > 0 {
-            /* index with index below */
-            let lower_a_off = a.get_offset(level-1)?;
-            let lower_a_len = a.get_length(level-1)?;
-            let lower_b_off = b.get_offset(level-1)?;
-            let lower_b_len = b.get_length(level-1)?;
-            for i in 0..a_off.1 {
-                if !compare_work(a,(lower_a_off[a_off.0+i],lower_a_len[a_off.0+i]),a_data,
-                                 b,(lower_b_off[b_off.0+i],lower_b_len[b_off.0+i]),b_data,
-                                 Some(level-1))? {
-                    return Ok(false);
-                }
-            }
-        } else {
-            /* index with data below */
-            for i in 0..a_off.1 {
-                if a_data[a_off.0+i] != b_data[b_off.0+i] {
-                    return Ok(false);
-                }
+    if a_off.1 != b_off.1 { return Ok(false); }
+    if level > 0 {
+        /* index with index below */
+        let lower_a_off = a.get_offset(level-1)?;
+        let lower_a_len = a.get_length(level-1)?;
+        let lower_b_off = b.get_offset(level-1)?;
+        let lower_b_len = b.get_length(level-1)?;
+        for i in 0..a_off.1 {
+            if !compare_work(a,(lower_a_off[a_off.0+i],lower_a_len[a_off.0+i]),a_data,
+                                b,(lower_b_off[b_off.0+i],lower_b_len[b_off.0+i]),b_data,
+                                level-1)? {
+                return Ok(false);
             }
         }
     } else {
-        /* data */
-        if a_data.len() != b_data.len() { return Ok(false); }
-        for i in 0..a_data.len() {
-            if a_data[i] != b_data[i] { return Ok(false); }
+        /* index with data below */
+        for i in 0..a_off.1 {
+            if a_data[a_off.0+i] != b_data[b_off.0+i] {
+                return Ok(false);
+            }
         }
     }
     Ok(true)
 }
 
-fn compare_indexed<T>(a: &SharedVec, b: &SharedVec, a_data: &[T], b_data: &[T]) -> Result<Vec<bool>,String> where T: PartialEq {
+fn compare_indexed<T>(a: &SharedVec, b: &SharedVec, a_data: &[T], b_data: &[T]) -> Result<Vec<bool>,String> where T: PartialEq + Debug {
     let top_a_off = a.get_offset(a.depth()-1)?;
-    let top_a_len = a.get_offset(a.depth()-1)?;
+    let top_a_len = a.get_length(a.depth()-1)?;
     let top_b_off = b.get_offset(b.depth()-1)?;
-    let top_b_len = b.get_offset(b.depth()-1)?;
+    let top_b_len = b.get_length(b.depth()-1)?;
     let b_len = top_b_off.len();
     let mut out = vec![];
-    let level = if a.depth() > 1 { Some(a.depth()-1) } else { None };
     for i in 0..top_a_off.len() {
         out.push(compare_work(a,(top_a_off[i],top_a_len[i]),a_data,
-                              b,(top_b_off[i%b_len],top_b_len[i&b_len]),b_data,
-                              level)?);
+                              b,(top_b_off[i%b_len],top_b_len[i%b_len]),b_data,
+                              a.depth()-1)?);
     }
     Ok(out)
 }

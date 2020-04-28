@@ -43,7 +43,7 @@ impl CommandType for LenCommandType {
     
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
-        Ok(Box::new(LenCommand(RegisterSignature::deserialize(&value[1],false)?,regs)))
+        Ok(Box::new(LenCommand(RegisterSignature::deserialize(&value[1],false,false)?,regs)))
     }
 }
 
@@ -62,7 +62,7 @@ impl Command for LenCommand {
     }
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false)?])
+        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false,false)?])
     }
 }
 
@@ -206,7 +206,7 @@ impl CommandType for PrintVecCommandType {
     
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
-        Ok(Box::new(PrintVecCommand(RegisterSignature::deserialize(&value[1],true)?,regs)))
+        Ok(Box::new(PrintVecCommand(RegisterSignature::deserialize(&value[1],true,true)?,regs)))
     }
 }
 
@@ -220,7 +220,7 @@ impl Command for PrintVecCommand {
     }
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(true)?])
+        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(true,true)?])
     }
 }
 
@@ -255,7 +255,7 @@ impl Command for AssertCommand {
         let a = &registers.get_boolean(&self.0)?;
         let b = &registers.get_boolean(&self.1)?;
         for i in 0..a.len() {
-            if a[i] != b[i] {
+            if a[i] != b[i%b.len()] {
                 return Err(format!("assertion failed index={}!",i));
             }
         }

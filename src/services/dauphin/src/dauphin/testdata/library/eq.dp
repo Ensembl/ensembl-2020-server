@@ -1,0 +1,43 @@
+proc assign(out _A, _A);
+inline ":=" assign left 14;
+
+proc print_regs(_A);
+proc print_vec(_);
+proc assert(boolean,boolean);
+
+func eq(_A,_A) becomes boolean;
+inline "==" eq left 5;
+
+assert(3==3,true);
+assert(3==4,false);
+assert([1]==[1],true);
+assert([1]==[2],false);
+assert([[1,2],[3,4]]==[[1,2],[3,4]],true);
+assert([[1,2],[3,4]][]==[[1,2],[3,4]][],[true,true][]);
+assert([[1,2],[3,4]][]==[[1,2],[3,4]][],true);
+assert([[1,2],[3,4]][]==[[1,2],[3,5]][],[true,false][]);
+assert([[1,2],[3,4]][]==[[1],[3,5]][],false);
+
+x := [[1,2],[3,4]];
+y := x;
+assert(x==[[1,2],[0,0]],false);
+assert(x==y,true);
+x[@==1] := [0,0];
+assert(x==[[1,2],[0,0]],true);
+assert(x==x,true);
+assert(x==y,false);
+
+z := [[[1,2,3],[4,5,6]],
+      [[0,0,0]],
+      [[7,7,7],[5,5,5],[6,6,6]]];
+assert(z==z,true);
+assert(z[@==1]==[[0,0,0]],true);
+assert(z[@==1]==[[6,6,6]],false);
+assert(z[@==2][@==2]==[6,6,6],true);
+
+z2 := [[[1,2,3],[4,5,6]],
+      [[0,0,0]],
+      [[1,2],[0,0]]];
+assert(z==z2,false);
+z[@==2] := x;
+assert(z==z2,true);
