@@ -185,7 +185,7 @@ class BAISGeneTranscript(object):
             biotypes.append(munge_code(biotype))
             prestiges.append(munge_code(prestige))
             trans_ids_disp.append(trans_id)
-            trans_ids.append("{0}:transcript:{1}".format(chrom.species.wire_genome_id,gene_id))
+            trans_ids.append("{0}:transcript:{1}".format(chrom.species.wire_genome_id,trans_id))
             if part_starts.endswith(","): part_starts = part_starts[:-1]
             if part_lens.endswith(","): part_lens = part_lens[:-1]
             part_starts = [int(x) for x in part_starts.split(",")]
