@@ -22,6 +22,7 @@ use crate::model::{ cbor_array, cbor_bool };
 use crate::typeinf::MemberMode;
 use super::super::common::vectorcopy::VectorCopy;
 use super::super::common::vectorsource::RegisterVectorSource;
+use super::super::common::sharedvec::SharedVec;
 
 fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
@@ -36,10 +37,13 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
 fn assign_filtered(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
     let filter_reg = context.registers().get_indexes(&regs[0])?;
     let mut vector_copies = vec![];
-    for (vr1,vr2) in sig[1].iter().zip(sig[2].iter()) {
+    let vrs = RegisterVectorSource::new(&regs);
+    let rights = sig[2].iter().map(|vr| {
+        SharedVec::new(context,&vrs,vr.1)
+    }).collect::<Result<Vec<_>,_>>()?;
+    for (vr1,right) in sig[1].iter().zip(rights.iter()) {
         let vrs1 = RegisterVectorSource::new(&regs);
-        let vrs2 = RegisterVectorSource::new(&regs);
-        vector_copies.push(VectorCopy::new(context,vrs1,vr1.1,vrs2,vr2.1,&filter_reg)?);
+        vector_copies.push(VectorCopy::new(context,vrs1,vr1.1,right,&filter_reg)?);
     }
     for vc in vector_copies {
         vc.copy(context)?;

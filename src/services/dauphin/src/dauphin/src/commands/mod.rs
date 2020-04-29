@@ -17,13 +17,13 @@
 #[macro_use]
 mod common {
     #[macro_use]
-    pub(super) mod blit;
-    pub(super) mod commontype;
-    pub(super) mod vectorcmp;
+    pub(super) mod polymorphic;
+    pub(super) mod sharedvec;
     pub(super) mod vectorcopy;
     pub(super) mod vectorsource;
 }
 mod core {
+    pub(super) mod commontype;
     pub(super) mod consts;
     pub(super) mod core;
 }

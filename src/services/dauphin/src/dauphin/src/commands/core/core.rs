@@ -20,8 +20,8 @@ use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext };
 use crate::model::Register;
 use crate::generate::InstructionSuperType;
 use serde_cbor::Value as CborValue;
-use super::super::common::commontype::BuiltinCommandType;
-use super::super::common::blit::{ coerce_to };
+use super::commontype::BuiltinCommandType;
+use crate::commands::common::polymorphic::arbitrate_type;
 use super::consts::const_commands;
 
 // XXX read is coerce
@@ -59,8 +59,8 @@ fn append_typed<T>(dst: &mut Vec<T>, src: &Vec<T>) where T: Clone {
 }
 
 fn append(dst: InterpValue, src: &Rc<InterpValue>) -> Result<InterpValue,String> {
-    if let Some(natural) = coerce_to(&dst,src,false) {
-        Ok(run_typed2!(dst,src,natural,(|d,s| {
+    if let Some(natural) = arbitrate_type(&dst,src,false) {
+        Ok(polymorphic!(dst,[src],natural,(|d,s| {
             append_typed(d,s)
         })))
     } else {
@@ -169,8 +169,8 @@ fn filter_typed<T>(dst: &mut Vec<T>, src: &[T], filter: &[bool]) where T: Clone 
 }
 
 pub fn filter(src: &Rc<InterpValue>, filter_val: &[bool]) -> Result<InterpValue,String> {
-    if let Some(natural) = coerce_to(&InterpValue::Empty,src,true) {
-        Ok(run_typed2!(InterpValue::Empty,src,natural,(|d,s| {
+    if let Some(natural) = arbitrate_type(&InterpValue::Empty,src,true) {
+        Ok(polymorphic!(InterpValue::Empty,[src],natural,(|d,s| {
             filter_typed(d,s,filter_val)
         })))
     } else {
@@ -250,8 +250,8 @@ fn seq_filter_typed<T>(dst: &mut Vec<T>, src: &[T], starts: &[usize], lens: &[us
 }
 
 fn seq_filter(src: &Rc<InterpValue>, starts: &[usize], lens: &[usize]) -> Result<InterpValue,String> {
-    if let Some(natural) = coerce_to(&InterpValue::Empty,src,true) {
-        Ok(run_typed2!(InterpValue::Empty,src,natural,(|d,s| {
+    if let Some(natural) = arbitrate_type(&InterpValue::Empty,src,true) {
+        Ok(polymorphic!(InterpValue::Empty,[src],natural,(|d,s| {
             seq_filter_typed(d,s,starts,lens)
         })))
     } else {

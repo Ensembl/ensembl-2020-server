@@ -14,15 +14,83 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ InterpNatural, InterpValue };
+use crate::interp::InterpValue;
 use crate::model::{ Register, RegisterSignature };
-use super::super::common::blit::coerce_to;
-use super::super::common::vectorcmp::{ SharedVec, compare };
 use super::super::common::vectorsource::RegisterVectorSource;
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
 use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
-use crate::model::{ cbor_array, cbor_bool };
+use crate::model::cbor_array;
+use crate::commands::common::sharedvec::SharedVec;
+
+use std::fmt::Debug;
+use crate::commands::common::polymorphic::arbitrate_type;
+
+fn compare_work<T>(a: &SharedVec, a_off: (usize,usize), a_data: &[T], b: &SharedVec, b_off: (usize,usize), b_data: &[T], level: usize) -> Result<bool,String>
+        where T: PartialEq {
+    if a_off.1 != b_off.1 { return Ok(false); }
+    if level > 0 {
+        /* index with index below */
+        let lower_a_off = a.get_offset(level-1)?;
+        let lower_a_len = a.get_length(level-1)?;
+        let lower_b_off = b.get_offset(level-1)?;
+        let lower_b_len = b.get_length(level-1)?;
+        for i in 0..a_off.1 {
+            if !compare_work(a,(lower_a_off[a_off.0+i],lower_a_len[a_off.0+i]),a_data,
+                                b,(lower_b_off[b_off.0+i],lower_b_len[b_off.0+i]),b_data,
+                                level-1)? {
+                return Ok(false);
+            }
+        }
+    } else {
+        /* index with data below */
+        for i in 0..a_off.1 {
+            if a_data[a_off.0+i] != b_data[b_off.0+i] {
+                return Ok(false);
+            }
+        }
+    }
+    Ok(true)
+}
+
+fn compare_indexed<T>(a: &SharedVec, b: &SharedVec, a_data: &[T], b_data: &[T]) -> Result<Vec<bool>,String> where T: PartialEq + Debug {
+    let top_a_off = a.get_offset(a.depth()-1)?;
+    let top_a_len = a.get_length(a.depth()-1)?;
+    let top_b_off = b.get_offset(b.depth()-1)?;
+    let top_b_len = b.get_length(b.depth()-1)?;
+    let b_len = top_b_off.len();
+    let mut out = vec![];
+    for i in 0..top_a_off.len() {
+        out.push(compare_work(a,(top_a_off[i],top_a_len[i]),a_data,
+                              b,(top_b_off[i%b_len],top_b_len[i%b_len]),b_data,
+                              a.depth()-1)?);
+    }
+    Ok(out)
+}
+
+fn compare_data<T>(a: &[T], b: &[T]) -> Vec<bool> where T: PartialEq {
+    let b_len = b.len();
+    a.iter().enumerate().map(|(i,av)| av == &b[i%b_len]).collect()
+}
+
+pub fn compare(a: &SharedVec, b: &SharedVec) -> Result<Vec<bool>,String> {
+    if a.depth() != b.depth() {
+        return Err(format!("unequal types in eq"));
+    }
+    let a_data = a.get_data();
+    let b_data = b.get_data();
+    if let Some(natural) = arbitrate_type(&a_data,&b_data,true) {
+        Ok(polymorphic!([&a_data,&b_data],natural,(|d,s| {
+            if a.depth() != 0 {
+                compare_indexed(a,b,d,s)
+            } else {
+                Ok(compare_data(d,s))
+            }
+        })).transpose()?.ok_or_else(|| format!("unexpected empty in eq"))?)
+    } else {
+        Ok(vec![])
+    }
+}
 
 pub struct EqCommandType();
 
