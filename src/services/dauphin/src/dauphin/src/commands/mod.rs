@@ -21,6 +21,7 @@ mod common {
     pub(super) mod sharedvec;
     pub(super) mod vectorcopy;
     pub(super) mod vectorsource;
+    pub(super) mod writevec;
 }
 mod core {
     pub(super) mod commontype;

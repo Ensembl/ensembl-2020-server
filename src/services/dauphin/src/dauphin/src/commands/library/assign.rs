@@ -20,9 +20,10 @@ use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
 use crate::typeinf::MemberMode;
-use super::super::common::vectorcopy::VectorCopy;
+use super::super::common::vectorcopy::{ vector_update, vector_update_poly, vector_push };
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::SharedVec;
+use super::super::common::writevec::WriteVec;
 
 fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
@@ -33,20 +34,49 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
     Ok(())
 }
 
+fn copy_deep<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
+    if filter.len() > 0 {
+        let offsets = vector_push(left,right,filter.len())?;
+        let depth = left.depth();
+        let off_len = offsets.len();
+        let mut i = 0;
+        vector_update(left.get_offset_mut(depth-1)?,right.get_offset(depth-1)?,filter,|v| {
+            i += 1;
+            *v+offsets[i%off_len]
+        });
+        vector_update(left.get_length_mut(depth-1)?,right.get_length(depth-1)?,filter,|v| *v);
+    }
+    Ok(())
+}
+
+fn copy_shallow<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
+    for _ in 0..filter.len() {
+        let data = vector_update_poly(left.take_data()?,right.get_data(),filter)?;
+        left.replace_data(data)?;
+    }
+    Ok(())
+}
+
+pub fn copy_vector<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
+    if left.depth() > 0 {
+        copy_deep(left,right,filter)?;
+    } else {
+        copy_shallow(left,right,filter)?;
+    }
+    Ok(())
+}
+
 /// XXX ban multi-Lvalue
 fn assign_filtered(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
     let filter_reg = context.registers().get_indexes(&regs[0])?;
-    let mut vector_copies = vec![];
     let vrs = RegisterVectorSource::new(&regs);
-    let rights = sig[2].iter().map(|vr| {
-        SharedVec::new(context,&vrs,vr.1)
-    }).collect::<Result<Vec<_>,_>>()?;
-    for (vr1,right) in sig[1].iter().zip(rights.iter()) {
-        let vrs1 = RegisterVectorSource::new(&regs);
-        vector_copies.push(VectorCopy::new(context,vrs1,vr1.1,right,&filter_reg)?);
-    }
-    for vc in vector_copies {
-        vc.copy(context)?;
+    /* build rhs then lhs (to avoid cow panics) */
+    let rights = sig[2].iter().map(|vr| SharedVec::new(context,&vrs,vr.1)).collect::<Result<Vec<_>,_>>()?;
+    let mut lefts = sig[1].iter().map(|vr| WriteVec::new(context,&vrs,vr.1)).collect::<Result<Vec<_>,_>>()?;
+    /* copy */
+    for (left,right) in lefts.iter_mut().zip(rights.iter()) {
+        copy_vector(left,right,&filter_reg)?;
+        left.write(context)?;
     }
     Ok(())
 }

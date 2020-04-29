@@ -31,6 +31,13 @@ pub fn arbitrate_type(dst: &InterpValue, src: &InterpValue, prefer_dst: bool) ->
 
 // If only there were higher-order type bounds in where clauses!
 macro_rules! pr_arm {
+    (($dst:expr),[$($src:expr),*],$wr:tt,$rd:tt,$func:tt,$arm:ident) => {
+        {
+            let mut d = $dst.$wr()?;
+            $func(&mut d,$(&$src.$rd()?.0),*);
+        }
+    };
+
     ($dst:expr,[$($src:expr),*],$wr:tt,$rd:tt,$func:tt,$arm:ident) => {
         {
             let mut d = $dst.$wr()?;
@@ -48,6 +55,17 @@ macro_rules! pr_arm {
 
 #[macro_use]
 macro_rules! polymorphic {
+    (($dst:expr),[$($src:expr),*],$natural:expr,$func:tt) => {
+        match $natural {
+            $crate::interp::InterpNatural::Empty => { $dst },
+            $crate::interp::InterpNatural::Numbers => pr_arm!(($dst),[$($src),*],to_numbers,to_rc_numbers,$func,Numbers),
+            $crate::interp::InterpNatural::Indexes => pr_arm!(($dst),[$($src),*],to_indexes,to_rc_indexes,$func,Indexes),
+            $crate::interp::InterpNatural::Boolean => pr_arm!(($dst),[$($src),*],to_boolean,to_rc_boolean,$func,Boolean),
+            $crate::interp::InterpNatural::Strings => pr_arm!(($dst),[$($src),*],to_strings,to_rc_strings,$func,Strings),
+            $crate::interp::InterpNatural::Bytes =>   pr_arm!(($dst),[$($src),*],to_bytes,to_rc_bytes,$func,Bytes),
+        }
+    };
+
     ($dst:expr,[$($src:expr),*],$natural:expr,$func:tt) => {
         match $natural {
             $crate::interp::InterpNatural::Empty => { $dst },

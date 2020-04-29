@@ -15,152 +15,69 @@
  */
 
 use std::rc::Rc;
-use crate::model::VectorRegisters;
-use crate::interp::{ InterpValue, InterpContext };
+use crate::interp::InterpValue;
 use crate::commands::common::polymorphic::arbitrate_type;
 use super::sharedvec::SharedVec;
-use super::vectorsource::VectorSource;
+use super::writevec::WriteVec;
 
-fn assign_reg<T,U>(context: &mut InterpContext, vs_left: &dyn VectorSource, left_idx: usize, right: &U, mut cb: T)
-                -> Result<(),String>
-                where T: FnMut(InterpValue,&U) -> Result<InterpValue,String> {
-    let left = vs_left.get_exclusive(context,left_idx)?;
-    vs_left.set(context,left_idx,cb(left,&right)?);
-    Ok(())
-}
-
-fn blit_number(dst: InterpValue, src: &[usize], filter: Option<&[usize]>, offset: usize) -> Result<InterpValue,String> {
-    let mut dstv = dst.to_indexes()?;
-    if let Some(filter) = filter {
-        let src_len = src.len();
-        for (i,filter_pos) in filter.iter().enumerate() {
-            dstv[*filter_pos] = src[i%src_len] + offset;
-        }
-    } else {
-        let mut new_values = src.iter().map(|x| *x+offset).collect();
-        dstv.append(&mut new_values);
-    }
-    Ok(InterpValue::Indexes(dstv))
-}
-
-fn blit_numbers(dst: InterpValue, src: &[usize], filter: Option<&[usize]>, offsets: &[usize]) -> Result<InterpValue,String> {
-    let mut dstv = dst.to_indexes()?;
-    if offsets.len() > 0 {
-        let off_len = offsets.len();
-        if let Some(filter) = filter {
-            let src_len = src.len();
-            for (i,filter_pos) in filter.iter().enumerate() {
-                dstv[*filter_pos] = src[i%src_len] + offsets[i%off_len];
-            }
-        } else {
-            for (i,val) in src.iter().enumerate() {
-                dstv.push(val+offsets[i%off_len]);
-            }
-        }
-    }
-    Ok(InterpValue::Indexes(dstv))
-}
-
-fn blit_typed<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: Option<&[usize]>) where T: Clone {
-    if let Some(filter) = filter {
-        let src_len = src.len();
-        for (i,filter_pos) in filter.iter().enumerate() {
-            dst[*filter_pos] = src[i%src_len].clone();
-        }
-    } else {
-        let mut new_values : Vec<T> = src.to_vec();
-        dst.append(&mut new_values);
+pub fn vector_update<F,T>(dst: &mut Vec<T>, src: &[T], filter: &[usize], mut cb: F) where F: FnMut(&T) -> T {
+    let src_len = src.len();
+    for (i,filter_pos) in filter.iter().enumerate() {
+        dst[*filter_pos] = cb(&src[i%src_len]);
     }
 }
 
-pub(super) fn blit(dst: InterpValue, src: &Rc<InterpValue>, filter_val: Option<&[usize]>) -> Result<InterpValue,String> {
-    if let Some(natural) = arbitrate_type(&dst,src,filter_val.is_some()) {
+pub fn vector_append<F,T>(dst: &mut Vec<T>, src: &[T], mut cb: F) where F: FnMut(&T) -> T {
+    let mut new_values = src.iter().map(|x| cb(x)).collect();
+    dst.append(&mut new_values);
+}
+
+fn update_poly<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: &[usize]) where T: Clone {
+    vector_update(dst,src,filter,|v| v.clone())
+}
+
+pub fn vector_update_poly(dst: InterpValue, src: &Rc<InterpValue>, filter_val: &[usize]) -> Result<InterpValue,String> {
+    if let Some(natural) = arbitrate_type(&dst,src,true) {
         Ok(polymorphic!(dst,[src],natural,(|d,s| {
-            blit_typed(d,s,filter_val)
+            update_poly(d,s,filter_val)
         })))
     } else {
         Ok(dst)
     }
 }
 
-pub struct VectorCopy<'a,'b,'c,'d> {
-    right: &'d SharedVec,
-    vs_left: Box<dyn VectorSource + 'c>,
-    a_left: &'a VectorRegisters,
-    filter: &'b [usize],
-    lengths: Vec<(usize,usize)>
+pub fn append_data(dst: InterpValue, src: &Rc<InterpValue>) -> Result<InterpValue,String> {
+    if let Some(natural) = arbitrate_type(&dst,src,false) {
+        Ok(polymorphic!(dst,[src],natural,(|d: &mut Vec<_>, s: &[_]| {
+            d.append(&mut s.to_vec());
+        })))
+    } else {
+        Ok(dst)
+    }
 }
 
-impl<'a,'b,'c,'d> VectorCopy<'a,'b,'c,'d> {
-    pub fn new<T>(context: &mut InterpContext, vs_left: T, a_left: &'a VectorRegisters, right: &'d SharedVec, filter: &'b [usize])
-            -> Result<VectorCopy<'a,'b,'c,'d>,String>
-            where T: VectorSource + 'c {
-        let mut lengths = vec![];
-        for level in 0..a_left.depth() {
-            /* how long are the lower registers? */
-            let left_lower_len = vs_left.len(context,a_left.lower_pos(level))?;
-            let right_lower_len = if level > 0 {
-                right.get_offset(level-1)?.len()
-            } else {
-                right.get_data().len()
-            };
-            lengths.push((left_lower_len,right_lower_len));
-        }
-        Ok(VectorCopy {
-            vs_left: Box::new(vs_left), a_left, lengths, filter, right
-        })
+pub fn vector_push<'e>(left: &mut WriteVec<'e>, right: &SharedVec, copies: usize) -> Result<Vec<usize>,String> {
+    let depth = left.depth();
+    /* data for top-level */
+    let mut offsets = vec![];
+    let start = if depth > 1 { left.get_offset(depth-2)?.len() } else { left.get_data().len() };
+    let stride = if depth > 1 { right.get_offset(depth-2)?.len() } else { right.get_data().len() };
+    for i in 0..copies {
+        offsets.push(start+i*stride);
     }
-
-    fn copy_deep(&self, context: &mut InterpContext) -> Result<(),String> {
-        let copies = self.filter.len();
-        let mut offsets = vec![];
-        let depth = self.a_left.depth();
-        /* intermediate levels */
-        for level in 0..(depth-1) {
-            let (start,stride) = &self.lengths[level];
-            assign_reg(context,self.vs_left.as_ref(),self.a_left.offset_pos(level)?,self.right.get_offset(level)?, |mut left, right| {
-                for i in 0..copies {
-                    left = blit_number(left,right,None,start+i*stride)?;
-                }
-                Ok(left)
-            })?;
-            assign_reg(context,self.vs_left.as_ref(),self.a_left.length_pos(level)?,self.right.get_length(level)?, |mut left, right| {
-                for _ in 0..copies {
-                    left = blit_number(left,right,None,0)?;
-                }
-                Ok(left)
-            })?;
-        }
-        /* bottom-level */
-        self.copy_shallow(context,None,copies)?;
+    /* intermediate levels */
+    for level in (0..(depth-1)).rev() {
+        let start = if level > 0 { left.get_offset(level-1)?.len() } else { left.get_data().len() };
+        let stride = if level > 0 { right.get_offset(level-1)?.len() } else { right.get_data().len() };
         for i in 0..copies {
-            offsets.push(self.lengths[depth-1].0+i*self.lengths[depth-1].1);
-        }
-        /* top level */
-        assign_reg(context,self.vs_left.as_ref(),self.a_left.offset_pos(depth-1)?,self.right.get_offset(depth-1)?, |left,right| {
-            blit_numbers(left,&right,Some(self.filter),&offsets)
-        })?;
-        assign_reg(context,self.vs_left.as_ref(),self.a_left.length_pos(depth-1)?,self.right.get_length(depth-1)?, |left,right| {
-            blit_number(left,&right,Some(self.filter),0)
-        })?;
-        Ok(())
-    }
-
-    fn copy_shallow(&self, context: &mut InterpContext, filter: Option<&[usize]>, len: usize) -> Result<(),String> {
-        assign_reg(context,self.vs_left.as_ref(),self.a_left.data_pos(),self.right.get_data(), |mut left, right| {
-            for _ in 0..len {
-                left = blit(left,right,filter)?;
-            }
-            Ok(left)
-        })?;
-        Ok(())
-    }
-
-    pub fn copy(&self, context: &mut InterpContext) -> Result<(),String> {
-        if self.a_left.depth() > 0 {
-            self.copy_deep(context)
-        } else {
-            self.copy_shallow(context,Some(self.filter),self.filter.len())
+            vector_append(left.get_offset_mut(level)?,right.get_offset(level)?,|v| *v+start+i*stride);
+            vector_append(left.get_length_mut(level)?,right.get_length(level)?,|v| *v);
         }
     }
+    /* bottom-level */
+    for _ in 0..copies {
+        let data = append_data(left.take_data()?,right.get_data())?;
+        left.replace_data(data)?;
+    }
+    Ok(offsets)
 }
