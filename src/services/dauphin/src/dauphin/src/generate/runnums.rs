@@ -29,6 +29,8 @@ fn update_values(values: &mut HashMap<Register,Vec<usize>>, changing: &[usize], 
         InstructionType::Copy => {
             if let Some(src) = values.get(&instr.regs[1]).cloned() {
                 values.insert(instr.regs[0],src.to_vec());
+            } else {
+                values.remove(&instr.regs[0]);
             }
         },
 

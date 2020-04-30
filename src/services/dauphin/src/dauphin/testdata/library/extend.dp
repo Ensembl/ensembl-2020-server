@@ -28,5 +28,5 @@ x := [x[] (+) [3,4][]]; // multi-push
 assert(x==[1,2,3,4],true);
 
 x := [[1,2],[3,4]];
-//x := [x,x];
+x := [x,x];
 print_vec(x);
