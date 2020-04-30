@@ -15,10 +15,12 @@
  */
 
 use std::rc::Rc;
-use crate::interp::InterpValue;
+use crate::interp::{ InterpValue, InterpContext };
 use crate::commands::common::polymorphic::arbitrate_type;
 use super::sharedvec::SharedVec;
 use super::writevec::WriteVec;
+use super::vectorsource::RegisterVectorSource;
+use crate::model::VectorRegisters;
 
 pub fn vector_update<F,T>(dst: &mut Vec<T>, src: &[T], filter: &[usize], mut cb: F) where F: FnMut(&T) -> T {
     let src_len = src.len();
@@ -46,13 +48,14 @@ pub fn vector_update_poly(dst: InterpValue, src: &Rc<InterpValue>, filter_val: &
     }
 }
 
-pub fn append_data(dst: InterpValue, src: &Rc<InterpValue>) -> Result<InterpValue,String> {
+pub fn append_data(dst: InterpValue, src: &Rc<InterpValue>) -> Result<(InterpValue,usize),String> {
+    let offset = src.len();
     if let Some(natural) = arbitrate_type(&dst,src,false) {
-        Ok(polymorphic!(dst,[src],natural,(|d: &mut Vec<_>, s: &[_]| {
+        Ok((polymorphic!(dst,[src],natural,(|d: &mut Vec<_>, s: &[_]| {
             d.append(&mut s.to_vec());
-        })))
+        })),offset))
     } else {
-        Ok(dst)
+        Ok((dst,offset))
     }
 }
 
@@ -76,8 +79,17 @@ pub fn vector_push<'e>(left: &mut WriteVec<'e>, right: &SharedVec, copies: usize
     }
     /* bottom-level */
     for _ in 0..copies {
-        let data = append_data(left.take_data()?,right.get_data())?;
+        let data = append_data(left.take_data()?,right.get_data())?.0;
         left.replace_data(data)?;
     }
     Ok(offsets)
+}
+
+pub fn vector_register_copy<'e>(context: &mut InterpContext, rvs: &RegisterVectorSource<'e>, dst: &VectorRegisters, src: &VectorRegisters) -> Result<(),String> {
+    for level in 0..dst.depth() {
+        rvs.copy(context,dst.offset_pos(level)?,src.offset_pos(level)?)?;
+        rvs.copy(context,dst.length_pos(level)?,src.length_pos(level)?)?;
+    }
+    rvs.copy(context,dst.data_pos(),src.data_pos())?;
+    Ok(())
 }

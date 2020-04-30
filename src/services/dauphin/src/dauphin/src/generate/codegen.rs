@@ -41,7 +41,8 @@ macro_rules! addf {
 pub struct CodeGen<'a> {
     context: GenContext<'a>,
     defstore: &'a DefStore,
-    regnames: HashMap<String,Register>
+    rvalue_regnames: HashMap<String,Register>,
+    lvalue_regnames: HashMap<String,Register>
 }
 
 impl<'a> CodeGen<'a> {
@@ -49,7 +50,8 @@ impl<'a> CodeGen<'a> {
         CodeGen {
             context: GenContext::new(defstore),
             defstore,
-            regnames: HashMap::new()
+            lvalue_regnames: HashMap::new(),
+            rvalue_regnames: HashMap::new()
         }
     }
 
@@ -83,10 +85,10 @@ impl<'a> CodeGen<'a> {
     fn type_of(&mut self, expr: &Expression) -> Result<ExpressionType,String> {
         Ok(match expr {
             Expression::Identifier(id) => {
-                if !self.regnames.contains_key(id) {
+                if !self.rvalue_regnames.contains_key(id) {
                     return Err(format!("No such variable {:?}",id));
                 }
-                self.context.get_partial_type(&self.regnames[id])
+                self.context.get_partial_type(&self.rvalue_regnames[id])
             },
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
@@ -137,12 +139,12 @@ impl<'a> CodeGen<'a> {
             Expression::Identifier(id) => {
                 if top {
                     // if it's a top level assignment allow type change
-                    self.regnames.remove(id);
+                    self.lvalue_regnames.remove(id);
                 }
-                if !self.regnames.contains_key(id) {
-                    self.regnames.insert(id.clone(),self.context.allocate_register(None));
+                if !self.lvalue_regnames.contains_key(id) {
+                    self.lvalue_regnames.insert(id.clone(),self.context.allocate_register(None));
                 }
-                let real_reg = self.regnames[id];
+                let real_reg = self.lvalue_regnames[id];
                 let lvalue_reg = addf!(self,Alias,real_reg);
                 Ok((lvalue_reg,None,real_reg))
             },
@@ -203,10 +205,10 @@ impl<'a> CodeGen<'a> {
     fn build_rvalue(&mut self, expr: &Expression, dollar: Option<&Register>, at: Option<&Register>) -> Result<Register,String> {
         Ok(match expr {
             Expression::Identifier(id) => {
-                if !self.regnames.contains_key(id) {
+                if !self.rvalue_regnames.contains_key(id) {
                     return Err(format!("Unset variable {:?}",id));
                 }
-                let real_reg = self.regnames[id];
+                let real_reg = self.rvalue_regnames[id];
                 addf!(self,Copy,real_reg)
             },
             Expression::Number(n) =>        addf!(self,NumberConst(*n)),
@@ -325,6 +327,8 @@ impl<'a> CodeGen<'a> {
             }
         }
         self.context.add_untyped(Instruction::new(InstructionType::Proc(stmt.0.to_string(),modes),regs))?;
+        self.rvalue_regnames.extend(self.lvalue_regnames.drain());
+        self.lvalue_regnames = self.rvalue_regnames.clone();
         Ok(())
     }
 

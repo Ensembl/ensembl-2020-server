@@ -1,0 +1,32 @@
+proc assign(out _A, _A);
+inline ":=" assign left 14;
+
+proc assert(boolean,boolean);
+
+func eq(_A,_A) becomes boolean;
+inline "==" eq left 5;
+
+func extend(_A,_A) becomes _A;
+inline "(+)" extend left 14;
+
+proc print_vec(_);
+
+x := [[1,2][] (+) [3,4][]];
+assert(x==[1,2,3,4],true);
+
+x := [[1,2] (+) [3,4]];
+assert(x==[[1,2],[3,4]],true);
+
+x := [1,2];
+print_vec([x[] (+) 3]);
+x := [x[] (+) 3]; // push!
+print_vec(x);
+assert(x==[1,2,3],true);
+
+x := [1,2];
+x := [x[] (+) [3,4][]]; // multi-push
+assert(x==[1,2,3,4],true);
+
+x := [[1,2],[3,4]];
+//x := [x,x];
+print_vec(x);

@@ -23,7 +23,8 @@ use super::value::{ InterpValue, InterpValueNumbers, InterpValueIndexes, InterpV
 
 pub struct RegisterFile {
     values: RefCell<HashMap<Register,Rc<RefCell<SuperCow<InterpValue>>>>>,
-    commits: Vec<Rc<RefCell<dyn SuperCowCommit>>>
+    commit_order: Vec<Register>,
+    commit_value: HashMap<Register,Rc<RefCell<dyn SuperCowCommit>>>
 }
 
 /* traits would have been cleaner as an impl, but this gives more ergonomic API */
@@ -51,14 +52,20 @@ impl RegisterFile {
     pub fn new() -> RegisterFile {
         RegisterFile {
             values: RefCell::new(HashMap::new()),
-            commits: Vec::new()
+            commit_order: vec![],
+            commit_value: HashMap::new()
         }
+    }
+
+    fn add_commit(&mut self, register: &Register, cow: Rc<RefCell<dyn SuperCowCommit>>) {
+        self.commit_order.push(*register);
+        self.commit_value.insert(*register,cow);
     }
 
     pub fn write_rc(&mut self, register: &Register, value: Rc<InterpValue>) {
         let cow = self.get(register);
         cow.borrow_mut().set_rc(value);
-        self.commits.push(cow);
+        self.add_commit(register,cow);
     }
 
     pub fn get(&self, register: &Register) -> Rc<RefCell<SuperCow<InterpValue>>> {
@@ -76,21 +83,21 @@ impl RegisterFile {
     pub fn write(&mut self, register: &Register, value: InterpValue) {
         let cow = self.get(register);
         cow.borrow_mut().set(value);
-        self.commits.push(cow);
+        self.add_commit(register,cow);
     }
 
     pub fn commit(&mut self) {
-        for commit in self.commits.drain(..) {
-            commit.borrow_mut().commit();
+        for register in self.commit_order.drain(..) {
+            self.commit_value[&register].borrow_mut().commit();
         }
     }
 
     pub fn copy(&mut self, dst: &Register, src: &Register) -> Result<(),String> {
         if src == dst { return Ok(()); }
-        let src = self.get(src);
-        let dst = self.get(dst);
-        dst.borrow_mut().copy(&src.borrow())?;
-        self.commits.push(dst);
+        let srcv = self.get(src);
+        let dstv = self.get(dst);
+        dstv.borrow_mut().copy(&srcv.borrow())?;
+        self.add_commit(dst,dstv);
         Ok(())
     }
 
@@ -109,7 +116,7 @@ impl RegisterFile {
     }
 
     pub fn dump(&self, reg: &Register) -> Result<(String,String),String> {
-        Ok((reg.to_string(),self.get(reg).borrow().get_shared()?.dump()?))
+        Ok((reg.to_string(),self.get(reg).borrow().get_shared().and_then(|x| x.dump()).unwrap_or_else(|_| format!("???"))))
     }
 
     fn dump_one(&self, reg: &Register) -> Result<String,String> {

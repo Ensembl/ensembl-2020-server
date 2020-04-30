@@ -59,3 +59,10 @@ impl<'c> VectorSource for RegisterVectorSource<'c> {
         context.registers().write(&self.regs[index],value);
     }
 }
+
+impl<'c> RegisterVectorSource<'c> {
+    pub fn copy(&self, context: &mut InterpContext, dst: usize, src: usize) -> Result<(),String> {
+        context.registers().copy(&self.regs[dst],&self.regs[src])?;
+        Ok(())
+    }
+}

@@ -18,8 +18,11 @@ use super::{ linearize, remove_aliases, prune, run_nums, reuse_dead, assign_regs
 use crate::model::DefStore;
 
 pub fn generate(context: &mut GenContext, defstore: &DefStore) -> Result<(),String> {
+    print!("A018\n{:?}\n",context);
     call(context)?;
+    print!("A017\n{:?}\n",context);
     simplify(&defstore,context)?;
+    print!("A016\n{:?}\n",context);
     linearize(context)?;
     print!("A015\n{:?}\n",context);
     remove_aliases(context);

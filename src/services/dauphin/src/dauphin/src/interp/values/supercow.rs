@@ -41,8 +41,14 @@ impl<T> SuperCow<T> {
     }
 
     pub fn get_exclusive(&mut self) -> Result<T,String> {
-        let get = self.get.take().clone().ok_or_else(|| format!("Attempt to double spend exclusive value"))?;
-        Ok(Rc::try_unwrap(get).unwrap_or_else(|rc| (self.copy)(&rc)))
+        let value = if let Some(value) = self.set.take() {
+            value.clone()
+        } else if let Some(value) = self.get.take() {
+            value.clone()
+        } else {
+            return Err(format!("Attempt to double spend exclusive value"));
+        };
+        Ok(Rc::try_unwrap(value).unwrap_or_else(|rc| (self.copy)(&rc)))
     }
 
     pub fn set(&mut self, value: T) {

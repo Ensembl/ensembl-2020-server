@@ -99,7 +99,7 @@ pub struct ProcDecl {
 }
 
 impl ProcDecl {
-    pub fn new(name: &str,signature: &SignatureConstraint) -> ProcDecl {
+    pub fn new(name: &str, signature: &SignatureConstraint) -> ProcDecl {
         ProcDecl { name: name.to_string(), signature: signature.clone() }
     }
 
