@@ -58,7 +58,8 @@ pub enum InstructionSuperType {
     BooleanConst,
     StringConst,
     BytesConst,
-    Call
+    Call,
+    LineNumber
 }
 
 #[derive(Clone,PartialEq,Debug)]
@@ -96,7 +97,8 @@ pub enum InstructionType {
     ETest(String,String),
     Proc(String,Vec<MemberMode>),
     Operator(String),
-    Call(String,bool,RegisterSignature,Vec<MemberDataFlow>)
+    Call(String,bool,RegisterSignature,Vec<MemberDataFlow>),
+    LineNumber(String,u32)
 }
 
 impl InstructionType {
@@ -120,6 +122,7 @@ impl InstructionType {
             InstructionType::StringConst(_) => InstructionSuperType::StringConst,
             InstructionType::BytesConst(_) => InstructionSuperType::BytesConst,
             InstructionType::Call(_,_,_,_) => InstructionSuperType::Call,
+            InstructionType::LineNumber(_,_) => InstructionSuperType::LineNumber,
             _ => Err(format!("instruction has no supertype"))?
         })
     }
@@ -160,6 +163,7 @@ impl InstructionType {
             InstructionType::Operator(_) => "oper",
             InstructionType::Call(_,_,_,_) => "call",
             InstructionType::Const(_) => "const",
+            InstructionType::LineNumber(_,_) => "line",
         }.to_string()];
         if let Some(prefixes) = match self {
             InstructionType::CtorStruct(name) => Some(vec![name.to_string()]),
@@ -190,6 +194,7 @@ impl InstructionType {
             InstructionType::StringConst(s) => Some(format!("\"{}\"",s.to_string())),
             InstructionType::BytesConst(b) => Some(format!("\'{}\'",hex::encode(b))),
             InstructionType::Const(c) => Some(c.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")),
+            InstructionType::LineNumber(file,line) => Some(format!("\"{}\" {}",file,line)),
             _ => None
         } {
             out.push(suffix);
@@ -200,6 +205,7 @@ impl InstructionType {
     pub fn self_justifying_call(&self) -> bool {
         match self {
             InstructionType::Call(_,impure,_,_) => *impure,
+            InstructionType::LineNumber(_,_) => true,
             _ => false
         }
     }
@@ -223,6 +229,8 @@ impl InstructionType {
             InstructionType::Proc(_,_) |
             InstructionType::Operator(_) =>
                 panic!("Unexpected instruction {:?}",self),
+
+            InstructionType::LineNumber(_,_) => vec![],
 
             InstructionType::At |
             InstructionType::Nil |
@@ -376,6 +384,7 @@ impl InstructionType {
             InstructionType::BytesConst(_) => Ok(vec![fixed(BaseType::BytesType)]),
             InstructionType::ReFilter => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
 
+            InstructionType::LineNumber(_,_) |
             InstructionType::NumEq |
             InstructionType::Length |
             InstructionType::Add |

@@ -14,9 +14,11 @@
  *  limitations under the License.
  */
 
+use std::convert::TryInto;
 use crate::interp::InterpValue;
 use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet };
 use crate::model::Register;
+use crate::model::{ cbor_int, cbor_string };
 use crate::generate::{ Instruction, InstructionType, InstructionSuperType };
 use serde_cbor::Value as CborValue;
 
@@ -191,11 +193,48 @@ impl Command for BytesConstCommand {
     } 
 }
 
+pub struct LineNumberCommandType();
+
+impl CommandType for LineNumberCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 2,
+            trigger: CommandTrigger::Instruction(InstructionSuperType::LineNumber)
+        }
+    }
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        let (file,line) = if let InstructionType::LineNumber(file,line) = &it.itype {
+            (file,line)
+        } else {
+            return Err(format!("malformatted cbor"));
+        };
+        Ok(Box::new(LineNumberCommand(file.to_string(),(*line).try_into().unwrap_or(0))))
+    }
+
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(LineNumberCommand(cbor_string(&value[0])?,cbor_int(&value[1],None)? as u32)))
+    }
+}
+
+pub struct LineNumberCommand(String,u32);
+
+impl Command for LineNumberCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        context.set_line_number(&self.0,self.1);
+        Ok(())
+    }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![CborValue::Text(self.0.to_string()),CborValue::Integer(self.1 as i128)])
+    }
+}
+
 pub(super) fn const_commands(set: &mut CommandSet) -> Result<(),String> {
     set.push("number",0,NumberConstCommandType())?;
     set.push("const",1,ConstCommandType())?;
     set.push("boolean",2,BooleanConstCommandType())?;
     set.push("string",3,StringConstCommandType())?;
     set.push("bytes",4,BytesConstCommandType())?;
+    set.push("linenumber",17,LineNumberCommandType())?;
     Ok(())
 }

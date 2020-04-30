@@ -136,7 +136,8 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
         InstructionType::NumberConst(_) |
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |
-        InstructionType::BytesConst(_) =>
+        InstructionType::BytesConst(_) |
+        InstructionType::LineNumber(_,_) =>
             context.add(instr.clone()),
 
         InstructionType::Proc(_,_) |
@@ -365,7 +366,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -383,7 +384,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke-filter.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let instrs = context.get_instructions().clone();
@@ -413,7 +414,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke-reffilter.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -457,7 +458,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke-structenum.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -475,7 +476,7 @@ mod test {
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -496,7 +497,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize_real(&mut context).expect("linearize");
@@ -518,7 +519,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke-push.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let instrs = context.get_instructions().clone();

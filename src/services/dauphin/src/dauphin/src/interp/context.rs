@@ -19,18 +19,66 @@ use super::stream::{ Stream, StreamContents };
 
 pub struct InterpContext {
     registers: RegisterFile,
-    stream: Stream
+    stream: Stream,
+    filename: String,
+    line_number: u32
 }
 
 impl InterpContext {
     pub fn new() -> InterpContext {
         InterpContext {
             registers: RegisterFile::new(),
-            stream: Stream::new()
+            stream: Stream::new(),
+            filename: "**anon**".to_string(),
+            line_number: 0
         }
     }
 
     pub fn registers(&mut self) -> &mut RegisterFile { &mut self.registers }
     pub fn stream_add(&mut self, contents: StreamContents) { self.stream.add(contents); }
     pub fn stream_take(&mut self) -> Vec<StreamContents> { self.stream.take() }
+
+    pub fn set_line_number(&mut self, filename: &str, line_number: u32) {
+        self.filename = filename.to_string();
+        self.line_number = line_number;
+    }
+
+    pub fn get_line_number(&self) -> (&str,u32) {
+        (&self.filename,self.line_number)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::lexer::{ FileResolver, Lexer };
+    use crate::parser::{ Parser };
+    use crate::generate::{ generate_code, generate };
+    use crate::interp::mini_interp;
+
+    #[test]
+    fn line_number_smoke() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:library/line-number.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        generate(&mut context,&defstore).expect("j");
+        let message = mini_interp(&mut context).expect_err("x");
+        assert!(message.ends_with("at test:library/line-number.dp:10"));
+    }
+
+    #[test]
+    fn no_line_number_smoke() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:library/line-number.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts,false).expect("codegen");
+        generate(&mut context,&defstore).expect("j");
+        let message = mini_interp(&mut context).expect_err("x");
+        print!("{}\n",message);
+        assert!(!message.contains(" at "));
+    }
 }

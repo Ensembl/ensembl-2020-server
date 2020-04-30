@@ -1,0 +1,10 @@
+proc assert(boolean,boolean);
+/*
+
+
+this error is on line 10
+
+
+
+*/
+assert(false,true);

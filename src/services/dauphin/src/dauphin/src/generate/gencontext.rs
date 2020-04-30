@@ -100,6 +100,7 @@ impl<'a> GenContext<'a> {
     pub fn xxx_types(&mut self) -> &mut TypeModel { &mut self.types }
 }
 
+// XXX merge into core code only used in tests?
 fn optimise(context: &mut GenContext) {
     run_nums(context);
     prune(context);
@@ -112,7 +113,7 @@ fn optimise(context: &mut GenContext) {
 
 pub fn generate_and_optimise(defstore: &DefStore, stmts: Vec<Statement>) -> Result<GenContext,String> {
     /* basic generation */
-    let mut context = generate_code(&defstore,stmts).map_err(|e| e.join("\n"))?;
+    let mut context = generate_code(&defstore,stmts,true).map_err(|e| e.join("\n"))?;
     call(&mut context)?;
     simplify(&defstore,&mut context)?;
     linearize(&mut context)?;

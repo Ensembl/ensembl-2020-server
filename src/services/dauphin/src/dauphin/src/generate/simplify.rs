@@ -151,7 +151,8 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
         InstructionType::NumberConst(_) |
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |
-        InstructionType::BytesConst(_) =>
+        InstructionType::BytesConst(_) |
+        InstructionType::LineNumber(_,_) =>
             context.add(instr.clone()),
 
         InstructionType::Nil |
@@ -389,7 +390,7 @@ mod test {
         lexer.import("test:codegen/simplify-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
@@ -404,7 +405,7 @@ mod test {
         lexer.import("test:codegen/simplify-enum-nest.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
     }
@@ -416,7 +417,7 @@ mod test {
         lexer.import("test:codegen/enum-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
@@ -442,7 +443,7 @@ mod test {
         lexer.import("test:codegen/struct-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
@@ -468,7 +469,7 @@ mod test {
         lexer.import("test:codegen/both-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         print!("{:?}\n",context);
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");

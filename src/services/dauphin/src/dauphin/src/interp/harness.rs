@@ -47,7 +47,7 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
     Ok(out)
 }
 
-pub fn mini_interp(context: &GenContext) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
+pub fn mini_interp_run(context: &GenContext, ic: &mut InterpContext) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
     let mut suite = CommandSuiteBuilder::new();
     suite.add(make_core()?)?;
     suite.add(make_library()?)?;
@@ -63,15 +63,27 @@ pub fn mini_interp(context: &GenContext) -> Result<(HashMap<Register,Vec<usize>>
     suite.add(make_library()?)?;
     let interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
 
-    let mut ic = InterpContext::new();
+    
     let mut instrs = interpret_linker.get_instructions().unwrap().iter();
     for command in interpret_linker.get_commands() {
         let (instr,regs) = instrs.next().unwrap();
         print!("{}",ic.registers().dump_many(&regs)?);
         print!("{}",instr);
-        command.execute(&mut ic)?;
+        command.execute(ic)?;
         ic.registers().commit();
         print!("{}",ic.registers().dump_many(&regs)?);
     }
-    Ok((export_indexes(&mut ic)?,stream_strings(&ic.stream_take())))
+    Ok((export_indexes(ic)?,stream_strings(&ic.stream_take())))
+}
+
+pub fn mini_interp(context: &GenContext) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
+    let mut ic = InterpContext::new();
+    mini_interp_run(context,&mut ic).map_err(|x| {
+        let line = ic.get_line_number();
+        if line.1 != 0 {
+            format!("{} at {}:{}",x,line.0,line.1)
+        } else {
+            x
+        }
+    })
 }

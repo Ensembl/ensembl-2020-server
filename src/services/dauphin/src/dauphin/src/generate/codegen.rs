@@ -41,15 +41,17 @@ macro_rules! addf {
 pub struct CodeGen<'a> {
     context: GenContext<'a>,
     defstore: &'a DefStore,
+    include_line_numbers: bool,
     rvalue_regnames: HashMap<String,Register>,
     lvalue_regnames: HashMap<String,Register>
 }
 
 impl<'a> CodeGen<'a> {
-    fn new(defstore: &'a DefStore) -> CodeGen {
+    fn new(defstore: &'a DefStore, include_line_numbers: bool) -> CodeGen {
         CodeGen {
             context: GenContext::new(defstore),
             defstore,
+            include_line_numbers,
             lvalue_regnames: HashMap::new(),
             rvalue_regnames: HashMap::new()
         }
@@ -309,6 +311,9 @@ impl<'a> CodeGen<'a> {
         if procdecl.is_none() {
             return Err(format!("No such procedure '{}'",stmt.0));
         }
+        if self.include_line_numbers {
+            addf!(self,LineNumber(stmt.2.to_string(),stmt.3));
+        }
         for (i,member) in procdecl.unwrap().get_signature().each_member().enumerate() {
             match member {
                 SignatureMemberConstraint::RValue(_) => {
@@ -349,8 +354,8 @@ impl<'a> CodeGen<'a> {
     }
 }
 
-pub fn generate_code<'a>(defstore: &'a DefStore, stmts: Vec<Statement>) -> Result<GenContext,Vec<String>> {
-    let mut context = CodeGen::new(defstore).go(stmts)?;
+pub fn generate_code<'a>(defstore: &'a DefStore, stmts: Vec<Statement>, include_line_numbers: bool) -> Result<GenContext,Vec<String>> {
+    let mut context = CodeGen::new(defstore,include_line_numbers).go(stmts)?;
     print!("c {:?}\n",context.get_instructions().len());
     context.phase_finished();
     print!("d {:?}\n",context.get_instructions().len());
@@ -370,7 +375,7 @@ mod test {
         lexer.import(&format!("test:codegen/{}",filename)).expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let gen = CodeGen::new(&defstore);
+        let gen = CodeGen::new(&defstore,true);
         gen.go(stmts)?;
         Ok(())
     }
@@ -382,7 +387,7 @@ mod test {
         lexer.import("test:codegen/generate-smoke2.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let gencontext = generate_code(&defstore,stmts).expect("codegen");
+        let gencontext = generate_code(&defstore,stmts,true).expect("codegen");
         let cmds : Vec<String> = gencontext.get_instructions().iter().map(|e| format!("{:?}",e)).collect();
         let outdata = load_testdata(&["codegen","generate-smoke2.out"]).ok().unwrap();
         print!("{}",cmds.join(""));

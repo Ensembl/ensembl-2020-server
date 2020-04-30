@@ -299,7 +299,7 @@ impl Command for SeqAtCommand {
 }
 
 pub fn make_core() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("core",(0,0),0xD99E736DBD9EB7C5);
+    let set_id = CommandSetId::new("core",(0,0),0xC1ED479408579BD);
     let mut set = CommandSet::new(&set_id);
     const_commands(&mut set)?;
     set.push("nil",5,BuiltinCommandType::new(InstructionSuperType::Nil,1,Box::new(|x| Ok(Box::new(NilCommand(x[0]))))))?;

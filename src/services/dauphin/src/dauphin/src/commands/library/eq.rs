@@ -169,7 +169,7 @@ mod test {
         lexer.import("test:library/eq.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         generate(&mut context,&defstore).expect("j");
         let (_,strings) = mini_interp(&mut context).expect("x");
         for s in &strings {

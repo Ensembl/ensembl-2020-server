@@ -143,7 +143,7 @@ mod test {
         lexer.import("test:codegen/offset-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let _context = generate_code(&defstore,stmts).expect("codegen");
+        let _context = generate_code(&defstore,stmts,true).expect("codegen");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")/*,MemberDataFlow::Normal*/).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(etest3)")/*,MemberDataFlow::Normal*/).expect("b");
@@ -157,7 +157,7 @@ mod test {
         lexer.import("test:codegen/offset-enums.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts).expect("codegen");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"stest")/*,MemberDataFlow::Normal*/).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         call(&mut context).expect("j");
@@ -186,7 +186,7 @@ mod test {
         lexer.import("test:codegen/offset-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let _context = generate_code(&defstore,stmts).expect("codegen");
+        let _context = generate_code(&defstore,stmts,true).expect("codegen");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(etest3)")/*,MemberDataFlow::Normal*/).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");
