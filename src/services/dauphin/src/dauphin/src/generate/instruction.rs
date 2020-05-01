@@ -95,8 +95,8 @@ pub enum InstructionType {
     RefEValue(String,String),
     FilterEValue(String,String),
     ETest(String,String),
-    Proc(String,Vec<MemberMode>),
-    Operator(String),
+    Proc(Option<String>,String,Vec<MemberMode>),
+    Operator(Option<String>,String),
     Call(String,bool,RegisterSignature,Vec<MemberDataFlow>),
     LineNumber(String,u32)
 }
@@ -159,8 +159,8 @@ impl InstructionType {
             InstructionType::FilterEValue(_,_) => "frevalue",
             InstructionType::RefEValue(_,_) => "refevalue",
             InstructionType::ETest(_,_) => "etest",
-            InstructionType::Proc(_,_) => "proc",
-            InstructionType::Operator(_) => "oper",
+            InstructionType::Proc(_,_,_) => "proc",
+            InstructionType::Operator(_,_) => "oper",
             InstructionType::Call(_,_,_,_) => "call",
             InstructionType::Const(_) => "const",
             InstructionType::LineNumber(_,_) => "line",
@@ -171,9 +171,14 @@ impl InstructionType {
             InstructionType::SValue(name,field) => Some(vec![name.to_string(),field.to_string()]),
             InstructionType::EValue(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
             InstructionType::ETest(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
-            InstructionType::Operator(name) => Some(vec![name.to_string()]),
-            InstructionType::Proc(name,modes) =>  {
-                let mut out = vec![name.to_string()];
+            InstructionType::Operator(module,name) => {
+                let mut out = if let Some(module) = module { vec![module.to_string()] } else { vec![] };
+                out.push(name.to_string());
+                Some(out)
+            }
+            InstructionType::Proc(module,name,modes) =>  {
+                let mut out = if let Some(module) = module { vec![module.to_string()] } else { vec![] };
+                out.push(name.to_string());
                 out.extend(modes.iter().map(|x| x.to_string()).collect::<Vec<_>>());
                 Some(out)
             },            
@@ -226,8 +231,8 @@ impl InstructionType {
             InstructionType::RefEValue(_,_) |
             InstructionType::FilterEValue(_,_) |
             InstructionType::ETest(_,_) |
-            InstructionType::Proc(_,_) |
-            InstructionType::Operator(_) =>
+            InstructionType::Proc(_,_,_) |
+            InstructionType::Operator(_,_) =>
                 panic!("Unexpected instruction {:?}",self),
 
             InstructionType::LineNumber(_,_) => vec![],
@@ -337,8 +342,8 @@ impl InstructionType {
                 ])
             },
 
-            InstructionType::Proc(name,modes) => {
-                let procdecl = defstore.get_proc(name).ok_or_else(|| format!("No such procedure {:?}",name))?;
+            InstructionType::Proc(module,name,modes) => {
+                let procdecl = defstore.get_proc(module.as_ref().map(|x| x as &str).clone(),name)?;
                 let signature = procdecl.get_signature();
                 let mut arguments = Vec::new();
                 let mut member_index = 0;
@@ -356,9 +361,9 @@ impl InstructionType {
                 Ok(arguments)
             },
 
-            InstructionType::Operator(name) => {
+            InstructionType::Operator(module,name) => {
                 let mut out = Vec::new();
-                let exprdecl = defstore.get_func(name).ok_or_else(|| format!("No such function {:?}",name))?;
+                let exprdecl = defstore.get_func(module.as_ref().map(|x| x as &str).clone(),name)?;
                 let signature = exprdecl.get_signature();
                 for member_constraint in signature.each_member() {
                     out.push(member_constraint.to_argumentconstraint());

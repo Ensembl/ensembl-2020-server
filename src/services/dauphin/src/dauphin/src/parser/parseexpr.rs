@@ -24,7 +24,7 @@ fn vec_ctor(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Expr
 }
 
 fn parse_prefix(lexer: &mut Lexer, defstore: &DefStore, op: &str, nested: bool) -> Result<Expression,ParseError> {
-    if defstore.stmt_like(op,lexer).unwrap_or(false) { /* stmt-like */
+    if defstore.stmt_like(None,op,lexer).unwrap_or(false) { /* stmt-like */ // XXX module
         return Err(ParseError::new("Unexpected statement",lexer));
     }
     let inline = defstore.get_inline_unary(op,lexer)?;
@@ -86,10 +86,10 @@ fn parse_ctor_full(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: boo
 }
 
 fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool) -> Result<Expression,ParseError> {
-    if defstore.stmt_like(id,lexer).unwrap_or(false) {
+    if defstore.stmt_like(None,id,lexer).unwrap_or(false) { // XXX module
         Err(ParseError::new("Unexpected statement in expression",lexer))?;
     }
-    if !defstore.stmt_like(id,lexer).unwrap_or(true) { /* expr-like */
+    if !defstore.stmt_like(None,id,lexer).unwrap_or(true) { /* expr-like */ // XXX module
         get_other(lexer, "(")?;
         Ok(Expression::Operator(id.to_string(),parse_exprlist(lexer,defstore,')',nested)?))
     } else {
@@ -193,7 +193,7 @@ fn extend_expr(lexer: &mut Lexer, defstore: &DefStore, left: Expression, symbol:
         }
     }
     let name = inline.name().to_string();
-    if defstore.stmt_like(&name,lexer)? {
+    if defstore.stmt_like(None,&name,lexer)? { // XXX module
         return Ok((left,false));
     }
     Ok(match *inline.mode() {

@@ -224,7 +224,7 @@ impl<'a> CodeGen<'a> {
                     let r = self.build_rvalue(e,dollar,at)?;
                     subregs.push(r);
                 }
-                self.context.add_untyped_f(InstructionType::Operator(name.clone()),subregs)?
+                self.context.add_untyped_f(InstructionType::Operator(None,name.clone()),subregs)? // XXX modules
             },
             Expression::CtorStruct(s,x,n) => {
                 let mut subregs = vec![];
@@ -307,14 +307,11 @@ impl<'a> CodeGen<'a> {
     fn build_stmt(&mut self, stmt: &Statement) -> Result<(),String> {
         let mut regs = Vec::new();
         let mut modes = Vec::new();
-        let procdecl = self.defstore.get_proc(&stmt.0);
-        if procdecl.is_none() {
-            return Err(format!("No such procedure '{}'",stmt.0));
-        }
+        let procdecl = self.defstore.get_proc(None,&stmt.0)?; // XXX modules
         if self.include_line_numbers {
             addf!(self,LineNumber(stmt.2.to_string(),stmt.3));
         }
-        for (i,member) in procdecl.unwrap().get_signature().each_member().enumerate() {
+        for (i,member) in procdecl.get_signature().each_member().enumerate() {
             match member {
                 SignatureMemberConstraint::RValue(_) => {
                     modes.push(MemberMode::RValue);
@@ -331,7 +328,7 @@ impl<'a> CodeGen<'a> {
                 }
             }
         }
-        self.context.add_untyped(Instruction::new(InstructionType::Proc(stmt.0.to_string(),modes),regs))?;
+        self.context.add_untyped(Instruction::new(InstructionType::Proc(None,stmt.0.to_string(),modes),regs))?; // XXX modules
         self.rvalue_regnames.extend(self.lvalue_regnames.drain());
         self.lvalue_regnames = self.rvalue_regnames.clone();
         Ok(())

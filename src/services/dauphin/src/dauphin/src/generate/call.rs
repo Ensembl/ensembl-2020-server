@@ -22,7 +22,7 @@ use crate::model::{ RegisterSignature, ComplexRegisters };
 pub fn call(context: &mut GenContext) -> Result<(),String> {
     for instr in &context.get_instructions() {
         match &instr.itype {
-            InstructionType::Proc(name,modes) => {
+            InstructionType::Proc(module,name,modes) => {
                 let mut rs = RegisterSignature::new();
                 let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
@@ -36,7 +36,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                 context.add(Instruction::new(InstructionType::Call(name.to_string(),true,rs,flows),instr.regs.to_vec()));
             },
             
-            InstructionType::Operator(name) => {
+            InstructionType::Operator(module,name) => {
                 let mut rs = RegisterSignature::new();
                 let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {

@@ -76,33 +76,38 @@ impl StmtMacro {
 
 #[derive(Debug)]
 pub struct FuncDecl {
+    module: String,
     name: String,
     signature: SignatureConstraint
 }
 
 impl FuncDecl {
-    pub fn new(name: &str, signature: &SignatureConstraint) -> FuncDecl {
+    pub fn new(module: &str, name: &str, signature: &SignatureConstraint) -> FuncDecl {
         FuncDecl {
+            module: module.to_string(),
             name: name.to_string(),
             signature: signature.clone()
         }
     }
 
+    pub fn module(&self) -> &str { &self.module }
     pub fn name(&self) -> &str { &self.name }
     pub fn get_signature(&self) -> &SignatureConstraint { &self.signature }
 }
 
 #[derive(Debug)]
 pub struct ProcDecl {
+    module: String,
     name: String,
     signature: SignatureConstraint
 }
 
 impl ProcDecl {
-    pub fn new(name: &str, signature: &SignatureConstraint) -> ProcDecl {
-        ProcDecl { name: name.to_string(), signature: signature.clone() }
+    pub fn new(module: &str, name: &str, signature: &SignatureConstraint) -> ProcDecl {
+        ProcDecl { module: module.to_string(), name: name.to_string(), signature: signature.clone() }
     }
 
+    pub fn module(&self) -> &str { &self.module }
     pub fn name(&self) -> &str { &self.name }
     pub fn get_signature(&self) -> &SignatureConstraint { &self.signature }
 }

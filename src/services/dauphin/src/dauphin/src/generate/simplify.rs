@@ -128,8 +128,8 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 
 fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
     Ok(match &instr.itype {
-        InstructionType::Proc(_,_) |
-        InstructionType::Operator(_) |
+        InstructionType::Proc(_,_,_) |
+        InstructionType::Operator(_,_) |
         InstructionType::Run |
         InstructionType::Length |
         InstructionType::Add |

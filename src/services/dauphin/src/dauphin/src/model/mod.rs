@@ -17,6 +17,7 @@
 mod cborutil;
 mod definition;
 mod definitionstore;
+mod identifierstore;
 mod register;
 mod structenum;
 mod signature {

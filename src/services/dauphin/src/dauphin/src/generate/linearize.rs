@@ -140,8 +140,8 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
         InstructionType::LineNumber(_,_) =>
             context.add(instr.clone()),
 
-        InstructionType::Proc(_,_) |
-        InstructionType::Operator(_) |
+        InstructionType::Proc(_,_,_) |
+        InstructionType::Operator(_,_) |
         InstructionType::CtorStruct(_) |
         InstructionType::CtorEnum(_,_) |
         InstructionType::SValue(_,_) |

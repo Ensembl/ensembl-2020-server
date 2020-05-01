@@ -28,7 +28,7 @@ fn run_import(path: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
 }
 
 fn run_inline(symbol: &str, name: &str, mode: &InlineMode, prio: f64, lexer: &mut Lexer, defstore: &mut DefStore) -> Result<(),ParseError> {
-    let stmt_like = defstore.stmt_like(name,lexer)?;
+    let stmt_like = defstore.stmt_like(None,name,lexer)?; /// XXX module
     lexer.add_inline(symbol,mode == &InlineMode::Prefix).map_err(|s| {
         ParseError::new(&s,lexer)
     })?;
@@ -50,13 +50,13 @@ fn run_stmt(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<()
 
 fn run_proc(name: &str, signature: &SignatureConstraint, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    defstore.add_proc(ProcDecl::new(name,signature),lexer)?;
+    defstore.add_proc(ProcDecl::new("",name,signature),lexer)?; // XXX module name
     Ok(())
 }
 
 fn run_func(name: &str, signature: &SignatureConstraint, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    defstore.add_func(FuncDecl::new(name,signature),lexer)?;
+    defstore.add_func(FuncDecl::new("",name,signature),lexer)?;  // XXX module name
     Ok(())
 }
 

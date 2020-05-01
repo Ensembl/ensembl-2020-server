@@ -20,6 +20,7 @@ use super::definition::{
     ExprMacro, StmtMacro, FuncDecl, ProcDecl, Inline, InlineMode
 };
 use super::structenum::{ StructDef, EnumDef };
+use super::identifierstore::{ IdentifierStore, IdentifierStoreError };
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
 
@@ -28,8 +29,8 @@ pub struct DefStore {
     namespace: HashMap<String,(String,u32,u32)>,
     exprs: HashMap<String,ExprMacro>,
     stmts: HashMap<String,StmtMacro>,
-    funcs: HashMap<String,FuncDecl>,
-    procs: HashMap<String,ProcDecl>,
+    funcs: IdentifierStore<FuncDecl>,
+    procs: IdentifierStore<ProcDecl>,
     structs: HashMap<String,StructDef>,
     enums: HashMap<String,EnumDef>,
     inlines_binary: HashMap<String,Inline>,
@@ -43,8 +44,8 @@ impl DefStore {
             namespace: HashMap::new(),
             exprs: HashMap::new(),
             stmts: HashMap::new(),
-            funcs: HashMap::new(),
-            procs: HashMap::new(),
+            funcs: IdentifierStore::new(),
+            procs: IdentifierStore::new(),
             structs: HashMap::new(),
             enums: HashMap::new(),
             inlines_binary: HashMap::new(),
@@ -83,13 +84,13 @@ impl DefStore {
 
     pub fn add_func(&mut self, func: FuncDecl, lexer: &Lexer) -> Result<(),ParseError> {
         self.detect_clash(func.name(),lexer)?;
-        self.funcs.insert(func.name().to_string(),func);
+        self.funcs.add(&func.module().to_string(),&func.name().to_string(),func);
         Ok(())
     }
 
     pub fn add_proc(&mut self, proc_: ProcDecl, lexer: &Lexer) -> Result<(),ParseError> {
         self.detect_clash(proc_.name(),lexer)?;
-        self.procs.insert(proc_.name().to_string(),proc_);
+        self.procs.add(&proc_.module().to_string(),&proc_.name().to_string(),proc_);
         Ok(())
     }
 
@@ -102,10 +103,6 @@ impl DefStore {
 
     pub fn get_struct(&self, name: &str) -> Option<&StructDef> {
         self.structs.get(name)
-    }
-
-    pub fn get_func(&self, name: &str) -> Option<&FuncDecl> {
-        self.funcs.get(name)
     }
 
     pub fn add_enum(&mut self, enum_: EnumDef, lexer: &Lexer) -> Result<(),ParseError> {
@@ -140,18 +137,22 @@ impl DefStore {
         )
     }
 
-    pub fn stmt_like(&self, cmp: &str, lexer: &Lexer) -> Result<bool,ParseError> {
-        if self.stmts.contains_key(cmp) || self.procs.contains_key(cmp) {
+    pub fn stmt_like(&self, module: Option<&str>, name: &str, lexer: &Lexer) -> Result<bool,ParseError> {
+        if self.stmts.contains_key(name) || self.procs.contains_key(module,name) {
             Ok(true)
-        } else if self.exprs.contains_key(cmp) || self.funcs.contains_key(cmp) {
+        } else if self.exprs.contains_key(name) || self.funcs.contains_key(module,name) {
             Ok(false)
         } else {
-            Err(ParseError::new(&format!("No such symbol: '{}'",cmp),lexer))
+            Err(ParseError::new(&format!("Missing or ambiguous symbol: '{}'",name),lexer))
         }
     }
 
-    pub fn get_proc(&self, name: &str) -> Option<&ProcDecl> {
-        self.procs.get(name)
+    pub fn get_func(&self, module: Option<&str>, name: &str) -> Result<&FuncDecl,IdentifierStoreError> {
+        self.funcs.get(module,name).map(|x| x.1)
+    }
+
+    pub fn get_proc(&self, module: Option<&str>, name: &str) -> Result<&ProcDecl,IdentifierStoreError> {
+        self.procs.get(module,name).map(|x| x.1)
     }
 
     pub fn get_structenum_order(&self) -> impl DoubleEndedIterator<Item=&String> {
