@@ -59,7 +59,7 @@ fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStateme
     get_other(lexer,"(")?;
     let exprs = parse_exprlist(lexer,defstore,')',false)?;
     let (file,line,_) = lexer.position();
-    Ok(ParserStatement::Regular(Statement(name,exprs,file.to_string(),line)))
+    Ok(ParserStatement::Regular(Statement(None,name,exprs,file.to_string(),line))) // XXX module
 } 
 
 fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
@@ -71,7 +71,7 @@ fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserState
         Err(ParseError::new("Got inline expr, expected inline stmt",lexer))?;
     }
     let (file,line,_) = lexer.position();
-    Ok(ParserStatement::Regular(Statement(name.to_string(),vec![left,right],file.to_string(),line)))
+    Ok(ParserStatement::Regular(Statement(None,name.to_string(),vec![left,right],file.to_string(),line))) // XXX module
 }
 
 pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore) -> Result<Option<ParserStatement>,ParseError> {

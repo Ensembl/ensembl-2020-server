@@ -32,7 +32,7 @@ fn run_inline(symbol: &str, name: &str, mode: &InlineMode, prio: f64, lexer: &mu
     lexer.add_inline(symbol,mode == &InlineMode::Prefix).map_err(|s| {
         ParseError::new(&s,lexer)
     })?;
-    defstore.add_inline(Inline::new(symbol,name,stmt_like,prio,mode))?;
+    defstore.add_inline(Inline::new(symbol,None,name,stmt_like,prio,mode))?; // XXX module
     Ok(())
 }
 

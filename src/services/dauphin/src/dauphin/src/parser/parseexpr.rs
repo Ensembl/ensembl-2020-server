@@ -32,11 +32,12 @@ fn parse_prefix(lexer: &mut Lexer, defstore: &DefStore, op: &str, nested: bool) 
     if inline.mode() != &InlineMode::Prefix {
         return Err(ParseError::new("Not a prefix operator",lexer));
     }
+    let module = inline.module().clone();
     let name = inline.name().to_string();
     Ok(match &name[..] {
         "__star__" => Expression::Star(Box::new(parse_expr_level(lexer,defstore,Some(prec),true,nested)?)),
         "__sqctor__" => vec_ctor(lexer,defstore,nested)?,
-        _ => Expression::Operator(name.to_string(),vec![parse_expr_level(lexer,defstore,Some(prec),true,nested)?])
+        _ => Expression::Operator(module,name,vec![parse_expr_level(lexer,defstore,Some(prec),true,nested)?])
     })
 }
 
@@ -91,7 +92,7 @@ fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool)
     }
     if !defstore.stmt_like(None,id,lexer).unwrap_or(true) { /* expr-like */ // XXX module
         get_other(lexer, "(")?;
-        Ok(Expression::Operator(id.to_string(),parse_exprlist(lexer,defstore,')',nested)?))
+        Ok(Expression::Operator(None,id.to_string(),parse_exprlist(lexer,defstore,')',nested)?)) // XXX module
     } else {
         Ok(match id {
             "true" => Expression::LiteralBool(true),
@@ -174,14 +175,14 @@ fn parse_suffix(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: 
                 return Err(ParseError::new("Expected filter",lexer));
             }
         },
-        _ => Expression::Operator(name.to_string(),vec![left])
+        _ => Expression::Operator(None,name.to_string(),vec![left]) // XXX module
     })
 }
 
 fn parse_binary_right(lexer: &mut Lexer, defstore: &DefStore, left: Expression, name: &str, min: f64, oreq: bool, nested: bool) -> Result<Expression,ParseError> {
     lexer.get_oper(false);
     let right = parse_expr_level(lexer,defstore,Some(min),oreq,nested)?;
-    Ok(Expression::Operator(name.to_string(),vec![left,right]))
+    Ok(Expression::Operator(None,name.to_string(),vec![left,right])) // XXX module
 }
 
 fn extend_expr(lexer: &mut Lexer, defstore: &DefStore, left: Expression, symbol: &str, min: Option<f64>, oreq: bool, nested: bool) -> Result<(Expression,bool),ParseError> {

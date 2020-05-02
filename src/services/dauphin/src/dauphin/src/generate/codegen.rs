@@ -218,13 +218,13 @@ impl<'a> CodeGen<'a> {
             Expression::LiteralBool(b) =>   addf!(self,BooleanConst(*b)),
             Expression::LiteralBytes(b) =>  addf!(self,BytesConst(b.to_vec())),
             Expression::Vector(v) =>        self.build_vec(v,dollar,at)?,
-            Expression::Operator(name,x) => {
+            Expression::Operator(module,name,x) => {
                 let mut subregs = vec![];
                 for e in x {
                     let r = self.build_rvalue(e,dollar,at)?;
                     subregs.push(r);
                 }
-                self.context.add_untyped_f(InstructionType::Operator(None,name.clone()),subregs)? // XXX modules
+                self.context.add_untyped_f(InstructionType::Operator(module.clone(),name.clone()),subregs)?
             },
             Expression::CtorStruct(s,x,n) => {
                 let mut subregs = vec![];
@@ -307,18 +307,18 @@ impl<'a> CodeGen<'a> {
     fn build_stmt(&mut self, stmt: &Statement) -> Result<(),String> {
         let mut regs = Vec::new();
         let mut modes = Vec::new();
-        let procdecl = self.defstore.get_proc(None,&stmt.0)?; // XXX modules
+        let procdecl = self.defstore.get_proc(stmt.0.as_ref().map(|x| x as &str),&stmt.1)?;
         if self.include_line_numbers {
-            addf!(self,LineNumber(stmt.2.to_string(),stmt.3));
+            addf!(self,LineNumber(stmt.3.to_string(),stmt.4));
         }
         for (i,member) in procdecl.get_signature().each_member().enumerate() {
             match member {
                 SignatureMemberConstraint::RValue(_) => {
                     modes.push(MemberMode::RValue);
-                    regs.push(self.build_rvalue(&stmt.1[i],None,None)?);
+                    regs.push(self.build_rvalue(&stmt.2[i],None,None)?);
                 },
                 SignatureMemberConstraint::LValue(_) => {
-                    let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.1[i],true,true)?;
+                    let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.2[i],true,true)?;
                     if let Some(fvalue_reg) = fvalue_reg {
                         modes.push(MemberMode::FValue);
                         regs.push(fvalue_reg);
@@ -328,7 +328,7 @@ impl<'a> CodeGen<'a> {
                 }
             }
         }
-        self.context.add_untyped(Instruction::new(InstructionType::Proc(None,stmt.0.to_string(),modes),regs))?; // XXX modules
+        self.context.add_untyped(Instruction::new(InstructionType::Proc(stmt.0.clone(),stmt.1.to_string(),modes),regs))?;
         self.rvalue_regnames.extend(self.lvalue_regnames.drain());
         self.lvalue_regnames = self.rvalue_regnames.clone();
         Ok(())
@@ -339,7 +339,7 @@ impl<'a> CodeGen<'a> {
         for stmt in &stmts {
             let r = self.build_stmt(stmt);
             if let Err(r) = r {
-                errors.push(format!("{} at {} {}",r,stmt.2,stmt.3));
+                errors.push(format!("{} at {} {}",r,stmt.3,stmt.4)); // XXX modules
             }
         }
         if errors.len() > 0 {

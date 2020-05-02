@@ -28,7 +28,7 @@ pub enum Expression {
     LiteralString(String),
     LiteralBytes(Vec<u8>),
     LiteralBool(bool),
-    Operator(String,Vec<Expression>),
+    Operator(Option<String>,String,Vec<Expression>),
     Star(Box<Expression>),
     Square(Box<Expression>),
     Bracket(Box<Expression>,Box<Expression>),
@@ -88,7 +88,7 @@ impl fmt::Debug for Expression {
                 write!(f,"]")?;
                 Ok(())
             }
-            Expression::Operator(s,x) => {
+            Expression::Operator(module,s,x) => { // XXX modules
                 write!(f,"{}(",s)?;
                 write_csl(f,x)?;
                 write!(f,")")?;
@@ -108,14 +108,13 @@ impl fmt::Debug for Expression {
     }
 }
 
-/* TODO economical statement line numbers */
 #[derive(PartialEq)]
-pub struct Statement(pub String,pub Vec<Expression>,pub String,pub u32);
+pub struct Statement(pub Option<String>,pub String,pub Vec<Expression>,pub String,pub u32);
 
 impl fmt::Debug for Statement {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"{}(",self.0)?;
-        for (i,sub) in self.1.iter().enumerate() {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { // XXX modules
+        write!(f,"{}(",self.1)?;
+        for (i,sub) in self.2.iter().enumerate() {
             if i > 0 {
                 write!(f,",")?;
             }

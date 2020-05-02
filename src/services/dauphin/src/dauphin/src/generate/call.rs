@@ -23,6 +23,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
     for instr in &context.get_instructions() {
         match &instr.itype {
             InstructionType::Proc(module,name,modes) => {
+                print!("mfind {:?} in {:?}\n",name,module);
                 let mut rs = RegisterSignature::new();
                 let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
@@ -37,6 +38,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
             },
             
             InstructionType::Operator(module,name) => {
+                print!("mfind {:?} in {:?}\n",name,module);
                 let mut rs = RegisterSignature::new();
                 let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
@@ -52,4 +54,24 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
     }
     context.phase_finished();
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::lexer::{ FileResolver, Lexer };
+    use crate::parser::{ Parser };
+    use crate::generate::{ generate_code, generate };
+    use crate::interp::mini_interp;
+
+    #[test]
+    fn module_smoke() {
+        let resolver = FileResolver::new();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/module-smoke.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        generate(&mut context,&defstore).expect("j");
+        mini_interp(&mut context).expect("x");
+    }
 }
