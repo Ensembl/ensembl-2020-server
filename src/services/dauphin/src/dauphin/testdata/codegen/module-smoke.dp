@@ -1,13 +1,13 @@
-proc assign(out _A, _A);
-inline ":=" assign left 14;
+proc library#assign(out _A, _A);
+inline ":=" library#assign left 14;
 
 proc library#assert(boolean,boolean);
 
-func eq(_A,_A) becomes boolean;
-inline "==" eq left 5;
+func library#eq(_A,_A) becomes boolean;
+inline "==" library#eq left 5;
 
-func extend(_A,_A) becomes _A;
-inline "(+)" extend left 14;
+func library#extend(_A,_A) becomes _A;
+inline "(+)" library#extend left 14;
 
 x := [ [1,2] (+) [3]];
 library#assert(true,true);

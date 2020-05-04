@@ -37,10 +37,10 @@ pub(in super) fn parse_stmtdecl(lexer: &mut Lexer) -> Result<ParserStatement,Par
 pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let mut members = Vec::new();
-    let (module,name) = parse_full_identifier(lexer)?; // XXX module
+    let (module,name) = parse_full_identifier(lexer,None)?;
     get_other(lexer,"(")?;
     loop {
-        if lexer.peek(1)[0] == Token::Other(')') { lexer.get(); break; }
+        if lexer.peek(None,1)[0] == Token::Other(')') { lexer.get(); break; }
         members.push(SignatureMemberConstraint::RValue(parse_typesigexpr(lexer,defstore)?));
         match lexer.get() {
             Token::Other(',') => (),
@@ -52,16 +52,16 @@ pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<Pa
         return Err(ParseError::new("missing 'becomes'",lexer));
     }
     members.insert(0,SignatureMemberConstraint::RValue(parse_typesigexpr(lexer,defstore)?));
-    Ok(ParserStatement::FuncDecl(name.to_string(),SignatureConstraint::new(&members)))
+    Ok(ParserStatement::FuncDecl(module,name.to_string(),SignatureConstraint::new(&members)))
 }
 
 pub(in super) fn parse_proc(lexer: &mut Lexer,defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
-    let (module,name) = parse_full_identifier(lexer)?; // XXX module
+    let (module,name) = parse_full_identifier(lexer,None)?;
     let mut members = Vec::new();
     get_other(lexer,"(")?;
     loop {
-        if lexer.peek(1)[0] == Token::Other(')') { break; }
+        if lexer.peek(None,1)[0] == Token::Other(')') { break; }
         let member = parse_signature(lexer,defstore)?;
         members.push(member);
         match lexer.get() {
@@ -76,7 +76,7 @@ pub(in super) fn parse_proc(lexer: &mut Lexer,defstore: &DefStore) -> Result<Par
 pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<SignatureMemberConstraint,ParseError> {
     let mut out = false;
     loop {
-        match &lexer.peek(1)[0] {
+        match &lexer.peek(None,1)[0] {
             Token::Identifier(name) => {
                 match &name[..] {
                     // XXX to go
@@ -176,7 +176,7 @@ fn parse_struct_short(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<Mem
 fn parse_struct_enum_full(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<MemberType>,Vec<String>),ParseError> {
     let mut types = Vec::new();
     let mut names = Vec::new();
-    if let Token::Other('}') = lexer.peek(1)[0] {
+    if let Token::Other('}') = lexer.peek(None,1)[0] {
         lexer.get();
         return Ok((vec![],vec![]));
     }
@@ -198,7 +198,7 @@ fn parse_struct_contents(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<
     let start = lexer.pos();
     Ok(match lexer.get() {
         Token::Identifier(_) => {
-            let next = lexer.peek(1)[0].clone();
+            let next = lexer.peek(None,1)[0].clone();
             lexer.back_to(start);
             match next {
                 Token::Other(':') => parse_struct_enum_full(lexer,defstore)?,
@@ -214,7 +214,7 @@ fn parse_struct_contents(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<
 
 pub(in super) fn parse_struct(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
-    let (module,name) = parse_full_identifier(lexer)?; // XXX module
+    let (module,name) = parse_full_identifier(lexer,None)?; // XXX module
     get_other(lexer, "{")?;
     let (member_types,names) = parse_struct_contents(lexer,defstore)?;
     Ok(ParserStatement::StructDef(name.to_string(),member_types,names))
@@ -222,7 +222,7 @@ pub(in super) fn parse_struct(lexer: &mut Lexer, defstore: &DefStore) -> Result<
 
 pub(in super) fn parse_enum(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
-    let (module,name) = parse_full_identifier(lexer)?; // XXX module
+    let (module,name) = parse_full_identifier(lexer,None)?; // XXX module
     get_other(lexer, "{")?;
     let (member_types,names) = parse_struct_enum_full(lexer,defstore)?;
     Ok(ParserStatement::EnumDef(name.to_string(),member_types,names))

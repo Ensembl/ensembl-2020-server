@@ -27,7 +27,7 @@ pub enum InlineMode {
 #[derive(Debug)]
 pub struct Inline {
     symbol: String,
-    module: Option<String>,
+    module: String,
     name: String,
     statement: bool,
     precedence: f64,
@@ -35,16 +35,16 @@ pub struct Inline {
 }
 
 impl Inline {
-    pub fn new(symbol: &str, module: Option<&str>, name: &str, statement: bool, precedence: f64, mode: &InlineMode) -> Inline {
+    pub fn new(symbol: &str, module: &str, name: &str, statement: bool, precedence: f64, mode: &InlineMode) -> Inline {
         Inline {
             symbol: symbol.to_string(),
-            module: module.map(|x| x.to_string()),
+            module: module.to_string(),
             name: name.to_string(),
             statement, precedence, mode: *mode
         }
     }
 
-    pub fn module(&self) -> &Option<String> { &self.module }
+    pub fn module(&self) -> &str { &self.module }
     pub fn symbol(&self) -> &str { &self.symbol }
     pub fn name(&self) -> &str { &self.name }
     pub fn precedence(&self) -> f64 { self.precedence }

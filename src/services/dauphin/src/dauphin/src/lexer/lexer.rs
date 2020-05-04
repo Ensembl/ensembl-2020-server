@@ -52,17 +52,9 @@ impl Lexer {
         }
     }
 
-    pub fn peek(&mut self, num: usize) -> Vec<Token> {
+    pub fn peek(&mut self, mode: Option<bool>, num: usize) -> Vec<Token> {
         if let Some(last) = self.files.last_mut() {
-            last.peek_multi(&self.inlines,None,num)
-        } else {
-            vec![Token::EndOfLex]
-        }
-    }
-
-    pub fn peek_oper(&mut self, mode: bool, num: usize) -> Vec<Token> {
-        if let Some(last) = self.files.last_mut() {
-            last.peek_multi(&self.inlines,Some(mode),num)
+            last.peek_multi(&self.inlines,mode,num)
         } else {
             vec![Token::EndOfLex]
         }

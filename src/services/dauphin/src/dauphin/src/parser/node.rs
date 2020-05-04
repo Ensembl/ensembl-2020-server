@@ -128,10 +128,10 @@ impl fmt::Debug for Statement {
 #[derive(Debug,PartialEq)]
 pub enum ParserStatement {
     Import(String),
-    Inline(String,String,InlineMode,f64),
+    Inline(String,Option<String>,String,InlineMode,f64),
     ExprMacro(String),
     StmtMacro(String),
-    FuncDecl(String,SignatureConstraint),
+    FuncDecl(Option<String>,String,SignatureConstraint),
     ProcDecl(Option<String>,String,SignatureConstraint),
     Regular(Statement),
     StructDef(String,Vec<MemberType>,Vec<String>),

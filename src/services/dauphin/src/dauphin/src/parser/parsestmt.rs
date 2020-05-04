@@ -25,7 +25,7 @@ use super::parsedecl::{
 use super::parseexpr::{ parse_expr, parse_exprlist, parse_full_identifier, peek_full_identifier };
 
 fn parse_regular(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
-    if let Some((module,name)) = peek_full_identifier(lexer) {
+    if let Some((module,name)) = peek_full_identifier(lexer,None) {
         if defstore.stmt_like(module.as_ref().map(|x| x as &str),&name,lexer).unwrap_or(false) {
             return parse_funcstmt(lexer,defstore);
         }
@@ -41,7 +41,7 @@ fn parse_import(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
 fn parse_inline(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let symbol = get_string(lexer)?;
-    let name = get_identifier(lexer)?;
+    let (module,name) = parse_full_identifier(lexer,None)?;
     let mode = match &get_identifier(lexer)?[..] {
         "left" => Ok(InlineMode::LeftAssoc),
         "right" => Ok(InlineMode::RightAssoc),
@@ -50,11 +50,11 @@ fn parse_inline(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
         _ => Err(ParseError::new("Bad oper mode, expected left, right, prefix, or suffix",lexer))
     }?;
     let prio = get_number(lexer)?;
-    Ok(ParserStatement::Inline(symbol,name,mode,prio))
+    Ok(ParserStatement::Inline(symbol,module,name,mode,prio))
 }
 
 fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
-    let (module,name) = parse_full_identifier(lexer)?;
+    let (module,name) = parse_full_identifier(lexer,None)?;
     get_other(lexer,"(")?;
     let exprs = parse_exprlist(lexer,defstore,')',false)?;
     let (file,line,_) = lexer.position();
@@ -65,16 +65,16 @@ fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserState
     let left = parse_expr(lexer,defstore, false)?;
     let op = get_operator(lexer,false)?;
     let right = parse_expr(lexer,defstore,false)?;
-    let name = defstore.get_inline_binary(&op,lexer)?.name();
-    if !defstore.stmt_like(None,&name,lexer)? { // XXX module
+    let inline = defstore.get_inline_binary(&op,lexer)?;
+    if !defstore.stmt_like(Some(inline.module()),inline.name(),lexer)? {
         Err(ParseError::new("Got inline expr, expected inline stmt",lexer))?;
     }
     let (file,line,_) = lexer.position();
-    Ok(ParserStatement::Regular(Statement(None,name.to_string(),vec![left,right],file.to_string(),line))) // XXX module
+    Ok(ParserStatement::Regular(Statement(Some(inline.module().to_string()),inline.name().to_string(),vec![left,right],file.to_string(),line)))
 }
 
 pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore) -> Result<Option<ParserStatement>,ParseError> {
-    let token = &lexer.peek(1)[0];
+    let token = &lexer.peek(None,1)[0];
     match token {
         Token::Identifier(id) => {
             let out = match &id[..] {
