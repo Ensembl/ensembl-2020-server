@@ -48,9 +48,10 @@ fn run_stmt(name: &str, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<()
     Ok(())
 }
 
-fn run_proc(name: &str, signature: &SignatureConstraint, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_proc(module: &Option<String>, name: &str, signature: &SignatureConstraint, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     not_reserved(name,lexer)?;
-    defstore.add_proc(ProcDecl::new("",name,signature),lexer)?; // XXX module name
+    let module = module.as_ref().map(|x| x as &str).unwrap_or(""); // XXX module
+    defstore.add_proc(ProcDecl::new(module,name,signature),lexer)?;
     Ok(())
 }
 
@@ -85,8 +86,8 @@ pub fn declare(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStor
             run_expr(&name,defstore,lexer).map(|_| true),
         ParserStatement::StmtMacro(name) =>
             run_stmt(&name,defstore,lexer).map(|_| true),
-        ParserStatement::ProcDecl(name,signature) =>
-            run_proc(&name,&signature,defstore,lexer).map(|_| true),
+        ParserStatement::ProcDecl(module,name,signature) =>
+            run_proc(&module,&name,&signature,defstore,lexer).map(|_| true),
         ParserStatement::FuncDecl(name,signature) =>
             run_func(&name,signature,defstore,lexer).map(|_| true),
         ParserStatement::StructDef(name,member_types,names) =>

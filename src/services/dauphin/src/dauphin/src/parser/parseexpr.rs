@@ -56,7 +56,7 @@ fn parse_struct_ctor(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: b
     get_other(lexer,"{")?;
     let pos = lexer.pos();
     if let Token::Identifier(_) = lexer.get() {
-        if lexer.peek() == Token::Other(':') {
+        if lexer.peek(1)[0] == Token::Other(':') {
             lexer.back_to(pos);
             return parse_ctor_full(lexer,defstore,id,nested);
         }
@@ -69,7 +69,7 @@ fn parse_struct_ctor(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: b
 fn parse_ctor_full(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool) -> Result<Expression,ParseError> {
     let mut inner = Vec::new();
     let mut names = Vec::new();
-    if let Token::Other('}') = lexer.peek() {
+    if let Token::Other('}') = lexer.peek(1)[0] {
         lexer.get();
         return Ok(Expression::CtorStruct(id.to_string(),vec![],vec![]));
     }
@@ -105,7 +105,7 @@ fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, id: &str, nested: bool)
 fn peek_enum_ctor(lexer: &mut Lexer) -> bool {
     let pos = lexer.pos();
     let x = lexer.get();
-    let y = lexer.peek();
+    let y = &lexer.peek(1)[0];
     let out = if let Token::Identifier(_) = y {
         x == Token::Other(':')
     } else {
@@ -118,7 +118,7 @@ fn peek_enum_ctor(lexer: &mut Lexer) -> bool {
 fn parse_atom(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Expression,ParseError> {
     Ok(match lexer.get_oper(true) {
         Token::Identifier(id) => {
-            if lexer.peek() == Token::Other('{') {
+            if lexer.peek(1)[0] == Token::Other('{') {
                 parse_struct_ctor(lexer,defstore,&id,nested)?
             } else if peek_enum_ctor(lexer) {
                 lexer.get();
@@ -151,7 +151,7 @@ fn parse_atom(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Ex
 }
 
 fn parse_brackets(lexer: &mut Lexer, defstore: &DefStore, left: Expression) -> Result<Expression,ParseError> {
-    if let Token::Other(']') = lexer.peek() {
+    if let Token::Other(']') = lexer.peek(1)[0] {
         lexer.get();
         Ok(Expression::Square(Box::new(left)))
     } else {
@@ -208,7 +208,7 @@ fn extend_expr(lexer: &mut Lexer, defstore: &DefStore, left: Expression, symbol:
 fn parse_expr_level(lexer: &mut Lexer, defstore: &DefStore, min: Option<f64>, oreq: bool, nested: bool) -> Result<Expression,ParseError> {
     let mut out = parse_atom(lexer,defstore,nested)?;
     loop {
-        match lexer.peek_oper(false) {
+        match &lexer.peek_oper(false,1)[0] {
             Token::Operator(op) => {
                 let op = op.to_string();
                 let (expr,progress) = extend_expr(lexer,defstore,out,&op,min,oreq,nested)?;
@@ -229,7 +229,7 @@ pub(in super) fn parse_expr(lexer: &mut Lexer, defstore: &DefStore, nested: bool
 pub(in super) fn parse_exprlist(lexer: &mut Lexer, defstore: &DefStore, term: char, nested: bool) -> Result<Vec<Expression>,ParseError> {
     let mut out = Vec::new();
     loop {
-        match lexer.peek() {
+        match lexer.peek(1)[0] {
             Token::Other(x) if x == term => {
                 lexer.get();
                 return Ok(out)
@@ -241,5 +241,32 @@ pub(in super) fn parse_exprlist(lexer: &mut Lexer, defstore: &DefStore, term: ch
                 out.push(parse_expr(lexer,defstore,nested)?);
             }
         }
+    }
+}
+
+pub(super) fn parse_full_identifier(lexer: &mut Lexer) -> Result<(Option<String>,String),ParseError> {
+    let first = get_identifier(lexer)?;
+    if let Token::Other('#') = lexer.peek(1)[0] {
+        lexer.get();
+        let second = get_identifier(lexer)?;
+        Ok((Some(first),second))
+    } else {
+        Ok((None,first))
+    }
+}
+
+pub(super) fn peek_full_identifier(lexer: &mut Lexer) -> Option<(Option<String>,String)> {
+    let peeks = lexer.peek(3);
+    if let Token::Identifier(first) = &peeks[0] {
+        let first = first.to_string();
+        if let Token::Other('#') = &peeks[1] {
+            if let Token::Identifier(second) = &peeks[2] {
+                let second = second.to_string();
+                return Some((Some(first),second));
+            }
+        }
+        return Some((None,first));
+    } else {
+        return None;
     }
 }

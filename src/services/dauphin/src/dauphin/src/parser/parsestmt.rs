@@ -22,12 +22,11 @@ use super::parsedecl::{
     parse_proc, parse_exprdecl, parse_stmtdecl, parse_func, parse_struct,
     parse_enum
 };
-use super::parseexpr::{ parse_expr, parse_exprlist };
+use super::parseexpr::{ parse_expr, parse_exprlist, parse_full_identifier, peek_full_identifier };
 
 fn parse_regular(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
-    if let Token::Identifier(id) = lexer.peek() {
-        let id = id.clone();
-        if defstore.stmt_like(None,&id,lexer).unwrap_or(false) {
+    if let Some((module,name)) = peek_full_identifier(lexer) {
+        if defstore.stmt_like(module.as_ref().map(|x| x as &str),&name,lexer).unwrap_or(false) {
             return parse_funcstmt(lexer,defstore);
         }
     }
@@ -55,11 +54,11 @@ fn parse_inline(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
 }
 
 fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
-    let name = get_identifier(lexer)?;
+    let (module,name) = parse_full_identifier(lexer)?;
     get_other(lexer,"(")?;
     let exprs = parse_exprlist(lexer,defstore,')',false)?;
     let (file,line,_) = lexer.position();
-    Ok(ParserStatement::Regular(Statement(None,name,exprs,file.to_string(),line))) // XXX module
+    Ok(ParserStatement::Regular(Statement(module,name,exprs,file.to_string(),line)))
 } 
 
 fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
@@ -75,7 +74,7 @@ fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserState
 }
 
 pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore) -> Result<Option<ParserStatement>,ParseError> {
-    let token = lexer.peek();
+    let token = &lexer.peek(1)[0];
     match token {
         Token::Identifier(id) => {
             let out = match &id[..] {

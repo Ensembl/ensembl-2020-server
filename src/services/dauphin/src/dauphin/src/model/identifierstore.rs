@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+use std::fmt::Debug;
 use std::collections::HashMap;
 
 pub enum IdentifierStoreError {
@@ -22,12 +23,12 @@ pub enum IdentifierStoreError {
 }
 
 #[derive(Debug)]
-pub struct IdentifierStore<T> {
+pub struct IdentifierStore<T> where T: Debug {
     uses: HashMap<String,Vec<String>>,
     store: HashMap<(String,String),T>
 }
 
-impl<T> IdentifierStore<T> {
+impl<T> IdentifierStore<T> where T: Debug {
     pub fn new() -> IdentifierStore<T> {
         IdentifierStore {
             uses: HashMap::new(),

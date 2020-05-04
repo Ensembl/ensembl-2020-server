@@ -132,7 +132,7 @@ pub enum ParserStatement {
     ExprMacro(String),
     StmtMacro(String),
     FuncDecl(String,SignatureConstraint),
-    ProcDecl(String,SignatureConstraint),
+    ProcDecl(Option<String>,String,SignatureConstraint),
     Regular(Statement),
     StructDef(String,Vec<MemberType>,Vec<String>),
     EnumDef(String,Vec<MemberType>,Vec<String>),

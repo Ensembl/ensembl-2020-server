@@ -52,11 +52,11 @@ impl FileLexer {
         }
     }
 
-    pub fn peek(&mut self, ops: &InlineTokens, mode: Option<bool>) -> Token {
+    pub fn peek_multi(&mut self, ops: &InlineTokens, mode: Option<bool>, num: usize) -> Vec<Token> {
         let pos = self.stream.pos();
-        let token = self.get(ops,mode);
+        let tokens = (0..num).map(|_| self.get(ops,mode)).collect::<Vec<_>>();
         self.stream.retreat(self.stream.pos()-pos);
-        token
+        tokens
     }
 
     pub fn pos(&self) -> usize {
