@@ -18,6 +18,7 @@ use super::filelexer::FileLexer;
 use super::fileresolver::FileResolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
+use crate::model::{ IdentifierPattern, Identifier, IdentifierStore };
 
 pub struct Lexer {
     resolver: FileResolver,
@@ -31,6 +32,16 @@ impl Lexer {
             resolver,
             inlines: InlineTokens::new(),
             files: Vec::new()
+        }
+    }
+
+    pub fn get_module(&self) -> &str {
+        self.files.last().map(|f| f.get_module()).unwrap_or("")
+    }
+
+    pub fn set_module(&mut self, module: &str) { 
+        if let Some(last) = self.files.last_mut() {
+            last.set_module(module);
         }
     }
 

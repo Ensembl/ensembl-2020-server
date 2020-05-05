@@ -16,7 +16,7 @@
 
 use std::fmt;
 
-use crate::model::{ DefStore, Register, RegisterSignature };
+use crate::model::{ DefStore, Register, RegisterSignature, Identifier };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
@@ -87,16 +87,16 @@ pub enum InstructionType {
     BooleanConst(bool),
     StringConst(String),
     BytesConst(Vec<u8>),
-    CtorStruct(String),
-    CtorEnum(String,String),
-    SValue(String,String),
-    RefSValue(String,String),
-    EValue(String,String),
-    RefEValue(String,String),
-    FilterEValue(String,String),
-    ETest(String,String),
-    Proc(Option<String>,String,Vec<MemberMode>),
-    Operator(Option<String>,String),
+    CtorStruct(Identifier),
+    CtorEnum(Identifier,String),
+    SValue(Identifier,String),
+    RefSValue(Identifier,String),
+    EValue(Identifier,String),
+    RefEValue(Identifier,String),
+    FilterEValue(Identifier,String),
+    ETest(Identifier,String),
+    Proc(Identifier,Vec<MemberMode>),
+    Operator(Identifier),
     Call(String,bool,RegisterSignature,Vec<MemberDataFlow>),
     LineNumber(String,u32)
 }
@@ -128,7 +128,7 @@ impl InstructionType {
     }
 
     pub fn get_name(&self) -> Vec<String> {
-        let mut out = vec![match self {
+        let call = match self {
             InstructionType::Nil => "nil",
             InstructionType::Alias => "alias",
             InstructionType::Copy => "copy",
@@ -159,40 +159,40 @@ impl InstructionType {
             InstructionType::FilterEValue(_,_) => "frevalue",
             InstructionType::RefEValue(_,_) => "refevalue",
             InstructionType::ETest(_,_) => "etest",
-            InstructionType::Proc(_,_,_) => "proc",
-            InstructionType::Operator(_,_) => "oper",
+            InstructionType::Proc(_,_) => "proc",
+            InstructionType::Operator(_) => "oper",
             InstructionType::Call(_,_,_,_) => "call",
             InstructionType::Const(_) => "const",
             InstructionType::LineNumber(_,_) => "line",
-        }.to_string()];
+        }.to_string();
+        let mut out = vec![call.clone()];
         if let Some(prefixes) = match self {
             InstructionType::CtorStruct(name) => Some(vec![name.to_string()]),
             InstructionType::CtorEnum(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
             InstructionType::SValue(name,field) => Some(vec![name.to_string(),field.to_string()]),
             InstructionType::EValue(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
             InstructionType::ETest(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
-            InstructionType::Operator(module,name) => {
-                let mut out = if let Some(module) = module { vec![module.to_string()] } else { vec![] };
-                out.push(name.to_string());
-                Some(out)
-            }
-            InstructionType::Proc(module,name,modes) =>  {
-                let mut out = if let Some(module) = module { vec![module.to_string()] } else { vec![] };
-                out.push(name.to_string());
-                out.extend(modes.iter().map(|x| x.to_string()).collect::<Vec<_>>());
-                Some(out)
+            InstructionType::Operator(name) => {
+                Some(vec![name.to_string()])
+            },
+            InstructionType::Proc(name,modes) =>  {
+                let mut more = vec![];
+                more.push(name.to_string());
+                more.extend(modes.iter().map(|x| x.to_string()).collect::<Vec<_>>());
+                Some(more)
             },            
             InstructionType::Call(name,impure,types,_) => {
                 let mut name = name.to_string();
                 if *impure { name.push_str("/i"); }
-                let mut out = vec![name.to_string()];
-                out.extend(types.iter().map(|x| x.to_string()).collect::<Vec<_>>());
-                Some(out)
+                let mut more = vec![name.to_string()];
+                more.extend(types.iter().map(|x| x.to_string()).collect::<Vec<_>>());
+                Some(more)
             },
             _ => None
         } {
-            out[0] = format!("{}:{}",out[0],prefixes.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(":"));
+            out[0] = format!("{}:{}",call,prefixes.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(":"));
         };
+        
         if let Some(suffix) = match self {
             InstructionType::NumberConst(n) => Some(n.to_string()),
             InstructionType::BooleanConst(b) => Some(b.to_string()),
@@ -231,8 +231,8 @@ impl InstructionType {
             InstructionType::RefEValue(_,_) |
             InstructionType::FilterEValue(_,_) |
             InstructionType::ETest(_,_) |
-            InstructionType::Proc(_,_,_) |
-            InstructionType::Operator(_,_) =>
+            InstructionType::Proc(_,_) |
+            InstructionType::Operator(_) =>
                 panic!("Unexpected instruction {:?}",self),
 
             InstructionType::LineNumber(_,_) => vec![],
@@ -275,75 +275,75 @@ impl InstructionType {
 
     pub fn get_constraints(&self, defstore: &DefStore) -> Result<Vec<ArgumentConstraint>,String> {
         match self {
-            InstructionType::CtorStruct(name) => {
-                let exprdecl = defstore.get_struct(name).ok_or_else(|| format!("No such struct {:?}",name))?;
+            InstructionType::CtorStruct(identifier) => {
+                let exprdecl = defstore.get_struct_id(identifier)?;
                 let intypes = exprdecl.get_member_types();
-                let mut out = vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::StructType(name.to_string())))];
+                let mut out = vec![ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::StructType(identifier.clone())))];
                 out.extend(intypes.iter().map(|t| ArgumentConstraint::NonReference(t.to_argumentexpressionconstraint())));
                 Ok(out)
             },
 
-            InstructionType::CtorEnum(name,branch) => {
-                let exprdecl = defstore.get_enum(name).ok_or_else(|| format!("No such enum {:?}",name))?;
-                let intype = exprdecl.get_branch_type(branch).ok_or_else(|| format!("No such enum branch {:?}",name))?;
+            InstructionType::CtorEnum(identifier,branch) => {
+                let exprdecl = defstore.get_enum_id(identifier)?;
+                let intype = exprdecl.get_branch_type(branch).ok_or_else(|| format!("No such enum branch {:?}",branch))?;
                 Ok(vec![
-                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(name.to_string()))),
+                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(identifier.clone()))),
                     ArgumentConstraint::NonReference(intype.to_argumentexpressionconstraint())
                 ])
             },
 
-            InstructionType::SValue(stype,field) => {
-                let exprdecl = defstore.get_struct(stype).ok_or_else(|| format!("No such struct {:?}",stype))?;
+            InstructionType::SValue(identifier,field) => {
+                let exprdecl = defstore.get_struct_id(identifier)?;
                 let dtype = exprdecl.get_member_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
                 Ok(vec![
                     ArgumentConstraint::NonReference(dtype.to_argumentexpressionconstraint()),
-                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::StructType(stype.to_string())))
+                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::StructType(identifier.clone())))
                 ])
             },
 
-            InstructionType::RefSValue(stype,field) => {
-                let exprdecl = defstore.get_struct(stype).ok_or_else(|| format!("No such struct {:?}",stype))?;
+            InstructionType::RefSValue(identifier,field) => {
+                let exprdecl = defstore.get_struct_id(identifier)?;
                 let dtype = exprdecl.get_member_type(field).ok_or_else(|| format!("No such field {:?}",field))?;
                 Ok(vec![
                     ArgumentConstraint::Reference(dtype.to_argumentexpressionconstraint()),
-                    ArgumentConstraint::Reference(ArgumentExpressionConstraint::Base(BaseType::StructType(stype.to_string())))
+                    ArgumentConstraint::Reference(ArgumentExpressionConstraint::Base(BaseType::StructType(identifier.clone())))
                 ])
             },
 
-            InstructionType::EValue(etype,field) => {
-                let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
+            InstructionType::EValue(identifier,field) => {
+                let exprdecl = defstore.get_enum_id(identifier)?;
                 let dtype = exprdecl.get_branch_type(field).ok_or_else(|| format!("No such branch {:?}",field))?;
                 Ok(vec![
                     ArgumentConstraint::NonReference(dtype.to_argumentexpressionconstraint()),
-                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(etype.to_string())))
+                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(identifier.clone())))
                 ])
             },
 
-            InstructionType::FilterEValue(etype,_) => {
+            InstructionType::FilterEValue(identifier,_) => {
                 Ok(vec![
                     ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType)),
-                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(etype.to_string())))
+                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(identifier.clone())))
                 ])
             },
 
-            InstructionType::RefEValue(etype,field) => {
-                let exprdecl = defstore.get_enum(etype).ok_or_else(|| format!("No such enum {:?}",etype))?;
+            InstructionType::RefEValue(identifier,field) => {
+                let exprdecl = defstore.get_enum_id(identifier)?;
                 let dtype = exprdecl.get_branch_type(field).ok_or_else(|| format!("No such branch {:?}",field))?;
                 Ok(vec![
                     ArgumentConstraint::Reference(dtype.to_argumentexpressionconstraint()),
-                    ArgumentConstraint::Reference(ArgumentExpressionConstraint::Base(BaseType::EnumType(etype.to_string())))
+                    ArgumentConstraint::Reference(ArgumentExpressionConstraint::Base(BaseType::EnumType(identifier.clone())))
                 ])
             },
 
-            InstructionType::ETest(etype,_) => {
+            InstructionType::ETest(identifier,_) => {
                 Ok(vec![
                     fixed(BaseType::BooleanType),
-                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(etype.to_string())))
+                    ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::EnumType(identifier.clone())))
                 ])
             },
 
-            InstructionType::Proc(module,name,modes) => {
-                let procdecl = defstore.get_proc(module.as_ref().map(|x| x as &str).clone(),name)?;
+            InstructionType::Proc(identifier,modes) => {
+                let procdecl = defstore.get_proc_id(identifier)?;
                 let signature = procdecl.get_signature();
                 let mut arguments = Vec::new();
                 let mut member_index = 0;
@@ -361,9 +361,9 @@ impl InstructionType {
                 Ok(arguments)
             },
 
-            InstructionType::Operator(module,name) => {
+            InstructionType::Operator(identifier) => {
                 let mut out = Vec::new();
-                let exprdecl = defstore.get_func(module.as_ref().map(|x| x as &str).clone(),name)?;
+                let exprdecl = defstore.get_func_id(identifier)?;
                 let signature = exprdecl.get_signature();
                 for member_constraint in signature.each_member() {
                     out.push(member_constraint.to_argumentconstraint());

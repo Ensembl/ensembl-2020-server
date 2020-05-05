@@ -22,8 +22,8 @@ use crate::model::{ RegisterSignature, ComplexRegisters };
 pub fn call(context: &mut GenContext) -> Result<(),String> {
     for instr in &context.get_instructions() {
         match &instr.itype {
-            InstructionType::Proc(module,name,modes) => {
-                print!("mfind {:?} in {:?}\n",name,module);
+            InstructionType::Proc(identifier,modes) => {
+                print!("mfind {:?}\n",identifier);
                 let mut rs = RegisterSignature::new();
                 let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
@@ -34,11 +34,11 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                     });                    
                     rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_)?);
                 }
-                context.add(Instruction::new(InstructionType::Call(name.to_string(),true,rs,flows),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(identifier.1.to_string(),true,rs,flows),instr.regs.to_vec()));
             },
             
-            InstructionType::Operator(module,name) => {
-                print!("mfind {:?} in {:?}\n",name,module);
+            InstructionType::Operator(identifier) => {
+                print!("mfind {:?}\n",identifier);
                 let mut rs = RegisterSignature::new();
                 let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
@@ -46,7 +46,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
                     rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::RValue,&type_)?);
                 }
-                context.add(Instruction::new(InstructionType::Call(name.to_string(),false,rs,flows),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(identifier.1.to_string(),false,rs,flows),instr.regs.to_vec()));
             },
 
             _ => { context.add(instr.clone()); }

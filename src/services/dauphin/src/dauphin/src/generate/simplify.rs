@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use crate::generate::{ Instruction, InstructionType };
-use crate::model::{ DefStore, Register, StructDef, EnumDef };
+use crate::model::{ DefStore, Register, StructDef, EnumDef, Identifier };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
 use super::gencontext::GenContext;
 
@@ -104,22 +104,22 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
             BaseType::BytesType => context.add(Instruction::new(InstructionType::BytesConst(vec![]),vec![*reg])),
             BaseType::Invalid => return Err("cannot build nil".to_string()),
             BaseType::StructType(name) => {
-                let decl = defstore.get_struct(name).ok_or_else(|| "cannot build nil".to_string())?;
+                let decl = defstore.get_struct_id(name)?;
                 let mut subregs = vec![*reg];
                 for member_type in decl.get_member_types() {
                     let r = context.allocate_register(Some(member_type));
                     build_nil(context,defstore,&r,member_type)?;
                     subregs.push(r);
                 }
-                context.add(Instruction::new(InstructionType::CtorStruct(name.to_string()),subregs));
+                context.add(Instruction::new(InstructionType::CtorStruct(name.clone()),subregs));
             },
             BaseType::EnumType(name) => {
-                let decl = defstore.get_enum(name).ok_or_else(|| "cannot build nil".to_string())?;
+                let decl = defstore.get_enum_id(name)?;
                 let branch_type = decl.get_branch_types().get(0).ok_or_else(|| "cannot build nil".to_string())?;
                 let field_name = decl.get_names().get(0).ok_or_else(|| "cannot build nil".to_string())?;
                 let subreg = context.allocate_register(Some(branch_type));
                 build_nil(context,defstore,&subreg,branch_type)?;
-                context.add(Instruction::new(InstructionType::CtorEnum(name.to_string(),field_name.clone()),vec![*reg,subreg]));
+                context.add(Instruction::new(InstructionType::CtorEnum(name.clone(),field_name.clone()),vec![*reg,subreg]));
             }
         }
     }
@@ -128,8 +128,8 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
 
 fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
     Ok(match &instr.itype {
-        InstructionType::Proc(_,_,_) |
-        InstructionType::Operator(_,_) |
+        InstructionType::Proc(_,_) |
+        InstructionType::Operator(_) |
         InstructionType::Run |
         InstructionType::Length |
         InstructionType::Add |
@@ -205,7 +205,7 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
     })
 }
 
-fn extend_struct_instr(obj_name: &str, context: &mut GenContext, decl: &StructDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
+fn extend_struct_instr(obj_name: &Identifier, context: &mut GenContext, decl: &StructDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
     /* because types topologically ordered and non-recursive
     * we know there's nothing to expand in the args in the else branches.
     */
@@ -237,7 +237,7 @@ fn extend_struct_instr(obj_name: &str, context: &mut GenContext, decl: &StructDe
     })
 }
 
-fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &str, decl: &EnumDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
+fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &Identifier, decl: &EnumDef, instr: &Instruction, mapping: &HashMap<Register,Vec<Register>>) -> Result<(),String> {
     /* because types topologically ordered and non-recursive we know there's nothing to expand in the args */
     Ok(match &instr.itype {
         InstructionType::CtorEnum(name,field) => {
@@ -314,17 +314,17 @@ fn make_new_registers(context: &mut GenContext, member_types: &Vec<MemberType>, 
     Ok(new_registers)
 }
 
-fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &str) -> Result<(),String> {
-    if let Some(decl) = defstore.get_struct(name) {
+fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &Identifier) -> Result<(),String> {
+    if let Some(decl) = defstore.get_struct_id(name).ok() {
         let member_types = decl.get_member_types();
-        let base = BaseType::StructType(name.to_string());
+        let base = BaseType::StructType(name.clone());
         let new_registers = make_new_registers(context,member_types,base,false)?;
         for instr in &context.get_instructions() {
             extend_struct_instr(name,context,decl,instr,&new_registers)?;
         }
-    } else if let Some(decl) = defstore.get_enum(name) {
+    } else if let Some(decl) = defstore.get_enum_id(name).ok() {
         let member_types = decl.get_branch_types();
-        let base = BaseType::EnumType(name.to_string());
+        let base = BaseType::EnumType(name.clone());
         let new_registers = make_new_registers(context,member_types,base,true)?;
         print!("new_registers {:?}\n",new_registers);
         for instr in &context.get_instructions() {

@@ -21,18 +21,24 @@ use super::token::Token;
 
 pub struct FileLexer {
     stream: LocatedCharSource,
+    module: String,
     line: u32,
     col: u32
 }
 
 impl FileLexer {
     pub fn new(stream: Box<dyn CharSource>) -> FileLexer {
+        let module = stream.name().to_string();
         FileLexer {
             stream: LocatedCharSource::new(stream),
+            module,
             line: 0,
             col: 0
         }
     }
+
+    pub fn get_module(&self) -> &str { &self.module }
+    pub fn set_module(&mut self, module: &str) { self.module = module.to_string(); }
 
     pub fn position(&self) -> (&str,u32,u32) { 
         (self.stream.name(),self.line,self.col)

@@ -17,7 +17,7 @@
 use std::fmt;
 use hex;
 
-use crate::model::InlineMode;
+use crate::model::{ InlineMode, IdentifierPattern, Identifier };
 use crate::lexer::Lexer;
 use crate::typeinf::{ MemberType, SignatureConstraint };
 
@@ -28,7 +28,7 @@ pub enum Expression {
     LiteralString(String),
     LiteralBytes(Vec<u8>),
     LiteralBool(bool),
-    Operator(Option<String>,String,Vec<Expression>),
+    Operator(Identifier,Vec<Expression>),
     Star(Box<Expression>),
     Square(Box<Expression>),
     Bracket(Box<Expression>,Box<Expression>),
@@ -37,8 +37,8 @@ pub enum Expression {
     Query(Box<Expression>,String),
     Pling(Box<Expression>,String),
     Vector(Vec<Expression>),
-    CtorStruct(String,Vec<Expression>,Vec<String>),
-    CtorEnum(String,String,Box<Expression>),
+    CtorStruct(Identifier,Vec<Expression>,Vec<String>),
+    CtorEnum(Identifier,String,Box<Expression>),
     Dollar,
     At
 }
@@ -88,7 +88,7 @@ impl fmt::Debug for Expression {
                 write!(f,"]")?;
                 Ok(())
             }
-            Expression::Operator(module,s,x) => { // XXX modules
+            Expression::Operator(s,x) => {
                 write!(f,"{}(",s)?;
                 write_csl(f,x)?;
                 write!(f,")")?;
@@ -109,12 +109,12 @@ impl fmt::Debug for Expression {
 }
 
 #[derive(PartialEq)]
-pub struct Statement(pub Option<String>,pub String,pub Vec<Expression>,pub String,pub u32);
+pub struct Statement(pub Identifier,pub Vec<Expression>,pub String,pub u32);
 
 impl fmt::Debug for Statement {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { // XXX modules
-        write!(f,"{}(",self.1)?;
-        for (i,sub) in self.2.iter().enumerate() {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{}(",self.0)?;
+        for (i,sub) in self.1.iter().enumerate() {
             if i > 0 {
                 write!(f,",")?;
             }
@@ -128,14 +128,15 @@ impl fmt::Debug for Statement {
 #[derive(Debug,PartialEq)]
 pub enum ParserStatement {
     Import(String),
-    Inline(String,Option<String>,String,InlineMode,f64),
-    ExprMacro(String),
-    StmtMacro(String),
-    FuncDecl(Option<String>,String,SignatureConstraint),
-    ProcDecl(Option<String>,String,SignatureConstraint),
+    Module(String),
+    Inline(String,IdentifierPattern,InlineMode,f64),
+    ExprMacro(IdentifierPattern),
+    StmtMacro(IdentifierPattern),
+    FuncDecl(IdentifierPattern,SignatureConstraint),
+    ProcDecl(IdentifierPattern,SignatureConstraint),
     Regular(Statement),
-    StructDef(String,Vec<MemberType>,Vec<String>),
-    EnumDef(String,Vec<MemberType>,Vec<String>),
+    StructDef(IdentifierPattern,Vec<MemberType>,Vec<String>),
+    EnumDef(IdentifierPattern,Vec<MemberType>,Vec<String>),
     EndOfParse
 }
 

@@ -15,7 +15,7 @@
  */
 
 use crate::lexer::{ Lexer, Token };
-use crate::model::DefStore;
+use crate::model::{ DefStore, IdentifierGuesser };
 
 use super::node::{ Statement, ParserStatement, ParseError };
 use super::declare::declare;
@@ -24,6 +24,7 @@ use super::parsestmt::{ parse_statement };
 pub struct Parser {
     lexer: Lexer,
     defstore: DefStore,
+    guesser: IdentifierGuesser,
     stmts: Vec<Statement>,
     errors: Vec<ParseError>
 }
@@ -33,6 +34,7 @@ impl Parser {
         let mut p = Parser {
             lexer,
             defstore: DefStore::new(),
+            guesser: IdentifierGuesser::new(),
             stmts: Vec::new(),
             errors: Vec::new()
         };
@@ -52,7 +54,7 @@ impl Parser {
 
     fn recover_parse_statement(&mut self) -> Result<ParserStatement,ParseError> {
         loop {
-            let s = parse_statement(&mut self.lexer,&self.defstore);
+            let s = parse_statement(&mut self.lexer,&self.defstore,&mut self.guesser);
             if s.is_err() {
                 self.ffwd_error();
                 return Err(s.err().unwrap());
@@ -64,7 +66,7 @@ impl Parser {
     }
 
     fn run_declare(&mut self, stmt: ParserStatement) -> Result<Option<ParserStatement>,ParseError> {
-        declare(&stmt,&mut self.lexer,&mut self.defstore).map(|done| if done { None } else { Some(stmt) })
+        declare(&stmt,&mut self.lexer,&mut self.defstore,&mut self.guesser).map(|done| if done { None } else { Some(stmt) })
     }
 
     fn get_non_declare(&mut self) -> Result<Option<ParserStatement>,ParseError> {
@@ -93,6 +95,7 @@ impl Parser {
 mod test {
     use super::*;
     use crate::lexer::FileResolver;
+    use crate::model::Identifier;
     use crate::test::files::load_testdata;
 
     fn last_statement(p: &mut Parser) -> Result<ParserStatement,ParseError> {
@@ -169,17 +172,29 @@ mod test {
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 
+    fn make_identifier(name: &str) -> Identifier {
+        Identifier("".to_string(),name.to_string(),true)
+    }
+
+    fn print_struct(defstore: &DefStore, name: &str) -> String {
+        format!("{:?}",defstore.get_struct_id(&make_identifier(name)).expect("A"))
+    }
+
     #[test]
     fn test_struct() {
         let resolver = FileResolver::new();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/struct-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        assert_eq!("struct A { 0: number, 1: vec(number) }",format!("{:?}",defstore.get_struct("A").unwrap()));
-        assert_eq!("struct B { X: number, Y: vec(A) }",format!("{:?}",defstore.get_struct("B").unwrap()));
-        assert_eq!("struct C {  }",format!("{:?}",defstore.get_struct("C").unwrap()));
-        assert_eq!("[assign(x,A {0: [1,2,3]}), assign(y,B {X: 23,Y: [x,x]})]",&format!("{:?}",stmts));
+        let (_stmts,defstore) = p.parse().expect("error");
+        assert_eq!("struct A { 0: number, 1: vec(number) }",print_struct(&defstore,"A"));
+        assert_eq!("struct B { X: number, Y: vec(A) }",print_struct(&defstore,"B"));
+        assert_eq!("struct C {  }",print_struct(&defstore,"C"));
+        assert_eq!("[assign(x,A {0: [1,2,3]}), assign(y,B {X: 23,Y: [x,x]})]",print_struct(&defstore,"D"));
+    }
+
+    fn print_enum(defstore: &DefStore, name: &str) -> String {
+        format!("{:?}",defstore.get_enum_id(&make_identifier(name)).expect("A"))
     }
 
     #[test]
@@ -189,9 +204,9 @@ mod test {
         lexer.import("test:parser/enum-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        assert_eq!("enum A { M: number, N: vec(number) }",format!("{:?}",defstore.get_enum("A").unwrap()));
-        assert_eq!("enum B { X: number, Y: vec(A) }",format!("{:?}",defstore.get_enum("B").unwrap()));
-        assert_eq!("enum C {  }",format!("{:?}",defstore.get_enum("C").unwrap()));
+        assert_eq!("enum A { M: number, N: vec(number) }",print_enum(&defstore,"A"));
+        assert_eq!("enum B { X: number, Y: vec(A) }",print_enum(&defstore,"B"));
+        assert_eq!("enum C {  }",print_enum(&defstore,"C"));
         assert_eq!("[assign(x,B:Y [A:M 42,B:N [1,2,3]])]",&format!("{:?}",stmts));
     }
 }

@@ -1,3 +1,5 @@
+module "library";
+
 proc library#assign(out _A, _A);
 inline ":=" library#assign left 14;
 

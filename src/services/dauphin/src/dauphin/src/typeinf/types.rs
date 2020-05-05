@@ -15,7 +15,7 @@
  */
 
 use std::fmt;
-use crate::model::{ Register, cbor_int };
+use crate::model::{ Register, cbor_int, Identifier };
 use serde_cbor::Value as CborValue;
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash)]
@@ -24,8 +24,8 @@ pub enum BaseType {
     BytesType,
     NumberType,
     BooleanType,
-    StructType(String),
-    EnumType(String),
+    StructType(Identifier),
+    EnumType(Identifier),
     Invalid
 }
 
@@ -60,13 +60,13 @@ impl fmt::Debug for BaseType {
 impl fmt::Display for BaseType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let v = match self {
-            BaseType::StringType => "string",
-            BaseType::BytesType => "bytes",
-            BaseType::NumberType => "number",
-            BaseType::BooleanType => "boolean",
-            BaseType::Invalid => "***INVALID***",
-            BaseType::StructType(t) => t,
-            BaseType::EnumType(t) => t
+            BaseType::StringType => "string".to_string(),
+            BaseType::BytesType => "bytes".to_string(),
+            BaseType::NumberType => "number".to_string(),
+            BaseType::BooleanType => "boolean".to_string(),
+            BaseType::Invalid => "***INVALID***".to_string(),
+            BaseType::StructType(t) => t.to_string(),
+            BaseType::EnumType(t) => t.to_string()
         };
         write!(f,"{}",v)?;
         Ok(())

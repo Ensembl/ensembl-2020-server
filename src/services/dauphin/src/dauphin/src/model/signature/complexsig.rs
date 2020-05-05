@@ -142,11 +142,11 @@ impl ComplexRegisters {
         let container = container.merge(&type_.get_container());
         match type_.get_base() {
             BaseType::StructType(name) => {
-                let struct_ = defstore.get_struct(&name).unwrap();
+                let struct_ = defstore.get_struct_id(&name)?;
                 self.from_struct(defstore,struct_,path,&container)
             },
             BaseType::EnumType(name) => {
-                let enum_ = defstore.get_enum(&name).unwrap();
+                let enum_ = defstore.get_enum_id(&name)?;
                 self.from_enum(defstore,enum_,path,&container)
             },
             _ => {

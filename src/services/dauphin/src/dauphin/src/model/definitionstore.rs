@@ -20,47 +20,47 @@ use super::definition::{
     ExprMacro, StmtMacro, FuncDecl, ProcDecl, Inline, InlineMode
 };
 use super::structenum::{ StructDef, EnumDef };
-use super::identifierstore::{ IdentifierStore, IdentifierStoreError };
+use super::identifierstore::{ IdentifierStore, IdentifierStoreError, IdentifierPattern, Identifier };
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
 
 #[derive(Debug)]
 pub struct DefStore {
-    namespace: HashMap<String,(String,u32,u32)>,
-    exprs: HashMap<String,ExprMacro>,
-    stmts: HashMap<String,StmtMacro>,
+    namespace: HashMap<Identifier,(String,u32,u32)>,
+    exprs: IdentifierStore<ExprMacro>,
+    stmts: IdentifierStore<StmtMacro>,
     funcs: IdentifierStore<FuncDecl>,
     procs: IdentifierStore<ProcDecl>,
-    structs: HashMap<String,StructDef>,
-    enums: HashMap<String,EnumDef>,
+    structs: IdentifierStore<StructDef>,
+    enums: IdentifierStore<EnumDef>,
     inlines_binary: HashMap<String,Inline>,
     inlines_unary: HashMap<String,Inline>,
-    structenum_order: Vec<String>
+    structenum_order: Vec<Identifier>
 }
 
 impl DefStore {
     pub fn new() -> DefStore {
         DefStore {
             namespace: HashMap::new(),
-            exprs: HashMap::new(),
-            stmts: HashMap::new(),
+            exprs: IdentifierStore::new(),
+            stmts: IdentifierStore::new(),
             funcs: IdentifierStore::new(),
             procs: IdentifierStore::new(),
-            structs: HashMap::new(),
-            enums: HashMap::new(),
+            structs: IdentifierStore::new(),
+            enums: IdentifierStore::new(),
             inlines_binary: HashMap::new(),
             inlines_unary: HashMap::new(),
             structenum_order: Vec::new()
         }
     }
 
-    fn detect_clash(&mut self, cmp: &str, lexer: &Lexer) -> Result<(),ParseError> {
-        match self.namespace.entry(cmp.to_string()) {
+    fn detect_clash(&mut self, identifier: &Identifier, lexer: &Lexer) -> Result<(),ParseError> {
+        match self.namespace.entry(identifier.clone()) {
             Entry::Occupied(e) => {
                 let (file,line,col) = e.get();
                 Err(ParseError::new(
                     &format!("'{}' already defined at {} {}:{}",
-                        cmp,file,line,col),lexer))
+                        identifier,file,line,col),lexer))
             },
             Entry::Vacant(e) => {
                 let (file,line,col) = lexer.position();
@@ -71,49 +71,49 @@ impl DefStore {
     }
 
     pub fn add_expr(&mut self, expr: ExprMacro, lexer: &Lexer) -> Result<(),ParseError> {
-        self.detect_clash(expr.name(),lexer)?;
-        self.exprs.insert(expr.name().to_string(),expr);
+        self.detect_clash(expr.identifier(),lexer)?;
+        self.exprs.add(&expr.identifier().clone(),expr);
         Ok(())
     }
 
     pub fn add_stmt(&mut self, stmt: StmtMacro, lexer: &Lexer) -> Result<(),ParseError> {
-        self.detect_clash(stmt.name(),lexer)?;
-        self.stmts.insert(stmt.name().to_string(),stmt);
+        self.detect_clash(stmt.identifier(),lexer)?;
+        self.stmts.add(&stmt.identifier().clone(),stmt);
         Ok(())
     }
 
     pub fn add_func(&mut self, func: FuncDecl, lexer: &Lexer) -> Result<(),ParseError> {
-        self.detect_clash(func.name(),lexer)?;
-        self.funcs.add(&func.module().to_string(),&func.name().to_string(),func);
+        self.detect_clash(func.identifier(),lexer)?;
+        self.funcs.add(&func.identifier().clone(),func);
         Ok(())
     }
 
     pub fn add_proc(&mut self, proc_: ProcDecl, lexer: &Lexer) -> Result<(),ParseError> {
-        self.detect_clash(proc_.name(),lexer)?;
-        self.procs.add(&proc_.module().to_string(),&proc_.name().to_string(),proc_);
+        self.detect_clash(proc_.identifier(),lexer)?;
+        self.procs.add(&proc_.identifier().clone(),proc_);
         Ok(())
     }
 
     pub fn add_struct(&mut self, struct_: StructDef, lexer: &Lexer) -> Result<(),ParseError> {
-        self.detect_clash(struct_.name(),lexer)?;
-        self.structenum_order.push(struct_.name().to_string());
-        self.structs.insert(struct_.name().to_string(),struct_);
+        self.detect_clash(struct_.identifier(),lexer)?;
+        self.structenum_order.push(struct_.identifier().clone());
+        self.structs.add(&struct_.identifier().clone(),struct_);
         Ok(())
     }
 
-    pub fn get_struct(&self, name: &str) -> Option<&StructDef> {
-        self.structs.get(name)
+    pub fn get_struct_id(&self, identifier: &Identifier) -> Result<&StructDef,IdentifierStoreError> {
+        self.structs.get_id(identifier)
     }
 
     pub fn add_enum(&mut self, enum_: EnumDef, lexer: &Lexer) -> Result<(),ParseError> {
-        self.detect_clash(enum_.name(),lexer)?;
-        self.structenum_order.push(enum_.name().to_string());
-        self.enums.insert(enum_.name().to_string(),enum_);
+        self.detect_clash(enum_.identifier(),lexer)?;
+        self.structenum_order.push(enum_.identifier().clone());
+        self.enums.add(&enum_.identifier().clone(),enum_);
         Ok(())
     }
 
-    pub fn get_enum(&self, name: &str) -> Option<&EnumDef> {
-        self.enums.get(name)
+    pub fn get_enum_id(&self, identifier: &Identifier) -> Result<&EnumDef,IdentifierStoreError> {
+        self.enums.get_id(identifier)
     }
 
     pub fn add_inline(&mut self, inline: Inline) -> Result<(),ParseError> {
@@ -137,26 +137,25 @@ impl DefStore {
         )
     }
 
-    pub fn stmt_like(&self, module: Option<&str>, name: &str, lexer: &Lexer) -> Result<bool,ParseError> {
-        if self.stmts.contains_key(name) || self.procs.contains_key(module,name) {
+    pub fn stmt_like(&self, pattern: &IdentifierPattern, lexer: &Lexer) -> Result<bool,ParseError> {
+        if self.stmts.contains_key(pattern) || self.procs.contains_key(pattern) {
             Ok(true)
-        } else if self.exprs.contains_key(name) || self.funcs.contains_key(module,name) {
+        } else if self.exprs.contains_key(pattern) || self.funcs.contains_key(pattern) {
             Ok(false)
         } else {
-            Err(ParseError::new(&format!("Missing or ambiguous symbol: '{}'",name),lexer))
+            Err(ParseError::new(&format!("Missing or ambiguous symbol: '{}'",pattern),lexer))
         }
     }
 
-    pub fn get_func(&self, module: Option<&str>, name: &str) -> Result<&FuncDecl,IdentifierStoreError> {
-        self.funcs.get(module,name).map(|x| x.1)
+    pub fn get_proc_id(&self, identifier: &Identifier) -> Result<&ProcDecl,IdentifierStoreError> {
+        self.procs.get_id(identifier)
     }
 
-    pub fn get_proc(&self, module: Option<&str>, name: &str) -> Result<&ProcDecl,IdentifierStoreError> {
-        self.procs.get(module,name).map(|x| x.1)
+    pub fn get_func_id(&self, identifier: &Identifier) -> Result<&FuncDecl,IdentifierStoreError> {
+        self.funcs.get_id(identifier)
     }
 
-    pub fn get_structenum_order(&self) -> impl DoubleEndedIterator<Item=&String> {
-        print!("structenumorder = {:?}\n",self.structenum_order);
+    pub fn get_structenum_order(&self) -> impl DoubleEndedIterator<Item=&Identifier> {
         self.structenum_order.iter()
     }
 }

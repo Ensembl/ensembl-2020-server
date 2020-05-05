@@ -22,6 +22,7 @@ use crate::parser::{ Expression, Statement };
 use crate::model::Register;
 use crate::model::DefStore;
 use crate::typeinf::{ BaseType, ExpressionType, SignatureMemberConstraint, MemberMode };
+use crate::model::{ Identifier };
 
 macro_rules! addf {
     ($this:expr,$opcode:tt,$($regs:expr),*) => {
@@ -67,21 +68,18 @@ impl<'a> CodeGen<'a> {
 
     }
 
-    fn struct_rearrange(&mut self, s: &str, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
-        if let Some(decl) = self.defstore.get_struct(s) {
-            let gotpos : HashMap<String,usize> = got_names.iter().enumerate().map(|(i,e)| (e.to_string(),i)).collect();
-            let mut out = Vec::new();
-            for want_name in decl.get_names().iter() {
-                if let Some(got_pos) = gotpos.get(want_name) {
-                    out.push(x[*got_pos]);
-                } else {
-                    return Err(format!("Missing member '{}'",want_name));
-                }
+    fn struct_rearrange(&mut self, s: &Identifier, x: Vec<Register>, got_names: &Vec<String>) -> Result<Vec<Register>,String> {
+        let decl = self.defstore.get_struct_id(s)?;
+        let gotpos : HashMap<String,usize> = got_names.iter().enumerate().map(|(i,e)| (e.to_string(),i)).collect();
+        let mut out = Vec::new();
+        for want_name in decl.get_names().iter() {
+            if let Some(got_pos) = gotpos.get(want_name) {
+                out.push(x[*got_pos]);
+            } else {
+                return Err(format!("Missing member '{}'",want_name));
             }
-            Ok(out)
-        } else {
-            Err(format!("no such struct '{}'",s))
         }
+        Ok(out)
     }
 
     fn type_of(&mut self, expr: &Expression) -> Result<ExpressionType,String> {
@@ -94,14 +92,11 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
-                    if let Some(struct_) = self.defstore.get_struct(&name) {
-                        if let Some(type_) = struct_.get_member_type(f) {
-                            type_.to_expressiontype()
-                        } else {
-                            return Err(format!("no such field {:?}",f));
-                        }
+                    let struct_ = self.defstore.get_struct_id(&name)?;
+                    if let Some(type_) = struct_.get_member_type(f) {
+                        type_.to_expressiontype()
                     } else {
-                        return Err(format!("{:?} is not a structure",expr));
+                        return Err(format!("no such field {:?}",f));
                     }
                 } else {
                     return Err(format!("{:?} is not a structure",expr));
@@ -109,14 +104,11 @@ impl<'a> CodeGen<'a> {
             },
             Expression::Pling(x,f) => {
                 if let ExpressionType::Base(BaseType::EnumType(name)) = self.type_of(x)? {
-                    if let Some(enum_) = self.defstore.get_enum(&name) {
-                        if let Some(type_) = enum_.get_branch_type(f) {
-                            type_.to_expressiontype()
-                        } else {
-                            return Err(format!("no such field {:?}",f));
-                        }
+                    let enum_ = self.defstore.get_enum_id(&name)?;
+                    if let Some(type_) = enum_.get_branch_type(f) {
+                        type_.to_expressiontype()
                     } else {
-                        return Err(format!("{:?} is not a structure",expr));
+                        return Err(format!("no such field {:?}",f));
                     }
                 } else {
                     return Err(format!("{:?} is not a structure",expr));
@@ -153,8 +145,8 @@ impl<'a> CodeGen<'a> {
             Expression::Dot(x,f) => {
                 if let ExpressionType::Base(BaseType::StructType(name)) = self.type_of(x)? {
                     let (lvalue_subreg,fvalue_reg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
-                    let lvalue_reg = addf!(self,RefSValue(name.to_string(),f.clone()),lvalue_subreg);
-                    let rvalue_reg = addf!(self,SValue(name.to_string(),f.clone()),rvalue_subreg);
+                    let lvalue_reg = addf!(self,RefSValue(name.clone(),f.clone()),lvalue_subreg);
+                    let rvalue_reg = addf!(self,SValue(name.clone(),f.clone()),rvalue_subreg);
                     Ok((lvalue_reg,fvalue_reg,rvalue_reg))
                 } else {
                     Err("Can only take \"dot\" of structs".to_string())
@@ -163,12 +155,12 @@ impl<'a> CodeGen<'a> {
             Expression::Pling(x,f) => {
                 if let ExpressionType::Base(BaseType::EnumType(name)) = self.type_of(x)? {
                     let (lvalue_subreg,fvalue_subreg,rvalue_subreg) = self.build_lvalue(x,false,unfiltered_in)?;
-                    let lvalue_reg = addf!(self,RefEValue(name.to_string(),f.clone()),lvalue_subreg);
-                    let mut fvalue_reg = addf!(self,FilterEValue(name.to_string(),f.clone()),rvalue_subreg);
+                    let lvalue_reg = addf!(self,RefEValue(name.clone(),f.clone()),lvalue_subreg);
+                    let mut fvalue_reg = addf!(self,FilterEValue(name.clone(),f.clone()),rvalue_subreg);
                     if let Some(fvalue_subreg) = fvalue_subreg {
                         fvalue_reg = addf!(self,ReFilter,fvalue_subreg,fvalue_reg);
                     }
-                    let rvalue_reg = addf!(self,EValue(name.to_string(),f.clone()),rvalue_subreg);
+                    let rvalue_reg = addf!(self,EValue(name.clone(),f.clone()),rvalue_subreg);
                     Ok((lvalue_reg,Some(fvalue_reg),rvalue_reg))
                 } else {
                     Err("Can only take \"pling\" of enums".to_string())
@@ -218,13 +210,13 @@ impl<'a> CodeGen<'a> {
             Expression::LiteralBool(b) =>   addf!(self,BooleanConst(*b)),
             Expression::LiteralBytes(b) =>  addf!(self,BytesConst(b.to_vec())),
             Expression::Vector(v) =>        self.build_vec(v,dollar,at)?,
-            Expression::Operator(module,name,x) => {
+            Expression::Operator(identifier,x) => {
                 let mut subregs = vec![];
                 for e in x {
                     let r = self.build_rvalue(e,dollar,at)?;
                     subregs.push(r);
                 }
-                self.context.add_untyped_f(InstructionType::Operator(module.clone(),name.clone()),subregs)?
+                self.context.add_untyped_f(InstructionType::Operator(identifier.clone()),subregs)?
             },
             Expression::CtorStruct(s,x,n) => {
                 let mut subregs = vec![];
@@ -243,7 +235,7 @@ impl<'a> CodeGen<'a> {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let stype = self.context.get_partial_type(&subreg);
                 if let ExpressionType::Base(BaseType::StructType(name)) = stype {
-                    addf!(self,SValue(name.to_string(),f.clone()),subreg)
+                    addf!(self,SValue(name.clone(),f.clone()),subreg)
                 } else {
                     return Err(format!("Can only take \"dot\" of structs, not {:?}",stype));
                 }
@@ -252,7 +244,7 @@ impl<'a> CodeGen<'a> {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let etype = self.context.get_partial_type(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
-                    addf!(self,ETest(name.to_string(),f.clone()),subreg)
+                    addf!(self,ETest(name.clone(),f.clone()),subreg)
                 } else {
                     return Err("Can only take \"query\" of enums".to_string());
                 }
@@ -261,7 +253,7 @@ impl<'a> CodeGen<'a> {
                 let subreg = self.build_rvalue(x,dollar,at)?;
                 let etype = self.context.get_partial_type(&subreg);
                 if let ExpressionType::Base(BaseType::EnumType(name)) = etype {
-                    addf!(self,EValue(name.to_string(),f.clone()),subreg)
+                    addf!(self,EValue(name.clone(),f.clone()),subreg)
                 } else {
                     return Err("Can only take \"pling\" of enums".to_string());
                 }
@@ -307,18 +299,18 @@ impl<'a> CodeGen<'a> {
     fn build_stmt(&mut self, stmt: &Statement) -> Result<(),String> {
         let mut regs = Vec::new();
         let mut modes = Vec::new();
-        let procdecl = self.defstore.get_proc(stmt.0.as_ref().map(|x| x as &str),&stmt.1)?;
+        let procdecl = self.defstore.get_proc_id(&stmt.0)?;
         if self.include_line_numbers {
-            addf!(self,LineNumber(stmt.3.to_string(),stmt.4));
+            addf!(self,LineNumber(stmt.2.to_string(),stmt.3));
         }
         for (i,member) in procdecl.get_signature().each_member().enumerate() {
             match member {
                 SignatureMemberConstraint::RValue(_) => {
                     modes.push(MemberMode::RValue);
-                    regs.push(self.build_rvalue(&stmt.2[i],None,None)?);
+                    regs.push(self.build_rvalue(&stmt.1[i],None,None)?);
                 },
                 SignatureMemberConstraint::LValue(_) => {
-                    let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.2[i],true,true)?;
+                    let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.1[i],true,true)?;
                     if let Some(fvalue_reg) = fvalue_reg {
                         modes.push(MemberMode::FValue);
                         regs.push(fvalue_reg);
@@ -328,7 +320,7 @@ impl<'a> CodeGen<'a> {
                 }
             }
         }
-        self.context.add_untyped(Instruction::new(InstructionType::Proc(stmt.0.clone(),stmt.1.to_string(),modes),regs))?;
+        self.context.add_untyped(Instruction::new(InstructionType::Proc(stmt.0.clone(),modes),regs))?;
         self.rvalue_regnames.extend(self.lvalue_regnames.drain());
         self.lvalue_regnames = self.rvalue_regnames.clone();
         Ok(())
@@ -339,7 +331,7 @@ impl<'a> CodeGen<'a> {
         for stmt in &stmts {
             let r = self.build_stmt(stmt);
             if let Err(r) = r {
-                errors.push(format!("{} at {} {}",r,stmt.3,stmt.4)); // XXX modules
+                errors.push(format!("{} at {} {}",r,stmt.2,stmt.3));
             }
         }
         if errors.len() > 0 {

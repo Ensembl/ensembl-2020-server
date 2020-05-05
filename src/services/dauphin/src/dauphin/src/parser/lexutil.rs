@@ -16,17 +16,24 @@
 
 use crate::lexer::{ Lexer, Token };
 use super::node::ParseError;
+use crate::model::{ Identifier };
 
 lazy_static! {
     static ref KEYWORDS: Vec<&'static str> = {
-        vec!["reserved","struct","enum","func","proc","expr","stmt","inline","import","becomes","lvalue","out"]
+        vec!["reserved","struct","enum","func","proc","expr","stmt","inline","import","becomes","lvalue","out","module"]
     };
 }
 
-pub fn not_reserved(s: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
-    if KEYWORDS.contains(&s) {
-        Err(ParseError::new(&format!("Reserved keyword '{}' found",s),lexer))?;
+pub fn id_not_reserved(id: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
+    if KEYWORDS.contains(&id) {
+        Err(ParseError::new(&format!("Reserved keyword '{}' found",id),lexer))?;
     }
+    Ok(())
+}
+
+pub fn not_reserved(identifier: &Identifier, lexer: &mut Lexer) -> Result<(),ParseError> {
+    id_not_reserved(&identifier.0,lexer)?;
+    id_not_reserved(&identifier.1,lexer)?;
     Ok(())
 }
 

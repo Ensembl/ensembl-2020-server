@@ -15,6 +15,7 @@
  */
 
 use crate::typeinf::SignatureConstraint;
+use crate::model::{ Identifier };
 
 #[derive(Debug,PartialEq,Clone,Copy)]
 pub enum InlineMode {
@@ -27,90 +28,82 @@ pub enum InlineMode {
 #[derive(Debug)]
 pub struct Inline {
     symbol: String,
-    module: String,
-    name: String,
+    identifier: Identifier,
     statement: bool,
     precedence: f64,
     mode: InlineMode
 }
 
 impl Inline {
-    pub fn new(symbol: &str, module: &str, name: &str, statement: bool, precedence: f64, mode: &InlineMode) -> Inline {
+    pub fn new(symbol: &str, identifier: &Identifier, statement: bool, precedence: f64, mode: &InlineMode) -> Inline {
         Inline {
             symbol: symbol.to_string(),
-            module: module.to_string(),
-            name: name.to_string(),
+            identifier: identifier.clone(),
             statement, precedence, mode: *mode
         }
     }
 
-    pub fn module(&self) -> &str { &self.module }
+    pub fn identifier(&self) -> &Identifier { &self.identifier }
     pub fn symbol(&self) -> &str { &self.symbol }
-    pub fn name(&self) -> &str { &self.name }
     pub fn precedence(&self) -> f64 { self.precedence }
     pub fn mode(&self) -> &InlineMode { &self.mode }
 }
 
 #[derive(Debug)]
 pub struct ExprMacro {
-    name: String
+    identifier: Identifier
 }
 
 impl ExprMacro {
-    pub fn new(name: &str) -> ExprMacro {
-        ExprMacro { name: name.to_string() }
+    pub fn new(identifier: &Identifier) -> ExprMacro {
+        ExprMacro { identifier: identifier.clone() }
     }
 
-    pub fn name(&self) -> &str { &self.name }
+    pub fn identifier(&self) -> &Identifier { &self.identifier }
 }
 
 #[derive(Debug)]
 pub struct StmtMacro {
-    name: String
+    identifier: Identifier
 }
 
 impl StmtMacro {
-    pub fn new(name: &str) -> StmtMacro {
-        StmtMacro { name: name.to_string() }
+    pub fn new(identifier: &Identifier) -> StmtMacro {
+        StmtMacro { identifier: identifier.clone() }
     }
 
-    pub fn name(&self) -> &str { &self.name }
+    pub fn identifier(&self) -> &Identifier { &self.identifier }
 }
 
 #[derive(Debug)]
 pub struct FuncDecl {
-    module: String,
-    name: String,
+    identifier: Identifier,
     signature: SignatureConstraint
 }
 
 impl FuncDecl {
-    pub fn new(module: &str, name: &str, signature: &SignatureConstraint) -> FuncDecl {
+    pub fn new(identifier: &Identifier, signature: &SignatureConstraint) -> FuncDecl {
         FuncDecl {
-            module: module.to_string(),
-            name: name.to_string(),
+            identifier: identifier.clone(),
             signature: signature.clone()
         }
     }
 
-    pub fn module(&self) -> &str { &self.module }
-    pub fn name(&self) -> &str { &self.name }
+    pub fn identifier(&self) -> &Identifier { &self.identifier }
     pub fn get_signature(&self) -> &SignatureConstraint { &self.signature }
 }
 
 #[derive(Debug)]
 pub struct ProcDecl {
-    module: String,
-    name: String,
+    identifier: Identifier,
     signature: SignatureConstraint
 }
 
 impl ProcDecl {
-    pub fn new(module: &str, name: &str, signature: &SignatureConstraint) -> ProcDecl {
-        ProcDecl { module: module.to_string(), name: name.to_string(), signature: signature.clone() }
+    pub fn new(identifier: &Identifier, signature: &SignatureConstraint) -> ProcDecl {
+        ProcDecl { identifier: identifier.clone(), signature: signature.clone() }
     }
 
-    pub fn module(&self) -> &str { &self.module }
-    pub fn name(&self) -> &str { &self.name }
+    pub fn identifier(&self) -> &Identifier { &self.identifier }
     pub fn get_signature(&self) -> &SignatureConstraint { &self.signature }
 }
