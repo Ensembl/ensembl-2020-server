@@ -1,15 +1,15 @@
 module "library";
 
-proc library#assign(out _A, _A);
-inline ":=" library#assign left 14;
+proc assign(out _A, _A);
+inline ":=" library::assign left 14;
 
-proc library#assert(boolean,boolean);
+proc assert(boolean,boolean);
 
-func library#eq(_A,_A) becomes boolean;
-inline "==" library#eq left 5;
+func library::eq(_A,_A) becomes boolean;
+inline "==" library::eq left 5;
 
-func library#extend(_A,_A) becomes _A;
-inline "(+)" library#extend left 14;
+func library::extend(_A,_A) becomes _A;
+inline "(+)" library::extend left 14;
 
 x := [ [1,2] (+) [3]];
-library#assert(true,true);
+assert(true,true);

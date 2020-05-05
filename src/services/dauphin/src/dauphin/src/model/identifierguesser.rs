@@ -18,24 +18,6 @@ use std::collections::{ HashMap, HashSet };
 use super::{ Identifier, IdentifierPattern };
 use crate::lexer::Lexer;
 
-#[derive(Debug)]
-pub enum IdentifierGuessError {
-    MultipleMatches(String,HashSet<String>),
-    NoMatch(String)
-}
-
-impl std::fmt::Display for IdentifierGuessError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            IdentifierGuessError::MultipleMatches(id,matches) =>
-                write!(f,"Multiple matches for unqualified identifier {} {}",id,matches.iter().cloned().collect::<Vec<_>>().join(", ")),
-            IdentifierGuessError::NoMatch(id) => {
-                write!(f,"No matches for unqualified identifier {}",id)
-            }
-        }
-    }
-}
-
 pub struct IdentifierGuesser {
     uses: HashMap<String,HashSet<String>>
 }
@@ -56,7 +38,7 @@ impl IdentifierGuesser {
         Identifier(module,pattern.1.clone(),pattern.0.is_none())
     }
 
-    pub fn guess(&mut self, lexer: &Lexer, pattern: &IdentifierPattern) -> Result<Identifier,IdentifierGuessError> {
+    pub fn guess(&mut self, lexer: &Lexer, pattern: &IdentifierPattern) -> Result<Identifier,String> {
         if let Some(module) = &pattern.0 {
             return Ok(Identifier(module.clone(),pattern.1.clone(),false));
         }
@@ -67,7 +49,7 @@ impl IdentifierGuesser {
             } else if modules.contains(lexer.get_module()) {
                 return Ok(Identifier(lexer.get_module().to_string(),pattern.1.clone(),true));
             } else {
-                return Err(IdentifierGuessError::MultipleMatches(pattern.1.clone(),modules.clone()));
+                return Err(format!("Multiple matches for unqualified identifier {} {}",pattern.1,modules.iter().cloned().collect::<Vec<_>>().join(", ")));
             }
         } else {
             return Ok(Identifier(lexer.get_module().to_string(),pattern.1.clone(),true));

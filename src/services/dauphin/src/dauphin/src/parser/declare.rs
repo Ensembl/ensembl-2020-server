@@ -34,7 +34,7 @@ fn run_module(name: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
 
 fn run_inline(symbol: &str, pattern: &IdentifierPattern, mode: &InlineMode, prio: f64, lexer: &mut Lexer, defstore: &mut DefStore, guesser: &mut IdentifierGuesser) -> Result<(),ParseError> {
     let identifier = guesser.add(lexer,pattern);
-    let stmt_like = defstore.stmt_like(pattern,lexer)?;
+    let stmt_like = defstore.stmt_like(&identifier,lexer)?;
     lexer.add_inline(symbol,mode == &InlineMode::Prefix).map_err(|s| {
         ParseError::new(&s,lexer)
     })?;

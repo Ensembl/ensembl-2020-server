@@ -84,10 +84,10 @@ fn parse_ctor_full(lexer: &mut Lexer, defstore: &DefStore, guesser: &mut Identif
 }
 
 fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, guesser: &mut IdentifierGuesser, identifier: &Identifier, nested: bool) -> Result<Expression,ParseError> {
-    if defstore.stmt_like(&identifier.to_pattern(),lexer).unwrap_or(false) {
+    if defstore.stmt_like(&identifier,lexer).unwrap_or(false) {
         Err(ParseError::new("Unexpected statement in expression",lexer))?;
     }
-    if !defstore.stmt_like(&identifier.to_pattern(),lexer).unwrap_or(true) { /* expr-like */
+    if !defstore.stmt_like(&identifier,lexer).unwrap_or(true) { /* expr-like */
         get_other(lexer, "(")?;
         Ok(Expression::Operator(identifier.clone(),parse_exprlist(lexer,defstore,guesser,')',nested)?))
     } else {
@@ -193,7 +193,7 @@ fn extend_expr(lexer: &mut Lexer, defstore: &DefStore, guesser: &mut IdentifierG
             return Ok((left,false));
         }
     }
-    if defstore.stmt_like(&inline.identifier().to_pattern(),lexer)? {
+    if defstore.stmt_like(&inline.identifier(),lexer)? {
         return Ok((left,false));
     }
     Ok(match *inline.mode() {
@@ -245,7 +245,7 @@ pub(in super) fn parse_exprlist(lexer: &mut Lexer, defstore: &DefStore, guesser:
 
 pub(super) fn parse_full_identifier(lexer: &mut Lexer, mode: Option<bool>) -> Result<IdentifierPattern,ParseError> {
     let first = get_identifier(lexer)?;
-    if let Token::Other('#') = lexer.peek(mode,1)[0] {
+    if let Token::FourDots = lexer.peek(mode,1)[0] {
         lexer.get();
         let second = get_identifier(lexer)?;
         Ok(IdentifierPattern(Some(first),second))
@@ -258,7 +258,7 @@ pub(super) fn peek_full_identifier(lexer: &mut Lexer, mode: Option<bool>) -> Opt
     let peeks = lexer.peek(mode,3);
     if let Token::Identifier(first) = &peeks[0] {
         let first = first.to_string();
-        if let Token::Other('#') = &peeks[1] {
+        if let Token::FourDots = &peeks[1] {
             if let Token::Identifier(second) = &peeks[2] {
                 let second = second.to_string();
                 return Some(IdentifierPattern(Some(first),second));

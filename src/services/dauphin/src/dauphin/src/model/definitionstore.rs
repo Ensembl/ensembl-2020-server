@@ -20,7 +20,7 @@ use super::definition::{
     ExprMacro, StmtMacro, FuncDecl, ProcDecl, Inline, InlineMode
 };
 use super::structenum::{ StructDef, EnumDef };
-use super::identifierstore::{ IdentifierStore, IdentifierStoreError, IdentifierPattern, Identifier };
+use super::identifierstore::{ IdentifierStore, Identifier };
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
 
@@ -101,7 +101,7 @@ impl DefStore {
         Ok(())
     }
 
-    pub fn get_struct_id(&self, identifier: &Identifier) -> Result<&StructDef,IdentifierStoreError> {
+    pub fn get_struct_id(&self, identifier: &Identifier) -> Result<&StructDef,String> {
         self.structs.get_id(identifier)
     }
 
@@ -112,7 +112,7 @@ impl DefStore {
         Ok(())
     }
 
-    pub fn get_enum_id(&self, identifier: &Identifier) -> Result<&EnumDef,IdentifierStoreError> {
+    pub fn get_enum_id(&self, identifier: &Identifier) -> Result<&EnumDef,String> {
         self.enums.get_id(identifier)
     }
 
@@ -137,21 +137,21 @@ impl DefStore {
         )
     }
 
-    pub fn stmt_like(&self, pattern: &IdentifierPattern, lexer: &Lexer) -> Result<bool,ParseError> {
-        if self.stmts.contains_key(pattern) || self.procs.contains_key(pattern) {
+    pub fn stmt_like(&self, identifier: &Identifier, lexer: &Lexer) -> Result<bool,ParseError> {
+        if self.stmts.contains_key(identifier) || self.procs.contains_key(identifier) {
             Ok(true)
-        } else if self.exprs.contains_key(pattern) || self.funcs.contains_key(pattern) {
+        } else if self.exprs.contains_key(identifier) || self.funcs.contains_key(identifier) {
             Ok(false)
         } else {
-            Err(ParseError::new(&format!("Missing or ambiguous symbol: '{}'",pattern),lexer))
+            Err(ParseError::new(&format!("Missing or ambiguous symbol: '{}'",identifier),lexer))
         }
     }
 
-    pub fn get_proc_id(&self, identifier: &Identifier) -> Result<&ProcDecl,IdentifierStoreError> {
+    pub fn get_proc_id(&self, identifier: &Identifier) -> Result<&ProcDecl,String> {
         self.procs.get_id(identifier)
     }
 
-    pub fn get_func_id(&self, identifier: &Identifier) -> Result<&FuncDecl,IdentifierStoreError> {
+    pub fn get_func_id(&self, identifier: &Identifier) -> Result<&FuncDecl,String> {
         self.funcs.get_id(identifier)
     }
 

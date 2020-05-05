@@ -149,6 +149,9 @@ impl LexerGetting {
                 self.set_token(Token::Operator(op));
             } else if c.is_whitespace() {
                 self.advance_char(|c,_| c.is_whitespace(),false,stream);
+            } else if c == ':' && stream.peek(2) == "::" {
+                stream.advance(2);
+                self.set_token(Token::FourDots);
             } else if c == '/' && stream.peek(2) == "/*" {
                 self.consume_comment(stream);
             } else if c == '/' && stream.peek(2) == "//" {
@@ -165,5 +168,4 @@ impl LexerGetting {
             self.set_token(Token::EndOfFile);
         }
     }
-
 }

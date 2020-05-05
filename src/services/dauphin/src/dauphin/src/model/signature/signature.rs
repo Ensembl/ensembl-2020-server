@@ -147,7 +147,7 @@ mod test {
         let _context = generate_code(&defstore,stmts,true).expect("codegen");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test#etest3)")).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test::etest3)")).expect("b");
         assert_eq!(load_cmp("offset-smoke.out"),format_pvec(&regs));
     }
 
@@ -159,7 +159,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"test#stest")).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"test::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
@@ -188,7 +188,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let _context = generate_code(&defstore,stmts,true).expect("codegen");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test#etest3)")).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test::etest3)")).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");
         let cr2 = ComplexRegisters::deserialize(&named,true,true).expect("cbor d");

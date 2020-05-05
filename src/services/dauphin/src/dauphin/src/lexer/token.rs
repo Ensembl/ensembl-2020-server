@@ -23,6 +23,7 @@ pub enum Token {
     Error(String),
     LiteralString(String),
     LiteralBytes(Vec<u8>),
+    FourDots,
     EndOfFile,
     EndOfLex
 }

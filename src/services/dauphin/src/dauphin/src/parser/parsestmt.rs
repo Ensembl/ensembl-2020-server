@@ -26,7 +26,8 @@ use super::parseexpr::{ parse_expr, parse_exprlist, parse_full_identifier, peek_
 
 fn parse_regular(lexer: &mut Lexer, defstore: &DefStore, guesser: &mut IdentifierGuesser) -> Result<ParserStatement,ParseError> {
     if let Some(pattern) = peek_full_identifier(lexer,None) {
-        if defstore.stmt_like(&pattern,lexer).unwrap_or(false) {
+        let identifier = guesser.guess(lexer,&pattern).map_err(|x| ParseError::new(&x.to_string(),lexer))?;
+        if defstore.stmt_like(&identifier,lexer).unwrap_or(false) {
             return parse_funcstmt(lexer,defstore,guesser);
         }
     }
@@ -72,7 +73,7 @@ fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore, guesser: &mut Identi
     let op = get_operator(lexer,false)?;
     let right = parse_expr(lexer,defstore,guesser,false)?;
     let inline = defstore.get_inline_binary(&op,lexer)?;
-    if !defstore.stmt_like(&inline.identifier().to_pattern(),lexer)? {
+    if !defstore.stmt_like(&inline.identifier(),lexer)? {
         Err(ParseError::new("Got inline expr, expected inline stmt",lexer))?;
     }
     let (file,line,_) = lexer.position();

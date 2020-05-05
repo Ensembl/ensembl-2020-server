@@ -18,7 +18,6 @@ use super::filelexer::FileLexer;
 use super::fileresolver::FileResolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
-use crate::model::{ IdentifierPattern, Identifier, IdentifierStore };
 
 pub struct Lexer {
     resolver: FileResolver,
