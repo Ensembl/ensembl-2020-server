@@ -173,18 +173,18 @@ impl InstructionType {
             InstructionType::EValue(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
             InstructionType::ETest(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
             InstructionType::Operator(name) => {
-                Some(vec![name.to_string()])
+                Some(vec![name.1.to_string()]) // XXX module
             },
             InstructionType::Proc(name,modes) =>  {
                 let mut more = vec![];
-                more.push(name.to_string());
+                more.push(name.1.to_string()); // XXX module
                 more.extend(modes.iter().map(|x| x.to_string()).collect::<Vec<_>>());
                 Some(more)
             },            
             InstructionType::Call(name,impure,types,_) => {
                 let mut name = name.to_string();
                 if *impure { name.push_str("/i"); }
-                let mut more = vec![name.to_string()];
+                let mut more = vec![name.to_string()]; // XXX module
                 more.extend(types.iter().map(|x| x.to_string()).collect::<Vec<_>>());
                 Some(more)
             },

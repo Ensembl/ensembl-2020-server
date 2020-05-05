@@ -28,7 +28,7 @@ pub struct FileLexer {
 
 impl FileLexer {
     pub fn new(stream: Box<dyn CharSource>) -> FileLexer {
-        let module = stream.name().to_string();
+        let module = stream.module().to_string();
         FileLexer {
             stream: LocatedCharSource::new(stream),
             module,

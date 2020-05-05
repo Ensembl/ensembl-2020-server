@@ -16,6 +16,7 @@
 
 pub trait CharSource {
     fn name(&self) -> &str;
+    fn module(&self) -> &str;
     fn next(&mut self) -> Option<char>;
     fn peek(&mut self, num: usize) -> String;
     fn advance(&mut self, num: usize) -> String;
@@ -25,18 +26,20 @@ pub trait CharSource {
 
 pub struct StringCharSource {
     name: String,
+    module: String,
     data: Vec<char>,
     index: usize
 }
 
 impl StringCharSource {
-    pub fn new(name: &str, data: String) -> StringCharSource {
-        StringCharSource { name: name.to_string(), data: data.chars().collect(), index: 0 }
+    pub fn new(name: &str, module: &str, data: String) -> StringCharSource {
+        StringCharSource { name: name.to_string(), module: module.to_string(), data: data.chars().collect(), index: 0 }
     }
 }
 
 impl CharSource for StringCharSource {
     fn name(&self) -> &str { &self.name }
+    fn module(&self) -> &str { &self.module }
 
     fn peek(&mut self, num: usize) -> String {
         let start = self.index;
@@ -77,6 +80,7 @@ pub struct LocatedCharSource {
 
 impl CharSource for LocatedCharSource {
     fn name(&self) -> &str { self.cs.name() }
+    fn module(&self) -> &str { self.cs.module() }
 
     fn peek(&mut self, num: usize) -> String {
         self.cs.peek(num)
@@ -155,7 +159,7 @@ mod test {
     fn start_test(start: usize) -> u32 {
                 /*   012345 6 7890123 */
         let text = "\nABCDE\n\nFGHIJ\n";
-        let c = StringCharSource::new("",text.to_string());
+        let c = StringCharSource::new("","",text.to_string());
         let mut lcs = LocatedCharSource::new(Box::new(c));
         lcs.advance(start);
         lcs.line_start_dist()
@@ -164,7 +168,7 @@ mod test {
     fn position_test(start: usize,retreat: usize) -> (u32,u32) {
                 /*   012345 6 7890123 */
         let text = "\nABCDE\n\nFGHIJ\n";
-        let c = StringCharSource::new("",text.to_string());
+        let c = StringCharSource::new("","",text.to_string());
         let mut lcs = LocatedCharSource::new(Box::new(c));
         lcs.advance(start);
         lcs.retreat(retreat);

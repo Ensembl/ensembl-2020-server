@@ -24,6 +24,20 @@ pub struct FileResolver {
 
 }
 
+// TODO use in proper fs-based compiler
+fn base_path(filename: &str) -> String {
+    if let Some(last) = filename.split("/").last() {
+        if last.ends_with(".dp") {
+            last[..last.len()-3].to_string()
+        } else {
+            last.to_string()
+        }
+    } else {
+        "".to_string()
+    }
+
+}
+
 impl FileResolver {
     pub fn new() -> FileResolver {
         FileResolver {}
@@ -34,7 +48,7 @@ impl FileResolver {
         let paths : Vec<&str> = path.split("/").collect();
         let name = format!("test:{}",path);
         match load_testdata(&paths) {
-            Ok(data) => Ok(Box::new(StringCharSource::new(&name,data))),
+            Ok(data) => Ok(Box::new(StringCharSource::new(&name,"test",data))),
             Err(err) => Err(format!("Loading \"{}\": {}",path,err))
         }
     }
@@ -46,11 +60,11 @@ impl FileResolver {
 
     pub fn resolve(&self, path: &str) -> Result<Box<dyn CharSource>,String> {
         if path.starts_with("data:") {
-            Ok(Box::new(StringCharSource::new(path,path[5..].to_string())))
+            Ok(Box::new(StringCharSource::new(path,"data",path[5..].to_string())))
         } else if path.starts_with("test:") {
             self.test_path(&path[5..])
         } else if path.starts_with("preamble:") {
-            Ok(Box::new(StringCharSource::new(path,PREAMBLE.to_string())))
+            Ok(Box::new(StringCharSource::new(path,"preamble",PREAMBLE.to_string())))
         } else {
             Err("protocol not supported".to_string())
         }

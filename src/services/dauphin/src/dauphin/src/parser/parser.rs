@@ -168,12 +168,12 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/id-clash.dp").expect("cannot load file");
         let p = Parser::new(lexer);
-        let txt = "\'assign\' already defined at test:parser/id-clash.dp 1:23 at line 2 column 29 in test:parser/id-clash.dp";
+        let txt = "\'test::assign\' already defined at test:parser/id-clash.dp 1:23 at line 2 column 29 in test:parser/id-clash.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 
     fn make_identifier(name: &str) -> Identifier {
-        Identifier("".to_string(),name.to_string(),true)
+        Identifier("test".to_string(),name.to_string(),true)
     }
 
     fn print_struct(defstore: &DefStore, name: &str) -> String {
@@ -186,11 +186,11 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/struct-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
-        let (_stmts,defstore) = p.parse().expect("error");
-        assert_eq!("struct A { 0: number, 1: vec(number) }",print_struct(&defstore,"A"));
-        assert_eq!("struct B { X: number, Y: vec(A) }",print_struct(&defstore,"B"));
-        assert_eq!("struct C {  }",print_struct(&defstore,"C"));
-        assert_eq!("[assign(x,A {0: [1,2,3]}), assign(y,B {X: 23,Y: [x,x]})]",print_struct(&defstore,"D"));
+        let (stmts,defstore) = p.parse().expect("error");
+        assert_eq!("struct test::A { 0: number, 1: vec(number) }",print_struct(&defstore,"A"));
+        assert_eq!("struct test::B { X: number, Y: vec(test::A) }",print_struct(&defstore,"B"));
+        assert_eq!("struct test::C {  }",print_struct(&defstore,"C"));
+        assert_eq!("[assign(x,A {0: [1,2,3]}), assign(y,B {X: 23,Y: [x,x]})]",&format!("{:?}",stmts));
     }
 
     fn print_enum(defstore: &DefStore, name: &str) -> String {
@@ -204,9 +204,9 @@ mod test {
         lexer.import("test:parser/enum-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        assert_eq!("enum A { M: number, N: vec(number) }",print_enum(&defstore,"A"));
-        assert_eq!("enum B { X: number, Y: vec(A) }",print_enum(&defstore,"B"));
-        assert_eq!("enum C {  }",print_enum(&defstore,"C"));
+        assert_eq!("enum test::A { M: number, N: vec(number) }",print_enum(&defstore,"A"));
+        assert_eq!("enum test::B { X: number, Y: vec(test::A) }",print_enum(&defstore,"B"));
+        assert_eq!("enum test::C {  }",print_enum(&defstore,"C"));
         assert_eq!("[assign(x,B:Y [A:M 42,B:N [1,2,3]])]",&format!("{:?}",stmts));
     }
 }
