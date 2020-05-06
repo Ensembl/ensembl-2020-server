@@ -14,14 +14,17 @@
  *  limitations under the License.
  */
 
-mod charsource;
-mod filelexer;
-mod lexer;
-mod token;
-mod inlinecheck;
-mod inlinetokens;
-mod getting;
+mod core;
+mod file;
+mod preamble;
+mod common;
+mod search;
+#[cfg(test)]
+mod test;
 
-pub use self::token::Token;
-pub use self::lexer::Lexer;
-pub use self::charsource::{ CharSource, StringCharSource };
+pub use self::core::Resolver;
+
+#[cfg(test)]
+pub use self::test::test_resolver;
+
+pub use self::common::common_resolver;

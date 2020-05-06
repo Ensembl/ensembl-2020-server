@@ -201,14 +201,15 @@ pub(super) fn library_assign_commands(set: &mut CommandSet) -> Result<(),String>
 
 #[cfg(test)]
 mod test {
-    use crate::lexer::{ FileResolver, Lexer };
+    use crate::lexer::Lexer;
+    use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::{ generate_code, generate };
     use crate::interp::mini_interp;
 
     #[test]
     fn extend_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:library/extend.dp").expect("cannot load file");
         let p = Parser::new(lexer);

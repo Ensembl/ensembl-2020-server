@@ -350,7 +350,8 @@ pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),Stri
 #[cfg(test)]
 mod test {
     use super::super::call;
-    use crate::lexer::{ FileResolver, Lexer };
+    use crate::lexer::Lexer;
+    use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
     use crate::test::files::load_testdata;
@@ -385,7 +386,7 @@ mod test {
 
     #[test]
     fn simplify_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/simplify-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -400,7 +401,7 @@ mod test {
 
     #[test]
     fn simplify_enum_nest() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/simplify-enum-nest.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -412,7 +413,7 @@ mod test {
 
     #[test]
     fn simplify_enum_lvalue() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/enum-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -438,7 +439,7 @@ mod test {
 
     #[test]
     fn simplify_struct_lvalue() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/struct-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -464,7 +465,7 @@ mod test {
 
     #[test]
     fn simplify_both_lvalue() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/both-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);

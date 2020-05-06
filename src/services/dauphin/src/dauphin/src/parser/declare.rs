@@ -24,7 +24,7 @@ use crate::lexer::Lexer;
 use crate::typeinf::{ SignatureConstraint, MemberType };
 
 fn run_import(path: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
-    lexer.import(path).map_err(|s| ParseError::new(&format!("import failed: {}",s),lexer))
+    lexer.import(path).map_err(|s| ParseError::new(&format!("import of {} failed: {}",path,s),lexer))
 }
 
 fn run_module(name: &str, lexer: &mut Lexer) -> Result<(),ParseError> {

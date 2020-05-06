@@ -94,9 +94,10 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::lexer::FileResolver;
+    use crate::resolver::{ common_resolver, test_resolver };
     use crate::model::Identifier;
-    use crate::test::files::load_testdata;
+    use crate::test::files::{ load_testdata, find_testdata };
+    use std::env::set_current_dir;
 
     fn last_statement(p: &mut Parser) -> Result<ParserStatement,ParseError> {
         let mut prev = Err(ParseError::new("unexpected EOF",&mut p.lexer));
@@ -111,7 +112,7 @@ mod test {
 
     #[test]
     fn statement() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("data: import \"x\";").ok();
         let mut p = Parser::new(lexer);
@@ -121,7 +122,7 @@ mod test {
 
     #[test]
     fn import_statement() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("data: import \"data: $;\";").ok();
         let p = Parser::new(lexer);
@@ -130,18 +131,32 @@ mod test {
     }
 
     #[test]
-    fn test_preprocess() {
-        let resolver = FileResolver::new();
+    fn import_search_statement() {
+        set_current_dir(find_testdata()).expect("A");
+        let resolver = common_resolver(&vec![
+            "file:parser/*.dp".to_string(),
+            "file:parser/import-subdir/*.dp".to_string()
+        ]).expect("A");
         let mut lexer = Lexer::new(resolver);
-        lexer.import("test:parser/import-smoke.dp").expect("cannot load file");
+        lexer.import("search:import-search").expect("cannot load file");
         let p = Parser::new(lexer);
-        let txt = "Reserved keyword 'reserved' found at line 1 column 1 in test:parser/import-smoke2.dp";
+        let txt = "Reserved keyword 'reserved' found at line 1 column 1 in ../import-smoke4.dp";
+        assert_eq!(txt,p.parse().err().unwrap()[0].message());
+    }
+
+    #[test]
+    fn test_preprocess() {
+        let resolver = test_resolver();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("file:parser/import-smoke.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let txt = "Reserved keyword 'reserved' found at line 1 column 1 in ../import-smoke4.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 
     #[test]
     fn test_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/parser-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -154,7 +169,7 @@ mod test {
 
     #[test]
     fn test_no_nested_dollar() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/parser-nonest.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -164,7 +179,7 @@ mod test {
 
     #[test]
     fn test_id_clash() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/id-clash.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -182,7 +197,7 @@ mod test {
 
     #[test]
     fn test_struct() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/struct-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -199,7 +214,7 @@ mod test {
 
     #[test]
     fn test_enum() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/enum-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);

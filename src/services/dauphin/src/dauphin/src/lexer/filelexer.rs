@@ -18,8 +18,10 @@ use super::charsource::{ CharSource, LocatedCharSource };
 use super::inlinetokens::InlineTokens;
 use super::getting::LexerGetting;
 use super::token::Token;
+use crate::resolver::Resolver;
 
 pub struct FileLexer {
+    resolver: Resolver,
     stream: LocatedCharSource,
     module: String,
     line: u32,
@@ -27,11 +29,11 @@ pub struct FileLexer {
 }
 
 impl FileLexer {
-    pub fn new(stream: Box<dyn CharSource>) -> FileLexer {
+    pub fn new(resolver: Resolver, stream: Box<dyn CharSource>) -> FileLexer {
         let module = stream.module().to_string();
         FileLexer {
             stream: LocatedCharSource::new(stream),
-            module,
+            module, resolver,
             line: 0,
             col: 0
         }
@@ -39,6 +41,7 @@ impl FileLexer {
 
     pub fn get_module(&self) -> &str { &self.module }
     pub fn set_module(&mut self, module: &str) { self.module = module.to_string(); }
+    pub fn get_resolver(&self) -> &Resolver { &self.resolver }
 
     pub fn position(&self) -> (&str,u32,u32) { 
         (self.stream.name(),self.line,self.col)
@@ -81,7 +84,7 @@ mod test {
     use crate::test::files::load_testdata;
     use std::str::FromStr;
     use std::rc::Rc;
-    use super::super::fileresolver::FileResolver;
+    use crate::resolver::test_resolver;
 
     fn add_token(out: &mut String, token: &(Token,String,u32,u32)) {
         out.push_str(&format!("{:?} {} {},{}\n",token.0,token.1,token.2,token.3));
@@ -90,9 +93,10 @@ mod test {
     fn try_lex(path_in: &str) -> Vec<(Token,String,u32,u32)> {
         let mut path = String::from_str("test:").ok().unwrap();
         path.push_str(path_in);
-        let resolver = Rc::new(FileResolver::new());
+        let resolver = Rc::new(test_resolver());
         let source = resolver.resolve(&path);
-        let mut lexer = FileLexer::new(source.ok().unwrap());
+        let (stream,resolver) = source.ok().unwrap();
+        let mut lexer = FileLexer::new(resolver,stream);
         let mut ops = InlineTokens::new();
         ops.add(":=",false).ok();
         ops.add("==",false).ok();

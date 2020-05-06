@@ -20,6 +20,7 @@ mod interp;
 mod lexer;
 mod model;
 mod parser;
+mod resolver;
 mod typeinf;
 
 mod test {
@@ -35,14 +36,15 @@ extern crate crc;
 
 /* This to remove RLS unused warns */
 
-use crate::lexer::{ FileResolver, Lexer };
+use crate::lexer::Lexer;
+use crate::resolver::common_resolver;
 use crate::parser::Parser;
 use crate::generate::generate_and_optimise;
 use crate::test::files::load_testdata;
 use crate::interp::mini_interp;
 
 fn main() {
-    let resolver = FileResolver::new();
+    let resolver = common_resolver(&vec![]).expect("setting up path resolver");
     let mut lexer = Lexer::new(resolver);
     lexer.import("test:parser/parser-smoke.dp").expect("cannot load file");
     let p = Parser::new(lexer);

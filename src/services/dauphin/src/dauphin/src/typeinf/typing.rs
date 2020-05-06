@@ -116,13 +116,14 @@ impl Typing {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::lexer::{ FileResolver, Lexer };
+    use crate::lexer::Lexer;
+    use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::{ generate_code };
 
     #[test]
     fn typing_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/typepass-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);

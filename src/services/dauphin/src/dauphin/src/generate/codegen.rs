@@ -354,12 +354,13 @@ pub fn generate_code<'a>(defstore: &'a DefStore, stmts: Vec<Statement>, include_
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::lexer::{ FileResolver, Lexer };
+    use crate::lexer::Lexer;
+    use crate::resolver::test_resolver;
     use crate::parser::Parser;
     use crate::test::files::load_testdata;
 
     fn run_pass(filename: &str) -> Result<(),Vec<String>> {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import(&format!("test:codegen/{}",filename)).expect("cannot load file");
         let p = Parser::new(lexer);
@@ -371,7 +372,7 @@ mod test {
 
     #[test]
     fn codegen_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/generate-smoke2.dp").expect("cannot load file");
         let p = Parser::new(lexer);

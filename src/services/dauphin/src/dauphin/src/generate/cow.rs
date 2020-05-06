@@ -241,7 +241,8 @@ mod test {
     use super::*;
     use super::super::call;
     use super::super::simplify::simplify;
-    use crate::lexer::{ FileResolver, Lexer };
+    use crate::lexer::Lexer;
+    use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
     use crate::interp::mini_interp;
@@ -253,7 +254,7 @@ mod test {
 
     #[test]
     fn cow_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -279,7 +280,7 @@ mod test {
 
     #[test]
     fn reuse_consts_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);

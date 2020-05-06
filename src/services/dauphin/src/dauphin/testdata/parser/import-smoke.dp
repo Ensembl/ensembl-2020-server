@@ -1,1 +1,1 @@
-import "test:parser/import-smoke2.dp";
+import "file:import-subdir/import-smoke2.dp";

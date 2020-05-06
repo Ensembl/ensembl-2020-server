@@ -50,14 +50,15 @@ impl InterpContext {
 
 #[cfg(test)]
 mod test {
-    use crate::lexer::{ FileResolver, Lexer };
+    use crate::lexer::Lexer;
+    use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::{ generate_code, generate };
     use crate::interp::mini_interp;
 
     #[test]
     fn line_number_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:library/line-number.dp").expect("cannot load file");
         let p = Parser::new(lexer);
@@ -70,7 +71,7 @@ mod test {
 
     #[test]
     fn no_line_number_smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:library/line-number.dp").expect("cannot load file");
         let p = Parser::new(lexer);

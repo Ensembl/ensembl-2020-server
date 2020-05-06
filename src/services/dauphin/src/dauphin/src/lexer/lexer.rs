@@ -15,18 +15,18 @@
  */
 
 use super::filelexer::FileLexer;
-use super::fileresolver::FileResolver;
+use crate::resolver::Resolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
 
 pub struct Lexer {
-    resolver: FileResolver,
+    resolver: Resolver,
     files: Vec<FileLexer>,
     inlines: InlineTokens
 }
 
 impl Lexer {
-    pub fn new(resolver: FileResolver) -> Lexer {
+    pub fn new(resolver: Resolver) -> Lexer {
         Lexer {
             resolver,
             inlines: InlineTokens::new(),
@@ -49,8 +49,9 @@ impl Lexer {
     }
 
     pub fn import(&mut self, path: &str) -> Result<(),String> {
-        self.resolver.resolve(path).map(|stream| {
-            self.files.push(FileLexer::new(stream)); ()
+        let resolver = self.files.iter().last().map(|f| f.get_resolver()).unwrap_or_else(|| &self.resolver);
+        resolver.resolve(path).map(|stream| {
+            self.files.push(FileLexer::new(stream.1,stream.0)); ()
         })
     }
 
@@ -109,10 +110,11 @@ impl Lexer {
 mod test {
     use super::*;
     use crate::test::files::load_testdata;
+    use crate::resolver::test_resolver;
 
     #[test]
     fn smoke() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:lexer/smoke2.in").expect("import failed");
         let mut out = String::new();
@@ -135,7 +137,7 @@ mod test {
 
     #[test]
     fn missing() {
-        let resolver = FileResolver::new();
+        let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         assert_eq!(lexer.import("test:missing").err().unwrap(),"Loading \"missing\": No such file or directory (os error 2)","Error message missing");
     }
