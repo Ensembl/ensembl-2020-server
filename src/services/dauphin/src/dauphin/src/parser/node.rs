@@ -128,6 +128,7 @@ impl fmt::Debug for Statement {
 #[derive(Debug,PartialEq)]
 pub enum ParserStatement {
     Import(String),
+    Use(String),
     Module(String),
     Inline(String,IdentifierPattern,InlineMode,f64),
     ExprMacro(IdentifierPattern),

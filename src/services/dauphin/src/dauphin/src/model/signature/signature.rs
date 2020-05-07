@@ -109,7 +109,7 @@ mod test {
     use crate::generate::assign_regs;
     use crate::interp::mini_interp;
     use crate::test::cbor::cbor_cmp;
-    use crate::model::{ DefStore, IdentifierGuesser };
+    use crate::model::{ DefStore };
     use crate::typeinf::{ MemberType, MemberMode };
 
     // XXX move to common test utils
@@ -117,8 +117,7 @@ mod test {
         let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
         lexer.import(&format!("data:{}",name)).expect("cannot load file");
-        let mut guesser = IdentifierGuesser::new();
-        parse_type(&mut lexer,defstore,&mut guesser).expect("bad type")
+        parse_type(&mut lexer,defstore).expect("bad type")
     }
 
     fn format_pvec(ass: &ComplexRegisters) -> String {

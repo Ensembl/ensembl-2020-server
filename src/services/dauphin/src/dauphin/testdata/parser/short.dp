@@ -1,0 +1,10 @@
+proc library1::assert(boolean,boolean);
+proc library2::assert(boolean,boolean);
+
+use "library2";
+
+library1::assert(true,true);
+library2::assert(true,true);
+assert(true,true);
+
+import "test:parser/short2.dp";

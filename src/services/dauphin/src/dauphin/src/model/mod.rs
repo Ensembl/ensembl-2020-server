@@ -17,7 +17,6 @@
 mod cborutil;
 mod definition;
 mod definitionstore;
-mod identifierguesser;
 mod identifierstore;
 mod register;
 mod structenum;
@@ -30,7 +29,6 @@ mod signature {
 
 pub use self::definition::{ Inline, InlineMode, ExprMacro, StmtMacro, ProcDecl, FuncDecl };
 pub use self::definitionstore::DefStore;
-pub use self::identifierguesser::IdentifierGuesser;
 pub use self::identifierstore::{ IdentifierPattern, Identifier, IdentifierStore };
 pub use self::signature::complexpath::ComplexPath;
 pub use self::signature::signature::RegisterSignature;

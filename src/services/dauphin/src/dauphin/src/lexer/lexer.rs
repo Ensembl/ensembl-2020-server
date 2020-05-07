@@ -14,12 +14,14 @@
  *  limitations under the License.
  */
 
+use std::collections::HashSet;
 use super::filelexer::FileLexer;
 use crate::resolver::Resolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
 
 pub struct Lexer {
+    empty_set: HashSet<String>,
     resolver: Resolver,
     files: Vec<FileLexer>,
     inlines: InlineTokens
@@ -28,6 +30,7 @@ pub struct Lexer {
 impl Lexer {
     pub fn new(resolver: Resolver) -> Lexer {
         Lexer {
+            empty_set: HashSet::new(),
             resolver,
             inlines: InlineTokens::new(),
             files: Vec::new()
@@ -41,6 +44,20 @@ impl Lexer {
     pub fn set_module(&mut self, module: &str) { 
         if let Some(last) = self.files.last_mut() {
             last.set_module(module);
+        }
+    }
+
+    pub fn add_short(&mut self, name: &str) {
+        if let Some(last) = self.files.last_mut() {
+            last.add_short(name);
+        }
+    }
+
+    pub fn get_shorts(&self) -> &HashSet<String> {
+        if let Some(last) = self.files.last() {
+            last.get_shorts()
+        } else {
+            &self.empty_set
         }
     }
 

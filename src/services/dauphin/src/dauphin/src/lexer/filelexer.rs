@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+use std::collections::HashSet;
 use super::charsource::{ CharSource, LocatedCharSource };
 use super::inlinetokens::InlineTokens;
 use super::getting::LexerGetting;
@@ -23,6 +24,7 @@ use crate::resolver::Resolver;
 pub struct FileLexer {
     resolver: Resolver,
     stream: LocatedCharSource,
+    shorts: HashSet<String>,
     module: String,
     line: u32,
     col: u32
@@ -31,17 +33,23 @@ pub struct FileLexer {
 impl FileLexer {
     pub fn new(resolver: Resolver, stream: Box<dyn CharSource>) -> FileLexer {
         let module = stream.module().to_string();
-        FileLexer {
+        let mut out = FileLexer {
             stream: LocatedCharSource::new(stream),
+            shorts: HashSet::new(),
             module, resolver,
             line: 0,
             col: 0
-        }
+        };
+        out.shorts.insert("preamble".to_string());
+        out
     }
 
     pub fn get_module(&self) -> &str { &self.module }
     pub fn set_module(&mut self, module: &str) { self.module = module.to_string(); }
     pub fn get_resolver(&self) -> &Resolver { &self.resolver }
+
+    pub fn add_short(&mut self, name: &str) { self.shorts.insert(name.to_string()); }
+    pub fn get_shorts(&self) -> &HashSet<String> { &self.shorts }
 
     pub fn position(&self) -> (&str,u32,u32) { 
         (self.stream.name(),self.line,self.col)

@@ -15,7 +15,7 @@
  */
 
 use crate::lexer::{ Lexer, Token };
-use crate::model::{ DefStore, IdentifierGuesser };
+use crate::model::DefStore;
 
 use super::node::{ Statement, ParserStatement, ParseError };
 use super::declare::declare;
@@ -24,7 +24,6 @@ use super::parsestmt::{ parse_statement };
 pub struct Parser {
     lexer: Lexer,
     defstore: DefStore,
-    guesser: IdentifierGuesser,
     stmts: Vec<Statement>,
     errors: Vec<ParseError>
 }
@@ -34,7 +33,6 @@ impl Parser {
         let mut p = Parser {
             lexer,
             defstore: DefStore::new(),
-            guesser: IdentifierGuesser::new(),
             stmts: Vec::new(),
             errors: Vec::new()
         };
@@ -54,7 +52,7 @@ impl Parser {
 
     fn recover_parse_statement(&mut self) -> Result<ParserStatement,ParseError> {
         loop {
-            let s = parse_statement(&mut self.lexer,&self.defstore,&mut self.guesser);
+            let s = parse_statement(&mut self.lexer,&self.defstore);
             if s.is_err() {
                 self.ffwd_error();
                 return Err(s.err().unwrap());
@@ -66,7 +64,7 @@ impl Parser {
     }
 
     fn run_declare(&mut self, stmt: ParserStatement) -> Result<Option<ParserStatement>,ParseError> {
-        declare(&stmt,&mut self.lexer,&mut self.defstore,&mut self.guesser).map(|done| if done { None } else { Some(stmt) })
+        declare(&stmt,&mut self.lexer,&mut self.defstore).map(|done| if done { None } else { Some(stmt) })
     }
 
     fn get_non_declare(&mut self) -> Result<Option<ParserStatement>,ParseError> {
@@ -183,7 +181,7 @@ mod test {
         let mut lexer = Lexer::new(resolver);
         lexer.import("test:parser/id-clash.dp").expect("cannot load file");
         let p = Parser::new(lexer);
-        let txt = "\'test::assign\' already defined at test:parser/id-clash.dp 1:23 at line 2 column 29 in test:parser/id-clash.dp";
+        let txt = "duplicate identifier: test::assign at line 2 column 29 in test:parser/id-clash.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 
@@ -224,4 +222,17 @@ mod test {
         assert_eq!("enum test::C {  }",print_enum(&defstore,"C"));
         assert_eq!("[assign(x,B:Y [A:M 42,B:N [1,2,3]])]",&format!("{:?}",stmts));
     }
+
+    #[test]
+    fn test_short() {
+        let resolver = test_resolver();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:parser/short.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,_) = p.parse().expect("error");
+        let modules = stmts.iter().map(|x| (x.0).0.to_string()).collect::<Vec<_>>();
+        assert_eq!(vec!["library1","library2","library2",
+                        "library1","library2","library1"],modules);
+    }
+
 }
