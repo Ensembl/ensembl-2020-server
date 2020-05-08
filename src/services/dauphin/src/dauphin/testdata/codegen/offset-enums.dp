@@ -1,3 +1,6 @@
+import "search:std";
+use "std";
+
 enum etest {
     X: boolean,
     Y: bytes
@@ -12,13 +15,6 @@ struct stest {
     M: vec(etest2),
     N: etest
 };
-
-proc assign(out _A, _A);
-inline ":=" assign left 14;
-func eq(number,number) becomes boolean;
-inline "==" eq left 5;
-proc print_vec(_);
-proc assert(_,_);
 
 y := etest2:B [ etest:X false, etest:X true ];
 

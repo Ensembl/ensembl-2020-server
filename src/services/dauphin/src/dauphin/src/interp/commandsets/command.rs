@@ -16,13 +16,14 @@
 
 use std::fmt;
 use crate::interp::context::InterpContext;
+use crate::model::Identifier;
 use crate::generate::{ Instruction, InstructionSuperType };
 use serde_cbor::Value as CborValue;
 
 #[derive(Eq,PartialEq,Hash,Clone,Debug)]
 pub enum CommandTrigger {
     Instruction(InstructionSuperType),
-    Command(String)
+    Command(Identifier)
 }
 
 impl fmt::Display for CommandTrigger {

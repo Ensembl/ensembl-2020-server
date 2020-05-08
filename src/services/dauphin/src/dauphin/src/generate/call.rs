@@ -34,7 +34,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                     });                    
                     rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_)?);
                 }
-                context.add(Instruction::new(InstructionType::Call(identifier.1.to_string(),true,rs,flows),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(identifier.clone(),true,rs,flows),instr.regs.to_vec()));
             },
             
             InstructionType::Operator(identifier) => {
@@ -46,7 +46,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
                     rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::RValue,&type_)?);
                 }
-                context.add(Instruction::new(InstructionType::Call(identifier.1.to_string(),false,rs,flows),instr.regs.to_vec()));
+                context.add(Instruction::new(InstructionType::Call(identifier.clone(),false,rs,flows),instr.regs.to_vec()));
             },
 
             _ => { context.add(instr.clone()); }

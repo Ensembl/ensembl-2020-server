@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+use std::path::Path;
 use super::core::DocumentResolver;
 use crate::lexer::CharSource;
 
@@ -21,6 +22,7 @@ use super::core::Resolver;
 use crate::lexer::StringCharSource;
 use super::common::{ DataResolver, PreambleResolver };
 use super::file::FileResolver;
+use super::search::SearchResolver;
 use crate::test::files::{ find_testdata, load_testdata };
 
 pub struct TestResolver {}
@@ -46,9 +48,18 @@ impl DocumentResolver for TestResolver {
 pub fn test_resolver() -> Resolver {
     let root_dir = find_testdata();
     let mut out = Resolver::new();
+    let std_path = root_dir.clone();
+    let std_path = Path::new(&std_path)
+        .parent().unwrap_or(&std_path)
+        .join("src").join("commands").join("std");
+    print!("root path {}\n",root_dir.display());
+    print!("std path {}\n",std_path.display());
     out.add("preamble",PreambleResolver::new());
     out.add("test",TestResolver::new());
     out.add("data",DataResolver::new());
     out.add("file",FileResolver::new(root_dir));
+    out.add("search",SearchResolver::new(&vec![
+        format!("file:{}/*.dp",std_path.to_string_lossy())
+    ]));
     out
 }

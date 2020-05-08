@@ -17,8 +17,21 @@
 use std::fmt::Debug;
 use std::collections::HashMap;
 
+#[derive(Clone,Debug)]
+pub struct IdentifierUse(pub Identifier,pub bool);
+
 #[derive(Clone,Debug,PartialEq,Eq,Hash,PartialOrd,Ord)]
-pub struct Identifier(pub String,pub String,pub bool);
+pub struct Identifier(String,String);
+
+impl Identifier {
+    pub fn new(library: &str, name: &str) -> Identifier {
+        Identifier(library.to_string(),name.to_string())
+    }
+
+
+    pub fn module(&self) -> &str { &self.0 }
+    pub fn name(&self) -> &str { &self.1 }
+}
 
 impl std::fmt::Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -41,7 +54,7 @@ impl std::fmt::Display for IdentifierPattern {
 
 #[derive(Debug)]
 pub struct IdentifierStore<T> where T: Debug {
-    store: HashMap<(String,String),T>
+    store: HashMap<Identifier,T>
 }
 
 impl<T> IdentifierStore<T> where T: Debug {
@@ -52,14 +65,14 @@ impl<T> IdentifierStore<T> where T: Debug {
     }
 
     pub fn add(&mut self, identifier: &Identifier, value: T) {
-        self.store.insert((identifier.0.to_string(),identifier.1.to_string()),value);
+        self.store.insert(identifier.clone(),value);
     }
 
     pub fn get_id(&self, identifier: &Identifier) -> Result<&T,String> {
-        self.store.get(&(identifier.0.clone(),identifier.1.clone())).ok_or_else(|| format!("No such identifier {}",identifier))
+        self.store.get(&identifier.clone()).ok_or_else(|| format!("No such identifier {}",identifier))
     }
 
     pub fn contains_key(&self, identifier: &Identifier) -> bool {
-        self.store.get(&(identifier.0.clone(),identifier.1.clone())).is_some()
+        self.store.get(&identifier.clone()).is_some()
     }
 }

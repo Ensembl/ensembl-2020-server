@@ -24,6 +24,7 @@ use super::super::common::vectorcopy::{ vector_update, vector_update_poly, vecto
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::SharedVec;
 use super::super::common::writevec::WriteVec;
+use super::library::std;
 
 fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
@@ -96,7 +97,7 @@ impl CommandType for AssignCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 3,
-            trigger: CommandTrigger::Command("assign".to_string())
+            trigger: CommandTrigger::Command(std("assign"))
         }
     }
 
@@ -160,7 +161,7 @@ impl CommandType for ExtendCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 2,
-            trigger: CommandTrigger::Command("extend".to_string())
+            trigger: CommandTrigger::Command(std("extend"))
         }
     }
 
@@ -211,7 +212,7 @@ mod test {
     fn extend_smoke() {
         let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
-        lexer.import("test:library/extend.dp").expect("cannot load file");
+        lexer.import("test:std/extend.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");

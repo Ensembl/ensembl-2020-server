@@ -27,7 +27,7 @@ use super::parseexpr::{ parse_expr, parse_exprlist, parse_full_identifier, peek_
 fn parse_regular(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     if let Some(pattern) = peek_full_identifier(lexer,None) {
         let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-        if defstore.stmt_like(&identifier,lexer).unwrap_or(false) {
+        if defstore.stmt_like(&identifier.0,lexer).unwrap_or(false) {
             return parse_funcstmt(lexer,defstore);
         }
     }
@@ -70,7 +70,7 @@ fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStateme
     let exprs = parse_exprlist(lexer,defstore,')',false)?;
     let (file,line,_) = lexer.position();
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    Ok(ParserStatement::Regular(Statement(identifier,exprs,file.to_string(),line)))
+    Ok(ParserStatement::Regular(Statement(identifier.0,exprs,file.to_string(),line)))
 } 
 
 fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
@@ -78,11 +78,11 @@ fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserState
     let op = get_operator(lexer,false)?;
     let right = parse_expr(lexer,defstore,false)?;
     let inline = defstore.get_inline_binary(&op,lexer)?;
-    if !defstore.stmt_like(&inline.identifier(),lexer)? {
+    if !defstore.stmt_like(&inline.identifier().0,lexer)? {
         Err(ParseError::new("Got inline expr, expected inline stmt",lexer))?;
     }
     let (file,line,_) = lexer.position();
-    Ok(ParserStatement::Regular(Statement(inline.identifier().clone(),vec![left,right],file.to_string(),line)))
+    Ok(ParserStatement::Regular(Statement(inline.identifier().0.clone(),vec![left,right],file.to_string(),line)))
 }
 
 pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore) -> Result<Option<ParserStatement>,ParseError> {

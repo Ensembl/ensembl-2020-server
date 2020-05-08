@@ -60,20 +60,21 @@ mod test {
     fn line_number_smoke() {
         let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
-        lexer.import("test:library/line-number.dp").expect("cannot load file");
+        lexer.import("test:std/line-number.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         generate(&mut context,&defstore).expect("j");
         let message = mini_interp(&mut context).expect_err("x");
-        assert!(message.ends_with("at test:library/line-number.dp:10"));
+        print!("{}\n",message);
+        assert!(message.ends_with("at test:std/line-number.dp:10"));
     }
 
     #[test]
     fn no_line_number_smoke() {
         let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
-        lexer.import("test:library/line-number.dp").expect("cannot load file");
+        lexer.import("test:std/line-number.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,false).expect("codegen");

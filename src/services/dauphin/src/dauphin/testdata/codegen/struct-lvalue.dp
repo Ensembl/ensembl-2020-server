@@ -1,11 +1,10 @@
+import "search:std";
+use "std";
+
 struct stest {
     A: boolean,
     B: boolean
 };
-
-proc assign(out _A, _A);
-inline ":=" assign left 14;
-proc assert(boolean,boolean);
 
 x := stest { A: false, B: false };
 assert(x.A,false);

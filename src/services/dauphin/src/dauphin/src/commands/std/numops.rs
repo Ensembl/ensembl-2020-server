@@ -19,6 +19,7 @@ use crate::model::Register;
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
 use crate::generate::Instruction;
 use serde_cbor::Value as CborValue;
+use super::library::std;
 
 #[derive(Copy,Clone)]
 pub enum InterpBinBoolOp {
@@ -54,7 +55,7 @@ impl CommandType for InterpBinBoolCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 3,
-            trigger: CommandTrigger::Command(self.0.name().to_string())
+            trigger: CommandTrigger::Command(std(self.0.name()))
         }
     }
 

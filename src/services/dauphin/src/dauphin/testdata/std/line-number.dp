@@ -1,6 +1,6 @@
-proc assert(boolean,boolean);
+import "search:std";
+use "std";
 /*
-
 
 this error is on line 10
 

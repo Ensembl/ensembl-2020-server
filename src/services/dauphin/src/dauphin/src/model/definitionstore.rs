@@ -19,7 +19,7 @@ use super::definition::{
     ExprMacro, StmtMacro, FuncDecl, ProcDecl, Inline, InlineMode
 };
 use super::structenum::{ StructDef, EnumDef };
-use super::identifierstore::{ IdentifierStore, Identifier, IdentifierPattern };
+use super::identifierstore::{ IdentifierStore, Identifier, IdentifierPattern, IdentifierUse };
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
 
@@ -53,6 +53,7 @@ macro_rules! accessor {
 
         pub fn $setter(&mut self, data: $type, lexer: &Lexer) -> Result<(),ParseError> {
             let id = data.identifier().clone();
+            print!("add {:?}\n",id);
             self.detect_clash(&id,lexer)?;
             let data = IdentifierValue::$branch(data);
             match data {
@@ -88,15 +89,13 @@ impl DefStore {
         self.identifiers.get_id(identifier)
     }
 
-    pub fn pattern_to_identifier(&self, lexer: &Lexer, pattern: &IdentifierPattern, guess: bool) -> Result<Identifier,String> {
-        let mut module = None;
-        let mut implicit = true;
+    pub fn pattern_to_identifier(&self, lexer: &Lexer, pattern: &IdentifierPattern, guess: bool) -> Result<IdentifierUse,String> {
         if let Some(first) = &pattern.0 {
-            module = Some(first);
-            implicit = false;
+            return Ok(IdentifierUse(Identifier::new(first,&pattern.1),false));
         } else if guess {
+            let mut module = None;
             for short in lexer.get_shorts().iter() {
-                if self.identifiers.contains_key(&Identifier(short.to_string(),pattern.1.to_string(),false)) {
+                if self.identifiers.contains_key(&Identifier::new(short,&pattern.1)) {
                     if module.is_some() {
                         return Err(format!("duplicate match for identifier '{}': use :: syntax",pattern.1))
                     } else {
@@ -104,9 +103,11 @@ impl DefStore {
                     }
                 }
             }
+            if let Some(module) = module {
+                return Ok(IdentifierUse(Identifier::new(module,&pattern.1),true));
+            }
         }
-        let module = module.cloned().unwrap_or_else(|| lexer.get_module().to_string());
-        Ok(Identifier(module.to_string(),pattern.1.to_string(),implicit))
+        Ok(IdentifierUse(Identifier::new(lexer.get_module(),&pattern.1),true))
     }
 
     pub fn add_inline(&mut self, inline: Inline) -> Result<(),ParseError> {

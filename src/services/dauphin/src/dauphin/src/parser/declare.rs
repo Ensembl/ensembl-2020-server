@@ -39,7 +39,7 @@ fn run_module(name: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
 
 fn run_inline(symbol: &str, pattern: &IdentifierPattern, mode: &InlineMode, prio: f64, lexer: &mut Lexer, defstore: &mut DefStore) -> Result<(),ParseError> {
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    let stmt_like = defstore.stmt_like(&identifier,lexer)?;
+    let stmt_like = defstore.stmt_like(&identifier.0,lexer)?;
     lexer.add_inline(symbol,mode == &InlineMode::Prefix).map_err(|s| {
         ParseError::new(&s,lexer)
     })?;
@@ -49,36 +49,36 @@ fn run_inline(symbol: &str, pattern: &IdentifierPattern, mode: &InlineMode, prio
 
 fn run_expr(pattern: &IdentifierPattern, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    not_reserved(&identifier,lexer)?;
-    defstore.add_expr(ExprMacro::new(&identifier),lexer)?;
+    not_reserved(&identifier.0,lexer)?;
+    defstore.add_expr(ExprMacro::new(&identifier.0),lexer)?;
     Ok(())
 }
 
 fn run_stmt(pattern: &IdentifierPattern, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    not_reserved(&identifier,lexer)?;
-    defstore.add_stmt(StmtMacro::new(&identifier),lexer)?;
+    not_reserved(&identifier.0,lexer)?;
+    defstore.add_stmt(StmtMacro::new(&identifier.0),lexer)?;
     Ok(())
 }
 
 fn run_proc(pattern: &IdentifierPattern, signature: &SignatureConstraint, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    not_reserved(&identifier,lexer)?;
-    defstore.add_proc(ProcDecl::new(&identifier,signature),lexer)?;
+    not_reserved(&identifier.0,lexer)?;
+    defstore.add_proc(ProcDecl::new(&identifier.0,signature),lexer)?;
     Ok(())
 }
 
 fn run_func(pattern: &IdentifierPattern, signature: &SignatureConstraint, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    not_reserved(&identifier,lexer)?;
-    defstore.add_func(FuncDecl::new(&identifier,signature),lexer)?;
+    not_reserved(&identifier.0,lexer)?;
+    defstore.add_func(FuncDecl::new(&identifier.0,signature),lexer)?;
     Ok(())
 }
 
 fn run_struct(pattern: &IdentifierPattern, member_types: &Vec<MemberType>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    not_reserved(&identifier,lexer)?;
-    let def = StructDef::new(&identifier,member_types,names).map_err(|e| ParseError::new(&e,lexer) )?;
+    not_reserved(&identifier.0,lexer)?;
+    let def = StructDef::new(&identifier.0,member_types,names).map_err(|e| ParseError::new(&e,lexer) )?;
     defstore.add_struct(def,lexer)?;
     Ok(())
 }
@@ -86,8 +86,8 @@ fn run_struct(pattern: &IdentifierPattern, member_types: &Vec<MemberType>, names
 // TODO allow one operator as prefix of another
 fn run_enum(pattern: &IdentifierPattern, member_types: &Vec<MemberType>, names: &Vec<String>, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    not_reserved(&identifier,lexer)?;
-    let def = EnumDef::new(&identifier,member_types,names).map_err(|e| ParseError::new(&e,lexer) )?;
+    not_reserved(&identifier.0,lexer)?;
+    let def = EnumDef::new(&identifier.0,member_types,names).map_err(|e| ParseError::new(&e,lexer) )?;
     defstore.add_enum(def,lexer)?;
     Ok(())
 }

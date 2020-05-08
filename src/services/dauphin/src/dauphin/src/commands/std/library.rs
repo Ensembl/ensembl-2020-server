@@ -15,7 +15,7 @@
  */
 
 use crate::interp::InterpNatural;
-use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath };
+use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents };
 use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
@@ -23,13 +23,17 @@ use super::numops::library_numops_commands;
 use super::eq::library_eq_command;
 use super::assign::library_assign_commands;
 
+pub(super) fn std(name: &str) -> Identifier {
+    Identifier::new("std",name)
+}
+
 pub struct LenCommandType();
 
 impl CommandType for LenCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 2,
-            trigger: CommandTrigger::Command("len".to_string())
+            trigger: CommandTrigger::Command(std("len"))
         }
     }
 
@@ -72,7 +76,7 @@ impl CommandType for PrintRegsCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 1,
-            trigger: CommandTrigger::Command("print_regs".to_string())
+            trigger: CommandTrigger::Command(std("print_regs"))
         }
     }
 
@@ -192,7 +196,7 @@ impl CommandType for PrintVecCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 2,
-            trigger: CommandTrigger::Command("print_vec".to_string())
+            trigger: CommandTrigger::Command(std("print_vec"))
         }
     }
 
@@ -230,7 +234,7 @@ impl CommandType for AssertCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 2,
-            trigger: CommandTrigger::Command("assert".to_string())
+            trigger: CommandTrigger::Command(std("assert"))
         }
     }
 
@@ -268,7 +272,7 @@ impl Command for AssertCommand {
 }
 
 pub fn make_library() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("library",(0,0),0xA5E0F89826A426E7);
+    let set_id = CommandSetId::new("std",(0,0),0xA5E0F89826A426E7);
     let mut set = CommandSet::new(&set_id);
     library_eq_command(&mut set)?;
     set.push("len",1,LenCommandType())?;

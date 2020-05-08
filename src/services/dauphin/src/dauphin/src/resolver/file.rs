@@ -61,7 +61,11 @@ impl FileResolver {
 
 impl DocumentResolver for FileResolver {
     fn resolve(&self, components: &str, _: &Resolver, new_resolver: &mut Resolver, prefix: &str) -> Result<Box<dyn CharSource>,String> {
-        let path = self.add_components(components);
+        let path = if components.starts_with("/") {
+            PathBuf::from(components)
+        } else {
+            self.add_components(components)
+        };
         let module = self.get_module(&path)?;
         let mut dir = path.clone();
         dir.pop();

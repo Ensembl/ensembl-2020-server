@@ -32,8 +32,8 @@ pub fn id_not_reserved(id: &str, lexer: &mut Lexer) -> Result<(),ParseError> {
 }
 
 pub fn not_reserved(identifier: &Identifier, lexer: &mut Lexer) -> Result<(),ParseError> {
-    id_not_reserved(&identifier.0,lexer)?;
-    id_not_reserved(&identifier.1,lexer)?;
+    id_not_reserved(&identifier.module(),lexer)?;
+    id_not_reserved(&identifier.name(),lexer)?;
     Ok(())
 }
 

@@ -348,7 +348,7 @@ mod test {
         let mut norm = Vec::new();
         for instr in instrs {
             if let InstructionType::Call(s,_,_,_) = &instr.itype {
-                if s == "assign" {
+                if s.name() == "assign" {
                     if let Some(reg) = subregs.get(&instr.regs[1]) {
                         lin.push(reg);
                     } else {

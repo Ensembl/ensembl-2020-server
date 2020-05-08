@@ -186,7 +186,7 @@ mod test {
     }
 
     fn make_identifier(name: &str) -> Identifier {
-        Identifier("test".to_string(),name.to_string(),true)
+        Identifier::new("test",name)
     }
 
     fn print_struct(defstore: &DefStore, name: &str) -> String {
@@ -230,7 +230,7 @@ mod test {
         lexer.import("test:parser/short.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,_) = p.parse().expect("error");
-        let modules = stmts.iter().map(|x| (x.0).0.to_string()).collect::<Vec<_>>();
+        let modules = stmts.iter().map(|x| (x.0).module().to_string()).collect::<Vec<_>>();
         assert_eq!(vec!["library1","library2","library2",
                         "library1","library2","library1"],modules);
     }

@@ -97,7 +97,7 @@ pub enum InstructionType {
     ETest(Identifier,String),
     Proc(Identifier,Vec<MemberMode>),
     Operator(Identifier),
-    Call(String,bool,RegisterSignature,Vec<MemberDataFlow>),
+    Call(Identifier,bool,RegisterSignature,Vec<MemberDataFlow>),
     LineNumber(String,u32)
 }
 
@@ -173,11 +173,11 @@ impl InstructionType {
             InstructionType::EValue(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
             InstructionType::ETest(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
             InstructionType::Operator(name) => {
-                Some(vec![name.1.to_string()]) // XXX module
+                Some(vec![name.name().to_string()]) // XXX module
             },
             InstructionType::Proc(name,modes) =>  {
                 let mut more = vec![];
-                more.push(name.1.to_string()); // XXX module
+                more.push(name.name().to_string()); // XXX module
                 more.extend(modes.iter().map(|x| x.to_string()).collect::<Vec<_>>());
                 Some(more)
             },            

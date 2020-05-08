@@ -18,7 +18,7 @@ use crate::lexer::{ Lexer, Token };
 use crate::model::{ DefStore, InlineMode };
 use super::node::{ ParseError, Expression };
 use super::lexutil::{get_other, get_identifier };
-use crate::model::{ IdentifierPattern, Identifier };
+use crate::model::{ IdentifierPattern, Identifier, IdentifierUse };
 
 fn vec_ctor(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Expression,ParseError> {
     Ok(Expression::Vector(parse_exprlist(lexer,defstore,']',nested)?))
@@ -31,10 +31,10 @@ fn parse_prefix(lexer: &mut Lexer, defstore: &DefStore, op: &str, nested: bool) 
         return Err(ParseError::new("Not a prefix operator",lexer));
     }
     let identifier = inline.identifier();
-    Ok(match &identifier.1[..] {
-        "__star__" if identifier.2 => Expression::Star(Box::new(parse_expr_level(lexer,defstore,Some(prec),true,nested)?)),
-        "__sqctor__" if identifier.2 => vec_ctor(lexer,defstore,nested)?,
-        _ => Expression::Operator(identifier.clone(),vec![parse_expr_level(lexer,defstore,Some(prec),true,nested)?])
+    Ok(match &identifier.0.name()[..] {
+        "__star__" if identifier.1 => Expression::Star(Box::new(parse_expr_level(lexer,defstore,Some(prec),true,nested)?)),
+        "__sqctor__" if identifier.1 => vec_ctor(lexer,defstore,nested)?,
+        _ => Expression::Operator(identifier.0.clone(),vec![parse_expr_level(lexer,defstore,Some(prec),true,nested)?])
     })
 }
 
@@ -83,17 +83,17 @@ fn parse_ctor_full(lexer: &mut Lexer, defstore: &DefStore, identifier: &Identifi
     Ok(Expression::CtorStruct(identifier.clone(),inner,names))
 }
 
-fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, identifier: &Identifier, nested: bool) -> Result<Expression,ParseError> {
-    if defstore.stmt_like(&identifier,lexer).unwrap_or(false) {
+fn parse_atom_id(lexer: &mut Lexer, defstore: &DefStore, identifier: &IdentifierUse, nested: bool) -> Result<Expression,ParseError> {
+    if defstore.stmt_like(&identifier.0,lexer).unwrap_or(false) {
         Err(ParseError::new("Unexpected statement in expression",lexer))?;
     }
-    if !defstore.stmt_like(&identifier,lexer).unwrap_or(true) { /* expr-like */
+    if !defstore.stmt_like(&identifier.0,lexer).unwrap_or(true) { /* expr-like */
         get_other(lexer, "(")?;
-        Ok(Expression::Operator(identifier.clone(),parse_exprlist(lexer,defstore,')',nested)?))
+        Ok(Expression::Operator(identifier.0.clone(),parse_exprlist(lexer,defstore,')',nested)?))
     } else {
-        Ok(match &identifier.1[..] {
-            "true" if identifier.2 => Expression::LiteralBool(true),
-            "false" if identifier.2 => Expression::LiteralBool(false),
+        Ok(match &identifier.0.name()[..] {
+            "true" if identifier.1 => Expression::LiteralBool(true),
+            "false" if identifier.1 => Expression::LiteralBool(false),
             id => Expression::Identifier(id.to_string())
         })
     }
@@ -117,12 +117,12 @@ fn parse_atom(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Ex
         let pattern = parse_full_identifier(lexer,Some(true)).unwrap();
         let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
         Ok(if lexer.peek(None,1)[0] == Token::Other('{') {
-            parse_struct_ctor(lexer,defstore,&identifier,nested)?
+            parse_struct_ctor(lexer,defstore,&identifier.0,nested)?
         } else if peek_enum_ctor(lexer) {
             lexer.get();
             let branch = get_identifier(lexer)?;
             let expr = parse_expr(lexer,defstore,nested)?;
-            Expression::CtorEnum(identifier,branch.to_string(),Box::new(expr))
+            Expression::CtorEnum(identifier.0,branch.to_string(),Box::new(expr))
         } else {
             parse_atom_id(lexer,defstore,&identifier,nested)?
         })
@@ -161,21 +161,21 @@ fn parse_brackets(lexer: &mut Lexer, defstore: &DefStore, left: Expression) -> R
     }
 }
 
-fn parse_suffix(lexer: &mut Lexer, defstore: &DefStore, left: Expression, identifier: &Identifier) -> Result<Expression,ParseError> {
+fn parse_suffix(lexer: &mut Lexer, defstore: &DefStore, left: Expression, identifier: &IdentifierUse) -> Result<Expression,ParseError> {
     lexer.get_oper(false);
-    Ok(match &identifier.1[..] {
-        "__sqopen__" if identifier.2 => parse_brackets(lexer,defstore,left)?,
-        "__dot__" if identifier.2 => Expression::Dot(Box::new(left),get_identifier(lexer)?),
-        "__query__" if identifier.2 => Expression::Query(Box::new(left),get_identifier(lexer)?),
-        "__pling__" if identifier.2 => Expression::Pling(Box::new(left),get_identifier(lexer)?),
-        "__ref__" if identifier.2 => {
+    Ok(match &identifier.0.name()[..] {
+        "__sqopen__" if identifier.1 => parse_brackets(lexer,defstore,left)?,
+        "__dot__" if identifier.1 => Expression::Dot(Box::new(left),get_identifier(lexer)?),
+        "__query__" if identifier.1 => Expression::Query(Box::new(left),get_identifier(lexer)?),
+        "__pling__" if identifier.1 => Expression::Pling(Box::new(left),get_identifier(lexer)?),
+        "__ref__" if identifier.1 => {
             if let Expression::Bracket(op,key) = parse_brackets(lexer,defstore,left)? {
                 Expression::Filter(op,key)
             } else {
                 Err(ParseError::new("Expected filter",lexer))?
             }
         },
-        _ => Expression::Operator(identifier.clone(),vec![left])
+        _ => Expression::Operator(identifier.0.clone(),vec![left])
     })
 }
 
@@ -193,12 +193,12 @@ fn extend_expr(lexer: &mut Lexer, defstore: &DefStore, left: Expression, symbol:
             return Ok((left,false));
         }
     }
-    if defstore.stmt_like(&inline.identifier(),lexer)? {
+    if defstore.stmt_like(&inline.identifier().0,lexer)? {
         return Ok((left,false));
     }
     Ok(match *inline.mode() {
-        InlineMode::LeftAssoc => (parse_binary_right(lexer,defstore,left,&inline.identifier(),prio,false,nested)?,true),
-        InlineMode::RightAssoc => (parse_binary_right(lexer,defstore,left,&inline.identifier(),prio,true,nested)?,true),
+        InlineMode::LeftAssoc => (parse_binary_right(lexer,defstore,left,&inline.identifier().0,prio,false,nested)?,true),
+        InlineMode::RightAssoc => (parse_binary_right(lexer,defstore,left,&inline.identifier().0,prio,true,nested)?,true),
         InlineMode::Prefix => (left,false),
         InlineMode::Suffix => (parse_suffix(lexer,defstore,left,&inline.identifier())?,true)
     })

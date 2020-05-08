@@ -29,7 +29,7 @@ mod signature {
 
 pub use self::definition::{ Inline, InlineMode, ExprMacro, StmtMacro, ProcDecl, FuncDecl };
 pub use self::definitionstore::DefStore;
-pub use self::identifierstore::{ IdentifierPattern, Identifier, IdentifierStore };
+pub use self::identifierstore::{ IdentifierPattern, Identifier, IdentifierStore, IdentifierUse };
 pub use self::signature::complexpath::ComplexPath;
 pub use self::signature::signature::RegisterSignature;
 pub use self::signature::complexsig::ComplexRegisters;

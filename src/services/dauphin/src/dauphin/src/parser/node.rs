@@ -89,19 +89,19 @@ impl fmt::Debug for Expression {
                 Ok(())
             }
             Expression::Operator(s,x) => {
-                write!(f,"{}(",s.1)?; // XXX module
+                write!(f,"{}(",s.name())?; // XXX module
                 write_csl(f,x)?;
                 write!(f,")")?;
                 Ok(())
             },
             Expression::CtorStruct(s,x,n) => {
-                write!(f,"{} {{",s.1)?; // XXX module
+                write!(f,"{} {{",s.name())?; // XXX module
                 write_csl_named(f,x,n)?;
                 write!(f,"}}")?;
                 Ok(())
             },
             Expression::CtorEnum(e,b,v) => {
-                write!(f,"{}:{} {:?}",e.1,b,v)?; // XXX module
+                write!(f,"{}:{} {:?}",e.name(),b,v)?; // XXX module
                 Ok(())
             }
         }
@@ -113,7 +113,7 @@ pub struct Statement(pub Identifier,pub Vec<Expression>,pub String,pub u32);
 
 impl fmt::Debug for Statement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"{}(",(self.0).1)?; // XXX module
+        write!(f,"{}(",(self.0).name())?; // XXX module
         for (i,sub) in self.1.iter().enumerate() {
             if i > 0 {
                 write!(f,",")?;

@@ -28,7 +28,7 @@ mod core {
     pub(super) mod consts;
     pub(super) mod core;
 }
-mod library {
+mod std {
     pub(super) mod assign; // XXX unexport
     pub(super) mod library;
     mod numops;
@@ -40,4 +40,4 @@ pub use self::core::consts::{
     ConstCommandType, NumberConstCommandType, BooleanConstCommandType, StringConstCommandType
 };
 pub use self::core::core::make_core;
-pub use self::library::library::make_library;
+pub use self::std::library::make_library;

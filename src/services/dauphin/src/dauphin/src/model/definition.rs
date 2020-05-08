@@ -15,7 +15,7 @@
  */
 
 use crate::typeinf::SignatureConstraint;
-use crate::model::{ Identifier };
+use crate::model::{ Identifier, IdentifierUse };
 
 #[derive(Debug,PartialEq,Clone,Copy)]
 pub enum InlineMode {
@@ -28,14 +28,14 @@ pub enum InlineMode {
 #[derive(Debug)]
 pub struct Inline {
     symbol: String,
-    identifier: Identifier,
+    identifier: IdentifierUse,
     statement: bool,
     precedence: f64,
     mode: InlineMode
 }
 
 impl Inline {
-    pub fn new(symbol: &str, identifier: &Identifier, statement: bool, precedence: f64, mode: &InlineMode) -> Inline {
+    pub fn new(symbol: &str, identifier: &IdentifierUse, statement: bool, precedence: f64, mode: &InlineMode) -> Inline {
         Inline {
             symbol: symbol.to_string(),
             identifier: identifier.clone(),
@@ -43,7 +43,7 @@ impl Inline {
         }
     }
 
-    pub fn identifier(&self) -> &Identifier { &self.identifier }
+    pub fn identifier(&self) -> &IdentifierUse { &self.identifier }
     pub fn symbol(&self) -> &str { &self.symbol }
     pub fn precedence(&self) -> f64 { self.precedence }
     pub fn mode(&self) -> &InlineMode { &self.mode }

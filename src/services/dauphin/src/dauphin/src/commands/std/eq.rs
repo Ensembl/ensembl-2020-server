@@ -22,6 +22,7 @@ use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
 use crate::model::cbor_array;
 use crate::commands::common::sharedvec::SharedVec;
+use super::library::std;
 
 use std::fmt::Debug;
 use crate::commands::common::polymorphic::arbitrate_type;
@@ -98,7 +99,7 @@ impl CommandType for EqCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 2,
-            trigger: CommandTrigger::Command("eq".to_string())
+            trigger: CommandTrigger::Command(std("eq"))
         }
     }
 
@@ -167,7 +168,7 @@ mod test {
     fn eq_smoke() {
         let resolver = test_resolver();
         let mut lexer = Lexer::new(resolver);
-        lexer.import("test:library/eq.dp").expect("cannot load file");
+        lexer.import("test:std/eq.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");

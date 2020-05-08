@@ -1,16 +1,10 @@
+import "search:std";
+use "std";
+
 enum etest {
     X: boolean,
     Y: boolean
 };
-
-proc assign(out _A, _A);
-inline ":=" assign left 14;
-proc assert(boolean,boolean);
-proc print_vec(_);
-func lt(number,number) becomes boolean;
-func eq(number,number) becomes boolean;
-inline "<" lt left 6;
-inline "==" eq left 5;
 
 x := [ etest:X false, etest:X true, etest:X false, etest:Y true ];
 

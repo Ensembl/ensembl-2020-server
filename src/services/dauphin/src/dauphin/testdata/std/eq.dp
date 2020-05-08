@@ -1,12 +1,5 @@
-proc assign(out _A, _A);
-inline ":=" assign left 14;
-
-proc print_regs(_A);
-proc print_vec(_);
-proc assert(boolean,boolean);
-
-func eq(_A,_A) becomes boolean;
-inline "==" eq left 5;
+import "search:std";
+use "std";
 
 struct A { x: vec(number), y: vec(number) };
 

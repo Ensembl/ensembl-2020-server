@@ -104,12 +104,12 @@ pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Signatu
 
 fn id_to_type(pattern: &IdentifierPattern, lexer: &Lexer, defstore: &DefStore) -> Result<BaseType2,ParseError> {
     let id = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    if defstore.get_struct_id(&id).is_ok() {
-        Ok(BaseType2::StructType(id.clone()))
-    } else if defstore.get_enum_id(&id).is_ok() {
-        Ok(BaseType2::EnumType(id.clone()))
+    if defstore.get_struct_id(&id.0).is_ok() {
+        Ok(BaseType2::StructType(id.0.clone()))
+    } else if defstore.get_enum_id(&id.0).is_ok() {
+        Ok(BaseType2::EnumType(id.0.clone()))
     } else {
-        Err(ParseError::new(&format!("No such struct/enum '{}'",id),lexer))
+        Err(ParseError::new(&format!("No such struct/enum '{}'",id.0),lexer))
     }
 }
 
