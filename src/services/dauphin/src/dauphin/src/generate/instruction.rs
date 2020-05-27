@@ -215,61 +215,56 @@ impl InstructionType {
         }
     }
 
-    pub fn changing_registers(&self) -> Vec<usize> {
+    pub fn out_only_registers(&self) -> Vec<usize> {
         match self {
-            InstructionType::Star |
-            InstructionType::Alias |
-            InstructionType::List |
-            InstructionType::Square |
-            InstructionType::RefSquare |
-            InstructionType::FilterSquare |
-            InstructionType::CtorStruct(_) |
-            InstructionType::CtorEnum(_,_) |
-            InstructionType::SValue(_,_) |
-            InstructionType::RefSValue(_,_) |
-            InstructionType::EValue(_,_) |
-            InstructionType::RefEValue(_,_) |
-            InstructionType::FilterEValue(_,_) |
-            InstructionType::ETest(_,_) |
-            InstructionType::Proc(_,_) |
-            InstructionType::Operator(_) =>
-                panic!("Unexpected instruction {:?}",self),
-
             InstructionType::LineNumber(_,_) => vec![],
-
-            InstructionType::At |
-            InstructionType::Nil |
-            InstructionType::Run |
-            InstructionType::Add |
-            InstructionType::Copy |
-            InstructionType::Append |
-            InstructionType::Filter |
-            InstructionType::ReFilter |
-            InstructionType::NumEq |
-            InstructionType::Length |
-            InstructionType::SeqFilter |
-            InstructionType::SeqAt |
-            InstructionType::Const(_) |
-            InstructionType::NumberConst(_) |
-            InstructionType::BooleanConst(_) |
-            InstructionType::StringConst(_) |
-            InstructionType::BytesConst(_) => 
-                vec![0],
 
             InstructionType::Call(_,_,sigs,dataflow) => {
                 let mut out = Vec::new();
                 let mut reg_offset = 0;
                 for (i,sig) in sigs.iter().enumerate() {
                     let num_regs = sig.iter().map(|x| x.1.register_count()).sum();
-                    if let MemberDataFlow::JustifiesCall = dataflow[i] {
-                        for j in 0..num_regs {
-                            out.push(reg_offset+j);
-                        }
+                    match dataflow[i] {
+                        MemberDataFlow::Out => {
+                            for j in 0..num_regs {
+                                out.push(reg_offset+j);
+                            }
+                        },
+                        MemberDataFlow::In | MemberDataFlow::InOut => {}
                     }
                     reg_offset += num_regs;
                 }
                 out
             },
+
+            InstructionType::Add => vec![],
+            _ => vec![0]
+        }
+    }
+
+    pub fn out_registers(&self) -> Vec<usize> {
+        match self {
+            InstructionType::LineNumber(_,_) => vec![],
+
+            InstructionType::Call(_,_,sigs,dataflow) => {
+                let mut out = Vec::new();
+                let mut reg_offset = 0;
+                for (i,sig) in sigs.iter().enumerate() {
+                    let num_regs = sig.iter().map(|x| x.1.register_count()).sum();
+                    match dataflow[i] {
+                        MemberDataFlow::Out | MemberDataFlow::InOut => {
+                            for j in 0..num_regs {
+                                out.push(reg_offset+j);
+                            }
+                        },
+                        MemberDataFlow::In => {}
+                    }
+                    reg_offset += num_regs;
+                }
+                out
+            },
+
+            _ => vec![0]
         }
     }
 

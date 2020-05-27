@@ -203,25 +203,24 @@ impl MemberMode {
 }
 
 #[derive(Debug,Clone,Copy,PartialEq)]
-pub enum MemberDataFlow {
-    JustifiesCall,  /* If this register is justified, so is this call (ie out or in/out) */
-    Normal          /* If this call is justified, so is this register (ie in) */
-}
+pub enum MemberDataFlow { In, Out, InOut }
 
 // XXX remove data-flow from sig
 impl MemberDataFlow {
     pub fn deserialize(cbor: &CborValue) -> Result<MemberDataFlow,String> {
         Ok(match cbor_int(cbor,Some(2))? {
-            0 => MemberDataFlow::JustifiesCall,
-            1 => MemberDataFlow::Normal,
+            0 => MemberDataFlow::In,
+            1 => MemberDataFlow::Out,
+            2 => MemberDataFlow::InOut,
             _ => panic!("cbor_int failed")
         })
     }
 
     pub fn serialize(&self) -> CborValue {
         match self {
-            MemberDataFlow::JustifiesCall => CborValue::Integer(0),
-            MemberDataFlow::Normal => CborValue::Integer(1)
+            MemberDataFlow::In => CborValue::Integer(0),
+            MemberDataFlow::Out => CborValue::Integer(1),
+            MemberDataFlow::InOut => CborValue::Integer(2)
         }
     }
 }
@@ -229,8 +228,9 @@ impl MemberDataFlow {
 impl fmt::Display for MemberDataFlow {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f,"{}",match self {
-            MemberDataFlow::JustifiesCall => "j",
-            MemberDataFlow::Normal => "n"
+            MemberDataFlow::In => "i",
+            MemberDataFlow::Out => "o",
+            MemberDataFlow::InOut => "io",
         })
     }
 }

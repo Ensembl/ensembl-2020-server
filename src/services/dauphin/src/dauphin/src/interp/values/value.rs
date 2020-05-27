@@ -48,7 +48,7 @@ fn indexes_to_numbers(data: &Vec<usize>) -> Result<Vec<f64>,String> {
     }).collect()
 }
 
-fn numbers_to_indexes(data: &Vec<f64>) -> Result<Vec<usize>,String> {
+pub fn numbers_to_indexes(data: &Vec<f64>) -> Result<Vec<usize>,String> {
     data.iter().map(|x| {
         if let Some(x) = to_index(*x) {
             Ok(x)

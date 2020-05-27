@@ -107,10 +107,8 @@ impl CurrentValues {
 
 fn process_instruction(context: &mut GenContext, instr: &Instruction, values: &mut CurrentValues, consts: Option<&mut ConstMatcher>) {
     /* get list of registers which are mutated by call */
-    let mutating_regs = instr.itype
-            .changing_registers()
+    let mutating_regs = instr.itype.out_registers()
             .iter().map(|x| instr.regs[*x]).collect::<Vec<_>>();
-    print!("mutating {:?}\n",mutating_regs);
     /* If any mutating regs are spare for some value, they need their own value now */
     for reg in &mutating_regs {
         if let Some((dst,src)) = values.promote_spare(&reg) {

@@ -19,7 +19,7 @@ use std::collections::{ HashMap, HashSet };
 use std::rc::Rc;
 use super::gencontext::GenContext;
 use crate::model::Register;
-use crate::interp::{ to_index, InterpContext, InterpValue, SuperCow, CompilerLink, CommandCompileSuite, Command, PreImageOutcome };
+use crate::interp::{ to_index, InterpContext, InterpValue, SuperCow, CompilerLink, CommandCompileSuite, Command, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
 pub struct PreImageContext<'a,'b> {
@@ -67,18 +67,22 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn unable_instr(&mut self, instr: &Instruction) {
         self.gen_context.add(instr.clone());
-        let changing = instr.itype.changing_registers();
+        let changing = instr.itype.out_registers();
         for idx in &changing {
             self.set_reg_valid(&instr.regs[*idx],false);
         }
     }
 
     fn long_constant<F,T>(&mut self, reg: &Register, values: &Vec<T>, mut cb: F) -> Result<(),String> where F: FnMut(Register,&T) -> Instruction {
-        self.gen_context.add(Instruction::new(InstructionType::Nil,vec![*reg]));
-        for v in values {
-            let inter = self.gen_context.allocate_register(None);
-            self.gen_context.add(cb(inter,v));
-            self.gen_context.add(Instruction::new(InstructionType::Append,vec![*reg,inter]));
+        if values.len() == 1 {
+            self.gen_context.add(cb(*reg,&values[0]));
+        } else {
+            self.gen_context.add(Instruction::new(InstructionType::Nil,vec![*reg]));
+            for v in values {
+                let inter = self.gen_context.allocate_register(None);
+                self.gen_context.add(cb(inter,v));
+                self.gen_context.add(Instruction::new(InstructionType::Append,vec![*reg,inter]));
+            }
         }
         Ok(())
     }
@@ -94,9 +98,13 @@ impl<'a,'b> PreImageContext<'a,'b> {
                 self.gen_context.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
             },
             InterpValue::Numbers(numbers) => {
-                self.long_constant(reg,numbers,|r,n| {
-                    Instruction::new(InstructionType::NumberConst(*n),vec![r])
-                })?;
+                if let Some(indexes) = numbers_to_indexes(numbers).ok() {
+                    self.gen_context.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
+                } else {
+                    self.long_constant(reg,numbers,|r,n| {
+                        Instruction::new(InstructionType::NumberConst(*n),vec![r])
+                    })?;
+                }
             },
             InterpValue::Boolean(bools) => {
                 self.long_constant(reg,bools,|r,n| {
@@ -324,7 +332,7 @@ pub fn run_nums(compiler_link: &CompilerLink, context: &mut GenContext) -> Resul
     let mut values : HashMap<Register,Vec<usize>> = HashMap::new();
     let mut suppressed = HashSet::new();
     for instr in &context.get_instructions() {
-        let changing = instr.itype.changing_registers();
+        let changing = instr.itype.out_registers();
         /* capture suppressed in/outs now as update_values will trample on them */
         let mut old_values : HashMap<Register,Vec<usize>> = HashMap::new();
         for reg in &instr.regs {

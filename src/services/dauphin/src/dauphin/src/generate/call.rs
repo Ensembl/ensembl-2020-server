@@ -23,14 +23,13 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
     for instr in &context.get_instructions() {
         match &instr.itype {
             InstructionType::Proc(identifier,modes) => {
-                print!("mfind {:?}\n",identifier);
                 let mut rs = RegisterSignature::new();
                 let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
                     flows.push(match modes[i] {
-                        MemberMode::LValue => MemberDataFlow::JustifiesCall,
-                        _ => MemberDataFlow::Normal
+                        MemberMode::LValue => MemberDataFlow::InOut, /// TODO maybe Out: let command decide
+                        _ => MemberDataFlow::In
                     });                    
                     rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_)?);
                 }
@@ -38,11 +37,10 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
             },
             
             InstructionType::Operator(identifier) => {
-                print!("mfind {:?}\n",identifier);
                 let mut rs = RegisterSignature::new();
                 let mut flows = Vec::new();
                 for (i,reg) in instr.regs.iter().enumerate() {
-                    flows.push(if i == 0 { MemberDataFlow::JustifiesCall } else { MemberDataFlow::Normal });
+                    flows.push(if i == 0 { MemberDataFlow::Out } else { MemberDataFlow::In });
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
                     rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::RValue,&type_)?);
                 }

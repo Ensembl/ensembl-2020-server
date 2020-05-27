@@ -27,7 +27,7 @@ pub fn prune(context: &mut GenContext) {
         if instr.itype.self_justifying_call() {
             call_justified = true;
         }
-        for idx in instr.itype.changing_registers() {
+        for idx in instr.itype.out_registers() {
             if justified_regs.contains(&instr.regs[idx]) {
                 call_justified = true;
                 break;
@@ -35,8 +35,11 @@ pub fn prune(context: &mut GenContext) {
         }
         justified_calls.push(call_justified);
         if call_justified {
-            for reg in instr.regs {
-                justified_regs.insert(reg);
+            let (regs,itype) = (instr.regs,instr.itype);
+            for (i,reg) in regs.iter().enumerate() {
+                if !itype.out_only_registers().contains(&i) {
+                    justified_regs.insert(*reg);
+                }
             }
         }
     }
