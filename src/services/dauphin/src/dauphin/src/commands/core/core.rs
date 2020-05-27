@@ -200,6 +200,15 @@ impl Command for NumEqCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 fn filter_typed<T>(dst: &mut Vec<T>, src: &[T], filter: &[bool]) where T: Clone {
@@ -236,6 +245,15 @@ impl Command for FilterCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct RunCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register);
@@ -260,6 +278,15 @@ impl Command for RunCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct AtCommand(pub(crate) Register, pub(crate) Register);
@@ -278,6 +305,15 @@ impl Command for AtCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize()])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
 
@@ -318,6 +354,15 @@ impl Command for SeqFilterCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize(),self.3.serialize()])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2) && context.get_reg_valid(&self.3))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct SeqAtCommand(pub(crate) Register,pub(crate) Register);
@@ -338,6 +383,15 @@ impl Command for SeqAtCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize()])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
 

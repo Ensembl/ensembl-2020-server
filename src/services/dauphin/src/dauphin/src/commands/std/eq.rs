@@ -118,6 +118,7 @@ impl CommandType for EqCommandType {
     }
 }
 
+// TODO preimage
 pub struct EqCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
 impl Command for EqCommand {
