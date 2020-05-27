@@ -162,7 +162,7 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::{ generate_code, generate };
-    use crate::interp::mini_interp;
+    use crate::interp::{ mini_interp, xxx_compiler_link };
 
     #[test]
     fn eq_smoke() {
@@ -172,8 +172,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
-        generate(&mut context,&defstore).expect("j");
-        let (_,strings) = mini_interp(&mut context).expect("x");
+        let linker = xxx_compiler_link().expect("y");
+        generate(&linker,&mut context,&defstore).expect("j");
+        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

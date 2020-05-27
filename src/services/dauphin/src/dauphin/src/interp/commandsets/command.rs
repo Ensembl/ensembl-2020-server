@@ -16,14 +16,21 @@
 
 use std::fmt;
 use crate::interp::context::InterpContext;
-use crate::model::Identifier;
-use crate::generate::{ Instruction, InstructionSuperType };
+use crate::model::{ Identifier, Register };
+use crate::generate::{ Instruction, InstructionSuperType, PreImageContext };
 use serde_cbor::Value as CborValue;
 
 #[derive(Eq,PartialEq,Hash,Clone,Debug)]
 pub enum CommandTrigger {
     Instruction(InstructionSuperType),
     Command(Identifier)
+}
+
+pub enum PreImageOutcome {
+    Skip,
+    Keep,
+    Constant(Vec<Register>),
+    Replace(Vec<Instruction>)
 }
 
 impl fmt::Display for CommandTrigger {
@@ -49,4 +56,14 @@ pub trait CommandType {
 pub trait Command {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
     fn serialize(&self) -> Result<Vec<CborValue>,String>;
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(false) }
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> { Ok(PreImageOutcome::Keep) }
+    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> { 
+        Ok(if self.simple_preimage(context)? {
+            self.execute(context.context())?;
+            self.preimage_post(context)?
+        } else {
+            PreImageOutcome::Skip
+        })
+    }
 }

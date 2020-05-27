@@ -54,7 +54,7 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::{ generate_code, generate };
-    use crate::interp::mini_interp;
+    use crate::interp::{ mini_interp, xxx_compiler_link };
 
     #[test]
     fn line_number_smoke() {
@@ -64,8 +64,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
-        generate(&mut context,&defstore).expect("j");
-        let message = mini_interp(&mut context).expect_err("x");
+        let linker = xxx_compiler_link().expect("y");
+        generate(&linker,&mut context,&defstore).expect("j");
+        let message = mini_interp(&mut context,&linker).expect_err("x");
         print!("{}\n",message);
         assert!(message.ends_with("at test:std/line-number.dp:10"));
     }
@@ -78,8 +79,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,false).expect("codegen");
-        generate(&mut context,&defstore).expect("j");
-        let message = mini_interp(&mut context).expect_err("x");
+        let linker = xxx_compiler_link().expect("y");
+        generate(&linker,&mut context,&defstore).expect("j");
+        let message = mini_interp(&mut context,&linker).expect_err("x");
         print!("{}\n",message);
         assert!(!message.contains(" at "));
     }

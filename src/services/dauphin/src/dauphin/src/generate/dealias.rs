@@ -58,7 +58,7 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
-    use crate::interp::mini_interp;
+    use crate::interp::{ mini_interp, xxx_compiler_link };
     use super::super::linearize;
 
     #[test]
@@ -77,7 +77,8 @@ mod test {
         print!("BEFORE {:?}\n",context);
         remove_aliases(&mut context);
         print!("AFTER {:?}\n",context);
-        let (values,strings) = mini_interp(&mut context).expect("x");
+        let linker = xxx_compiler_link().expect("y");
+        let (values,strings) = mini_interp(&mut context,&linker).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);

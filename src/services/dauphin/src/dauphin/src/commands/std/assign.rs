@@ -15,8 +15,8 @@
  */
 
 use crate::model::{ Register, RegisterSignature };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
-use crate::generate::{ Instruction, InstructionType };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome };
+use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
 use crate::typeinf::MemberMode;
@@ -33,6 +33,25 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
         registers.copy(&regs[i],&regs[i+n])?;
     }
     Ok(())
+}
+
+fn preimage_possible(context: &mut PreImageContext, regs: &Vec<Register>) -> Result<bool,String> {
+    let n = regs.len()/2;
+    for i in 0..n {
+        if !context.get_reg_valid(&regs[i+n]) {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn preimage_instrs(regs: &Vec<Register>) -> Result<Vec<Instruction>,String> {
+    let mut instrs = vec![];
+    let n = regs.len()/2;
+    for i in 0..n {
+        instrs.push(Instruction::new(InstructionType::Copy,vec![regs[i],regs[i+n]]));
+    }
+    Ok(instrs)
 }
 
 fn copy_deep<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
@@ -128,6 +147,14 @@ impl Command for AssignCommand {
         let regs = CborValue::Array(self.2.iter().map(|x| x.serialize()).collect());
         Ok(vec![CborValue::Bool(self.0),self.1.serialize(false,false)?,regs])
     }
+
+    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> { 
+        if !self.0 && preimage_possible(context,&self.2)? {
+            Ok(PreImageOutcome::Replace(preimage_instrs(&self.2)?))
+        } else {
+            Ok(PreImageOutcome::Skip)
+        }
+    }
 }
 
 fn extend(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
@@ -206,7 +233,7 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::{ generate_code, generate };
-    use crate::interp::mini_interp;
+    use crate::interp::{ mini_interp, xxx_compiler_link };
 
     #[test]
     fn extend_smoke() {
@@ -216,8 +243,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
-        generate(&mut context,&defstore).expect("j");
-        let (_,strings) = mini_interp(&mut context).expect("x");
+        let linker = xxx_compiler_link().expect("y");
+        generate(&linker,&mut context,&defstore).expect("j");
+        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

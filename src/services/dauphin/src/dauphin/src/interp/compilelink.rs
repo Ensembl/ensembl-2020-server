@@ -15,20 +15,22 @@
  */
 
 use std::collections::BTreeMap;
+use std::rc::Rc;
 use crate::generate::{ Instruction, InstructionType };
 use crate::interp::commandsets::{ Command, CommandSchema, CommandCompileSuite, CommandTrigger, CommandSuiteBuilder };
 use serde_cbor::Value as CborValue;
 
 pub(super) const VERSION : u32 = 0;
 
+#[derive(Clone)]
 pub struct CompilerLink {
-    cs: CommandCompileSuite
+    cs: Rc<CommandCompileSuite>
 }
 
 impl CompilerLink {
     pub fn new(cs: CommandSuiteBuilder) -> Result<CompilerLink,String> {
         Ok(CompilerLink {
-            cs: cs.make_compile_suite()?
+            cs: Rc::new(cs.make_compile_suite()?)
         })
     }
 

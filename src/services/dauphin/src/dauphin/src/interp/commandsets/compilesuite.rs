@@ -59,7 +59,6 @@ impl CommandCompileSuite {
     }
 
     pub fn get_by_trigger(&self, trigger: &CommandTrigger) -> Result<(&Box<dyn CommandType>,u32),String> {
-        print!("mapping {:?} -> {:?}\n",trigger,self.mapping.keys());
         let member = self.mapping.get(trigger).ok_or(format!("Unknown command {}",trigger))?;
         let cmdtype = member.get_object()?;
         Ok((cmdtype,member.opcode()))

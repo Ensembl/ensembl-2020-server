@@ -363,7 +363,7 @@ mod test {
     use crate::generate::reuse_dead;
     use crate::generate::prune;
     use crate::generate::assign_regs;
-    use crate::interp::mini_interp;
+    use crate::interp::{ mini_interp, xxx_compiler_link };
 
 
     // XXX common
@@ -418,20 +418,21 @@ mod test {
         lexer.import("test:codegen/enum-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
+        let linker = xxx_compiler_link().expect("y");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context).expect("x");
+        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }  
@@ -444,20 +445,21 @@ mod test {
         lexer.import("test:codegen/struct-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
+        let linker = xxx_compiler_link().expect("y");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context).expect("x");
+        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -472,19 +474,20 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         print!("{:?}\n",context);
+        let linker = xxx_compiler_link().expect("y");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context).expect("x");
+        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }  

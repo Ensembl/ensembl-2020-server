@@ -107,7 +107,7 @@ mod test {
     use crate::generate::reuse_dead;
     use crate::generate::prune;
     use crate::generate::assign_regs;
-    use crate::interp::mini_interp;
+    use crate::interp::{ mini_interp, xxx_compiler_link };
     use crate::test::cbor::cbor_cmp;
     use crate::model::{ DefStore };
     use crate::typeinf::{ MemberType, MemberMode };
@@ -159,6 +159,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let linker = xxx_compiler_link().expect("y");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"test::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         call(&mut context).expect("j");
@@ -166,15 +167,15 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context).expect("x");
+        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

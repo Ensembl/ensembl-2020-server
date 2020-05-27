@@ -28,7 +28,7 @@ mod commandsets {
     pub mod compilesuite;
     pub mod suitebuilder;
 
-    pub use command::{ Command, CommandSchema, CommandTrigger, CommandType };
+    pub use command::{ Command, CommandSchema, CommandTrigger, CommandType, PreImageOutcome };
     pub use commandset::CommandSet;
     pub use commandsetid::CommandSetId;
     pub use interpretsuite::CommandInterpretSuite;
@@ -41,9 +41,12 @@ mod values {
     pub mod value;
 
 }
-pub use self::harness::mini_interp;
+
+pub use self::compilelink::CompilerLink;
+pub use self::harness::{ mini_interp, xxx_compiler_link };
 pub use self::values::value::{ to_index, InterpValue, InterpNatural, InterpValueNumbers, InterpValueIndexes };
+pub use self::values::supercow::SuperCow;
 pub use self::values::registers::RegisterFile;
 pub use self::stream::StreamContents;
-pub use self::commandsets::{ CommandSet, CommandSetId, CommandInterpretSuite, CommandCompileSuite, CommandSuiteBuilder, Command, CommandSchema, CommandTrigger, CommandType };
+pub use self::commandsets::{ CommandSet, CommandSetId, CommandInterpretSuite, CommandCompileSuite, CommandSuiteBuilder, Command, CommandSchema, CommandTrigger, CommandType, PreImageOutcome };
 pub use self::context::InterpContext;

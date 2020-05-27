@@ -41,7 +41,7 @@ use crate::resolver::common_resolver;
 use crate::parser::Parser;
 use crate::generate::generate_and_optimise;
 use crate::test::files::load_testdata;
-use crate::interp::mini_interp;
+use crate::interp::{ mini_interp, xxx_compiler_link };
 
 fn main() {
     let resolver = common_resolver(&vec![]).expect("setting up path resolver");
@@ -53,6 +53,7 @@ fn main() {
     out.push("".to_string()); /* For trailing \n */
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
-    let mut context = generate_and_optimise(&defstore,stmts).expect("codegen");
-    mini_interp(&mut context).expect("A");
+    let linker = xxx_compiler_link().expect("y");
+    let mut context = generate_and_optimise(&linker,&defstore,stmts).expect("codegen");
+    mini_interp(&mut context,&linker).expect("A");
 }

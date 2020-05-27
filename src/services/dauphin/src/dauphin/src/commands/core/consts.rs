@@ -16,10 +16,10 @@
 
 use std::convert::TryInto;
 use crate::interp::InterpValue;
-use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet };
+use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet, PreImageOutcome };
 use crate::model::Register;
 use crate::model::{ cbor_int, cbor_string };
-use crate::generate::{ Instruction, InstructionType, InstructionSuperType };
+use crate::generate::{ Instruction, InstructionType, InstructionSuperType, PreImageContext };
 use serde_cbor::Value as CborValue;
 
 // XXX factor
@@ -61,6 +61,13 @@ impl Command for NumberConstCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),CborValue::Float(self.1)])
+    }
+
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
 

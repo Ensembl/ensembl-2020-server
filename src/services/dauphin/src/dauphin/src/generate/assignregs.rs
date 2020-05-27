@@ -92,7 +92,7 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
-    use crate::interp::mini_interp;
+    use crate::interp::{ mini_interp, xxx_compiler_link };
     use super::super::linearize;
     use super::super::remove_aliases;
     use super::super::copy_on_write;
@@ -108,20 +108,21 @@ mod test {
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
+        let linker = xxx_compiler_link().expect("y");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context);
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context).expect("x");
+        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

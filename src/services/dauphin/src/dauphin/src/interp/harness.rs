@@ -47,13 +47,8 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
     Ok(out)
 }
 
-pub fn mini_interp_run(context: &GenContext, ic: &mut InterpContext) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
-    let mut suite = CommandSuiteBuilder::new();
-    suite.add(make_core()?)?;
-    suite.add(make_library()?)?;
-    let compiler_linker = CompilerLink::new(suite)?;
-    let program = compiler_linker.serialize(&context.get_instructions(),false)?;
-
+pub fn mini_interp_run(context: &GenContext, cl: &CompilerLink, ic: &mut InterpContext) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
+    let program = cl.serialize(&context.get_instructions(),false)?;
     let mut buffer = Vec::new();
     serde_cbor::to_writer(&mut buffer,&program).expect("cbor b");
     print!("{}\n",hexdump(&buffer));
@@ -76,9 +71,16 @@ pub fn mini_interp_run(context: &GenContext, ic: &mut InterpContext) -> Result<(
     Ok((export_indexes(ic)?,stream_strings(&ic.stream_take())))
 }
 
-pub fn mini_interp(context: &GenContext) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
+pub fn xxx_compiler_link() -> Result<CompilerLink,String> {
+    let mut suite = CommandSuiteBuilder::new();
+    suite.add(make_core()?)?;
+    suite.add(make_library()?)?;
+    CompilerLink::new(suite)
+}
+
+pub fn mini_interp(context: &GenContext, cl: &CompilerLink) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
     let mut ic = InterpContext::new();
-    mini_interp_run(context,&mut ic).map_err(|x| {
+    mini_interp_run(context,&cl,&mut ic).map_err(|x| {
         let line = ic.get_line_number();
         if line.1 != 0 {
             format!("{} at {}:{}",x,line.0,line.1)

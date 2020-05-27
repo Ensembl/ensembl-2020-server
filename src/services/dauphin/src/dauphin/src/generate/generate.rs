@@ -16,8 +16,9 @@
 
 use super::{ linearize, remove_aliases, prune, run_nums, reuse_dead, assign_regs, GenContext, call, copy_on_write, reuse_const, simplify };
 use crate::model::DefStore;
+use crate::interp::CompilerLink;
 
-pub fn generate(context: &mut GenContext, defstore: &DefStore) -> Result<(),String> {
+pub fn generate(compiler_link: &CompilerLink, context: &mut GenContext, defstore: &DefStore) -> Result<(),String> {
     print!("A018\n{:?}\n",context);
     call(context)?;
     print!("A017\n{:?}\n",context);
@@ -27,7 +28,7 @@ pub fn generate(context: &mut GenContext, defstore: &DefStore) -> Result<(),Stri
     print!("A015\n{:?}\n",context);
     remove_aliases(context);
     print!("A014\n{:?}\n",context);
-    run_nums(context);
+    run_nums(compiler_link,context);
     print!("A013\n{:?}\n",context);
     prune(context);
     print!("A012\n{:?}\n",context);
@@ -35,7 +36,8 @@ pub fn generate(context: &mut GenContext, defstore: &DefStore) -> Result<(),Stri
     print!("A011\n{:?}\n",context);
     prune(context);
     print!("A010\n{:?}\n",context);
-    run_nums(context);
+    run_nums(compiler_link,context);
+    prune(context);
     print!("A09\n{:?}\n",context);
     reuse_dead(context);
     print!("A08\n{:?}\n",context);
@@ -49,7 +51,8 @@ pub fn generate(context: &mut GenContext, defstore: &DefStore) -> Result<(),Stri
     print!("A04\n{:?}\n",context);
     prune(context);
     print!("A03\n{:?}\n",context);
-    run_nums(context);
+    run_nums(compiler_link,context);
+    prune(context);
     print!("A02\n{:?}\n",context);
     reuse_dead(context);
     print!("A01\n{:?}\n",context);

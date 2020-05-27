@@ -39,5 +39,5 @@ pub use self::instruction::{ Instruction, InstructionType, InstructionSuperType 
 pub use self::linearize::linearize;
 pub use self::prune::prune;
 pub use self::reusedead::reuse_dead;
-pub use self::runnums::run_nums;
+pub use self::runnums::{ run_nums, PreImageContext };
 pub use self::simplify::simplify;

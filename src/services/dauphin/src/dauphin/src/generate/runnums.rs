@@ -14,11 +14,147 @@
  *  limitations under the License.
  */
 
+use std::cell::RefCell;
 use std::collections::{ HashMap, HashSet };
+use std::rc::Rc;
 use super::gencontext::GenContext;
 use crate::model::Register;
-use crate::interp::to_index;
+use crate::interp::{ to_index, InterpContext, InterpValue, SuperCow, CompilerLink, CommandCompileSuite, Command, PreImageOutcome };
 use crate::generate::{ Instruction, InstructionType };
+
+pub struct PreImageContext<'a,'b> {
+    compiler_link: CompilerLink,
+    valid_registers: HashSet<Register>,
+    context: InterpContext,
+    gen_context: &'a mut GenContext<'b>,
+    journal: Vec<Register>
+}
+
+impl<'a,'b> PreImageContext<'a,'b> {
+    pub fn new(compiler_link: &CompilerLink, gen_context: &'a mut GenContext<'b>) -> Result<PreImageContext<'a,'b>,String> {
+        Ok(PreImageContext {
+            compiler_link: compiler_link.clone(),
+            valid_registers: HashSet::new(),
+            context: InterpContext::new(),
+            gen_context,
+            journal: vec![]
+        })
+    }
+
+    pub fn context(&mut self) -> &mut InterpContext { &mut self.context }
+
+    pub fn get_reg(&mut self, reg: &Register) -> Option<Rc<RefCell<SuperCow<InterpValue>>>> {
+        if self.valid_registers.contains(reg) {
+            Some(self.context.registers().get(reg))
+        } else {
+            None
+        }
+    }
+
+    pub fn set_reg_valid(&mut self, reg: &Register, valid: bool) {
+        print!("valid {} {}\n",reg,valid);
+        if valid {
+            self.valid_registers.insert(*reg);
+            self.journal.push(*reg);
+        } else {
+            self.valid_registers.remove(reg);
+        }
+    }
+
+    pub fn get_reg_valid(&mut self, reg: &Register) -> bool {
+        self.valid_registers.contains(reg)
+    }
+
+    fn unable_instr(&mut self, instr: &Instruction) {
+        self.gen_context.add(instr.clone());
+        let changing = instr.itype.changing_registers();
+        for idx in &changing {
+            self.set_reg_valid(&instr.regs[*idx],false);
+        }
+    }
+
+    fn long_constant<F,T>(&mut self, reg: &Register, values: &Vec<T>, mut cb: F) -> Result<(),String> where F: FnMut(Register,&T) -> Instruction {
+        self.gen_context.add(Instruction::new(InstructionType::Nil,vec![*reg]));
+        for v in values {
+            let inter = self.gen_context.allocate_register(None);
+            self.gen_context.add(cb(inter,v));
+            self.gen_context.add(Instruction::new(InstructionType::Append,vec![*reg,inter]));
+        }
+        Ok(())
+    }
+
+    fn make_constant(&mut self, reg: &Register) -> Result<(),String> {
+        // XXX don't copy the big ones
+        let value = self.context().registers().get(reg).borrow().get_shared()?;
+        match value.as_ref() {
+            InterpValue::Empty => {
+                self.gen_context.add(Instruction::new(InstructionType::Nil,vec![*reg]));
+            },
+            InterpValue::Indexes(indexes) => {
+                self.gen_context.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
+            },
+            InterpValue::Numbers(numbers) => {
+                self.long_constant(reg,numbers,|r,n| {
+                    Instruction::new(InstructionType::NumberConst(*n),vec![r])
+                })?;
+            },
+            InterpValue::Boolean(bools) => {
+                self.long_constant(reg,bools,|r,n| {
+                    Instruction::new(InstructionType::BooleanConst(*n),vec![r])
+                })?;
+            },
+            InterpValue::Strings(strings) => {
+                self.long_constant(reg,strings,|r,n| {
+                    Instruction::new(InstructionType::StringConst(n.clone()),vec![r])
+                })?;
+            },
+            InterpValue::Bytes(bytes) => {
+                self.long_constant(reg,bytes,|r,n| {
+                    Instruction::new(InstructionType::BytesConst(n.clone()),vec![r])
+                })?;
+            },
+        }
+        Ok(())
+    }
+
+    fn preimage_instr(&mut self, instr: &Instruction) -> Result<(),String> {
+        print!("instr {:?}\n",instr);
+        let command = self.compiler_link.compile_instruction(instr)?.2;
+        match command.preimage(self) ? {
+            PreImageOutcome::Skip => {
+                self.unable_instr(&instr);
+            },
+            PreImageOutcome::Keep => {
+                self.gen_context.add(instr.clone());
+            },
+            PreImageOutcome::Replace(instrs) => {
+                for instr in instrs {
+                    self.preimage_instr(&instr)?;
+                }                    
+            },
+            PreImageOutcome::Constant(regs) => {
+                self.context().registers().commit();
+                for reg in &regs {
+                    self.make_constant(reg)?;
+                }
+            }
+        }
+        let (context,journal) = (&mut self.context,&mut self.journal);
+        for reg in journal.drain(..) {
+            print!("value {:?} {:?}\n",reg,context.registers().get(&reg).borrow().get_shared().expect(""));
+        }
+        self.context().registers().commit();
+        Ok(())
+    }
+
+    pub fn preimage(&mut self) -> Result<(),String> {
+        for instr in &self.gen_context.get_instructions() {
+            self.preimage_instr(instr)?;
+        }
+        self.gen_context.phase_finished();
+        Ok(())
+    }
+}
 
 fn update_values(values: &mut HashMap<Register,Vec<usize>>, changing: &[usize], instr: &Instruction) {
     match &instr.itype {
@@ -145,7 +281,7 @@ fn update_values(values: &mut HashMap<Register,Vec<usize>>, changing: &[usize], 
                 values.insert(instr.regs[0],out);
             } else {
                 values.remove(&instr.regs[0]);
-            }                
+            }
         },
 
         InstructionType::SeqAt => {
@@ -180,7 +316,11 @@ fn all_known(values: &HashMap<Register,Vec<usize>>, changing: &[usize], instr: &
     out
 }
 
-pub fn run_nums(context: &mut GenContext) {
+pub fn run_nums(compiler_link: &CompilerLink, context: &mut GenContext) -> Result<(),String> {
+    let mut pic = PreImageContext::new(compiler_link,context)?;
+    pic.preimage()?;
+    print!(">>>{:?}<<<\n",context.get_instructions());
+    return Ok(());
     let mut values : HashMap<Register,Vec<usize>> = HashMap::new();
     let mut suppressed = HashSet::new();
     for instr in &context.get_instructions() {
@@ -216,8 +356,8 @@ pub fn run_nums(context: &mut GenContext) {
 
     }
     context.phase_finished();
+    Ok(())
 }
-
 
 #[cfg(test)]
 mod test {
@@ -228,11 +368,11 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate_code;
-    use crate::interp::mini_interp;
+    use crate::generate::prune::prune;
+    use crate::interp::{ mini_interp, xxx_compiler_link };
     use super::super::linearize;
     use super::super::remove_aliases;
 
-    // XXX test pruning, eg fewer lines
     #[test]
     fn runnums_smoke() {
         let resolver = test_resolver();
@@ -241,19 +381,47 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let linker = xxx_compiler_link().expect("y");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        run_nums(&mut context);
+        run_nums(&linker,&mut context).expect("x");
+        prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);
-        let (values,strings) = mini_interp(&mut context).expect("x");
+        let lines = format!("{:?}",context).as_bytes().iter().filter(|&&c| c == b'\n').count();
+        print!("{}\n",lines);
+        //assert!(lines<350);
+        let (values,strings) = mini_interp(&mut context,&linker).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
         }
         assert_eq!(vec!["[[0],[2],[0],[4]]","[[0],[2],[9,9,9],[9,9,9]]","[0,0,0]","[[0],[2],[8,9,9],[9,9,9]]"],strings);
     }
+
+    #[test]
+    fn runnums2_smoke() {
+        let resolver = test_resolver();
+        let mut lexer = Lexer::new(resolver);
+        lexer.import("test:codegen/runnums.dp").expect("cannot load file");
+        let p = Parser::new(lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let linker = xxx_compiler_link().expect("y");
+        call(&mut context).expect("j");
+        simplify(&defstore,&mut context).expect("k");
+        linearize(&mut context).expect("linearize");
+        remove_aliases(&mut context);
+        print!("{:?}",context);
+        run_nums(&linker,&mut context).expect("x");
+        prune(&mut context);
+        print!("RUN NUMS\n");
+        print!("{:?}",context);
+        let lines = format!("{:?}",context).as_bytes().iter().filter(|&&c| c == b'\n').count();
+        print!("{}\n",lines);
+    }
+
 }

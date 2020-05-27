@@ -16,13 +16,13 @@
 
 use std::rc::Rc;
 use crate::interp::InterpValue;
-use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext };
+use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext, PreImageOutcome };
 use crate::model::Register;
-use crate::generate::InstructionSuperType;
 use serde_cbor::Value as CborValue;
 use super::commontype::BuiltinCommandType;
 use crate::commands::common::polymorphic::arbitrate_type;
 use super::consts::const_commands;
+use crate::generate::{ Instruction, InstructionSuperType, PreImageContext };
 
 // XXX read is coerce
 
@@ -37,6 +37,13 @@ impl Command for NilCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize()])
     }
+
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct CopyCommand(pub(crate) Register,pub(crate) Register);
@@ -49,6 +56,15 @@ impl Command for CopyCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize()])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
 
@@ -81,6 +97,15 @@ impl Command for AppendCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.0) && context.get_reg_valid(&self.1))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct LengthCommand(pub(crate) Register,pub(crate) Register);
@@ -95,6 +120,15 @@ impl Command for LengthCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize()])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
 
@@ -115,6 +149,15 @@ impl Command for AddCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize()])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.0) && context.get_reg_valid(&self.1))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
 
