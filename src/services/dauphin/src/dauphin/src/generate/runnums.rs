@@ -22,7 +22,27 @@ use crate::model::Register;
 use crate::interp::{ to_index, InterpContext, InterpValue, SuperCow, CompilerLink, CommandCompileSuite, Command, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
+#[derive(Clone,Hash,PartialEq,Eq)]
+enum StealableValue {
+    Empty,
+    Indexes(Vec<usize>),
+    Boolean(Vec<bool>),
+}
+
+impl StealableValue {
+    fn new(iv: &InterpValue) -> Option<StealableValue> {
+        match iv {
+            InterpValue::Empty => Some(StealableValue::Empty),
+            InterpValue::Indexes(x) => Some(StealableValue::Indexes(x.clone())),
+            InterpValue::Boolean(b) => Some(StealableValue::Boolean(b.clone())),
+            _ => None
+        }
+    }
+}
+
 pub struct PreImageContext<'a,'b> {
+    steals: HashMap<StealableValue,Register>,
+    rev_steals: HashMap<Register,StealableValue>,
     suppressed: HashSet<Register>,
     compiler_link: CompilerLink,
     valid_registers: HashSet<Register>,
@@ -34,6 +54,8 @@ pub struct PreImageContext<'a,'b> {
 impl<'a,'b> PreImageContext<'a,'b> {
     pub fn new(compiler_link: &CompilerLink, gen_context: &'a mut GenContext<'b>) -> Result<PreImageContext<'a,'b>,String> {
         Ok(PreImageContext {
+            steals: HashMap::new(),
+            rev_steals: HashMap::new(),
             suppressed: HashSet::new(),
             compiler_link: compiler_link.clone(),
             valid_registers: HashSet::new(),
@@ -46,12 +68,32 @@ impl<'a,'b> PreImageContext<'a,'b> {
     pub fn context(&mut self) -> &mut InterpContext { &mut self.context }
 
     pub fn add_instruction(&mut self, instr: &Instruction) -> Result<(),String> {
+        let out = instr.itype.out_registers();
         let out_only = instr.itype.out_only_registers();
         for (i,reg) in instr.regs.iter().enumerate() {
+            let mut make = true;
             if !out_only.contains(&i) && self.suppressed.contains(reg) {
-                self.make_constant(reg)?;
+                let value = self.context().registers().get(reg).borrow().get_shared()?;
+                if let Some(sv) = StealableValue::new(&value) {
+                    if let Some(other_reg) = self.steals.get(&sv) {
+                        self.gen_context.add(Instruction::new(InstructionType::Copy,vec![*reg,*other_reg]));
+                        make = false;
+                    }
+                    self.steals.insert(sv.clone(),*reg);
+                    self.rev_steals.insert(*reg,sv);
+                }
+                if make {
+                    self.make_constant(reg)?;
+                }
             }
             self.suppressed.remove(reg);
+        }
+        for (i,reg) in instr.regs.iter().enumerate() {
+            if out.contains(&i) {
+                if let Some(sv) = self.rev_steals.remove(reg) {
+                    self.steals.remove(&sv);
+                }
+            }
         }
         self.gen_context.add(instr.clone());
         Ok(())
@@ -71,12 +113,13 @@ impl<'a,'b> PreImageContext<'a,'b> {
         self.valid_registers.contains(reg)
     }
 
-    fn unable_instr(&mut self, instr: &Instruction) {
-        self.add_instruction(instr);
+    fn unable_instr(&mut self, instr: &Instruction) -> Result<(),String> {
+        self.add_instruction(instr)?;
         let changing = instr.itype.out_registers();
         for idx in &changing {
             self.set_reg_valid(&instr.regs[*idx],false);
         }
+        Ok(())
     }
 
     fn long_constant<F,T>(&mut self, reg: &Register, values: &Vec<T>, mut cb: F) -> Result<(),String> where F: FnMut(Register,&T) -> Instruction {
@@ -136,7 +179,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
         let command = self.compiler_link.compile_instruction(instr)?.2;
         match command.preimage(self) ? {
             PreImageOutcome::Skip => {
-                self.unable_instr(&instr);
+                self.unable_instr(&instr)?;
             },
             PreImageOutcome::Replace(instrs) => {
                 for instr in instrs {
