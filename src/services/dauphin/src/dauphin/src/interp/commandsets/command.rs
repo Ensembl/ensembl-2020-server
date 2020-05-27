@@ -28,7 +28,6 @@ pub enum CommandTrigger {
 
 pub enum PreImageOutcome {
     Skip,
-    Keep,
     Constant(Vec<Register>),
     Replace(Vec<Instruction>)
 }
@@ -57,7 +56,7 @@ pub trait Command {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
     fn serialize(&self) -> Result<Vec<CborValue>,String>;
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(false) }
-    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> { Ok(PreImageOutcome::Keep) }
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> { Err(format!("preimage_post must be overridden if simple_preimage returns true")) }
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> { 
         Ok(if self.simple_preimage(context)? {
             self.execute(context.context())?;

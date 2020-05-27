@@ -237,7 +237,7 @@ impl InstructionType {
                 out
             },
 
-            InstructionType::Add => vec![],
+            InstructionType::Add | InstructionType::Append => vec![],
             _ => vec![0]
         }
     }

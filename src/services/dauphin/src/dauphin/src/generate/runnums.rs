@@ -23,6 +23,7 @@ use crate::interp::{ to_index, InterpContext, InterpValue, SuperCow, CompilerLin
 use crate::generate::{ Instruction, InstructionType };
 
 pub struct PreImageContext<'a,'b> {
+    suppressed: HashSet<Register>,
     compiler_link: CompilerLink,
     valid_registers: HashSet<Register>,
     context: InterpContext,
@@ -33,6 +34,7 @@ pub struct PreImageContext<'a,'b> {
 impl<'a,'b> PreImageContext<'a,'b> {
     pub fn new(compiler_link: &CompilerLink, gen_context: &'a mut GenContext<'b>) -> Result<PreImageContext<'a,'b>,String> {
         Ok(PreImageContext {
+            suppressed: HashSet::new(),
             compiler_link: compiler_link.clone(),
             valid_registers: HashSet::new(),
             context: InterpContext::new(),
@@ -43,12 +45,16 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     pub fn context(&mut self) -> &mut InterpContext { &mut self.context }
 
-    pub fn get_reg(&mut self, reg: &Register) -> Option<Rc<RefCell<SuperCow<InterpValue>>>> {
-        if self.valid_registers.contains(reg) {
-            Some(self.context.registers().get(reg))
-        } else {
-            None
+    pub fn add_instruction(&mut self, instr: &Instruction) -> Result<(),String> {
+        let out_only = instr.itype.out_only_registers();
+        for (i,reg) in instr.regs.iter().enumerate() {
+            if !out_only.contains(&i) && self.suppressed.contains(reg) {
+                self.make_constant(reg)?;
+            }
+            self.suppressed.remove(reg);
         }
+        self.gen_context.add(instr.clone());
+        Ok(())
     }
 
     pub fn set_reg_valid(&mut self, reg: &Register, valid: bool) {
@@ -66,7 +72,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn unable_instr(&mut self, instr: &Instruction) {
-        self.gen_context.add(instr.clone());
+        self.add_instruction(instr);
         let changing = instr.itype.out_registers();
         for idx in &changing {
             self.set_reg_valid(&instr.regs[*idx],false);
@@ -132,9 +138,6 @@ impl<'a,'b> PreImageContext<'a,'b> {
             PreImageOutcome::Skip => {
                 self.unable_instr(&instr);
             },
-            PreImageOutcome::Keep => {
-                self.gen_context.add(instr.clone());
-            },
             PreImageOutcome::Replace(instrs) => {
                 for instr in instrs {
                     self.preimage_instr(&instr)?;
@@ -143,7 +146,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
             PreImageOutcome::Constant(regs) => {
                 self.context().registers().commit();
                 for reg in &regs {
-                    self.make_constant(reg)?;
+                    self.suppressed.insert(*reg);
                 }
             }
         }
@@ -327,7 +330,6 @@ fn all_known(values: &HashMap<Register,Vec<usize>>, changing: &[usize], instr: &
 pub fn run_nums(compiler_link: &CompilerLink, context: &mut GenContext) -> Result<(),String> {
     let mut pic = PreImageContext::new(compiler_link,context)?;
     pic.preimage()?;
-    print!(">>>{:?}<<<\n",context.get_instructions());
     return Ok(());
     let mut values : HashMap<Register,Vec<usize>> = HashMap::new();
     let mut suppressed = HashSet::new();
