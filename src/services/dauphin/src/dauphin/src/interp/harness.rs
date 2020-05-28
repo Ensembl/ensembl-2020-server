@@ -16,6 +16,7 @@
 
 use std::collections::{ HashMap };
 use std::rc::Rc;
+use crate::cli::Config;
 use crate::commands::{ make_core, make_library };
 use crate::generate::{ GenContext, Instruction };
 use crate::model::Register;
@@ -69,6 +70,14 @@ pub fn mini_interp_run(instrs: &Vec<Instruction>, cl: &CompilerLink, ic: &mut In
         print!("{}",ic.registers().dump_many(&regs)?);
     }
     Ok((export_indexes(ic)?,stream_strings(&ic.stream_take())))
+}
+
+pub fn xxx_test_config() -> Config {
+    let mut cfg = Config::new();
+    cfg.set_generate_debug(true);
+    cfg.set_verbose(99);
+    cfg.set_opt_level(2);
+    cfg
 }
 
 pub fn xxx_compiler_link() -> Result<CompilerLink,String> {

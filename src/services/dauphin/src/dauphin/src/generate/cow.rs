@@ -241,7 +241,7 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::interp::{ mini_interp, xxx_compiler_link };
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
     use super::super::dealias::remove_aliases;
     use super::super::prune::prune;
     use super::super::compilerun::compile_run;
@@ -284,7 +284,8 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let config = xxx_test_config();
+        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);

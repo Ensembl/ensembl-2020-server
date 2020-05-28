@@ -357,7 +357,7 @@ mod test {
     use crate::generate::codegen::generate_code;
     use crate::test::files::load_testdata;
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link };
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
 
     // XXX common
@@ -413,7 +413,8 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let config = xxx_test_config();
+        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
@@ -428,7 +429,8 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let config = xxx_test_config();
+        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
@@ -444,7 +446,8 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let config = xxx_test_config();
+        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {

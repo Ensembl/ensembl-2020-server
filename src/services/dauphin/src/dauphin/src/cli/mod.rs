@@ -14,21 +14,6 @@
  *  limitations under the License.
  */
 
-mod assignregs;
-mod call;
-mod codegen;
-mod cow;
-mod dealias;
-mod gencontext;
-mod generate;
-mod instruction;
-mod linearize;
-mod prune;
-mod reusedead;
-mod compilerun;
-mod simplify;
+mod config;
 
-pub use self::gencontext::GenContext;
-pub use self::generate::generate;
-pub use self::instruction::{ Instruction, InstructionType, InstructionSuperType };
-pub use self::compilerun::PreImageContext;
+pub use self::config::Config;

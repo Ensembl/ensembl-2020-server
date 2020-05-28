@@ -15,6 +15,7 @@
  */
 
 mod commands;
+mod cli;
 mod generate;
 mod interp;
 mod lexer;
@@ -41,7 +42,7 @@ use crate::resolver::common_resolver;
 use crate::parser::Parser;
 use crate::generate::generate;
 use crate::test::files::load_testdata;
-use crate::interp::{ mini_interp, xxx_compiler_link };
+use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
 fn main() {
     let resolver = common_resolver(&vec![]).expect("setting up path resolver");
@@ -54,6 +55,7 @@ fn main() {
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
     let linker = xxx_compiler_link().expect("y");
-    let instrs = generate(&linker,&stmts,&defstore).expect("codegen");
+    let config = xxx_test_config();
+    let instrs = generate(&linker,&stmts,&defstore,&config).expect("codegen");
     mini_interp(&instrs,&linker).expect("A");
 }

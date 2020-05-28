@@ -60,8 +60,8 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate2;
-    use crate::interp::{ mini_interp, xxx_compiler_link };
+    use crate::generate::generate;
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
     // XXX test pruning, eg fewer lines
     #[test]
@@ -72,7 +72,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate2("p",&linker,&stmts,&defstore,true).expect("j");
+        let mut config = xxx_test_config();
+        config.set_opt_seq("p");
+        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_values,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {

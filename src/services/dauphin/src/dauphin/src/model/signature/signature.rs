@@ -98,7 +98,7 @@ mod test {
     use crate::parser::{ Parser, parse_type };
     use crate::test::files::load_testdata;
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link };
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
     use crate::test::cbor::cbor_cmp;
     use crate::model::{ DefStore };
     use crate::typeinf::{ MemberType, MemberMode };
@@ -136,7 +136,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&xxx_test_config()).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test::etest3)")).expect("b");
@@ -153,7 +153,7 @@ mod test {
         let linker = xxx_compiler_link().expect("y");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"test::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
-        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&xxx_test_config()).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
@@ -168,7 +168,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&xxx_test_config()).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test::etest3)")).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");

@@ -119,8 +119,8 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate2;
-    use crate::interp::xxx_compiler_link;
+    use crate::generate::generate;
+    use crate::interp::{ xxx_compiler_link, xxx_test_config };
 
     #[test]
     fn typing_smoke() {
@@ -130,7 +130,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate2("",&linker,&stmts,&defstore,true).expect("j");
+        let mut config = xxx_test_config();
+        config.set_opt_seq("");
+        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));
         let mut tp = Typing::new();

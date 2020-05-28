@@ -60,7 +60,7 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link };
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
     #[test]
     fn module_smoke() {
@@ -70,7 +70,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&xxx_test_config()).expect("j");
         mini_interp(&instrs,&linker).expect("x");
     }
 }

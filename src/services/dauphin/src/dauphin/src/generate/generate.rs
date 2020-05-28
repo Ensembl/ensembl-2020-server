@@ -16,6 +16,7 @@
 
 use std::collections::HashMap;
 use super::{ GenContext, Instruction };
+use crate::cli::Config;
 use crate::model::DefStore;
 use crate::interp::CompilerLink;
 use crate::parser::Statement;
@@ -29,6 +30,7 @@ use super::call::call;
 use super::linearize::linearize;
 use super::simplify::simplify;
 use super::cow::{ copy_on_write, reuse_const };
+use crate::interp::xxx_test_config;
 
 struct GenerateStep {
     name: String,
@@ -44,10 +46,12 @@ impl GenerateStep {
         }
     }
 
-    fn run(&self, compiler_link: &CompilerLink, defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
+    fn run(&self, config: &Config, compiler_link: &CompilerLink, defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
         print!("step {}\n",self.name);
         (self.step)(compiler_link,defstore,context)?;
-        print!("{:?}\n",context);
+        if config.get_verbose() > 2 {
+            print!("{:?}\n",context);
+        }
         Ok(())
     }
 }
@@ -75,25 +79,35 @@ impl GenerateMenu {
         GenerateMenu { gen_steps, opt_steps }
     }
 
-    fn run_steps(&self, sequence: &str, compiler_link: &CompilerLink, defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
+    fn run_steps(&self, config: &Config, sequence: &str, compiler_link: &CompilerLink, defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
         for step in &self.gen_steps {
-            step.run(compiler_link,defstore,context)?;
+            step.run(config,compiler_link,defstore,context)?;
         }
         for k in sequence.chars() {
             let step = self.opt_steps.get(&k.to_string()).ok_or_else(|| format!("No such step '{}'",k))?;
-            step.run(compiler_link,defstore,context)?;
+            step.run(config,compiler_link,defstore,context)?;
         }
         Ok(())
     }
 }
 
-pub fn generate2(seq: &str, compiler_link: &CompilerLink, stmts: &Vec<Statement>, defstore: &DefStore, debug: bool) -> Result<Vec<Instruction>,String> {
-    let mut context = generate_code(&defstore,&stmts,debug).map_err(|e| e.join("\n"))?;
-    let gm = GenerateMenu::new();
-    gm.run_steps(seq,compiler_link,defstore,&mut context)?;
-    Ok(context.get_instructions())
+fn calculate_opt_seq(config: &Config) -> Result<&str,String> {
+    let seq = config.get_opt_seq();
+    if seq == "*" {
+        Ok(match config.get_opt_level() {
+            0 => "",
+            1 => "p",
+            2|3|4|5|6 => "pwpcpdaupwpcpda",
+            level => Err(format!("Bad optimisation level {}",level))?
+        })
+    } else {
+        Ok(seq)
+    }
 }
 
-pub fn generate(compiler_link: &CompilerLink, stmts: &Vec<Statement>, defstore: &DefStore) -> Result<Vec<Instruction>,String> {
-    generate2("pwpcpdaupwpcpda",compiler_link,stmts,defstore,true)
+pub fn generate(compiler_link: &CompilerLink, stmts: &Vec<Statement>, defstore: &DefStore, config: &Config) -> Result<Vec<Instruction>,String> {
+    let mut context = generate_code(&defstore,&stmts,config.get_generate_debug()).map_err(|e| e.join("\n"))?;
+    let gm = GenerateMenu::new();
+    gm.run_steps(config,calculate_opt_seq(&config)?,compiler_link,defstore,&mut context)?;
+    Ok(context.get_instructions())
 }
