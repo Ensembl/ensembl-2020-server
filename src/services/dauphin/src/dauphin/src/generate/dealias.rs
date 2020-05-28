@@ -52,14 +52,14 @@ pub fn remove_aliases(context: &mut GenContext) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::call;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate_code;
+    use super::super::codegen::generate_code;
+    use super::super::call::call;
+    use super::super::linearize::linearize;
     use crate::interp::{ mini_interp, xxx_compiler_link };
-    use super::super::linearize;
 
     #[test]
     fn dealias_smoke() {
@@ -69,7 +69,7 @@ mod test {
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -78,7 +78,7 @@ mod test {
         remove_aliases(&mut context);
         print!("AFTER {:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
-        let (values,strings) = mini_interp(&mut context,&linker).expect("x");
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);

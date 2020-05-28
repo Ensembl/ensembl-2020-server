@@ -12,6 +12,12 @@ inline ">" gt left 6;
 func lt(number,number) becomes boolean;
 inline "<" lt left 6;
 
+func plus(number,number) becomes number;
+inline "+" plus left 4;
+
+proc incr(lvalue number, number);
+inline "(+=)" incr left 14;
+
 func len(vec(_)) becomes number;
 proc print_vec(_);
 

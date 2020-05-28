@@ -53,7 +53,7 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::{ generate_code, generate };
+    use crate::generate::{ generate2 };
     use crate::interp::{ mini_interp, xxx_compiler_link };
 
     #[test]
@@ -63,9 +63,8 @@ mod test {
         lexer.import("test:std/line-number.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
-        generate(&linker,&mut context,&defstore).expect("j");
+        let mut context = generate2("",&linker,&stmts,&defstore,true).expect("j");
         let message = mini_interp(&mut context,&linker).expect_err("x");
         print!("{}\n",message);
         assert!(message.ends_with("at test:std/line-number.dp:10"));
@@ -78,9 +77,8 @@ mod test {
         lexer.import("test:std/line-number.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,false).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
-        generate(&linker,&mut context,&defstore).expect("j");
+        let mut context = generate2("",&linker,&stmts,&defstore,false).expect("j");
         let message = mini_interp(&mut context,&linker).expect_err("x");
         print!("{}\n",message);
         assert!(!message.contains(" at "));

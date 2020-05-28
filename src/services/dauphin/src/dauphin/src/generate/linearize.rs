@@ -334,14 +334,14 @@ pub fn linearize(context: &mut GenContext) -> Result<(),String> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::call;
+    use super::super::call::call;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate_code;
+    use super::super::codegen::generate_code;
     use crate::interp::{ mini_interp, xxx_compiler_link };
-    use super::super::remove_aliases;
+    use super::super::dealias::remove_aliases;
 
     fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a BTreeMap<Register,Linearized>) -> (Vec<&'a Linearized>,Vec<Register>) {
         let mut lin = Vec::new();
@@ -367,7 +367,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -375,7 +375,7 @@ mod test {
         print!("{:?}\n",context);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let values = mini_interp(&mut context,&linker);
+        let values = mini_interp(&mut context.get_instructions(),&linker);
         print!("{:?}",values);
     }
 
@@ -386,7 +386,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke-filter.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let instrs = context.get_instructions().clone();
@@ -395,7 +395,7 @@ mod test {
         print!("{:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
         remove_aliases(&mut context);
-        let (values,_) = mini_interp(&mut context,&linker).expect("x");
+        let (values,_) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
         let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}",values);
         assert_eq!(vec![1,2],values[&lins[0].data]);
@@ -417,7 +417,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke-reffilter.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -425,7 +425,7 @@ mod test {
         print!("{:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
         remove_aliases(&mut context);
-        let (values,strings) = mini_interp(&mut context,&linker).expect("x");
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
@@ -462,7 +462,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke-structenum.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -470,7 +470,7 @@ mod test {
         print!("{:?}\n",context);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let (_values,strings) = mini_interp(&mut context,&linker).expect("x");
+        let (_values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
         assert_eq!("{ *: 2; A.A: -; A.B: 0; A.B.X: 0; A.B.Y: -; B: 0; B.X: 0; B.Y: -; C: true; D: - }",strings[0]);
     }
 
@@ -481,7 +481,7 @@ mod test {
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         print!("{:?}\n",context);
@@ -489,7 +489,7 @@ mod test {
         print!("{:?}\n",context);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let (values,strings) = mini_interp(&mut context,&linker).expect("x");
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
@@ -503,7 +503,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize_real(&mut context).expect("linearize");
@@ -525,7 +525,7 @@ mod test {
         lexer.import("test:codegen/linearize-smoke-push.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let instrs = context.get_instructions().clone();
@@ -534,7 +534,7 @@ mod test {
         let (lins,_) = find_assigns(&instrs,&subregs);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let (values,_) = mini_interp(&mut context,&linker).expect("x");
+        let (values,_) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(vec![0],values[&lins[0].index[0].0]);
         assert_eq!(vec![0],values[&lins[0].index[0].1]);

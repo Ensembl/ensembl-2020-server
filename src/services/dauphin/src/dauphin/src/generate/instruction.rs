@@ -422,10 +422,6 @@ impl Instruction {
         Instruction { itype, regs }
     }
 
-    pub fn get_registers(&self) -> Vec<Register> {
-        self.regs.iter().cloned().collect()
-    }
-
     pub fn get_constraint(&self, defstore: &DefStore) -> Result<InstructionConstraint,String> {
         let mut out = Vec::new();
         for (i,c) in self.itype.get_constraints(defstore)?.drain(..).enumerate() {

@@ -17,11 +17,8 @@
 use std::fmt;
 use std::mem::swap;
 use super::instruction::{ Instruction, InstructionType };
-use crate::interp::CompilerLink;
 use crate::model::{ DefStore, Register, RegisterAllocator };
 use crate::typeinf::{ ExpressionType, MemberType, TypeModel, Typing };
-use super::{ generate_code, call, simplify,linearize, remove_aliases, run_nums, prune, copy_on_write, reuse_dead, assign_regs, reuse_const };
-use crate::parser::Statement;
 
 pub struct GenContext<'a> {
     defstore: &'a DefStore,
@@ -99,28 +96,4 @@ impl<'a> GenContext<'a> {
     }
 
     pub fn xxx_types(&mut self) -> &mut TypeModel { &mut self.types }
-}
-
-// XXX merge into core code only used in tests?
-fn optimise(compiler_link: &CompilerLink, context: &mut GenContext) {
-    run_nums(compiler_link,context);
-    prune(context);
-    copy_on_write(context);
-    prune(context);
-    run_nums(compiler_link,context);
-    reuse_dead(context);
-    assign_regs(context);
-}
-
-pub fn generate_and_optimise<'a>(compiler_link: &CompilerLink, defstore: &'a DefStore, stmts: Vec<Statement>) -> Result<GenContext<'a>,String> {
-    /* basic generation */
-    let mut context = generate_code(&defstore,stmts,true).map_err(|e| e.join("\n"))?;
-    call(&mut context)?;
-    simplify(&defstore,&mut context)?;
-    linearize(&mut context)?;
-    remove_aliases(&mut context);
-    optimise(compiler_link,&mut context);
-    reuse_const(&mut context);
-    optimise(compiler_link,&mut context);
-    Ok(context)
 }

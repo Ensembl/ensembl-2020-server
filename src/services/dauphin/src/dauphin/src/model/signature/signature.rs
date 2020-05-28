@@ -96,17 +96,8 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser, parse_type };
-    use crate::generate::generate_code;
     use crate::test::files::load_testdata;
-    use crate::generate::call;
-    use crate::generate::simplify;
-    use crate::generate::linearize;
-    use crate::generate::remove_aliases;
-    use crate::generate::copy_on_write;
-    use crate::generate::run_nums;
-    use crate::generate::reuse_dead;
-    use crate::generate::prune;
-    use crate::generate::assign_regs;
+    use crate::generate::generate;
     use crate::interp::{ mini_interp, xxx_compiler_link };
     use crate::test::cbor::cbor_cmp;
     use crate::model::{ DefStore };
@@ -144,7 +135,8 @@ mod test {
         lexer.import("test:codegen/offset-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let _context = generate_code(&defstore,stmts,true).expect("codegen");
+        let linker = xxx_compiler_link().expect("y");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test::etest3)")).expect("b");
@@ -158,24 +150,11 @@ mod test {
         lexer.import("test:codegen/offset-enums.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"test::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        linearize(&mut context).expect("linearize");
-        remove_aliases(&mut context);
-        print!("{:?}",context);
-        run_nums(&linker,&mut context);
-        prune(&mut context);
-        copy_on_write(&mut context);
-        prune(&mut context);
-        run_nums(&linker,&mut context);
-        reuse_dead(&mut context);
-        assign_regs(&mut context);
-        print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -188,7 +167,8 @@ mod test {
         lexer.import("test:codegen/offset-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let _context = generate_code(&defstore,stmts,true).expect("codegen");
+        let linker = xxx_compiler_link().expect("y");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test::etest3)")).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");

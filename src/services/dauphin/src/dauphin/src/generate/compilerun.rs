@@ -17,7 +17,7 @@
 use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
 use crate::model::Register;
-use crate::interp::{ to_index, InterpContext, InterpValue, SuperCow, CompilerLink, CommandCompileSuite, Command, PreImageOutcome, numbers_to_indexes };
+use crate::interp::{ InterpContext, InterpValue, SuperCow, CompilerLink, CommandCompileSuite, Command, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
 #[derive(Clone,Hash,PartialEq,Eq)]
@@ -208,17 +208,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 }
 
-fn all_known(values: &HashMap<Register,Vec<usize>>, changing: &[usize], instr: &Instruction) -> bool {
-    let mut out = true;
-    for i in changing {
-        if !values.contains_key(&instr.regs[*i]) {
-            out = false;
-        }
-    }
-    out
-}
-
-pub fn run_nums(compiler_link: &CompilerLink, context: &mut GenContext) -> Result<(),String> {
+pub fn compile_run(compiler_link: &CompilerLink, context: &mut GenContext) -> Result<(),String> {
     let mut pic = PreImageContext::new(compiler_link,context)?;
     pic.preimage()?;
     Ok(())
@@ -227,16 +217,16 @@ pub fn run_nums(compiler_link: &CompilerLink, context: &mut GenContext) -> Resul
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::call;
+    use super::super::call::call;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate_code;
     use crate::generate::prune::prune;
     use crate::interp::{ mini_interp, xxx_compiler_link };
-    use super::super::linearize;
-    use super::super::remove_aliases;
+    use super::super::codegen::generate_code;
+    use super::super::linearize::linearize;
+    use super::super::dealias::remove_aliases;
 
     #[test]
     fn runnums_smoke() {
@@ -245,21 +235,21 @@ mod test {
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        run_nums(&linker,&mut context).expect("x");
+        compile_run(&linker,&mut context).expect("x");
         prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);
         let lines = format!("{:?}",context).as_bytes().iter().filter(|&&c| c == b'\n').count();
         print!("{}\n",lines);
         //assert!(lines<350);
-        let (values,strings) = mini_interp(&mut context,&linker).expect("x");
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
@@ -274,14 +264,14 @@ mod test {
         lexer.import("test:codegen/runnums.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        run_nums(&linker,&mut context).expect("x");
+        compile_run(&linker,&mut context).expect("x");
         prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);

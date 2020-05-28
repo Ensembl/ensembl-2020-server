@@ -326,9 +326,9 @@ impl<'a> CodeGen<'a> {
         Ok(())
     }
 
-    fn go(mut self, stmts: Vec<Statement>) -> Result<GenContext<'a>,Vec<String>> {
+    fn go(mut self, stmts: &Vec<Statement>) -> Result<GenContext<'a>,Vec<String>> {
         let mut errors = Vec::new();
-        for stmt in &stmts {
+        for stmt in stmts {
             let r = self.build_stmt(stmt);
             if let Err(r) = r {
                 errors.push(format!("{} at {} {}",r,stmt.2,stmt.3));
@@ -343,7 +343,7 @@ impl<'a> CodeGen<'a> {
     }
 }
 
-pub fn generate_code<'a>(defstore: &'a DefStore, stmts: Vec<Statement>, include_line_numbers: bool) -> Result<GenContext,Vec<String>> {
+pub fn generate_code<'a>(defstore: &'a DefStore, stmts: &Vec<Statement>, include_line_numbers: bool) -> Result<GenContext<'a>,Vec<String>> {
     let mut context = CodeGen::new(defstore,include_line_numbers).go(stmts)?;
     print!("c {:?}\n",context.get_instructions().len());
     context.phase_finished();
@@ -366,7 +366,7 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let gen = CodeGen::new(&defstore,true);
-        gen.go(stmts)?;
+        gen.go(&stmts)?;
         Ok(())
     }
 
@@ -377,7 +377,7 @@ mod test {
         lexer.import("test:codegen/generate-smoke2.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let gencontext = generate_code(&defstore,stmts,true).expect("codegen");
+        let gencontext = generate_code(&defstore,&stmts,true).expect("codegen");
         let cmds : Vec<String> = gencontext.get_instructions().iter().map(|e| format!("{:?}",e)).collect();
         let outdata = load_testdata(&["codegen","generate-smoke2.out"]).ok().unwrap();
         print!("{}",cmds.join(""));

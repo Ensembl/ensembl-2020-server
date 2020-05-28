@@ -43,7 +43,6 @@ impl CommandInterpretSuite {
         }
         let mut out = HashMap::new();
         for i in (0..data.len()).step_by(2) {
-            let offset = 
             out.insert(CommandSetId::deserialize(&data[i+1])?,cbor_int(&data[i],None)? as u32);
         }
         Ok(out)

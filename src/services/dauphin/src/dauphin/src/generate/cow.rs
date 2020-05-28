@@ -62,7 +62,7 @@ impl CurrentValues {
         if let Some(value) = self.reg_value.get(register) {
             let main_reg = *self.value_reg.get(value).unwrap();
             if main_reg == *register {
-                if let Some(spares) = self.spare_regs.get(value) {
+                if self.spare_regs.get(value).is_some() {
                     return true;
                 }
             }
@@ -237,18 +237,18 @@ pub fn reuse_const(context: &mut GenContext) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::call;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate_code;
     use crate::interp::{ mini_interp, xxx_compiler_link };
-    use super::super::linearize;
-    use super::super::remove_aliases;
-    use super::super::prune;
-    use super::super::run_nums;
+    use super::super::dealias::remove_aliases;
+    use super::super::prune::prune;
+    use super::super::compilerun::compile_run;
     use super::super::generate::generate;
+    use super::super::codegen::generate_code;
+    use super::super::call::call;
+    use super::super::linearize::linearize;
 
     #[test]
     fn cow_smoke() {
@@ -257,19 +257,19 @@ mod test {
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        run_nums(&linker,&mut context);
+        compile_run(&linker,&mut context).expect("m");
         prune(&mut context);
         print!("{:?}\n",context);
         copy_on_write(&mut context);
         print!("{:?}\n",context);
         prune(&mut context);
-        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
+        let (_,strings) = mini_interp(&context.get_instructions(),&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -283,11 +283,9 @@ mod test {
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
-        generate(&linker,&mut context,&defstore).expect("j");
-        let linker = xxx_compiler_link().expect("y");
-        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

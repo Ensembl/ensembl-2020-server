@@ -28,7 +28,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                 for (i,reg) in instr.regs.iter().enumerate() {
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
                     flows.push(match modes[i] {
-                        MemberMode::LValue => MemberDataFlow::InOut, /// TODO maybe Out: let command decide
+                        MemberMode::LValue => MemberDataFlow::InOut, // TODO maybe Out: let command decide
                         _ => MemberDataFlow::In
                     });                    
                     rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_)?);
@@ -59,7 +59,7 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::{ generate_code, generate };
+    use crate::generate::generate;
     use crate::interp::{ mini_interp, xxx_compiler_link };
 
     #[test]
@@ -69,9 +69,8 @@ mod test {
         lexer.import("test:codegen/module-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
-        generate(&linker,&mut context,&defstore).expect("j");
-        mini_interp(&mut context,&linker).expect("x");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        mini_interp(&instrs,&linker).expect("x");
     }
 }

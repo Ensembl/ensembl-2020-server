@@ -60,10 +60,8 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate_code;
+    use crate::generate::generate2;
     use crate::interp::{ mini_interp, xxx_compiler_link };
-    use super::super::linearize;
-    use super::super::remove_aliases;
 
     // XXX test pruning, eg fewer lines
     #[test]
@@ -73,16 +71,10 @@ mod test {
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        linearize(&mut context).expect("linearize");
-        remove_aliases(&mut context);
-        print!("{:?}\n",context);
-        prune(&mut context);
-        print!("{:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
-        let (_values,strings) = mini_interp(&mut context,&linker).expect("x");
+        let instrs = generate2("p",&linker,&stmts,&defstore,true).expect("j");
+        print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
+        let (_values,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

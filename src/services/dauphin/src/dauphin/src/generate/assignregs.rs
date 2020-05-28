@@ -86,19 +86,19 @@ pub fn assign_regs(context: &mut GenContext) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::call;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate_code;
     use crate::interp::{ mini_interp, xxx_compiler_link };
-    use super::super::linearize;
-    use super::super::remove_aliases;
-    use super::super::copy_on_write;
-    use super::super::run_nums;
-    use super::super::reuse_dead;
-    use super::super::prune;
+    use super::super::codegen::generate_code;
+    use super::super::call::call;
+    use super::super::linearize::linearize;
+    use super::super::dealias::remove_aliases;
+    use super::super::cow::copy_on_write;
+    use super::super::compilerun::compile_run;
+    use super::super::reusedead::reuse_dead;
+    use super::super::prune::prune;
 
     // XXX test pruning, eg fewer lines
     #[test]
@@ -109,20 +109,20 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        run_nums(&linker,&mut context);
+        compile_run(&linker,&mut context).expect("m");
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
-        run_nums(&linker,&mut context);
+        compile_run(&linker,&mut context).expect("n");
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
+        let (_,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

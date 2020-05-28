@@ -17,7 +17,7 @@
 use std::collections::{ HashMap };
 use std::rc::Rc;
 use crate::commands::{ make_core, make_library };
-use crate::generate::GenContext;
+use crate::generate::{ GenContext, Instruction };
 use crate::model::Register;
 use crate::interp::context::InterpContext;
 use crate::interp::CommandSuiteBuilder;
@@ -47,8 +47,8 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
     Ok(out)
 }
 
-pub fn mini_interp_run(context: &GenContext, cl: &CompilerLink, ic: &mut InterpContext) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
-    let program = cl.serialize(&context.get_instructions(),false)?;
+pub fn mini_interp_run(instrs: &Vec<Instruction>, cl: &CompilerLink, ic: &mut InterpContext) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
+    let program = cl.serialize(instrs,false)?;
     let mut buffer = Vec::new();
     serde_cbor::to_writer(&mut buffer,&program).expect("cbor b");
     print!("{}\n",hexdump(&buffer));
@@ -78,9 +78,9 @@ pub fn xxx_compiler_link() -> Result<CompilerLink,String> {
     CompilerLink::new(suite)
 }
 
-pub fn mini_interp(context: &GenContext, cl: &CompilerLink) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
+pub fn mini_interp(instrs: &Vec<Instruction>, cl: &CompilerLink) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
     let mut ic = InterpContext::new();
-    mini_interp_run(context,&cl,&mut ic).map_err(|x| {
+    mini_interp_run(instrs,&cl,&mut ic).map_err(|x| {
         let line = ic.get_line_number();
         if line.1 != 0 {
             format!("{} at {}:{}",x,line.0,line.1)

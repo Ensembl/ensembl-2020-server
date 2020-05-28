@@ -119,7 +119,8 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::{ generate_code };
+    use crate::generate::generate2;
+    use crate::interp::xxx_compiler_link;
 
     #[test]
     fn typing_smoke() {
@@ -128,11 +129,12 @@ mod test {
         lexer.import("test:codegen/typepass-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let context = generate_code(&defstore,stmts,true).expect("codegen");
-        let instrs_str : Vec<String> = context.get_instructions().iter().map(|v| format!("{:?}",v)).collect();
+        let linker = xxx_compiler_link().expect("y");
+        let instrs = generate2("",&linker,&stmts,&defstore,true).expect("j");
+        let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));
         let mut tp = Typing::new();
-        for instr in &context.get_instructions() {
+        for instr in &instrs {
             print!("=== {:?}",instr);
             tp.add(&instr.get_constraint(&defstore).expect("A")).expect("ok");
             print!("{:?}\n",tp);

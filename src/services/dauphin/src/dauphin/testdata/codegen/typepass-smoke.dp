@@ -1,15 +1,8 @@
+import "search:std";
+use "std";
+
 enum etest { X: string, Y: boolean };
 struct stest { A: vec(number), B: etest };
-
-proc assign(out _A, _A);
-proc incr(lvalue number, number);
-inline ":=" assign left 14;
-inline "(+=)" incr left 14;
-
-func gt(number,number) becomes boolean;
-func plus(number,number) becomes number;
-inline "+" plus left 4;
-inline ">" gt left 6;
 
 x := 1;
 y := true;

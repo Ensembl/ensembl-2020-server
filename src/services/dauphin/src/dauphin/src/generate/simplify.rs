@@ -349,20 +349,14 @@ pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),Stri
 
 #[cfg(test)]
 mod test {
-    use super::super::call;
+    use super::super::call::call;
+    use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::generate_code;
+    use crate::generate::codegen::generate_code;
     use crate::test::files::load_testdata;
-    use crate::generate::simplify;
-    use crate::generate::linearize;
-    use crate::generate::remove_aliases;
-    use crate::generate::copy_on_write;
-    use crate::generate::run_nums;
-    use crate::generate::reuse_dead;
-    use crate::generate::prune;
-    use crate::generate::assign_regs;
+    use crate::generate::generate;
     use crate::interp::{ mini_interp, xxx_compiler_link };
 
 
@@ -391,7 +385,7 @@ mod test {
         lexer.import("test:codegen/simplify-smoke.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
@@ -406,7 +400,7 @@ mod test {
         lexer.import("test:codegen/simplify-enum-nest.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
+        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
     }
@@ -419,20 +413,8 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        linearize(&mut context).expect("linearize");
-        remove_aliases(&mut context);
-        run_nums(&linker,&mut context);
-        prune(&mut context);
-        copy_on_write(&mut context);
-        prune(&mut context);
-        run_nums(&linker,&mut context);
-        reuse_dead(&mut context);
-        assign_regs(&mut context);
-        print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }  
@@ -446,20 +428,9 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        linearize(&mut context).expect("linearize");
-        remove_aliases(&mut context);
-        run_nums(&linker,&mut context);
-        prune(&mut context);
-        copy_on_write(&mut context);
-        prune(&mut context);
-        run_nums(&linker,&mut context);
-        reuse_dead(&mut context);
-        assign_regs(&mut context);
-        print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
+        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -472,22 +443,10 @@ mod test {
         lexer.import("test:codegen/both-lvalue.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
-        print!("{:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        linearize(&mut context).expect("linearize");
-        remove_aliases(&mut context);
-        run_nums(&linker,&mut context);
-        prune(&mut context);
-        copy_on_write(&mut context);
-        prune(&mut context);
-        run_nums(&linker,&mut context);
-        reuse_dead(&mut context);
-        assign_regs(&mut context);
-        print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
+        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }  

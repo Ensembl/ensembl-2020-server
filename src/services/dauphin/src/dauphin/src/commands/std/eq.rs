@@ -162,7 +162,7 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::{ generate_code, generate };
+    use crate::generate::generate;
     use crate::interp::{ mini_interp, xxx_compiler_link };
 
     #[test]
@@ -172,10 +172,9 @@ mod test {
         lexer.import("test:std/eq.dp").expect("cannot load file");
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
-        generate(&linker,&mut context,&defstore).expect("j");
-        let (_,strings) = mini_interp(&mut context,&linker).expect("x");
+        let instrs = generate(&linker,&stmts,&defstore).expect("j");
+        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
