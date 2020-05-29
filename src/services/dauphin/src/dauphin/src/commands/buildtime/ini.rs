@@ -29,42 +29,43 @@ pub struct LoadIniCommandType();
 impl CommandType for LoadIniCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            values: 3,
+            values: 4,
             trigger: CommandTrigger::Command(Identifier::new("buildtime","load_ini"))
         }
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(LoadIniCommand(it.regs[0],it.regs[1],it.regs[2])))
+        Ok(Box::new(LoadIniCommand(it.regs[0],it.regs[1],it.regs[2],it.regs[3])))
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         Err(format!("buildtime::load_ini can only be executed at compile time"))
     }
 }
 
-pub struct LoadIniCommand(pub(crate) Register, pub(crate) Register, pub(crate) Register);
+pub struct LoadIniCommand(Register,Register,Register,Register);
 
-fn load_ini(resolver: &Resolver, filename: &str, key: &str) -> Result<String,String> {
+fn load_ini(resolver: &Resolver, filename: &str, section: &str, key: &str) -> Result<String,String> {
     let data = resolver.resolve(filename)?.0.to_string();
     let ini_file = Ini::load_from_str(&data).map_err(|e| format!("Cannot parse {}: {}",filename,e))?;
-    let section: Option<String> = None;
+    let section = if section == "" { None } else { Some(section.to_string()) };
     let ini_section = ini_file.section(section).ok_or_else(|| format!("No such section"))?;
     let value = ini_section.get(key).ok_or_else(|| format!("No such key {}",key))?.to_string();
     Ok(value)
 }
 
-fn load_inis(resolver: &Resolver, filenames: &[String], keys: &[String]) -> Result<Vec<String>,String> {
+fn load_inis(resolver: &Resolver, filenames: &[String], sections: &[String], keys: &[String]) -> Result<Vec<String>,String> {
     let mut out = vec![];
+    let sec_len = sections.len();
     let fn_len = filenames.len();
     for (i,key) in keys.iter().enumerate() {
-        out.push(load_ini(resolver,&filenames[i%fn_len],key)?);
+        out.push(load_ini(resolver,&filenames[i%fn_len],&sections[i%sec_len],key)?);
     }
     Ok(out)
 }
 
 impl Command for LoadIniCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
         Err(format!("buildtime::load_ini can only be executed at compile time"))
     }
 
@@ -73,21 +74,22 @@ impl Command for LoadIniCommand {
     }
 
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        if context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2) {
-            let (filenames,keys) = {
-                let run_context = context.context();
-                let regs = run_context.registers();
+        if context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2) && context.get_reg_valid(&self.3) {
+            let (filenames,sections,keys) = {
+                let regs = context.context().registers();
                 (
                     &regs.get_strings(&self.1)?,
-                    &regs.get_strings(&self.2)?
+                    &regs.get_strings(&self.2)?,
+                    &regs.get_strings(&self.3)?
                 )
             };
-            let out = load_inis(context.resolver(),filenames,&keys)?;
+            let out = load_inis(context.resolver(),filenames,sections,keys)?;
             context.context().registers().write(&self.0,InterpValue::Strings(out));
             context.set_reg_valid(&self.0,true);
             Ok(PreImageOutcome::Constant(vec![self.0]))
         } else {
-            Err(format!("buildtime::load_ini needs all arguments to be known at build time 1st-arg-known={} 2nd-arg-known={}",context.get_reg_valid(&self.1),context.get_reg_valid(&self.2)))
+            Err(format!("buildtime::load_ini needs all arguments to be known at build time 1st/2nd/3rd-arg-known={}/{}/{}",
+                            context.get_reg_valid(&self.1),context.get_reg_valid(&self.2),context.get_reg_valid(&self.3)))
         }
     }
 }
