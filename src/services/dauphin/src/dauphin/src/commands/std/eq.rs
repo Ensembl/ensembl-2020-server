@@ -168,13 +168,13 @@ mod test {
     #[test]
     fn eq_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:std/eq.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let config = xxx_test_quiet_config();
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);

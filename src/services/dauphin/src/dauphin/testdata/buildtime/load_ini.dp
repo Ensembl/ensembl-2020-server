@@ -1,0 +1,8 @@
+import "search:std";
+use "std";
+
+import "search:buildtime";
+use "buildtime";
+
+x := load_ini("test:buildtime/test.ini","hello");
+assert(x=="world",true);

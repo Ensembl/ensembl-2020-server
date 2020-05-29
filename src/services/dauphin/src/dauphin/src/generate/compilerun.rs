@@ -16,6 +16,7 @@
 
 use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
+use crate::resolver::Resolver;
 use crate::model::Register;
 use crate::interp::{ InterpContext, InterpValue, SuperCow, CompilerLink, CommandCompileSuite, Command, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
@@ -39,6 +40,7 @@ impl StealableValue {
 }
 
 pub struct PreImageContext<'a,'b> {
+    resolver: &'a Resolver,
     steals: HashMap<StealableValue,Register>,
     rev_steals: HashMap<Register,StealableValue>,
     suppressed: HashSet<Register>,
@@ -49,8 +51,9 @@ pub struct PreImageContext<'a,'b> {
 }
 
 impl<'a,'b> PreImageContext<'a,'b> {
-    pub fn new(compiler_link: &CompilerLink, gen_context: &'a mut GenContext<'b>) -> Result<PreImageContext<'a,'b>,String> {
+    pub fn new(compiler_link: &CompilerLink, resolver: &'a Resolver, gen_context: &'a mut GenContext<'b>) -> Result<PreImageContext<'a,'b>,String> {
         Ok(PreImageContext {
+            resolver,
             steals: HashMap::new(),
             rev_steals: HashMap::new(),
             suppressed: HashSet::new(),
@@ -62,6 +65,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     pub fn context(&mut self) -> &mut InterpContext { &mut self.context }
+    pub fn resolver(&self) -> &Resolver { &self.resolver }
 
     pub fn add_instruction(&mut self, instr: &Instruction) -> Result<(),String> {
         let out = instr.itype.out_registers();
@@ -199,8 +203,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 }
 
-pub fn compile_run(compiler_link: &CompilerLink, context: &mut GenContext) -> Result<(),String> {
-    let mut pic = PreImageContext::new(compiler_link,context)?;
+pub fn compile_run(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut GenContext) -> Result<(),String> {
+    let mut pic = PreImageContext::new(compiler_link,resolver,context)?;
     pic.preimage()?;
     Ok(())
 }
@@ -222,9 +226,9 @@ mod test {
     #[test]
     fn runnums_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
@@ -233,7 +237,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        compile_run(&linker,&mut context).expect("x");
+        compile_run(&linker,&resolver,&mut context).expect("x");
         prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);
@@ -252,9 +256,9 @@ mod test {
     #[test]
     fn runnums2_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/runnums.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
@@ -263,7 +267,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        compile_run(&linker,&mut context).expect("x");
+        compile_run(&linker,&resolver,&mut context).expect("x");
         prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);

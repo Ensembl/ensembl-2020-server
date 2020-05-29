@@ -378,9 +378,9 @@ mod test {
     #[test]
     fn simplify_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/simplify-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
@@ -393,9 +393,9 @@ mod test {
     #[test]
     fn simplify_enum_nest() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/simplify-enum-nest.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
@@ -405,13 +405,13 @@ mod test {
     #[test]
     fn simplify_enum_lvalue() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/enum-lvalue.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let config = xxx_test_config();
-        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
@@ -421,13 +421,13 @@ mod test {
     #[test]
     fn simplify_struct_lvalue() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/struct-lvalue.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let config = xxx_test_config();
-        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
@@ -438,13 +438,13 @@ mod test {
     #[test]
     fn simplify_both_lvalue() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/both-lvalue.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let config = xxx_test_config();
-        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {

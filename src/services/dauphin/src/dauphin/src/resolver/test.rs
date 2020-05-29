@@ -52,6 +52,10 @@ pub fn test_resolver() -> Resolver {
     let std_path = Path::new(&std_path)
         .parent().unwrap_or(&std_path)
         .join("src").join("commands").join("std");
+    let bt_path = root_dir.clone();
+    let bt_path = Path::new(&bt_path)
+        .parent().unwrap_or(&bt_path)
+        .join("src").join("commands").join("buildtime");
     print!("root path {}\n",root_dir.display());
     print!("std path {}\n",std_path.display());
     out.add("preamble",PreambleResolver::new());
@@ -59,7 +63,8 @@ pub fn test_resolver() -> Resolver {
     out.add("data",DataResolver::new());
     out.add("file",FileResolver::new(root_dir));
     out.add("search",SearchResolver::new(&vec![
-        format!("file:{}/*.dp",std_path.to_string_lossy())
+        format!("file:{}/*.dp",std_path.to_string_lossy()),
+        format!("file:{}/*.dp",bt_path.to_string_lossy()),
     ]));
     out
 }

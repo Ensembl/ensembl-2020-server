@@ -251,9 +251,9 @@ mod test {
     #[test]
     fn cow_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         let linker = xxx_compiler_link().expect("y");
@@ -261,7 +261,7 @@ mod test {
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        compile_run(&linker,&mut context).expect("m");
+        compile_run(&linker,&resolver,&mut context).expect("m");
         prune(&mut context);
         print!("{:?}\n",context);
         copy_on_write(&mut context);
@@ -278,13 +278,13 @@ mod test {
     #[test]
     fn reuse_consts_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let config = xxx_test_config();
-        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);

@@ -67,14 +67,14 @@ mod test {
     #[test]
     fn prune_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let mut config = xxx_test_config();
         config.set_opt_seq("p");
-        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_values,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {

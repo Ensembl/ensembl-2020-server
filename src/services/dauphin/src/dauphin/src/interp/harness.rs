@@ -18,7 +18,7 @@ use std::collections::{ HashMap };
 use std::time::{ SystemTime, Duration };
 use std::rc::Rc;
 use crate::cli::Config;
-use crate::commands::{ make_core, make_library };
+use crate::commands::{ make_core, make_library, make_buildtime };
 use crate::generate::{ GenContext, Instruction };
 use crate::model::Register;
 use crate::interp::context::InterpContext;
@@ -58,6 +58,7 @@ pub fn mini_interp_run(instrs: &Vec<Instruction>, cl: &CompilerLink, ic: &mut In
     let mut suite = CommandSuiteBuilder::new();
     suite.add(make_core()?)?;
     suite.add(make_library()?)?;
+    suite.add(make_buildtime()?)?;
     let interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
 
     if let Some(instrs) = interpret_linker.get_instructions() {
@@ -102,6 +103,7 @@ pub fn xxx_compiler_link() -> Result<CompilerLink,String> {
     let mut suite = CommandSuiteBuilder::new();
     suite.add(make_core()?)?;
     suite.add(make_library()?)?;
+    suite.add(make_buildtime()?)?;
     CompilerLink::new(suite)
 }
 

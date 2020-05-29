@@ -1,0 +1,4 @@
+module "buildtime";
+
+func load_ini(string,string) becomes string;
+

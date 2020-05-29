@@ -165,7 +165,14 @@ impl Command for StringConstCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),CborValue::Text(self.1.to_string())])
-    } 
+    }
+
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct BytesConstCommandType();

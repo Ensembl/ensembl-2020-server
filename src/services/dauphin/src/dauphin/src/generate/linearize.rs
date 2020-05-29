@@ -363,9 +363,9 @@ mod test {
     #[test]
     fn linearize_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
@@ -383,9 +383,9 @@ mod test {
     #[test]
     fn linearize_filter_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-smoke-filter.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
@@ -415,9 +415,9 @@ mod test {
     #[test]
     fn linearize_reffilter_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-smoke-reffilter.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
@@ -461,9 +461,9 @@ mod test {
     #[test]
     fn linearize_structenum_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-smoke-structenum.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
@@ -481,9 +481,9 @@ mod test {
     #[test]
     fn linearize_refsquare() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
@@ -504,9 +504,9 @@ mod test {
 
     fn linearize_stable_pass() -> Vec<Instruction> {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
@@ -526,9 +526,9 @@ mod test {
    #[test]
     fn linearize_push_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-smoke-push.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");

@@ -22,7 +22,7 @@ use serde_cbor::Value as CborValue;
 use super::commontype::BuiltinCommandType;
 use crate::commands::common::polymorphic::arbitrate_type;
 use super::consts::const_commands;
-use crate::generate::{ Instruction, InstructionSuperType, PreImageContext };
+use crate::generate::{ InstructionSuperType, PreImageContext };
 
 // XXX read is coerce
 

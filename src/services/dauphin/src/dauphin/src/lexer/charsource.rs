@@ -15,6 +15,7 @@
  */
 
 pub trait CharSource {
+    fn to_string(&self) -> String; /* for alien formats */
     fn name(&self) -> &str;
     fn module(&self) -> &str;
     fn next(&mut self) -> Option<char>;
@@ -38,6 +39,7 @@ impl StringCharSource {
 }
 
 impl CharSource for StringCharSource {
+    fn to_string(&self) -> String { self.data.iter().collect() }
     fn name(&self) -> &str { &self.name }
     fn module(&self) -> &str { &self.module }
 
@@ -79,6 +81,7 @@ pub struct LocatedCharSource {
 }
 
 impl CharSource for LocatedCharSource {
+    fn to_string(&self) -> String { self.cs.to_string() }
     fn name(&self) -> &str { self.cs.name() }
     fn module(&self) -> &str { self.cs.module() }
 

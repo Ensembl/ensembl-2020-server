@@ -59,14 +59,14 @@ mod test {
     #[test]
     fn line_number_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:std/line-number.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let mut config = xxx_test_config();
         config.set_opt_seq("");
-        let mut context = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let mut context = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let message = mini_interp(&mut context,&linker,&config).expect_err("x");
         print!("{}\n",message);
         assert!(message.ends_with("at test:std/line-number.dp:10"));
@@ -75,15 +75,15 @@ mod test {
     #[test]
     fn no_line_number_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:std/line-number.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
         config.set_opt_seq("");
-        let mut context = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let mut context = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let message = mini_interp(&mut context,&linker,&config).expect_err("x");
         print!("{}\n",message);
         assert!(!message.contains(" at "));

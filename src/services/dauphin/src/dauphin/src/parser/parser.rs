@@ -21,16 +21,16 @@ use super::node::{ Statement, ParserStatement, ParseError };
 use super::declare::declare;
 use super::parsestmt::{ parse_statement };
 
-pub struct Parser {
-    lexer: Lexer,
+pub struct Parser<'a> {
+    lexer: &'a mut Lexer<'a>,
     defstore: DefStore,
     stmts: Vec<Statement>,
     errors: Vec<ParseError>
 }
 
-impl Parser {
-    pub fn new(lexer: Lexer) -> Parser {
-        let mut p = Parser {
+impl<'a> Parser<'a> {
+    pub fn new(lexer: &'a mut Lexer<'a>) -> Parser<'a> {
+        let p = Parser {
             lexer,
             defstore: DefStore::new(),
             stmts: Vec::new(),
@@ -111,9 +111,9 @@ mod test {
     #[test]
     fn statement() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("data: import \"x\";").ok();
-        let mut p = Parser::new(lexer);
+        let mut p = Parser::new(&mut lexer);
 
         assert_eq!(Ok(ParserStatement::Import("x".to_string())),last_statement(&mut p));
     }
@@ -121,9 +121,9 @@ mod test {
     #[test]
     fn import_statement() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("data: import \"data: $;\";").ok();
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let err = p.parse().err().unwrap();
         assert_eq!("$ encountered outside filter at line 1 column 2 in data: $;".to_string(),err[0].message());
     }
@@ -135,9 +135,9 @@ mod test {
             "file:parser/*.dp".to_string(),
             "file:parser/import-subdir/*.dp".to_string()
         ]).expect("A");
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("search:import-search").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let txt = "Reserved keyword 'reserved' found at line 1 column 1 in ../import-smoke4.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
@@ -145,9 +145,9 @@ mod test {
     #[test]
     fn test_preprocess() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("file:parser/import-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let txt = "Reserved keyword 'reserved' found at line 1 column 1 in ../import-smoke4.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
@@ -155,9 +155,9 @@ mod test {
     #[test]
     fn test_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:parser/parser-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,_defstore) = p.parse().expect("error");
         let mut out : Vec<String> = stmts.iter().map(|x| format!("{:?}",x)).collect();
         out.push("".to_string()); /* For trailing \n */
@@ -168,9 +168,9 @@ mod test {
     #[test]
     fn test_no_nested_dollar() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:parser/parser-nonest.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let txt = "$ encountered outside filter at line 5 column 1 in test:parser/parser-nonest.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
@@ -178,9 +178,9 @@ mod test {
     #[test]
     fn test_id_clash() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:parser/id-clash.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let txt = "duplicate identifier: test::assign at line 2 column 29 in test:parser/id-clash.dp";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
@@ -196,9 +196,9 @@ mod test {
     #[test]
     fn test_struct() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:parser/struct-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         assert_eq!("struct test::A { 0: number, 1: vec(number) }",print_struct(&defstore,"A"));
         assert_eq!("struct test::B { X: number, Y: vec(test::A) }",print_struct(&defstore,"B"));
@@ -213,9 +213,9 @@ mod test {
     #[test]
     fn test_enum() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:parser/enum-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         assert_eq!("enum test::A { M: number, N: vec(number) }",print_enum(&defstore,"A"));
         assert_eq!("enum test::B { X: number, Y: vec(test::A) }",print_enum(&defstore,"B"));
@@ -226,9 +226,9 @@ mod test {
     #[test]
     fn test_short() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:parser/short.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,_) = p.parse().expect("error");
         let modules = stmts.iter().map(|x| (x.0).module().to_string()).collect::<Vec<_>>();
         assert_eq!(vec!["library1","library2","library2",

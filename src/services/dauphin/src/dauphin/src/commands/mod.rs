@@ -35,9 +35,15 @@ mod std {
     mod eq;
 }
 
+mod buildtime {
+    pub(super) mod buildtime;
+    pub(super) mod ini;
+}
+
 // XXX unexport
 pub use self::core::consts::{
     ConstCommandType, NumberConstCommandType, BooleanConstCommandType, StringConstCommandType
 };
 pub use self::core::core::make_core;
 pub use self::std::library::make_library;
+pub use self::buildtime::buildtime::make_buildtime;

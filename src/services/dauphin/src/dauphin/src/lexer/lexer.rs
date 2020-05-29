@@ -20,15 +20,15 @@ use crate::resolver::Resolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
 
-pub struct Lexer {
+pub struct Lexer<'a> {
     empty_set: HashSet<String>,
-    resolver: Resolver,
+    resolver: &'a Resolver,
     files: Vec<FileLexer>,
     inlines: InlineTokens
 }
 
-impl Lexer {
-    pub fn new(resolver: Resolver) -> Lexer {
+impl<'a> Lexer<'a> {
+    pub fn new(resolver: &'a Resolver) -> Lexer<'a> {
         Lexer {
             empty_set: HashSet::new(),
             resolver,
@@ -132,7 +132,7 @@ mod test {
     #[test]
     fn smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:lexer/smoke2.in").expect("import failed");
         let mut out = String::new();
         loop {
@@ -155,7 +155,7 @@ mod test {
     #[test]
     fn missing() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         assert_eq!(lexer.import("test:missing").err().unwrap(),"Loading \"missing\": No such file or directory (os error 2)","Error message missing");
     }
 }

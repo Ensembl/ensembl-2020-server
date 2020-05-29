@@ -359,9 +359,9 @@ mod test {
 
     fn run_pass(filename: &str) -> Result<(),Vec<String>> {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import(&format!("test:codegen/{}",filename)).expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let gen = CodeGen::new(&defstore,true);
         gen.go(&stmts)?;
@@ -371,9 +371,9 @@ mod test {
     #[test]
     fn codegen_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/generate-smoke2.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let gencontext = generate_code(&defstore,&stmts,true).expect("codegen");
         let cmds : Vec<String> = gencontext.get_instructions().iter().map(|e| format!("{:?}",e)).collect();

@@ -65,9 +65,9 @@ mod test {
     fn dealias_smoke() {
         // XXX check all aliases gone
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");

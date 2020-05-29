@@ -34,6 +34,7 @@ extern crate lazy_static;
 extern crate owning_ref;
 extern crate serde_cbor;
 extern crate crc;
+extern crate ini;
 
 /* This to remove RLS unused warns */
 
@@ -46,9 +47,9 @@ use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
 fn main() {
     let resolver = common_resolver(&vec![]).expect("setting up path resolver");
-    let mut lexer = Lexer::new(resolver);
+    let mut lexer = Lexer::new(&resolver);
     lexer.import("test:parser/parser-smoke.dp").expect("cannot load file");
-    let p = Parser::new(lexer);
+    let p = Parser::new(&mut lexer);
     let (stmts,defstore) = p.parse().map_err(|e| e[0].message().to_string()).expect("error");
     let mut out : Vec<String> = stmts.iter().map(|x| format!("{:?}",x)).collect();
     out.push("".to_string()); /* For trailing \n */
@@ -56,6 +57,6 @@ fn main() {
     assert_eq!(outdata,out.join("\n"));
     let linker = xxx_compiler_link().expect("y");
     let config = xxx_test_config();
-    let instrs = generate(&linker,&stmts,&defstore,&config).expect("codegen");
+    let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("codegen");
     mini_interp(&instrs,&linker,&config).expect("A");
 }

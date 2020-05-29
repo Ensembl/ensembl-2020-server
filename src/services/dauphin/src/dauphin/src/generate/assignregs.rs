@@ -104,9 +104,9 @@ mod test {
     #[test]
     fn assign_regs_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -114,11 +114,11 @@ mod test {
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        compile_run(&linker,&mut context).expect("m");
+        compile_run(&linker,&resolver,&mut context).expect("m");
         prune(&mut context);
         copy_on_write(&mut context);
         prune(&mut context);
-        compile_run(&linker,&mut context).expect("n");
+        compile_run(&linker,&resolver,&mut context).expect("n");
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);

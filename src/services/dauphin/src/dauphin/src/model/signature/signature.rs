@@ -106,7 +106,7 @@ mod test {
     // XXX move to common test utils
     fn make_type(defstore: &DefStore, name: &str) -> MemberType {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import(&format!("data:{}",name)).expect("cannot load file");
         parse_type(&mut lexer,defstore).expect("bad type")
     }
@@ -131,12 +131,12 @@ mod test {
     #[test]
     fn offset_smoke() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/offset-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore,&xxx_test_config()).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test::etest3)")).expect("b");
@@ -146,15 +146,15 @@ mod test {
     #[test]
     fn offset_enums() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/offset-enums.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"test::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         let config = xxx_test_config();
-        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
@@ -164,12 +164,12 @@ mod test {
     #[test]
     fn test_cbor() {
         let resolver = test_resolver();
-        let mut lexer = Lexer::new(resolver);
+        let mut lexer = Lexer::new(&resolver);
         lexer.import("test:codegen/offset-smoke.dp").expect("cannot load file");
-        let p = Parser::new(lexer);
+        let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore,&xxx_test_config()).expect("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(test::etest3)")).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");
