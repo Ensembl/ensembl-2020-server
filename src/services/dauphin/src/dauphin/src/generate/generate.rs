@@ -15,6 +15,7 @@
  */
 
 use std::collections::HashMap;
+use std::time::{ SystemTime, Duration };
 use super::{ GenContext, Instruction };
 use crate::cli::Config;
 use crate::model::DefStore;
@@ -30,7 +31,6 @@ use super::call::call;
 use super::linearize::linearize;
 use super::simplify::simplify;
 use super::cow::{ copy_on_write, reuse_const };
-use crate::interp::xxx_test_config;
 
 struct GenerateStep {
     name: String,
@@ -46,9 +46,13 @@ impl GenerateStep {
         }
     }
 
-    fn run(&self, config: &Config, compiler_link: &CompilerLink, defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
-        print!("step {}\n",self.name);
+    fn run(&self, index: usize, config: &Config, compiler_link: &CompilerLink, defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
+        let start_time = SystemTime::now();
         (self.step)(compiler_link,defstore,context)?;
+        let duration = start_time.elapsed().unwrap_or(Duration::new(0,0));
+        if config.get_verbose() > 1 {
+            print!("step {}: {}. {} lines {:.2}ms\n",index,self.name,context.get_instructions().len(),duration.as_secs_f32()*1000.);
+        }
         if config.get_verbose() > 2 {
             print!("{:?}\n",context);
         }
@@ -80,12 +84,15 @@ impl GenerateMenu {
     }
 
     fn run_steps(&self, config: &Config, sequence: &str, compiler_link: &CompilerLink, defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
+        let mut index = 1;
         for step in &self.gen_steps {
-            step.run(config,compiler_link,defstore,context)?;
+            step.run(index,config,compiler_link,defstore,context)?;
+            index += 1;
         }
         for k in sequence.chars() {
             let step = self.opt_steps.get(&k.to_string()).ok_or_else(|| format!("No such step '{}'",k))?;
-            step.run(config,compiler_link,defstore,context)?;
+            step.run(index,config,compiler_link,defstore,context)?;
+            index += 1;
         }
         Ok(())
     }

@@ -16,6 +16,7 @@
 
 use std::collections::BTreeMap;
 use std::rc::Rc;
+use crate::cli::Config;
 use crate::generate::{ Instruction, InstructionType };
 use crate::interp::commandsets::{ Command, CommandSchema, CommandCompileSuite, CommandTrigger, CommandSuiteBuilder };
 use serde_cbor::Value as CborValue;
@@ -62,7 +63,7 @@ impl CompilerLink {
         ])
     }
 
-    pub fn serialize(&self, instrs: &[Instruction], strip: bool) -> Result<CborValue,String> {
+    pub fn serialize(&self, instrs: &[Instruction], config: &Config) -> Result<CborValue,String> {
         let cmds = instrs.iter().map(|x| self.compile_instruction(x)).collect::<Result<Vec<_>,_>>()?;
         let mut out = BTreeMap::new();
         let mut cmds_s = vec![];
@@ -72,7 +73,7 @@ impl CompilerLink {
         out.insert(CborValue::Text("version".to_string()),CborValue::Integer(VERSION as i128));
         out.insert(CborValue::Text("suite".to_string()),self.cs.serialize().clone());
         out.insert(CborValue::Text("program".to_string()),CborValue::Array(cmds_s));
-        if !strip {
+        if config.get_generate_debug() {
             out.insert(CborValue::Text("instructions".to_string()),CborValue::Array(instrs.iter().map(|x| self.serialize_instruction(x)).collect::<Vec<_>>()));
         }
         Ok(CborValue::Map(out))

@@ -301,7 +301,7 @@ impl<'a> CodeGen<'a> {
         let mut modes = Vec::new();
         let procdecl = self.defstore.get_proc_id(&stmt.0)?;
         if self.include_line_numbers {
-            addf!(self,LineNumber(stmt.2.to_string(),stmt.3));
+            self.context.add_untyped(Instruction::new(InstructionType::LineNumber(stmt.2.to_string(),stmt.3),vec![]))?;    
         }
         for (i,member) in procdecl.get_signature().each_member().enumerate() {
             match member {
@@ -345,9 +345,7 @@ impl<'a> CodeGen<'a> {
 
 pub fn generate_code<'a>(defstore: &'a DefStore, stmts: &Vec<Statement>, include_line_numbers: bool) -> Result<GenContext<'a>,Vec<String>> {
     let mut context = CodeGen::new(defstore,include_line_numbers).go(stmts)?;
-    print!("c {:?}\n",context.get_instructions().len());
     context.phase_finished();
-    print!("d {:?}\n",context.get_instructions().len());
     Ok(context)
 }
 

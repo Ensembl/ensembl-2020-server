@@ -90,7 +90,7 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
-    use crate::interp::{ mini_interp, xxx_compiler_link };
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
     use super::super::codegen::generate_code;
     use super::super::call::call;
     use super::super::linearize::linearize;
@@ -122,7 +122,8 @@ mod test {
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
+        let config = xxx_test_config();
+        let (_,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

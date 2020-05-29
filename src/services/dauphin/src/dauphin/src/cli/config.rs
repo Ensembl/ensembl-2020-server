@@ -14,6 +14,14 @@
  *  limitations under the License.
  */
 
+/* optimise:
+ * 0 = silent
+ * 1 = confirm
+ * 2 = step
+ * 3 = dump
+ * 4 = interstep
+ */
+
 #[derive(Clone)]
 pub struct Config {
     subconfig: Option<Box<Config>>,
@@ -58,7 +66,6 @@ macro_rules! flag_str {
         }            
     };
 }
-
 
 impl Config {
     pub fn new() -> Config {

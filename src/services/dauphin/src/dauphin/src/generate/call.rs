@@ -70,7 +70,8 @@ mod test {
         let p = Parser::new(lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let instrs = generate(&linker,&stmts,&defstore,&xxx_test_config()).expect("j");
-        mini_interp(&instrs,&linker).expect("x");
+        let config = xxx_test_config();
+        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        mini_interp(&instrs,&linker,&config).expect("x");
     }
 }

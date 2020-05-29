@@ -57,5 +57,5 @@ fn main() {
     let linker = xxx_compiler_link().expect("y");
     let config = xxx_test_config();
     let instrs = generate(&linker,&stmts,&defstore,&config).expect("codegen");
-    mini_interp(&instrs,&linker).expect("A");
+    mini_interp(&instrs,&linker,&config).expect("A");
 }

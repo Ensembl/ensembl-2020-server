@@ -76,7 +76,7 @@ mod test {
         config.set_opt_seq("p");
         let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_values,strings) = mini_interp(&instrs,&linker).expect("x");
+        let (_values,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

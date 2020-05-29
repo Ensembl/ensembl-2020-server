@@ -338,11 +338,8 @@ fn extend_one(defstore: &DefStore, context: &mut GenContext, name: &Identifier) 
 }
 
 pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),String> {
-    print!("f {:?}\n",context.get_instructions().len());
     for name in defstore.get_structenum_order().rev() {
-        print!("A {:?}\n",context.get_instructions().len());
         extend_one(defstore,context,name)?;
-        print!("B {:?}\n",context.get_instructions().len());
     }
     Ok(())
 }
@@ -415,7 +412,7 @@ mod test {
         let linker = xxx_compiler_link().expect("y");
         let config = xxx_test_config();
         let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
-        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
+        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }  
@@ -432,7 +429,7 @@ mod test {
         let config = xxx_test_config();
         let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
+        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -449,7 +446,7 @@ mod test {
         let config = xxx_test_config();
         let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
+        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }  

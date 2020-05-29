@@ -153,8 +153,9 @@ mod test {
         let linker = xxx_compiler_link().expect("y");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"test::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
-        let instrs = generate(&linker,&stmts,&defstore,&xxx_test_config()).expect("j");
-        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
+        let config = xxx_test_config();
+        let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
+        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

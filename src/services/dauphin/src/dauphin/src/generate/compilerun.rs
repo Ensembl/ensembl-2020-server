@@ -45,8 +45,7 @@ pub struct PreImageContext<'a,'b> {
     compiler_link: CompilerLink,
     valid_registers: HashSet<Register>,
     context: InterpContext,
-    gen_context: &'a mut GenContext<'b>,
-    journal: Vec<Register>
+    gen_context: &'a mut GenContext<'b>
 }
 
 impl<'a,'b> PreImageContext<'a,'b> {
@@ -58,8 +57,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
             compiler_link: compiler_link.clone(),
             valid_registers: HashSet::new(),
             context: InterpContext::new(),
-            gen_context,
-            journal: vec![]
+            gen_context
         })
     }
 
@@ -98,10 +96,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     pub fn set_reg_valid(&mut self, reg: &Register, valid: bool) {
-        print!("valid {} {}\n",reg,valid);
         if valid {
             self.valid_registers.insert(*reg);
-            self.journal.push(*reg);
         } else {
             self.valid_registers.remove(reg);
         }
@@ -173,7 +169,6 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn preimage_instr(&mut self, instr: &Instruction) -> Result<(),String> {
-        print!("instr {:?}\n",instr);
         let command = self.compiler_link.compile_instruction(instr)?.2;
         match command.preimage(self) ? {
             PreImageOutcome::Skip => {
@@ -190,10 +185,6 @@ impl<'a,'b> PreImageContext<'a,'b> {
                     self.suppressed.insert(*reg);
                 }
             }
-        }
-        let (context,journal) = (&mut self.context,&mut self.journal);
-        for reg in journal.drain(..) {
-            print!("value {:?} {:?}\n",reg,context.registers().get(&reg).borrow().get_shared().expect(""));
         }
         self.context().registers().commit();
         Ok(())
@@ -223,7 +214,7 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::prune::prune;
-    use crate::interp::{ mini_interp, xxx_compiler_link };
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
     use super::super::codegen::generate_code;
     use super::super::linearize::linearize;
     use super::super::dealias::remove_aliases;
@@ -248,8 +239,9 @@ mod test {
         print!("{:?}",context);
         let lines = format!("{:?}",context).as_bytes().iter().filter(|&&c| c == b'\n').count();
         print!("{}\n",lines);
-        //assert!(lines<350);
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
+        assert!(lines<350);
+        let config = xxx_test_config();
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);

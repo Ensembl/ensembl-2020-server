@@ -340,7 +340,7 @@ mod test {
     use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use super::super::codegen::generate_code;
-    use crate::interp::{ mini_interp, xxx_compiler_link };
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
     use super::super::dealias::remove_aliases;
 
     fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a BTreeMap<Register,Linearized>) -> (Vec<&'a Linearized>,Vec<Register>) {
@@ -375,7 +375,8 @@ mod test {
         print!("{:?}\n",context);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let values = mini_interp(&mut context.get_instructions(),&linker);
+        let config = xxx_test_config();
+        let values = mini_interp(&mut context.get_instructions(),&linker,&config);
         print!("{:?}",values);
     }
 
@@ -395,7 +396,8 @@ mod test {
         print!("{:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
         remove_aliases(&mut context);
-        let (values,_) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
+        let config = xxx_test_config();
+        let (values,_) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}",values);
         assert_eq!(vec![1,2],values[&lins[0].data]);
@@ -425,7 +427,8 @@ mod test {
         print!("{:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
         remove_aliases(&mut context);
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
+        let config = xxx_test_config();
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
@@ -470,7 +473,8 @@ mod test {
         print!("{:?}\n",context);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let (_values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
+        let config = xxx_test_config();
+        let (_values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         assert_eq!("{ *: 2; A.A: -; A.B: 0; A.B.X: 0; A.B.Y: -; B: 0; B.X: 0; B.Y: -; C: true; D: - }",strings[0]);
     }
 
@@ -489,7 +493,8 @@ mod test {
         print!("{:?}\n",context);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
+        let config = xxx_test_config();
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
@@ -534,7 +539,8 @@ mod test {
         let (lins,_) = find_assigns(&instrs,&subregs);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let (values,_) = mini_interp(&mut context.get_instructions(),&linker).expect("x");
+        let config = xxx_test_config();
+        let (values,_) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(vec![0],values[&lins[0].index[0].0]);
         assert_eq!(vec![0],values[&lins[0].index[0].1]);

@@ -32,7 +32,7 @@ pub struct GenContext<'a> {
 impl<'a> fmt::Debug for GenContext<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let instr_str : Vec<String> = self.input_instrs.iter().map(|v| format!("{:?}",v)).collect();
-        write!(f,"{:?}\n{}\n",self.types,instr_str.join(""))?;
+        write!(f,"{}\n",instr_str.join(""))?;
         Ok(())
     }
 }

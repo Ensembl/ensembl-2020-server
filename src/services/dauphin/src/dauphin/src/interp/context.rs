@@ -67,7 +67,7 @@ mod test {
         let mut config = xxx_test_config();
         config.set_opt_seq("");
         let mut context = generate(&linker,&stmts,&defstore,&config).expect("j");
-        let message = mini_interp(&mut context,&linker).expect_err("x");
+        let message = mini_interp(&mut context,&linker,&config).expect_err("x");
         print!("{}\n",message);
         assert!(message.ends_with("at test:std/line-number.dp:10"));
     }
@@ -84,7 +84,7 @@ mod test {
         config.set_generate_debug(false);
         config.set_opt_seq("");
         let mut context = generate(&linker,&stmts,&defstore,&config).expect("j");
-        let message = mini_interp(&mut context,&linker).expect_err("x");
+        let message = mini_interp(&mut context,&linker,&config).expect_err("x");
         print!("{}\n",message);
         assert!(!message.contains(" at "));
     }

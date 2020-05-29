@@ -53,7 +53,6 @@ macro_rules! accessor {
 
         pub fn $setter(&mut self, data: $type, lexer: &Lexer) -> Result<(),ParseError> {
             let id = data.identifier().clone();
-            print!("add {:?}\n",id);
             self.detect_clash(&id,lexer)?;
             let data = IdentifierValue::$branch(data);
             match data {

@@ -129,7 +129,6 @@ fn process_instruction(context: &mut GenContext, instr: &Instruction, values: &m
         }
     }
     /* Do it! */
-    print!("emit {:?}\n",Instruction::new(instr.itype.clone(),new_regs.clone()));
     context.add(Instruction::new(instr.itype.clone(),new_regs));
     /* Any constants we thought we had, we don't any more! */
     if let Some(consts) = consts {
@@ -147,7 +146,6 @@ pub fn copy_on_write(context: &mut GenContext) {
     let mut values = CurrentValues::new();
     let instrs = context.get_instructions();
     for instr in instrs {
-        print!("instruction: {:?}\n",instr);
         match &instr.itype {
             InstructionType::Copy => {
                 if let Some((dst,src)) = values.invalidate_main(&instr.regs[0]) {
@@ -269,7 +267,8 @@ mod test {
         copy_on_write(&mut context);
         print!("{:?}\n",context);
         prune(&mut context);
-        let (_,strings) = mini_interp(&context.get_instructions(),&linker).expect("x");
+        let config = xxx_test_config();
+        let (_,strings) = mini_interp(&context.get_instructions(),&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -286,7 +285,7 @@ mod test {
         let linker = xxx_compiler_link().expect("y");
         let config = xxx_test_config();
         let instrs = generate(&linker,&stmts,&defstore,&config).expect("j");
-        let (_,strings) = mini_interp(&instrs,&linker).expect("x");
+        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
