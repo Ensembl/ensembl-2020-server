@@ -19,6 +19,14 @@ use crate::lexer::CharSource;
 
 use super::core::Resolver;
 
+fn prefix_suffix(path: &str) -> (&str,&str) {
+    if let Some(colon) = path.find(':') {
+        (&path[0..colon],&path[colon+1..])
+    } else {
+        ("",path)
+    }
+}
+
 pub struct SearchResolver {
     templates: Vec<String>
 }
@@ -32,11 +40,12 @@ impl SearchResolver {
 }
 
 impl DocumentResolver for SearchResolver {
-    fn resolve(&self, path: &str, resolver: &Resolver, new_resolver: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
+    fn resolve(&self, name: &str, path: &str, resolver: &Resolver, new_resolver: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
         let mut errors = vec![];
         for template in &self.templates {
-            let new_path = template.replace("*",path);
-            match resolver.document_resolve(new_resolver,&new_path) {
+            let new_path = template.replace("*",prefix_suffix(path).1);
+            print!("{} -> {}\n",path,new_path);
+            match resolver.document_resolve(new_resolver,name,&new_path) {
                 Ok(out) => { return Ok(out); },
                 Err(err) => { errors.push(err); }
             }

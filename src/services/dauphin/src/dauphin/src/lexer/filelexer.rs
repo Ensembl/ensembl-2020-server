@@ -99,9 +99,9 @@ mod test {
     }
 
     fn try_lex(path_in: &str) -> Vec<(Token,String,u32,u32)> {
-        let mut path = String::from_str("test:").ok().unwrap();
+        let mut path = String::from_str("search:").ok().unwrap();
         path.push_str(path_in);
-        let resolver = Rc::new(test_resolver());
+        let resolver = Rc::new(test_resolver().expect("a"));
         let source = resolver.resolve(&path);
         let (stream,resolver) = source.ok().unwrap();
         let mut lexer = FileLexer::new(resolver,stream);
@@ -135,13 +135,13 @@ mod test {
 
     #[test]
     fn lexer_smoke() {
-        let res = try_lex("lexer/smoke.in");
+        let res = try_lex("lexer/smoke");
         compare_result(&res,&["lexer","smoke.out"]);
     }
 
     #[test]
     fn lexer_operator() {
-        let res = try_lex("lexer/operator.in");
+        let res = try_lex("lexer/operator");
         compare_result(&res,&["lexer","operator.out"]);
     }
 }

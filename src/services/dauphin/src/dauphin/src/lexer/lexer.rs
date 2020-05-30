@@ -130,10 +130,10 @@ mod test {
     use crate::resolver::test_resolver;
 
     #[test]
-    fn smoke() {
-        let resolver = test_resolver();
+    fn lexer_smoke() {
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:lexer/smoke2.in").expect("import failed");
+        lexer.import("search:lexer/smoke2").expect("import failed");
         let mut out = String::new();
         loop {
             let lx = &mut lexer;
@@ -143,7 +143,7 @@ mod test {
             if let Token::EndOfLex = tok { break; }
             if let Token::Identifier(ref s) = tok {
                 if s == "import" {
-                    lx.import("test:lexer/smoke2b.in").expect("import failed");
+                    lx.import("search:lexer/smoke2b").expect("import failed");
                 }
             }
             out.push_str(&format!("{:?} {} {},{}\n",tok,name,line,col));
@@ -154,8 +154,8 @@ mod test {
 
     #[test]
     fn missing() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        assert_eq!(lexer.import("test:missing").err().unwrap(),"Loading \"missing\": No such file or directory (os error 2)","Error message missing");
+        assert!(lexer.import("file:missing").err().unwrap().contains("No such file or directory"));
     }
 }

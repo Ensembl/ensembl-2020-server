@@ -17,10 +17,11 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 
+use crate::cli::Config;
 use crate::lexer::CharSource;
 
 pub trait DocumentResolver {
-    fn resolve(&self, path: &str, current_resolver: &Resolver, new_resolver: &mut Resolver, prefix: &str) -> Result<Box<dyn CharSource>,String>;
+    fn resolve(&self, name: &str, path: &str, current_resolver: &Resolver, new_resolver: &mut Resolver, prefix: &str) -> Result<Box<dyn CharSource>,String>;
 }
 
 #[derive(Clone)]
@@ -39,14 +40,14 @@ impl Resolver {
         self.document_resolvers.insert(prefix.to_string(),Rc::new(document_resolver));
     }
     
-    pub fn document_resolve(&self, new_resolver: &mut Resolver, path: &str) -> Result<Box<dyn CharSource>,String> {
+    pub fn document_resolve(&self, new_resolver: &mut Resolver, name: &str, path: &str) -> Result<Box<dyn CharSource>,String> {
         let (our_prefix,our_suffix) = if let Some(colon) = path.find(':') {
             (&path[0..colon],&path[colon+1..])
         } else {
             ("",path)
         };
         if let Some(document_resolver) = self.document_resolvers.get(our_prefix) {
-            document_resolver.resolve(our_suffix,&self,new_resolver,our_prefix)
+            document_resolver.resolve(name,our_suffix,&self,new_resolver,our_prefix)
         } else {
             Err(format!("protocol {} not supported",our_prefix))
         }
@@ -54,7 +55,7 @@ impl Resolver {
 
     pub fn resolve(&self, path: &str) -> Result<(Box<dyn CharSource>,Resolver),String> {
         let mut sub = self.clone();
-        let source = self.document_resolve(&mut sub,path)?;
+        let source = self.document_resolve(&mut sub,path,path)?;
         Ok((source,sub))
     }
 }

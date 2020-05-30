@@ -46,9 +46,10 @@ use crate::test::files::load_testdata;
 use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
 fn main() {
-    let resolver = common_resolver(&vec![]).expect("setting up path resolver");
+    let config = xxx_test_config();
+    let resolver = common_resolver(&config).expect("setting up path resolver");
     let mut lexer = Lexer::new(&resolver);
-    lexer.import("test:parser/parser-smoke.dp").expect("cannot load file");
+    lexer.import("search:parser/parser-smoke.dp").expect("cannot load file");
     let p = Parser::new(&mut lexer);
     let (stmts,defstore) = p.parse().map_err(|e| e[0].message().to_string()).expect("error");
     let mut out : Vec<String> = stmts.iter().map(|x| format!("{:?}",x)).collect();
@@ -56,7 +57,6 @@ fn main() {
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
     let linker = xxx_compiler_link().expect("y");
-    let config = xxx_test_config();
     let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("codegen");
     mini_interp(&instrs,&linker,&config).expect("A");
 }

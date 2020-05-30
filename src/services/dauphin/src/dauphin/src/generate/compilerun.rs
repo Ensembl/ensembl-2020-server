@@ -225,9 +225,9 @@ mod test {
 
     #[test]
     fn runnums_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
+        lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -255,9 +255,9 @@ mod test {
 
     #[test]
     fn runnums2_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/runnums.dp").expect("cannot load file");
+        lexer.import("search:codegen/runnums").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");

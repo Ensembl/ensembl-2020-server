@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+use crate::cli::Config;
 use crate::lexer::{ CharSource, StringCharSource };
 use super::core::{ DocumentResolver, Resolver };
 use super::preamble::PREAMBLE;
@@ -29,7 +30,7 @@ impl DataResolver {
 }
 
 impl DocumentResolver for DataResolver {
-    fn resolve(&self, path: &str, _: &Resolver, _: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
+    fn resolve(&self, _name: &str, path: &str, _: &Resolver, _: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
         Ok(Box::new(StringCharSource::new(&format!("data:{}",path),"data",path.to_string())))
     }
 }
@@ -43,7 +44,7 @@ impl PreambleResolver {
 }
 
 impl DocumentResolver for PreambleResolver {
-    fn resolve(&self, path: &str, _: &Resolver, _: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
+    fn resolve(&self, name: &str, path: &str, _: &Resolver, _: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
         if path == "" {
             Ok(Box::new(StringCharSource::new("preamble","preamble",PREAMBLE.to_string())))
         } else {
@@ -52,12 +53,12 @@ impl DocumentResolver for PreambleResolver {
     }
 }
 
-pub fn common_resolver(search: &[String]) -> Result<Resolver,String> {
+pub fn common_resolver(config: &Config) -> Result<Resolver,String> {
     let root_dir = std::env::current_dir().map_err(|x| x.to_string())?;
     let mut out = Resolver::new();
     out.add("preamble",PreambleResolver::new());
     out.add("data",DataResolver::new());
     out.add("file",FileResolver::new(root_dir));
-    out.add("search",SearchResolver::new(search));
+    out.add("search",SearchResolver::new(config.get_search_path()));
     Ok(out)
 }

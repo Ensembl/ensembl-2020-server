@@ -358,9 +358,9 @@ mod test {
     use crate::test::files::load_testdata;
 
     fn run_pass(filename: &str) -> Result<(),Vec<String>> {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import(&format!("test:codegen/{}",filename)).expect("cannot load file");
+        lexer.import(&format!("search:codegen/{}",filename)).expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let gen = CodeGen::new(&defstore,true);
@@ -370,9 +370,9 @@ mod test {
 
     #[test]
     fn codegen_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/generate-smoke2.dp").expect("cannot load file");
+        lexer.import("search:codegen/generate-smoke2").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let gencontext = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -384,7 +384,7 @@ mod test {
 
     #[test]
     fn codegen_lvalue_checks() {
-        run_pass("typepass-reassignok.dp").expect("A");
-        run_pass("typepass-reassignbad.dp").expect_err("B");
+        run_pass("typepass-reassignok").expect("A");
+        run_pass("typepass-reassignbad").expect_err("B");
     }
 }

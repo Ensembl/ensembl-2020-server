@@ -362,9 +362,9 @@ mod test {
 
     #[test]
     fn linearize_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
+        lexer.import("search:codegen/linearize-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -382,9 +382,9 @@ mod test {
 
     #[test]
     fn linearize_filter_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/linearize-smoke-filter.dp").expect("cannot load file");
+        lexer.import("search:codegen/linearize-smoke-filter").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -414,9 +414,9 @@ mod test {
 
     #[test]
     fn linearize_reffilter_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/linearize-smoke-reffilter.dp").expect("cannot load file");
+        lexer.import("search:codegen/linearize-smoke-reffilter").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -460,9 +460,9 @@ mod test {
 
     #[test]
     fn linearize_structenum_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/linearize-smoke-structenum.dp").expect("cannot load file");
+        lexer.import("search:codegen/linearize-smoke-structenum").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -480,9 +480,9 @@ mod test {
 
     #[test]
     fn linearize_refsquare() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/linearize-refsquare.dp").expect("cannot load file");
+        lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -503,9 +503,9 @@ mod test {
     }
 
     fn linearize_stable_pass() -> Vec<Instruction> {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/linearize-smoke.dp").expect("cannot load file");
+        lexer.import("search:codegen/linearize-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -525,9 +525,9 @@ mod test {
 
    #[test]
     fn linearize_push_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/linearize-smoke-push.dp").expect("cannot load file");
+        lexer.import("search:codegen/linearize-smoke-push").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");

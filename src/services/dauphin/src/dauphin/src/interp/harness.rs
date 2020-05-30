@@ -15,6 +15,7 @@
  */
 
 use std::collections::{ HashMap };
+use std::path::{ Path, PathBuf };
 use std::time::{ SystemTime, Duration };
 use std::rc::Rc;
 use crate::cli::Config;
@@ -83,11 +84,43 @@ pub fn mini_interp_run(instrs: &Vec<Instruction>, cl: &CompilerLink, ic: &mut In
     Ok((export_indexes(ic)?,stream_strings(&ic.stream_take())))
 }
 
+pub fn find_testdata() -> PathBuf {
+    let mut dir = std::env::current_exe().expect("cannot get current exec path");
+    while dir.pop() {
+        let mut testdata = PathBuf::from(&dir);
+        testdata.push("testdata");
+        if testdata.exists() {
+            return testdata;
+        }
+    }
+    panic!("cannot find testdata directory");
+}
+
+fn xxx_subpaths(config: &mut Config) {
+    let root_dir = find_testdata();
+    let std_path = root_dir.clone();
+    let std_path = Path::new(&std_path)
+        .parent().unwrap_or(&std_path)
+        .join("src").join("commands").join("std");
+    let bt_path = root_dir.clone();
+    let bt_path = Path::new(&bt_path)
+        .parent().unwrap_or(&bt_path)
+        .join("src").join("commands").join("buildtime");
+    config.add_search_path(&format!("file:{}/*.dp",std_path.to_string_lossy()));
+    config.add_search_path(&format!("file:{}/*.dp",bt_path.to_string_lossy()));
+    config.add_search_path(&format!("file:{}/*.dp",root_dir.to_string_lossy())); // for tests
+}
+
 pub fn xxx_test_config() -> Config {
     let mut cfg = Config::new();
     cfg.set_generate_debug(true);
     cfg.set_verbose(3);
     cfg.set_opt_level(2);
+    let root_dir = find_testdata();
+    cfg.add_search_path(&format!("file:{}/*.dp",root_dir.to_string_lossy()));
+    cfg.add_search_path(&format!("file:{}/parser/*.dp",root_dir.to_string_lossy()));
+    cfg.add_search_path(&format!("file:{}/parser/import-subdir/*.dp",root_dir.to_string_lossy()));
+    xxx_subpaths(&mut cfg);
     cfg
 }
 
@@ -96,6 +129,10 @@ pub fn xxx_test_quiet_config() -> Config {
     cfg.set_generate_debug(false);
     cfg.set_verbose(2);
     cfg.set_opt_level(2);
+    cfg.add_search_path("file:testdata/*.dp");
+    cfg.add_search_path("file:testdata/parser/*.dp");
+    cfg.add_search_path("file:testdata/parser/import-subdir/*.dp");
+    xxx_subpaths(&mut cfg);
     cfg
 }
 

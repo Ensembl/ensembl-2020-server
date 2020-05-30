@@ -18,6 +18,7 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 use super::core::{ DocumentResolver, Resolver };
 use crate::lexer::{ CharSource, StringCharSource };
+use regex::Regex;
 
 static EXTENSIONS : [&str;1] = [".dp"];
 
@@ -44,15 +45,24 @@ impl FileResolver {
         path
     }
 
+    fn strip_extension(&self, name: &str) -> String {
+        for extension in &EXTENSIONS {
+            if name.ends_with(extension) {
+                return name[0..name.len()-extension.len()].to_string();
+            }
+        }
+        name.to_string()
+    }
+
     fn get_module(&self, path: &PathBuf) -> Result<String,String> {
         if let Some(last) = path.iter().last() {
-            let last = last.to_str().ok_or_else(|| format!("filename is bad unicode"))?;
-            for extension in &EXTENSIONS {
-                if last.ends_with(extension) {
-                    return Ok(last[0..last.len()-extension.len()].to_string());
-                }
-            }
-            Ok(last.to_string())
+            let name = last.to_str().ok_or_else(|| format!("filename is bad unicode"))?;
+            let name = self.strip_extension(name);
+            let re = Regex::new(r"[^A-Za-z0-9]").unwrap();
+            let name = re.replace_all(&name,"_");
+            let re = Regex::new(r"^.*?:").unwrap();
+            let name = re.replace_all(&name,"");
+            Ok(name.to_string())
         } else {
             Ok("*anon*".to_string())
         }
@@ -60,18 +70,22 @@ impl FileResolver {
 }
 
 impl DocumentResolver for FileResolver {
-    fn resolve(&self, components: &str, _: &Resolver, new_resolver: &mut Resolver, prefix: &str) -> Result<Box<dyn CharSource>,String> {
+    fn resolve(&self, name: &str, components: &str, _: &Resolver, new_resolver: &mut Resolver, prefix: &str) -> Result<Box<dyn CharSource>,String> {
         let path = if components.starts_with("/") {
             PathBuf::from(components)
         } else {
             self.add_components(components)
         };
         let module = self.get_module(&path)?;
+        print!("components = {}\n",components);
+        print!("path = {}\n",path.to_string_lossy());
+        print!("name = {}\n",name);
+        print!("module = {}\n",module);
         let mut dir = path.clone();
         dir.pop();
         let sub = FileResolver::new(dir);
         let data = read_to_string(path.clone()).map_err(|x| format!("{}: {}",path.to_str().unwrap_or(""),x))?;
         new_resolver.add(prefix,sub);
-        Ok(Box::new(StringCharSource::new(components,&module,data)))
+        Ok(Box::new(StringCharSource::new(name,&module,data)))
     }
 }

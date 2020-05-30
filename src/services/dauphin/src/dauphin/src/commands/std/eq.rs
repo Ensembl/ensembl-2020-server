@@ -167,9 +167,9 @@ mod test {
 
     #[test]
     fn eq_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:std/eq.dp").expect("cannot load file");
+        lexer.import("search:std/eq").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let config = xxx_test_quiet_config();

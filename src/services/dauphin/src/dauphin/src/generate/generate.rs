@@ -100,16 +100,15 @@ impl GenerateMenu {
 }
 
 fn calculate_opt_seq(config: &Config) -> Result<&str,String> {
-    let seq = config.get_opt_seq();
-    if seq == "*" {
+    if config.isset_opt_seq() {
+        Ok(config.get_opt_seq())
+    } else {
         Ok(match config.get_opt_level() {
             0 => "",
             1 => "p",
             2|3|4|5|6 => "pwpcpdaupwpcpda",
             level => Err(format!("Bad optimisation level {}",level))?
         })
-    } else {
-        Ok(seq)
     }
 }
 

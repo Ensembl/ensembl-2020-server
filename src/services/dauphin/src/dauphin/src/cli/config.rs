@@ -28,11 +28,36 @@ pub struct Config {
     generate_debug: Option<bool>,
     verbose: Option<u8>,
     optimise: Option<u8>,
-    opt_seq: Option<String>
+    opt_seq: Option<String>,
+    search_path: Vec<String>
+}
+
+macro_rules! push {
+    ($self:ident,$option:ident,$adder:ident,$getter:ident,$t:ty) => {
+        pub fn $adder(&mut $self, value: $t) {
+            $self.$option.push(value);
+        }
+
+        pub fn $getter(&$self) -> &Vec<$t> {
+            &$self.$option
+        }
+    };
+}
+
+macro_rules! push_str {
+    ($self:ident,$option:ident,$adder:ident,$getter:ident) => {
+        pub fn $adder(&mut $self, value: &str) {
+            $self.$option.push(value.to_string());
+        }
+
+        pub fn $getter(&$self) -> &Vec<String> {
+            &$self.$option
+        }
+    };
 }
 
 macro_rules! flag {
-    ($self:ident,$option:ident,$setter:ident,$getter:ident,$t:ty,$dft:expr) => {
+    ($self:ident,$option:ident,$setter:ident,$getter:ident,$isset:ident,$t:ty,$dft:expr) => {
         pub fn $setter(&mut $self, value: $t) {
             $self.$option = Some(value);
         }
@@ -46,11 +71,21 @@ macro_rules! flag {
                 $dft
             }
         }            
+
+        pub fn $isset(&$self) -> bool {
+            if let Some(ref value) = $self.$option {
+                true
+            } else if let Some(ref sub) = $self.subconfig {
+                sub.$isset()
+            } else {
+                false
+            }
+        }
     };
 }
 
 macro_rules! flag_str {
-    ($self:ident,$option:ident,$setter:ident,$getter:ident,$dft:expr) => {
+    ($self:ident,$option:ident,$setter:ident,$getter:ident,$isset:ident,$dft:expr) => {
         pub fn $setter(&mut $self, value: &str) {
             $self.$option = Some(value.to_string());
         }
@@ -63,7 +98,17 @@ macro_rules! flag_str {
             } else {
                 $dft
             }
-        }            
+        }
+
+        pub fn $isset(&$self) -> bool {
+            if let Some(ref value) = $self.$option {
+                true
+            } else if let Some(ref sub) = $self.subconfig {
+                sub.$isset()
+            } else {
+                false
+            }
+        }
     };
 }
 
@@ -74,7 +119,8 @@ impl Config {
             generate_debug: None,
             verbose: None,
             optimise: None,
-            opt_seq: None
+            opt_seq: None,
+            search_path: vec![]
         }
     }
 
@@ -82,8 +128,9 @@ impl Config {
         self.subconfig = Some(Box::new(sub));
     }
 
-    flag!(self,generate_debug,set_generate_debug,get_generate_debug,bool,false);
-    flag!(self,verbose,set_verbose,get_verbose,u8,0);
-    flag!(self,optimise,set_opt_level,get_opt_level,u8,0);
-    flag_str!(self,opt_seq,set_opt_seq,get_opt_seq,"*");
+    flag!(self,generate_debug,set_generate_debug,get_generate_debug,isset_generate_debug,bool,false);
+    flag!(self,verbose,set_verbose,get_verbose,isset_verbose,u8,0);
+    flag!(self,optimise,set_opt_level,get_opt_level,isset_opt_level,u8,0);
+    flag_str!(self,opt_seq,set_opt_seq,get_opt_seq,isset_opt_seq,"*");
+    push_str!(self,search_path,add_search_path,get_search_path);
 }

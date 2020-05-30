@@ -377,9 +377,9 @@ mod test {
 
     #[test]
     fn simplify_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/simplify-smoke.dp").expect("cannot load file");
+        lexer.import("search:codegen/simplify-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -392,9 +392,9 @@ mod test {
 
     #[test]
     fn simplify_enum_nest() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/simplify-enum-nest.dp").expect("cannot load file");
+        lexer.import("search:codegen/simplify-enum-nest").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
@@ -404,9 +404,9 @@ mod test {
 
     #[test]
     fn simplify_enum_lvalue() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/enum-lvalue.dp").expect("cannot load file");
+        lexer.import("search:codegen/enum-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
@@ -420,9 +420,9 @@ mod test {
 
     #[test]
     fn simplify_struct_lvalue() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/struct-lvalue.dp").expect("cannot load file");
+        lexer.import("search:codegen/struct-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
@@ -437,9 +437,9 @@ mod test {
 
     #[test]
     fn simplify_both_lvalue() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/both-lvalue.dp").expect("cannot load file");
+        lexer.import("search:codegen/both-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");

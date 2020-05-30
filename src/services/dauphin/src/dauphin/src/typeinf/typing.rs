@@ -124,9 +124,9 @@ mod test {
 
     #[test]
     fn typing_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:codegen/typepass-smoke.dp").expect("cannot load file");
+        lexer.import("search:codegen/typepass-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");

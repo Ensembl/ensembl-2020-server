@@ -104,9 +104,9 @@ mod test {
 
     #[test]
     fn load_ini_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:buildtime/load_ini.dp").expect("cannot load file");
+        lexer.import("search:buildtime/load_ini").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let config = xxx_test_config();

@@ -14,57 +14,18 @@
  *  limitations under the License.
  */
 
-use std::path::Path;
-use super::core::DocumentResolver;
-use crate::lexer::CharSource;
-
+use std::env::set_current_dir;
+use crate::interp::find_testdata;
 use super::core::Resolver;
-use crate::lexer::StringCharSource;
-use super::common::{ DataResolver, PreambleResolver };
-use super::file::FileResolver;
-use super::search::SearchResolver;
-use crate::test::files::{ find_testdata, load_testdata };
-
-pub struct TestResolver {}
-
-impl TestResolver {
-    pub fn new() -> TestResolver {
-        TestResolver {}
-    }
-}
-
-impl DocumentResolver for TestResolver {
-    fn resolve(&self, path: &str, _: &Resolver, _: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
-        let paths : Vec<&str> = path.split("/").collect();
-        let name = format!("test:{}",path);
-        match load_testdata(&paths) {
-            Ok(data) => Ok(Box::new(StringCharSource::new(&name,"test",data))),
-            Err(err) => Err(format!("Loading \"{}\": {}",path,err))
-        }
-    }
-}
+use crate::interp::xxx_test_config;
+use crate::resolver::common_resolver;
 
 #[cfg(test)]
-pub fn test_resolver() -> Resolver {
-    let root_dir = find_testdata();
-    let mut out = Resolver::new();
-    let std_path = root_dir.clone();
-    let std_path = Path::new(&std_path)
-        .parent().unwrap_or(&std_path)
-        .join("src").join("commands").join("std");
-    let bt_path = root_dir.clone();
-    let bt_path = Path::new(&bt_path)
-        .parent().unwrap_or(&bt_path)
-        .join("src").join("commands").join("buildtime");
-    print!("root path {}\n",root_dir.display());
-    print!("std path {}\n",std_path.display());
-    out.add("preamble",PreambleResolver::new());
-    out.add("test",TestResolver::new());
-    out.add("data",DataResolver::new());
-    out.add("file",FileResolver::new(root_dir));
-    out.add("search",SearchResolver::new(&vec![
-        format!("file:{}/*.dp",std_path.to_string_lossy()),
-        format!("file:{}/*.dp",bt_path.to_string_lossy()),
-    ]));
-    out
+pub fn test_resolver() -> Result<Resolver,String> {
+    let path = find_testdata();
+    let path = path.parent().unwrap();
+    set_current_dir(path).expect("A");
+    let config = xxx_test_config();
+    let out = common_resolver(&config)?;
+    Ok(out)
 }

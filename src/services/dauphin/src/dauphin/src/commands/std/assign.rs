@@ -237,9 +237,9 @@ mod test {
 
     #[test]
     fn extend_smoke() {
-        let resolver = test_resolver();
+        let resolver = test_resolver().expect("a");
         let mut lexer = Lexer::new(&resolver);
-        lexer.import("test:std/extend.dp").expect("cannot load file");
+        lexer.import("search:std/extend").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
