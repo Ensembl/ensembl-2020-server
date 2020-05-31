@@ -104,12 +104,12 @@ mod test {
     #[test]
     fn assign_regs_smoke() {
         let config = xxx_test_config();
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");

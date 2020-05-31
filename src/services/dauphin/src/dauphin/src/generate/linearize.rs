@@ -363,7 +363,8 @@ mod test {
     #[test]
     fn linearize_smoke() {
         let config = xxx_test_config();
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -375,7 +376,6 @@ mod test {
         linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let values = mini_interp(&mut context.get_instructions(),&linker,&config);
         print!("{:?}",values);
     }
@@ -383,7 +383,8 @@ mod test {
     #[test]
     fn linearize_filter_smoke() {
         let config = xxx_test_config();
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke-filter").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -395,7 +396,6 @@ mod test {
         print!("{:?}\n",context);
         let subregs = linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         remove_aliases(&mut context);
         let (values,_) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         let (lins,norms) = find_assigns(&instrs,&subregs);
@@ -415,7 +415,8 @@ mod test {
     #[test]
     fn linearize_reffilter_smoke() {
         let config = xxx_test_config();
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke-reffilter").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -426,7 +427,6 @@ mod test {
         print!("{:?}\n",context);
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         remove_aliases(&mut context);
         let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
@@ -461,7 +461,8 @@ mod test {
     #[test]
     fn linearize_structenum_smoke() {
         let config = xxx_test_config();
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke-structenum").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -473,7 +474,6 @@ mod test {
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let (_values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         assert_eq!("{ *: 2; A.A: -; A.B: 0; A.B.X: 0; A.B.Y: -; B: 0; B.X: 0; B.Y: -; C: true; D: - }",strings[0]);
     }
@@ -481,7 +481,8 @@ mod test {
     #[test]
     fn linearize_refsquare() {
         let config = xxx_test_config();
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -493,7 +494,6 @@ mod test {
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
@@ -504,7 +504,8 @@ mod test {
 
     fn linearize_stable_pass() -> Vec<Instruction> {
         let config = xxx_test_config();
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -527,7 +528,8 @@ mod test {
    #[test]
     fn linearize_push_smoke() {
         let config = xxx_test_config();
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke-push").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -540,7 +542,6 @@ mod test {
         let subregs = linearize_real(&mut context).expect("linearize");
         let (lins,_) = find_assigns(&instrs,&subregs);
         remove_aliases(&mut context);
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let (values,_) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(vec![0],values[&lins[0].index[0].0]);

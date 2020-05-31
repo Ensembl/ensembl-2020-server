@@ -25,6 +25,7 @@ use serde_cbor::Value as CborValue;
 
 pub struct LibrarySuiteBuilder {
     next_opcode: u32,
+    headers: HashMap<String,String>,
     seen: HashMap<(String,u32),String>,
     compile_suite: CommandCompileSuite,
     interpret_suite: CommandInterpretSuite
@@ -33,6 +34,7 @@ pub struct LibrarySuiteBuilder {
 impl LibrarySuiteBuilder {
     pub fn new() -> LibrarySuiteBuilder {
         LibrarySuiteBuilder {
+            headers: HashMap::new(),
             compile_suite: CommandCompileSuite::new(),
             interpret_suite: CommandInterpretSuite::new(),
             seen: HashMap::new(),
@@ -61,8 +63,13 @@ impl LibrarySuiteBuilder {
             self.interpret_suite.add_member(offset+local_opcode,&member,set_offset);
         }
         self.seen.insert((set_name,set_major),set_id.to_string());
+        for (name,value) in set.get_headers() {
+            self.headers.insert(name.to_string(),value.to_string());
+        }
         Ok(())
     }
+
+    pub fn get_headers(&self) -> &HashMap<String,String> { &self.headers }
 
     fn check_traces(&self) -> Result<(),String> {
         self.compile_suite.check_traces()

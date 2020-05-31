@@ -14,15 +14,36 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ CommandSet, CommandSetId, InterpContext, StreamContents };
-use super::ini::LoadIniCommandType;
-use super::header::BUILDTIME;
+pub const STD: &str = r#"
 
-pub fn make_buildtime() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("buildtime",(0,0),0xB6546C18A5641C3E);
-    let mut set = CommandSet::new(&set_id);
-    set.push("load_ini",1,LoadIniCommandType())?;
-    set.add_header("buildtime",&BUILDTIME);
-    Ok(set)
-}
+module "std";
 
+proc assign(out _A, _A);
+inline ":=" assign left 14;
+
+func eq(_A,_A) becomes boolean;
+inline "==" eq left 5;
+
+func gt(number,number) becomes boolean;
+inline ">" gt left 6;
+
+func lt(number,number) becomes boolean;
+inline "<" lt left 6;
+
+func plus(number,number) becomes number;
+inline "+" plus left 4;
+
+proc incr(lvalue number, number);
+inline "(+=)" incr left 14;
+
+func len(vec(_)) becomes number;
+proc print_vec(_);
+
+proc assert(boolean,boolean);
+
+proc print_regs(_A);
+
+func extend(_A,_A) becomes _A;
+inline "(+)" extend left 14;
+
+"#;

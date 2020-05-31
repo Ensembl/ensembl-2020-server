@@ -1,4 +1,4 @@
-import "search:std";
+import "lib:std";
 use "std";
 
 x := [[1,1],[2],[3,3],[4]];

@@ -60,12 +60,12 @@ mod test {
     fn line_number_smoke() {
         let mut config = xxx_test_config();
         config.set_opt_seq("");
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let mut context = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let message = mini_interp(&mut context,&linker,&config).expect_err("x");
         print!("{}\n",message);
@@ -77,12 +77,12 @@ mod test {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
         config.set_opt_seq("");
-        let resolver = common_resolver(&config).expect("a");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let mut context = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let message = mini_interp(&mut context,&linker,&config).expect_err("x");
         print!("{}\n",message);

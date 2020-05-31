@@ -1,3 +1,0 @@
-module "buildtime";
-
-func load_ini(string,string,string) becomes string;

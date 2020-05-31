@@ -126,12 +126,12 @@ mod test {
     fn typing_smoke() {
         let mut config = xxx_test_config();
         config.set_opt_seq("");
-        let resolver = common_resolver(&config).expect("cfg");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("cfg");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/typepass-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));

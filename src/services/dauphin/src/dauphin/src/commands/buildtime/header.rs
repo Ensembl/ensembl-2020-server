@@ -14,15 +14,10 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ CommandSet, CommandSetId, InterpContext, StreamContents };
-use super::ini::LoadIniCommandType;
-use super::header::BUILDTIME;
+pub const BUILDTIME: &str = r#"
 
-pub fn make_buildtime() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("buildtime",(0,0),0xB6546C18A5641C3E);
-    let mut set = CommandSet::new(&set_id);
-    set.push("load_ini",1,LoadIniCommandType())?;
-    set.add_header("buildtime",&BUILDTIME);
-    Ok(set)
-}
+module "buildtime";
 
+func load_ini(string,string,string) becomes string;
+
+"#;

@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use crate::cli::Config;
 use crate::lexer::{ CharSource, StringCharSource };
@@ -21,6 +22,7 @@ use super::core::{ DocumentResolver, Resolver, ResolverQuery, ResolverResult };
 use super::preamble::PREAMBLE;
 use super::file::FileResolver;
 use super::search::SearchResolver;
+use crate::interp::CompilerLink;
 
 pub struct DataResolver {}
 
@@ -33,8 +35,26 @@ impl DataResolver {
 impl DocumentResolver for DataResolver {
     fn resolve(&self, query: &ResolverQuery) -> Result<ResolverResult,String> {
         let path = query.current_suffix();
-        print!("DATA: {}\n",path.to_string());
         Ok(query.new_result(StringCharSource::new(query.original_name(),"data",path.to_string())))
+    }
+}
+
+pub struct HashMapResolver(HashMap<String,String>);
+
+impl HashMapResolver {
+    pub fn new(values: &HashMap<String,String>) -> HashMapResolver {
+        HashMapResolver(values.clone())
+    }
+}
+
+impl DocumentResolver for HashMapResolver {
+    fn resolve(&self, query: &ResolverQuery) -> Result<ResolverResult,String> {
+        let key = query.current_suffix();
+        if let Some(value) = self.0.get(key) {
+            Ok(query.new_result(StringCharSource::new(query.original_name(),key,value.to_string())))
+        } else {
+            Err(format!("No such library header 'lib:{}'",key))
+        }
     }
 }
 
@@ -68,7 +88,7 @@ fn calculate_search_path(config: &Config) -> Vec<String> {
     out
 }
 
-pub fn common_resolver(config: &Config) -> Result<Resolver,String> {
+pub fn common_resolver(config: &Config, clink: &CompilerLink) -> Result<Resolver,String> {
     let root_dir = root_dir(config)?;
     let mut out = Resolver::new();
     out.add("preamble",PreambleResolver::new());
@@ -76,5 +96,6 @@ pub fn common_resolver(config: &Config) -> Result<Resolver,String> {
     out.add("file",FileResolver::new(&root_dir));
     out.add("root",FileResolver::new(&root_dir));
     out.add("search",SearchResolver::new(&calculate_search_path(config)));
+    out.add("lib",HashMapResolver::new(clink.get_headers()));
     Ok(out)
 }

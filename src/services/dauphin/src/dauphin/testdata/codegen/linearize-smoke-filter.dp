@@ -1,4 +1,4 @@
-import "search:std";
+import "lib:std";
 use "std";
 
 enum etest { X: string, Y: vec(boolean) };

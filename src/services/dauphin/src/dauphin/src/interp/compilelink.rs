@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use std::collections::BTreeMap;
+use std::collections::{ BTreeMap, HashMap };
 use std::rc::Rc;
 use crate::cli::Config;
 use crate::generate::{ Instruction, InstructionType };
@@ -25,15 +25,20 @@ pub(super) const VERSION : u32 = 0;
 
 #[derive(Clone)]
 pub struct CompilerLink {
-    cs: Rc<CommandCompileSuite>
+    cs: Rc<CommandCompileSuite>,
+    headers: HashMap<String,String>
 }
 
 impl CompilerLink {
     pub fn new(cs: LibrarySuiteBuilder) -> Result<CompilerLink,String> {
+        let headers = cs.get_headers().clone();
         Ok(CompilerLink {
-            cs: Rc::new(cs.make_compile_suite()?)
+            cs: Rc::new(cs.make_compile_suite()?),
+            headers
         })
     }
+
+    pub fn get_headers(&self) -> &HashMap<String,String> { &self.headers }
 
     pub fn compile_instruction(&self, instr: &Instruction) -> Result<(u32,CommandSchema,Box<dyn Command>),String> {
         let (ct,opcode) = if let InstructionType::Call(identifier,_,_,_) = &instr.itype {

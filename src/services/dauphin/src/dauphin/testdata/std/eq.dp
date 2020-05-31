@@ -1,4 +1,4 @@
-import "search:std";
+import "lib:std";
 use "std";
 
 struct A { x: vec(number), y: vec(number) };

@@ -1,6 +1,6 @@
 module "library";
 
-import "search:std";
+import "lib:std";
 use "std";
 
 x := [ [1,2] (+) [3]];

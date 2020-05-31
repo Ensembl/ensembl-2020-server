@@ -22,6 +22,7 @@ use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
 use super::eq::library_eq_command;
 use super::assign::library_assign_commands;
+use super::header::STD;
 
 pub(super) fn std(name: &str) -> Identifier {
     Identifier::new("std",name)
@@ -279,6 +280,7 @@ pub fn make_library() -> Result<CommandSet,String> {
     set.push("print_regs",2,PrintRegsCommandType())?;
     set.push("print_vec",3,PrintVecCommandType())?;
     set.push("assert",4,AssertCommandType())?;
+    set.add_header("std",&STD);
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;
     Ok(set)

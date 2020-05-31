@@ -22,6 +22,7 @@ use crc::crc64::checksum_iso;
 
 pub struct CommandSet {
     names: HashSet<String>,
+    headers: HashMap<String,String>,
     trace: HashMap<u32,String>,
     csi: CommandSetId,
     commands: HashMap<u32,Box<dyn CommandType>>,
@@ -31,6 +32,7 @@ pub struct CommandSet {
 impl CommandSet {
     pub fn new(csi: &CommandSetId) -> CommandSet {
         CommandSet {
+            headers: HashMap::new(),
             names: HashSet::new(),
             trace: HashMap::new(),
             csi: csi.clone(),
@@ -46,6 +48,12 @@ impl CommandSet {
     pub(super) fn get(&self, opcode: u32) -> Result<&Box<dyn CommandType>,String> {
         self.commands.get(&opcode).ok_or_else(|| format!("No such opcode {}",opcode))
     }
+
+    pub fn add_header(&mut self, name: &str, value: &str) {
+        self.headers.insert(name.to_string(),value.to_string());
+    }
+
+    pub(super) fn get_headers(&self) -> &HashMap<String,String> { &self.headers }
 
     fn cbor_trace(&self) -> CborValue {
         let mut opcodes = self.trace.keys().collect::<Vec<_>>();

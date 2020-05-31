@@ -47,7 +47,8 @@ use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysui
 
 fn main() {
     let config = xxx_test_config();
-    let resolver = common_resolver(&config).expect("setting up path resolver");
+    let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+    let resolver = common_resolver(&config,&linker).expect("setting up path resolver");
     let mut lexer = Lexer::new(&resolver);
     lexer.import("search:parser/parser-smoke.dp").expect("cannot load file");
     let p = Parser::new(&mut lexer);
@@ -56,7 +57,6 @@ fn main() {
     out.push("".to_string()); /* For trailing \n */
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
-    let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
     let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("codegen");
     mini_interp(&instrs,&linker,&config).expect("A");
 }

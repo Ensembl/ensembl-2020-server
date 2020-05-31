@@ -1,7 +1,7 @@
-import "search:std";
+import "lib:std";
 use "std";
 
-import "search:buildtime";
+import "lib:buildtime";
 use "buildtime";
 
 x := load_ini("file:buildtime/test.ini","greetings","hello");

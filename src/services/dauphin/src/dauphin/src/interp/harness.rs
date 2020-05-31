@@ -106,8 +106,6 @@ pub fn xxx_test_config() -> Config {
     cfg.add_file_search_path("*.dp");
     cfg.add_file_search_path("parser/*.dp");
     cfg.add_file_search_path("parser/import-subdir/*.dp");
-    cfg.add_file_search_path("../src/commands/std/*.dp");
-    cfg.add_file_search_path("../src/commands/buildtime/*.dp");
     cfg
 }
 
