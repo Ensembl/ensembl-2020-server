@@ -43,7 +43,7 @@ use crate::resolver::common_resolver;
 use crate::parser::Parser;
 use crate::generate::generate;
 use crate::test::files::load_testdata;
-use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
 
 fn main() {
     let config = xxx_test_config();
@@ -56,7 +56,7 @@ fn main() {
     out.push("".to_string()); /* For trailing \n */
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
-    let linker = xxx_compiler_link().expect("y");
+    let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
     let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("codegen");
     mini_interp(&instrs,&linker,&config).expect("A");
 }

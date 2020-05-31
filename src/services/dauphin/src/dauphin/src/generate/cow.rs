@@ -239,7 +239,7 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
     use super::super::dealias::remove_aliases;
     use super::super::prune::prune;
     use super::super::compilerun::compile_run;
@@ -257,7 +257,7 @@ mod test {
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
@@ -283,7 +283,7 @@ mod test {
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {

@@ -340,7 +340,7 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use super::super::codegen::generate_code;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
     use super::super::dealias::remove_aliases;
 
     fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a BTreeMap<Register,Linearized>) -> (Vec<&'a Linearized>,Vec<Register>) {
@@ -375,7 +375,7 @@ mod test {
         linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let values = mini_interp(&mut context.get_instructions(),&linker,&config);
         print!("{:?}",values);
     }
@@ -395,7 +395,7 @@ mod test {
         print!("{:?}\n",context);
         let subregs = linearize_real(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         remove_aliases(&mut context);
         let (values,_) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         let (lins,norms) = find_assigns(&instrs,&subregs);
@@ -426,7 +426,7 @@ mod test {
         print!("{:?}\n",context);
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         remove_aliases(&mut context);
         let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
@@ -473,7 +473,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let (_values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         assert_eq!("{ *: 2; A.A: -; A.B: 0; A.B.X: 0; A.B.Y: -; B: 0; B.X: 0; B.Y: -; C: true; D: - }",strings[0]);
     }
@@ -493,8 +493,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         print!("{:?}\n",context);
         remove_aliases(&mut context);
-        let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
@@ -541,8 +540,7 @@ mod test {
         let subregs = linearize_real(&mut context).expect("linearize");
         let (lins,_) = find_assigns(&instrs,&subregs);
         remove_aliases(&mut context);
-        let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let (values,_) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
         assert_eq!(vec![0],values[&lins[0].index[0].0]);

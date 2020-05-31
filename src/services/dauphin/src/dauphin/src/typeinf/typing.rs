@@ -119,7 +119,7 @@ mod test {
     use crate::lexer::Lexer;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ CompilerLink, xxx_test_config, make_librarysuite_builder };
     use crate::resolver::common_resolver;
 
     #[test]
@@ -131,7 +131,7 @@ mod test {
         lexer.import("search:codegen/typepass-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));

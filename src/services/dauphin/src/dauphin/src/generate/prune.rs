@@ -61,20 +61,19 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
 
     // XXX test pruning, eg fewer lines
     #[test]
     fn prune_smoke() {
-        let config = xxx_test_config();
+        let mut config = xxx_test_config();
+        config.set_opt_seq("p");
         let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
-        let mut config = xxx_test_config();
-        config.set_opt_seq("p");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_values,strings) = mini_interp(&instrs,&linker,&config).expect("x");

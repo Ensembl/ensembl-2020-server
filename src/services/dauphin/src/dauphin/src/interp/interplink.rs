@@ -16,7 +16,7 @@
 
 use std::collections::BTreeMap;
 use crate::generate::{ Instruction, InstructionType };
-use crate::interp::commandsets::{ Command, CommandSchema, CommandInterpretSuite, CommandTrigger, CommandSuiteBuilder };
+use crate::interp::commandsets::{ Command, CommandSchema, CommandInterpretSuite, CommandTrigger, LibrarySuiteBuilder };
 use crate::model::Register;
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string };
@@ -79,7 +79,7 @@ impl InterpreterLink {
         cbor_array(cbor,0,true)?.iter().map(|x| InterpreterLink::make_instruction(x)).collect()
     }
 
-    pub fn new(cs: CommandSuiteBuilder, cbor: &CborValue) -> Result<InterpreterLink,String> {
+    pub fn new(cs: LibrarySuiteBuilder, cbor: &CborValue) -> Result<InterpreterLink,String> {
         let data = cbor_map(cbor,&vec!["version","suite","program"])?;
         let got_ver = cbor_int(data[0],None)? as u32;
         if got_ver != VERSION {

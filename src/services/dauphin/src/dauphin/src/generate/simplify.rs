@@ -354,7 +354,7 @@ mod test {
     use crate::generate::codegen::generate_code;
     use crate::test::files::load_testdata;
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, xxx_test_config, CompilerLink, make_librarysuite_builder };
 
 
     // XXX common
@@ -412,8 +412,7 @@ mod test {
         lexer.import("search:codegen/enum-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
@@ -429,8 +428,7 @@ mod test {
         lexer.import("search:codegen/struct-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
@@ -447,8 +445,7 @@ mod test {
         lexer.import("search:codegen/both-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");

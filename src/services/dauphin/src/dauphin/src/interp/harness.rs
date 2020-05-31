@@ -23,7 +23,7 @@ use crate::commands::{ make_core, make_library, make_buildtime };
 use crate::generate::{ GenContext, Instruction };
 use crate::model::Register;
 use crate::interp::context::InterpContext;
-use crate::interp::CommandSuiteBuilder;
+use crate::interp::LibrarySuiteBuilder;
 use crate::interp::{ InterpValue, StreamContents };
 use super::compilelink::CompilerLink;
 use super::interplink::InterpreterLink;
@@ -56,7 +56,7 @@ pub fn mini_interp_run(instrs: &Vec<Instruction>, cl: &CompilerLink, ic: &mut In
     serde_cbor::to_writer(&mut buffer,&program).expect("cbor b");
     print!("{}\n",hexdump(&buffer));
 
-    let mut suite = CommandSuiteBuilder::new();
+    let mut suite = LibrarySuiteBuilder::new();
     suite.add(make_core()?)?;
     suite.add(make_library()?)?;
     suite.add(make_buildtime()?)?;
@@ -102,20 +102,13 @@ pub fn xxx_test_config() -> Config {
     cfg.set_generate_debug(true);
     cfg.set_verbose(3);
     cfg.set_opt_level(2);
+    cfg.add_lib("buildtime");
     cfg.add_file_search_path("*.dp");
     cfg.add_file_search_path("parser/*.dp");
     cfg.add_file_search_path("parser/import-subdir/*.dp");
     cfg.add_file_search_path("../src/commands/std/*.dp");
     cfg.add_file_search_path("../src/commands/buildtime/*.dp");
     cfg
-}
-
-pub fn xxx_compiler_link() -> Result<CompilerLink,String> {
-    let mut suite = CommandSuiteBuilder::new();
-    suite.add(make_core()?)?;
-    suite.add(make_library()?)?;
-    suite.add(make_buildtime()?)?;
-    CompilerLink::new(suite)
 }
 
 pub fn mini_interp(instrs: &Vec<Instruction>, cl: &CompilerLink, config: &Config) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {

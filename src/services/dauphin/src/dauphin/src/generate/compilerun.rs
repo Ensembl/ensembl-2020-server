@@ -218,7 +218,7 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::prune::prune;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
     use super::super::codegen::generate_code;
     use super::super::linearize::linearize;
     use super::super::dealias::remove_aliases;
@@ -232,7 +232,7 @@ mod test {
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
@@ -262,7 +262,7 @@ mod test {
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");

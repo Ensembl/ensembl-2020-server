@@ -100,7 +100,7 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
 
     #[test]
     fn load_ini_smoke() {
@@ -110,7 +110,7 @@ mod test {
         lexer.import("search:buildtime/load_ini").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {

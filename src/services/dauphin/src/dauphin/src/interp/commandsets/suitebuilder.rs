@@ -19,18 +19,20 @@ use std::rc::Rc;
 use super::commandset::CommandSet;
 use super::member::CommandSuiteMember;
 use super::{ CommandCompileSuite, CommandInterpretSuite };
+use crate::commands::{ make_core, make_library, make_buildtime };
+use crate::cli::Config;
 use serde_cbor::Value as CborValue;
 
-pub struct CommandSuiteBuilder {
+pub struct LibrarySuiteBuilder {
     next_opcode: u32,
     seen: HashMap<(String,u32),String>,
     compile_suite: CommandCompileSuite,
     interpret_suite: CommandInterpretSuite
 }
 
-impl CommandSuiteBuilder {
-    pub fn new() -> CommandSuiteBuilder {
-        CommandSuiteBuilder {
+impl LibrarySuiteBuilder {
+    pub fn new() -> LibrarySuiteBuilder {
+        LibrarySuiteBuilder {
             compile_suite: CommandCompileSuite::new(),
             interpret_suite: CommandInterpretSuite::new(),
             seen: HashMap::new(),
@@ -78,6 +80,18 @@ impl CommandSuiteBuilder {
     }
 }
 
+pub fn make_librarysuite_builder(config: &Config) -> Result<LibrarySuiteBuilder,String> {
+    let mut suite = LibrarySuiteBuilder::new();
+    suite.add(make_core()?)?;
+    if !config.get_nostd() {
+        suite.add(make_library()?)?;
+    }
+    if config.get_libs().contains(&"buildtime".to_string()) {
+        suite.add(make_buildtime()?)?;
+    }
+    Ok(suite)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -88,7 +102,7 @@ mod test {
     #[test]
     fn test_suite_smoke() {
         /* imagine all this at the compiler end */
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
 
         //
         let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
@@ -108,7 +122,7 @@ mod test {
         assert_eq!(11,opcode);
 
         /* and here's the same thing, but with sets flipped, at the interpreter end */
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
         //
         let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
         let mut cs2 = CommandSet::new(&csi2);
@@ -130,14 +144,14 @@ mod test {
     }
 
     fn age_check(compiler: (u32,u32), interpreter: (u32,u32)) -> bool {
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",compiler,0xB790000000000000);
         let cs1 = CommandSet::new(&csi1);
         cb.add(cs1).expect("a");
         let ccs = cb.make_compile_suite().expect("b");
 
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
         let csi1 = CommandSetId::new("test",interpreter,0xB790000000000000);
         let cs1 = CommandSet::new(&csi1);
         cb.add(cs1).expect("c");
@@ -154,7 +168,7 @@ mod test {
 
     #[test]
     fn test_no_multi_minor() {
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",(1,1),0xB790000000000000);
         let cs1 = CommandSet::new(&csi1);
@@ -166,7 +180,7 @@ mod test {
 
     #[test]
     fn test_ok_multi_major() {
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
         let mut cs1 = CommandSet::new(&csi1);
@@ -175,7 +189,7 @@ mod test {
 
         let ccs = cb.make_compile_suite().expect("b");
 
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
         let csi2 = CommandSetId::new("test",(2,1),0x284E7C72C8628854);
         let mut cs2 = CommandSet::new(&csi2);
         cs2.push("test2",5,NumberConstCommandType()).expect("a");
@@ -192,7 +206,7 @@ mod test {
 
     #[test]
     fn test_missing_set_bad_interp() {
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
         let mut cs1 = CommandSet::new(&csi1);
@@ -201,18 +215,18 @@ mod test {
 
         let ccs = cb.make_compile_suite().expect("b");
 
-        let cb = CommandSuiteBuilder::new();
+        let cb = LibrarySuiteBuilder::new();
         assert!(cb.make_interpret_suite(&ccs.serialize()).is_err());
     }
 
     #[test]
     fn test_missing_set_ok_compiler() {
-        let cb = CommandSuiteBuilder::new();
+        let cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
         let ccs = cb.make_compile_suite().expect("b");
 
-        let mut cb = CommandSuiteBuilder::new();
+        let mut cb = LibrarySuiteBuilder::new();
         let mut cs1 = CommandSet::new(&csi1);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         cb.add(cs1).expect("a");

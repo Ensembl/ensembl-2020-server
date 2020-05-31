@@ -98,7 +98,7 @@ mod test {
     use crate::parser::{ Parser, parse_type };
     use crate::test::files::load_testdata;
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
     use crate::test::cbor::cbor_cmp;
     use crate::model::{ DefStore };
     use crate::typeinf::{ MemberType, MemberMode };
@@ -137,7 +137,7 @@ mod test {
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
@@ -153,10 +153,9 @@ mod test {
         lexer.import("search:codegen/offset-enums").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"offset_enums::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
-        let config = xxx_test_config();
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
@@ -172,7 +171,7 @@ mod test {
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");

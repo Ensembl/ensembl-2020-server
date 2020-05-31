@@ -59,7 +59,7 @@ mod test {
     use super::super::codegen::generate_code;
     use super::super::call::call;
     use super::super::linearize::linearize;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
 
     #[test]
     fn dealias_smoke() {
@@ -78,8 +78,7 @@ mod test {
         print!("BEFORE {:?}\n",context);
         remove_aliases(&mut context);
         print!("AFTER {:?}\n",context);
-        let linker = xxx_compiler_link().expect("y");
-
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {

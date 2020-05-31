@@ -54,19 +54,18 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, xxx_test_config,CompilerLink, make_librarysuite_builder };
 
     #[test]
     fn line_number_smoke() {
-        let config = xxx_test_config();
+        let mut config = xxx_test_config();
+        config.set_opt_seq("");
         let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
-        let mut config = xxx_test_config();
-        config.set_opt_seq("");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let mut context = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let message = mini_interp(&mut context,&linker,&config).expect_err("x");
         print!("{}\n",message);
@@ -75,16 +74,15 @@ mod test {
 
     #[test]
     fn no_line_number_smoke() {
-        let config = xxx_test_config();
+        let mut config = xxx_test_config();
+        config.set_generate_debug(false);
+        config.set_opt_seq("");
         let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
-        let mut config = xxx_test_config();
-        config.set_generate_debug(false);
-        config.set_opt_seq("");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let mut context = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let message = mini_interp(&mut context,&linker,&config).expect_err("x");
         print!("{}\n",message);

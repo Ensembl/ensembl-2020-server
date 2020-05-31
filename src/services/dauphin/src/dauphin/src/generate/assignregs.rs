@@ -90,7 +90,7 @@ mod test {
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
     use super::super::codegen::generate_code;
     use super::super::call::call;
     use super::super::linearize::linearize;
@@ -109,7 +109,7 @@ mod test {
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let linker = xxx_compiler_link().expect("y");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
         call(&mut context).expect("j");
         simplify(&defstore,&mut context).expect("k");
