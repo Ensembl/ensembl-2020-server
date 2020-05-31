@@ -39,7 +39,7 @@ fn parse_import(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
     Ok(ParserStatement::Import(get_string(lexer)?))
 }
 
-fn parse_use(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
+fn parse_use(lexer: &mut Lexer, _defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
     Ok(ParserStatement::Use(get_string(lexer)?))
 }

@@ -30,10 +30,12 @@ pub struct RegisterFile {
 /* traits would have been cleaner as an impl, but this gives more ergonomic API */
 macro_rules! accessors {
     ($self:ident,$wrapper:ident,$to_exc:ident,$to_shared:ident,$type:ty,$get:ident,$coerce:ident,$take:ident) => {
+        #[allow(unused)]
         pub fn $get(&$self, register: &Register) -> Result<$wrapper,String> {
             Ok(InterpValue::$to_shared(&$self.get(register).borrow().get_shared()?)?.0)
         }
 
+        #[allow(unused)]
         pub fn $coerce(&mut $self, register: &Register) -> Result<$wrapper,String> {
             let v = InterpValue::$to_shared(&$self.get(register).borrow().get_shared()?)?;
             if let Some(v) = v.1 {
@@ -42,6 +44,7 @@ macro_rules! accessors {
             Ok(v.0)
         }
 
+        #[allow(unused)]
         pub fn $take(&mut $self, register: &Register) -> Result<Vec<$type>,String> {
             Ok($self.get(register).borrow_mut().get_exclusive()?.$to_exc()?)
         }

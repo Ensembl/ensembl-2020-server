@@ -15,8 +15,7 @@
  */
 
 use super::core::{ DocumentResolver, ResolverQuery };
-
-use super::core::{ Resolver, ResolverResult };
+use super::core::ResolverResult;
 
 pub struct SearchResolver {
     templates: Vec<String>

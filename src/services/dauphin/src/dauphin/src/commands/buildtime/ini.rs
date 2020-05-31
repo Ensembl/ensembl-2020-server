@@ -14,13 +14,12 @@
  *  limitations under the License.
  */
 
-use crate::interp::InterpNatural;
-use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome };
-use crate::generate::{ Instruction, InstructionType };
+use crate::model::{ Register, Identifier };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome };
+use crate::generate::Instruction;
 use serde_cbor::Value as CborValue;
 use crate::interp::InterpValue;
-use crate::generate::{ InstructionSuperType, PreImageContext };
+use crate::generate::PreImageContext;
 use crate::resolver::Resolver;
 use ini::Ini;
 

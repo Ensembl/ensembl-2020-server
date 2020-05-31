@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use crate::cli::Config;
-use crate::lexer::{ CharSource, StringCharSource };
+use crate::lexer::StringCharSource;
 use super::core::{ DocumentResolver, Resolver, ResolverQuery, ResolverResult };
 use super::preamble::PREAMBLE;
 use super::file::FileResolver;

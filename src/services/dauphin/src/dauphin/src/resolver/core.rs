@@ -17,7 +17,6 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use crate::cli::Config;
 use crate::lexer::CharSource;
 
 pub(super) fn prefix_suffix(path: &str) -> (&str,&str) {

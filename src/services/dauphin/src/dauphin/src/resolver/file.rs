@@ -16,7 +16,7 @@
 
 use std::fs::read_to_string;
 use std::path::PathBuf;
-use super::core::{ DocumentResolver, Resolver, ResolverQuery, ResolverResult };
+use super::core::{ DocumentResolver, ResolverQuery, ResolverResult };
 use crate::lexer::StringCharSource;
 use regex::Regex;
 

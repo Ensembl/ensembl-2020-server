@@ -95,8 +95,7 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::model::Identifier;
     use crate::test::files::{ load_testdata };
-    use crate::interp::{ find_testdata, xxx_test_config, CompilerLink, make_librarysuite_builder };
-    use std::env::set_current_dir;
+    use crate::interp::{ xxx_test_config, CompilerLink, make_librarysuite_builder };
 
     fn last_statement(p: &mut Parser) -> Result<ParserStatement,ParseError> {
         let mut prev = Err(ParseError::new("unexpected EOF",&mut p.lexer));

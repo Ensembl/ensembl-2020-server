@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-use std::path::PathBuf;
 use std::fs::read_to_string;
 use crate::interp::find_testdata;
 

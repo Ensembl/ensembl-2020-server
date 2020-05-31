@@ -139,7 +139,7 @@ mod test {
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
+        generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
@@ -173,7 +173,7 @@ mod test {
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
+        generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");

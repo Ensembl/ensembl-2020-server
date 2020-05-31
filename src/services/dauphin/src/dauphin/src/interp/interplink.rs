@@ -14,9 +14,7 @@
  *  limitations under the License.
  */
 
-use std::collections::BTreeMap;
-use crate::generate::{ Instruction, InstructionType };
-use crate::interp::commandsets::{ Command, CommandSchema, CommandInterpretSuite, CommandTrigger, LibrarySuiteBuilder };
+use crate::interp::commandsets::{ Command, CommandInterpretSuite, LibrarySuiteBuilder };
 use crate::model::Register;
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string };
@@ -43,7 +41,7 @@ impl<'a> ProgramCursor<'a> {
     }
 
     fn next_n(&mut self, n: usize) -> Result<Vec<&'a CborValue>,String> {
-        (0..n).map(|i| self.next()).collect()
+        (0..n).map(|_| self.next()).collect()
     }
 }
 

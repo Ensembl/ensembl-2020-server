@@ -15,12 +15,12 @@
  */
 
 use std::collections::{ HashMap };
-use std::path::{ Path, PathBuf };
+use std::path::PathBuf;
 use std::time::{ SystemTime, Duration };
 use std::rc::Rc;
 use crate::cli::Config;
 use crate::commands::{ make_core, make_library, make_buildtime };
-use crate::generate::{ GenContext, Instruction };
+use crate::generate::Instruction;
 use crate::model::Register;
 use crate::interp::context::InterpContext;
 use crate::interp::LibrarySuiteBuilder;

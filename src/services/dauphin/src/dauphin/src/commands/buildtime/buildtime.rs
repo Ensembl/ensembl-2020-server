@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ CommandSet, CommandSetId, InterpContext, StreamContents };
+use crate::interp::{ CommandSet, CommandSetId };
 use super::ini::LoadIniCommandType;
 use super::header::BUILDTIME;
 

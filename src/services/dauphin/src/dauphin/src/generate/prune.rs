@@ -54,9 +54,6 @@ pub fn prune(context: &mut GenContext) {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use super::super::call;
-    use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
