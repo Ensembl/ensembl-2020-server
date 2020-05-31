@@ -353,12 +353,14 @@ pub fn generate_code<'a>(defstore: &'a DefStore, stmts: &Vec<Statement>, include
 mod test {
     use super::*;
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
+    use crate::interp::xxx_test_config;
     use crate::parser::Parser;
     use crate::test::files::load_testdata;
 
     fn run_pass(filename: &str) -> Result<(),Vec<String>> {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import(&format!("search:codegen/{}",filename)).expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -370,7 +372,8 @@ mod test {
 
     #[test]
     fn codegen_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/generate-smoke2").expect("cannot load file");
         let p = Parser::new(&mut lexer);

@@ -117,21 +117,21 @@ impl Typing {
 mod test {
     use super::*;
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
     use crate::interp::{ xxx_compiler_link, xxx_test_config };
+    use crate::resolver::common_resolver;
 
     #[test]
     fn typing_smoke() {
-        let resolver = test_resolver().expect("a");
+        let mut config = xxx_test_config();
+        config.set_opt_seq("");
+        let resolver = common_resolver(&config).expect("cfg");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/typepass-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let mut config = xxx_test_config();
-        config.set_opt_seq("");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
         print!("{}\n",instrs_str.join(""));

@@ -54,7 +54,7 @@ mod test {
     use super::*;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use super::super::codegen::generate_code;
     use super::super::call::call;
@@ -64,7 +64,8 @@ mod test {
     #[test]
     fn dealias_smoke() {
         // XXX check all aliases gone
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -78,7 +79,7 @@ mod test {
         remove_aliases(&mut context);
         print!("AFTER {:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
+
         let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {

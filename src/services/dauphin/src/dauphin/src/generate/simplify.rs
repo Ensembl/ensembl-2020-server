@@ -349,7 +349,7 @@ mod test {
     use super::super::call::call;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::codegen::generate_code;
     use crate::test::files::load_testdata;
@@ -377,7 +377,8 @@ mod test {
 
     #[test]
     fn simplify_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/simplify-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -392,7 +393,8 @@ mod test {
 
     #[test]
     fn simplify_enum_nest() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/simplify-enum-nest").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -404,7 +406,8 @@ mod test {
 
     #[test]
     fn simplify_enum_lvalue() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/enum-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -420,7 +423,8 @@ mod test {
 
     #[test]
     fn simplify_struct_lvalue() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/struct-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -437,7 +441,8 @@ mod test {
 
     #[test]
     fn simplify_both_lvalue() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/both-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);

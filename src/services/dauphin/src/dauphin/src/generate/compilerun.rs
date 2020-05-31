@@ -215,7 +215,7 @@ mod test {
     use super::super::call::call;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::prune::prune;
     use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
@@ -225,7 +225,8 @@ mod test {
 
     #[test]
     fn runnums_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -244,7 +245,6 @@ mod test {
         let lines = format!("{:?}",context).as_bytes().iter().filter(|&&c| c == b'\n').count();
         print!("{}\n",lines);
         assert!(lines<350);
-        let config = xxx_test_config();
         let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
@@ -255,7 +255,8 @@ mod test {
 
     #[test]
     fn runnums2_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/runnums").expect("cannot load file");
         let p = Parser::new(&mut lexer);

@@ -92,16 +92,18 @@ mod test {
     use crate::test::files::load_testdata;
     use std::str::FromStr;
     use std::rc::Rc;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
+    use crate::interp::xxx_test_config;
 
     fn add_token(out: &mut String, token: &(Token,String,u32,u32)) {
         out.push_str(&format!("{:?} {} {},{}\n",token.0,token.1,token.2,token.3));
     }
 
     fn try_lex(path_in: &str) -> Vec<(Token,String,u32,u32)> {
+        let config = xxx_test_config();
         let mut path = String::from_str("search:").ok().unwrap();
         path.push_str(path_in);
-        let resolver = Rc::new(test_resolver().expect("a"));
+        let resolver = Rc::new(common_resolver(&config).expect("a"));
         let source = resolver.resolve(&path);
         let (stream,resolver) = source.ok().unwrap();
         let mut lexer = FileLexer::new(resolver,stream);

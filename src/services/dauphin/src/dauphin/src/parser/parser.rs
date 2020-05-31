@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::resolver::{ common_resolver, test_resolver };
+    use crate::resolver::common_resolver;
     use crate::model::Identifier;
     use crate::test::files::{ load_testdata };
     use crate::interp::{ find_testdata, xxx_test_config };
@@ -111,7 +111,8 @@ mod test {
 
     #[test]
     fn statement() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("data: import \"x\";").ok();
         let mut p = Parser::new(&mut lexer);
@@ -121,7 +122,8 @@ mod test {
 
     #[test]
     fn import_statement() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("data: import \"data: $;\";").ok();
         let p = Parser::new(&mut lexer);
@@ -131,7 +133,6 @@ mod test {
 
     #[test]
     fn import_search_statement() {
-        set_current_dir(find_testdata()).expect("A");
         let resolver = common_resolver(&xxx_test_config()).expect("A");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:import-search").expect("cannot load file");
@@ -142,7 +143,8 @@ mod test {
 
     #[test]
     fn test_preprocess() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:parser/import-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -152,7 +154,8 @@ mod test {
 
     #[test]
     fn test_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:parser/parser-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -165,7 +168,8 @@ mod test {
 
     #[test]
     fn test_no_nested_dollar() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:parser/parser-nonest").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -175,7 +179,8 @@ mod test {
 
     #[test]
     fn test_id_clash() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:parser/id-clash").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -193,7 +198,8 @@ mod test {
 
     #[test]
     fn test_struct() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:parser/struct-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -210,7 +216,8 @@ mod test {
 
     #[test]
     fn test_enum() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:parser/enum-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -223,7 +230,8 @@ mod test {
 
     #[test]
     fn test_short() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:parser/short").expect("cannot load file");
         let p = Parser::new(&mut lexer);

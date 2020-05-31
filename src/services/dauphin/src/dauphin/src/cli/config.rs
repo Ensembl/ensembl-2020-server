@@ -29,7 +29,8 @@ pub struct Config {
     verbose: Option<u8>,
     optimise: Option<u8>,
     opt_seq: Option<String>,
-    search_path: Vec<String>
+    file_search_path: Vec<String>,
+    root_dir: Option<String>
 }
 
 macro_rules! push {
@@ -120,7 +121,8 @@ impl Config {
             verbose: None,
             optimise: None,
             opt_seq: None,
-            search_path: vec![]
+            file_search_path: vec![],
+            root_dir: None
         }
     }
 
@@ -132,5 +134,6 @@ impl Config {
     flag!(self,verbose,set_verbose,get_verbose,isset_verbose,u8,0);
     flag!(self,optimise,set_opt_level,get_opt_level,isset_opt_level,u8,0);
     flag_str!(self,opt_seq,set_opt_seq,get_opt_seq,isset_opt_seq,"*");
-    push_str!(self,search_path,add_search_path,get_search_path);
+    flag_str!(self,root_dir,set_root_dir,get_root_dir,isset_root_dir,".");
+    push_str!(self,file_search_path,add_file_search_path,get_file_search_path);
 }

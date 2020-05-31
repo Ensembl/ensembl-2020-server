@@ -16,8 +16,8 @@
 
 use std::fs::read_to_string;
 use std::path::PathBuf;
-use super::core::{ DocumentResolver, Resolver };
-use crate::lexer::{ CharSource, StringCharSource };
+use super::core::{ DocumentResolver, Resolver, ResolverQuery, ResolverResult };
+use crate::lexer::StringCharSource;
 use regex::Regex;
 
 static EXTENSIONS : [&str;1] = [".dp"];
@@ -27,13 +27,14 @@ pub struct FileResolver {
 }
 
 impl FileResolver {
-    pub fn new(path: PathBuf) -> FileResolver {
+    pub fn new(path: &PathBuf) -> FileResolver {
         FileResolver  {
-            path
+            path: path.clone()
         }
     }
 
     fn add_components(&self, components: &str) -> PathBuf {
+        print!("absoluting {} using {} as root\n",components,self.path.to_string_lossy());
         let mut path = self.path.clone();
         for component in components.split("/") {
             if component == ".." {
@@ -70,22 +71,25 @@ impl FileResolver {
 }
 
 impl DocumentResolver for FileResolver {
-    fn resolve(&self, name: &str, components: &str, _: &Resolver, new_resolver: &mut Resolver, prefix: &str) -> Result<Box<dyn CharSource>,String> {
-        let path = if components.starts_with("/") {
-            PathBuf::from(components)
+    fn resolve(&self, query: &ResolverQuery) -> Result<ResolverResult,String> {
+        let name = query.current_suffix();
+        let path = if name.starts_with("/") {
+            PathBuf::from(name)
         } else {
-            self.add_components(components)
+            self.add_components(name)
         };
         let module = self.get_module(&path)?;
-        print!("components = {}\n",components);
+        print!("\ncomponents = {}\n",name);
         print!("path = {}\n",path.to_string_lossy());
-        print!("name = {}\n",name);
+        print!("name = {}\n",query.original_name());
         print!("module = {}\n",module);
         let mut dir = path.clone();
         dir.pop();
-        let sub = FileResolver::new(dir);
+        let sub = FileResolver::new(&dir);
+        print!("subresolver = {}\n\n",sub.path.to_string_lossy());
         let data = read_to_string(path.clone()).map_err(|x| format!("{}: {}",path.to_str().unwrap_or(""),x))?;
-        new_resolver.add(prefix,sub);
-        Ok(Box::new(StringCharSource::new(name,&module,data)))
+        let mut result = query.new_result(StringCharSource::new(query.original_name(),&module,data));
+        result.resolver().add("file",sub);
+        Ok(result)
     }
 }

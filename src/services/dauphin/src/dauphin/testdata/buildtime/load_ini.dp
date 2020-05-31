@@ -4,5 +4,5 @@ use "std";
 import "search:buildtime";
 use "buildtime";
 
-x := load_ini("file:testdata/buildtime/test.ini","greetings","hello");
+x := load_ini("file:buildtime/test.ini","greetings","hello");
 assert(x=="world",true);

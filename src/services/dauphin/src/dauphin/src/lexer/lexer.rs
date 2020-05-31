@@ -127,11 +127,13 @@ impl<'a> Lexer<'a> {
 mod test {
     use super::*;
     use crate::test::files::load_testdata;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
+    use crate::interp::xxx_test_config;
 
     #[test]
     fn lexer_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:lexer/smoke2").expect("import failed");
         let mut out = String::new();
@@ -154,7 +156,8 @@ mod test {
 
     #[test]
     fn missing() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         assert!(lexer.import("file:missing").err().unwrap().contains("No such file or directory"));
     }

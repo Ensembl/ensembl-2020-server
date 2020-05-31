@@ -19,12 +19,6 @@ mod file;
 mod preamble;
 mod common;
 mod search;
-#[cfg(test)]
-mod test;
 
 pub use self::core::Resolver;
-
-#[cfg(test)]
-pub use self::test::test_resolver;
-
 pub use self::common::common_resolver;

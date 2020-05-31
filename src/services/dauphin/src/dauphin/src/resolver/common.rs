@@ -14,9 +14,10 @@
  *  limitations under the License.
  */
 
+use std::path::PathBuf;
 use crate::cli::Config;
 use crate::lexer::{ CharSource, StringCharSource };
-use super::core::{ DocumentResolver, Resolver };
+use super::core::{ DocumentResolver, Resolver, ResolverQuery, ResolverResult };
 use super::preamble::PREAMBLE;
 use super::file::FileResolver;
 use super::search::SearchResolver;
@@ -30,8 +31,10 @@ impl DataResolver {
 }
 
 impl DocumentResolver for DataResolver {
-    fn resolve(&self, _name: &str, path: &str, _: &Resolver, _: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
-        Ok(Box::new(StringCharSource::new(&format!("data:{}",path),"data",path.to_string())))
+    fn resolve(&self, query: &ResolverQuery) -> Result<ResolverResult,String> {
+        let path = query.current_suffix();
+        print!("DATA: {}\n",path.to_string());
+        Ok(query.new_result(StringCharSource::new(query.original_name(),"data",path.to_string())))
     }
 }
 
@@ -44,21 +47,34 @@ impl PreambleResolver {
 }
 
 impl DocumentResolver for PreambleResolver {
-    fn resolve(&self, name: &str, path: &str, _: &Resolver, _: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
-        if path == "" {
-            Ok(Box::new(StringCharSource::new("preamble","preamble",PREAMBLE.to_string())))
-        } else {
-            Err(format!("Nonsense in preamble path"))
-        }
+    fn resolve(&self, query: &ResolverQuery) -> Result<ResolverResult,String> {
+        Ok(query.new_result(StringCharSource::new("preamble","preamble",PREAMBLE.to_string())))
     }
 }
 
+fn root_dir(config: &Config) -> Result<PathBuf,String> {
+    if config.isset_root_dir() {
+        Ok(PathBuf::from(config.get_root_dir()))
+    } else {
+        std::env::current_dir().map_err(|x| x.to_string())
+    }
+}
+
+fn calculate_search_path(config: &Config) -> Vec<String> {
+    let mut out = vec![];
+    for path in config.get_file_search_path() {
+        out.push(format!("root:{}",path))
+    }
+    out
+}
+
 pub fn common_resolver(config: &Config) -> Result<Resolver,String> {
-    let root_dir = std::env::current_dir().map_err(|x| x.to_string())?;
+    let root_dir = root_dir(config)?;
     let mut out = Resolver::new();
     out.add("preamble",PreambleResolver::new());
     out.add("data",DataResolver::new());
-    out.add("file",FileResolver::new(root_dir));
-    out.add("search",SearchResolver::new(config.get_search_path()));
+    out.add("file",FileResolver::new(&root_dir));
+    out.add("root",FileResolver::new(&root_dir));
+    out.add("search",SearchResolver::new(&calculate_search_path(config)));
     Ok(out)
 }

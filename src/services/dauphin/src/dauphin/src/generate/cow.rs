@@ -237,7 +237,7 @@ mod test {
     use super::*;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
     use super::super::dealias::remove_aliases;
@@ -250,7 +250,8 @@ mod test {
 
     #[test]
     fn cow_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -267,7 +268,6 @@ mod test {
         copy_on_write(&mut context);
         print!("{:?}\n",context);
         prune(&mut context);
-        let config = xxx_test_config();
         let (_,strings) = mini_interp(&context.get_instructions(),&linker,&config).expect("x");
         for s in &strings {
             print!("{}\n",s);
@@ -277,13 +277,13 @@ mod test {
 
     #[test]
     fn reuse_consts_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {

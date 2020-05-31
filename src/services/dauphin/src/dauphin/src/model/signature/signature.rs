@@ -94,7 +94,7 @@ impl<I> Index<I> for RegisterSignature where I: SliceIndex<[ComplexRegisters]> {
 mod test {
     use super::*;
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser, parse_type };
     use crate::test::files::load_testdata;
     use crate::generate::generate;
@@ -105,7 +105,8 @@ mod test {
 
     // XXX move to common test utils
     fn make_type(defstore: &DefStore, name: &str) -> MemberType {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import(&format!("data:{}",name)).expect("cannot load file");
         parse_type(&mut lexer,defstore).expect("bad type")
@@ -130,7 +131,8 @@ mod test {
 
     #[test]
     fn offset_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -145,7 +147,8 @@ mod test {
 
     #[test]
     fn offset_enums() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/offset-enums").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -163,7 +166,8 @@ mod test {
 
     #[test]
     fn test_cbor() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);

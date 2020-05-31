@@ -14,18 +14,9 @@
  *  limitations under the License.
  */
 
-use super::core::DocumentResolver;
-use crate::lexer::CharSource;
+use super::core::{ DocumentResolver, ResolverQuery };
 
-use super::core::Resolver;
-
-fn prefix_suffix(path: &str) -> (&str,&str) {
-    if let Some(colon) = path.find(':') {
-        (&path[0..colon],&path[colon+1..])
-    } else {
-        ("",path)
-    }
-}
+use super::core::{ Resolver, ResolverResult };
 
 pub struct SearchResolver {
     templates: Vec<String>
@@ -40,12 +31,14 @@ impl SearchResolver {
 }
 
 impl DocumentResolver for SearchResolver {
-    fn resolve(&self, name: &str, path: &str, resolver: &Resolver, new_resolver: &mut Resolver, _: &str) -> Result<Box<dyn CharSource>,String> {
+    fn resolve(&self, query: &ResolverQuery) -> Result<ResolverResult,String> {
+        let suffix = query.current_suffix();
         let mut errors = vec![];
         for template in &self.templates {
-            let new_path = template.replace("*",prefix_suffix(path).1);
-            print!("{} -> {}\n",path,new_path);
-            match resolver.document_resolve(new_resolver,name,&new_path) {
+            let new_path = template.replace("*",suffix);
+            let new_subquery = query.new_subquery(&new_path);
+            print!("{} -> {}\n",suffix,new_path);
+            match query.resolver().document_resolve(&new_subquery) {
                 Ok(out) => { return Ok(out); },
                 Err(err) => { errors.push(err); }
             }

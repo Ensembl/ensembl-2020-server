@@ -337,7 +337,7 @@ mod test {
     use super::super::call::call;
     use super::super::simplify::simplify;
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use super::super::codegen::generate_code;
     use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
@@ -362,7 +362,8 @@ mod test {
 
     #[test]
     fn linearize_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -375,14 +376,14 @@ mod test {
         print!("{:?}\n",context);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
         let values = mini_interp(&mut context.get_instructions(),&linker,&config);
         print!("{:?}",values);
     }
 
     #[test]
     fn linearize_filter_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke-filter").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -396,7 +397,6 @@ mod test {
         print!("{:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
         remove_aliases(&mut context);
-        let config = xxx_test_config();
         let (values,_) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         let (lins,norms) = find_assigns(&instrs,&subregs);
         print!("{:?}",values);
@@ -414,7 +414,8 @@ mod test {
 
     #[test]
     fn linearize_reffilter_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke-reffilter").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -427,7 +428,6 @@ mod test {
         print!("{:?}\n",context);
         let linker = xxx_compiler_link().expect("y");
         remove_aliases(&mut context);
-        let config = xxx_test_config();
         let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         print!("{:?}\n",values);
         for s in &strings {
@@ -460,7 +460,8 @@ mod test {
 
     #[test]
     fn linearize_structenum_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke-structenum").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -473,14 +474,14 @@ mod test {
         print!("{:?}\n",context);
         remove_aliases(&mut context);
         let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
         let (_values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
         assert_eq!("{ *: 2; A.A: -; A.B: 0; A.B.X: 0; A.B.Y: -; B: 0; B.X: 0; B.Y: -; C: true; D: - }",strings[0]);
     }
 
     #[test]
     fn linearize_refsquare() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -503,7 +504,8 @@ mod test {
     }
 
     fn linearize_stable_pass() -> Vec<Instruction> {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
@@ -525,7 +527,8 @@ mod test {
 
    #[test]
     fn linearize_push_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-smoke-push").expect("cannot load file");
         let p = Parser::new(&mut lexer);

@@ -97,19 +97,19 @@ impl Command for LoadIniCommand {
 #[cfg(test)]
 mod test {
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
     use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
     #[test]
     fn load_ini_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:buildtime/load_ini").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let config = xxx_test_config();
         let linker = xxx_compiler_link().expect("y");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");

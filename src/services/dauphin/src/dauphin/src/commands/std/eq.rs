@@ -160,19 +160,21 @@ pub(super) fn library_eq_command(set: &mut CommandSet) -> Result<(),String> {
 #[cfg(test)]
 mod test {
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_quiet_config };
+    use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
     #[test]
     fn eq_smoke() {
-        let resolver = test_resolver().expect("a");
+        let mut config = xxx_test_config();
+        config.set_generate_debug(false);
+        config.set_verbose(2);    
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/eq").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let config = xxx_test_quiet_config();
         let linker = xxx_compiler_link().expect("y");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");

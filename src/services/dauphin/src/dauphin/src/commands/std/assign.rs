@@ -230,20 +230,20 @@ pub(super) fn library_assign_commands(set: &mut CommandSet) -> Result<(),String>
 #[cfg(test)]
 mod test {
     use crate::lexer::Lexer;
-    use crate::resolver::test_resolver;
+    use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
     use crate::interp::{ mini_interp, xxx_compiler_link, xxx_test_config };
 
     #[test]
     fn extend_smoke() {
-        let resolver = test_resolver().expect("a");
+        let config = xxx_test_config();
+        let resolver = common_resolver(&config).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/extend").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let linker = xxx_compiler_link().expect("y");
-        let config = xxx_test_config();
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
         for s in &strings {
