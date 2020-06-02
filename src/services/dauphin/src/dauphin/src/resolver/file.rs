@@ -34,7 +34,6 @@ impl FileResolver {
     }
 
     fn add_components(&self, components: &str) -> PathBuf {
-        print!("absoluting {} using {} as root\n",components,self.path.to_string_lossy());
         let mut path = self.path.clone();
         for component in components.split("/") {
             if component == ".." {
@@ -76,17 +75,25 @@ impl DocumentResolver for FileResolver {
         let path = if name.starts_with("/") {
             PathBuf::from(name)
         } else {
-            self.add_components(name)
+            let out = self.add_components(name);
+            if query.resolver().config().get_verbose() > 1 {
+                print!("converting {} to absolute path using {} as root with result {}\n",
+                    name,self.path.to_string_lossy(),out.to_string_lossy());
+            }
+            out
         };
         let module = self.get_module(&path)?;
-        print!("\ncomponents = {}\n",name);
-        print!("path = {}\n",path.to_string_lossy());
-        print!("name = {}\n",query.original_name());
-        print!("module = {}\n",module);
+        if query.resolver().config().get_verbose() > 1 {
+            print!("found {}:{} at {}. Using module name {}\n",
+                query.current_prefix(),
+                query.current_suffix(),
+                path.to_string_lossy(),
+                module);
+                
+        }
         let mut dir = path.clone();
         dir.pop();
         let sub = FileResolver::new(&dir);
-        print!("subresolver = {}\n\n",sub.path.to_string_lossy());
         let data = read_to_string(path.clone()).map_err(|x| format!("{}: {}",path.to_str().unwrap_or(""),x))?;
         let mut result = query.new_result(StringCharSource::new(query.original_name(),&module,data));
         result.resolver().add("file",sub);

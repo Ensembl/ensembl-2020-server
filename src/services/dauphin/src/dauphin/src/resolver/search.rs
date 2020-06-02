@@ -31,14 +31,22 @@ impl SearchResolver {
 
 impl DocumentResolver for SearchResolver {
     fn resolve(&self, query: &ResolverQuery) -> Result<ResolverResult,String> {
+        let verbosity = query.resolver().config().get_verbose();
         let suffix = query.current_suffix();
         let mut errors = vec![];
         for template in &self.templates {
             let new_path = template.replace("*",suffix);
             let new_subquery = query.new_subquery(&new_path);
-            print!("{} -> {}\n",suffix,new_path);
+            if verbosity > 1 {
+                print!("trying {} -> {}\n",suffix,new_path);
+            }
             match query.resolver().document_resolve(&new_subquery) {
-                Ok(out) => { return Ok(out); },
+                Ok(out) => { 
+                    if verbosity > 0 {
+                        print!("success {} -> {}\n",suffix,new_path);
+                    }
+                    return Ok(out);
+                },
                 Err(err) => { errors.push(err); }
             }
         }

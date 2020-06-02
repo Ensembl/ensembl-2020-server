@@ -90,7 +90,7 @@ fn calculate_search_path(config: &Config) -> Vec<String> {
 
 pub fn common_resolver(config: &Config, clink: &CompilerLink) -> Result<Resolver,String> {
     let root_dir = root_dir(config)?;
-    let mut out = Resolver::new();
+    let mut out = Resolver::new(config);
     out.add("preamble",PreambleResolver::new());
     out.add("data",DataResolver::new());
     out.add("file",FileResolver::new(&root_dir));

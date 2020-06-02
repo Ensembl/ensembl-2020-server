@@ -15,6 +15,7 @@
  */
 
 use std::rc::Rc;
+use crate::cli::Config;
 use std::collections::HashMap;
 
 use crate::lexer::CharSource;
@@ -87,15 +88,19 @@ pub trait DocumentResolver {
 
 #[derive(Clone)]
 pub struct Resolver {
+    config: Config,
     document_resolvers: HashMap<String,Rc<dyn DocumentResolver>>
 }
 
 impl Resolver {
-    pub fn new() -> Resolver {
+    pub fn new(config: &Config) -> Resolver {
         Resolver {
+            config: config.clone(),
             document_resolvers: HashMap::new()
         }
     }
+
+    pub fn config(&self) -> &Config { &self.config }
 
     pub fn add<T>(&mut self, prefix: &str, document_resolver: T) where T: DocumentResolver + 'static {
         self.document_resolvers.insert(prefix.to_string(),Rc::new(document_resolver));
