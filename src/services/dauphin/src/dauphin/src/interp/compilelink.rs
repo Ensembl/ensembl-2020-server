@@ -40,12 +40,17 @@ impl CompilerLink {
 
     pub fn get_headers(&self) -> &HashMap<String,String> { &self.headers }
 
-    pub fn compile_instruction(&self, instr: &Instruction) -> Result<(u32,CommandSchema,Box<dyn Command>),String> {
-        let (ct,opcode) = if let InstructionType::Call(identifier,_,_,_) = &instr.itype {
+    pub fn compile_instruction(&self, instr: &Instruction, compile_side: bool) -> Result<(u32,CommandSchema,Box<dyn Command>),String> {
+        let mut name = "*anon*".to_string();
+        let (ct,opcode,compile_only) = if let InstructionType::Call(identifier,_,_,_) = &instr.itype {
+            name = identifier.to_string();
             self.cs.get_by_trigger(&CommandTrigger::Command(identifier.clone()))?
         } else {
             self.cs.get_by_trigger(&CommandTrigger::Instruction(instr.itype.supertype()?))?
         };
+        if compile_only && !compile_side {
+            return Err(format!("{} is a compile-side only command",name));
+        }
         Ok((opcode,ct.get_schema(),ct.from_instruction(instr)?))
     }
 
@@ -69,7 +74,7 @@ impl CompilerLink {
     }
 
     pub fn serialize(&self, instrs: &[Instruction], config: &Config) -> Result<CborValue,String> {
-        let cmds = instrs.iter().map(|x| self.compile_instruction(x)).collect::<Result<Vec<_>,_>>()?;
+        let cmds = instrs.iter().map(|x| self.compile_instruction(x,false)).collect::<Result<Vec<_>,_>>()?;
         let mut out = BTreeMap::new();
         let mut cmds_s = vec![];
         for (opcode,sch,cmd) in &cmds {

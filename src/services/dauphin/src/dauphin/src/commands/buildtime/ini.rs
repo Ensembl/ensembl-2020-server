@@ -103,7 +103,7 @@ mod test {
 
     #[test]
     fn load_ini_smoke() {
-        let config = xxx_test_config();
+        let mut config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);

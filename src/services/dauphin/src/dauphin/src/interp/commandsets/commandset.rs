@@ -26,18 +26,20 @@ pub struct CommandSet {
     trace: HashMap<u32,String>,
     csi: CommandSetId,
     commands: HashMap<u32,Box<dyn CommandType>>,
-    mapping: Option<HashMap<CommandTrigger,u32>>
+    mapping: Option<HashMap<CommandTrigger,u32>>,
+    compile_only: bool
 }
 
 impl CommandSet {
-    pub fn new(csi: &CommandSetId) -> CommandSet {
+    pub fn new(csi: &CommandSetId, compile_only: bool) -> CommandSet {
         CommandSet {
             headers: HashMap::new(),
             names: HashSet::new(),
             trace: HashMap::new(),
             csi: csi.clone(),
             commands: HashMap::new(),
-            mapping: Some(HashMap::new())
+            mapping: Some(HashMap::new()),
+            compile_only
         }
     }
 
@@ -48,6 +50,7 @@ impl CommandSet {
     pub(super) fn get(&self, opcode: u32) -> Result<&Box<dyn CommandType>,String> {
         self.commands.get(&opcode).ok_or_else(|| format!("No such opcode {}",opcode))
     }
+    pub(super) fn compile_only(&self) -> bool { self.compile_only }
 
     pub fn add_header(&mut self, name: &str, value: &str) {
         self.headers.insert(name.to_string(),value.to_string());
@@ -105,7 +108,7 @@ mod test {
     #[test]
     fn test_command_smoke() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
-        let mut cs = CommandSet::new(&csi);
+        let mut cs = CommandSet::new(&csi,false);
         cs.push("test1",0,ConstCommandType()).expect("a");
         cs.push("test3",2,NumberConstCommandType()).expect("c");
         cs.push("test2",1,BooleanConstCommandType()).expect("b");
@@ -116,7 +119,7 @@ mod test {
     #[test]
     fn test_command_get() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
-        let mut cs = CommandSet::new(&csi);
+        let mut cs = CommandSet::new(&csi,false);
         cs.push("test1",0,ConstCommandType()).expect("a");
         cs.push("test2",1,BooleanConstCommandType()).expect("b");
         cs.push("test3",2,NumberConstCommandType()).expect("c");
@@ -136,7 +139,7 @@ mod test {
 
     fn trace_check(trace: u64, cmds: Vec<(&str,u32)>) -> bool {
         let csi = CommandSetId::new("test",(1,2),trace);
-        let mut cs = CommandSet::new(&csi);
+        let mut cs = CommandSet::new(&csi,false);
         for (name,opcode) in &cmds {
             trace_type(&mut cs, name, *opcode);
         }
@@ -154,7 +157,7 @@ mod test {
     #[test]
     fn duplicate_opcode_test() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
-        let mut cs = CommandSet::new(&csi);
+        let mut cs = CommandSet::new(&csi,false);
         cs.push("test1",0,ConstCommandType()).expect("a");
         cs.push("test2",0,ConstCommandType()).expect_err("b");
     }
@@ -162,7 +165,7 @@ mod test {
     #[test]
     fn duplicate_name_test() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
-        let mut cs = CommandSet::new(&csi);
+        let mut cs = CommandSet::new(&csi,false);
         cs.push("test1",0,ConstCommandType()).expect("a");
         cs.push("test1",1,ConstCommandType()).expect_err("b");
     }
@@ -170,7 +173,7 @@ mod test {
     #[test]
     fn test_mappings() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
-        let mut cs = CommandSet::new(&csi);
+        let mut cs = CommandSet::new(&csi,false);
         cs.push("test1",0,ConstCommandType()).expect("a");
         cs.push("test2",1,NumberConstCommandType()).expect("c");
         let mappings = cs.take_mappings();

@@ -397,7 +397,7 @@ impl Command for SeqAtCommand {
 
 pub fn make_core() -> Result<CommandSet,String> {
     let set_id = CommandSetId::new("core",(0,0),0xC1ED479408579BD);
-    let mut set = CommandSet::new(&set_id);
+    let mut set = CommandSet::new(&set_id,false);
     const_commands(&mut set)?;
     set.push("nil",5,BuiltinCommandType::new(InstructionSuperType::Nil,1,Box::new(|x| Ok(Box::new(NilCommand(x[0]))))))?;
     set.push("copy",6,BuiltinCommandType::new(InstructionSuperType::Copy,2,Box::new(|x| Ok(Box::new(CopyCommand(x[0],x[1]))))))?;

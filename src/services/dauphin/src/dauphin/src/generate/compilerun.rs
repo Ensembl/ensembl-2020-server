@@ -173,7 +173,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn preimage_instr(&mut self, instr: &Instruction) -> Result<(),String> {
-        let command = self.compiler_link.compile_instruction(instr)?.2;
+        let command = self.compiler_link.compile_instruction(instr,true)?.2;
         match command.preimage(self) ? {
             PreImageOutcome::Skip => {
                 self.unable_instr(&instr)?;

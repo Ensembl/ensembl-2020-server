@@ -109,28 +109,28 @@ mod test {
         let mut ccs = CommandCompileSuite::new();
         //
         let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1);
+        let mut cs1 = CommandSet::new(&csi1,false);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         let cs1 = Rc::new(cs1);
         ccs.add_set(cs1.clone(),10);
         let m = CommandSuiteMember::new(5,cs1.clone(),10);
-        ccs.add_member(CommandTrigger::Instruction(InstructionSuperType::Const),&m);
+        ccs.add_member(CommandTrigger::Instruction(InstructionSuperType::Const),&m,false);
         //
         let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
-        let mut cs2 = CommandSet::new(&csi2);
+        let mut cs2 = CommandSet::new(&csi2,false);
         cs2.push("test2",5,NumberConstCommandType()).expect("a");
         let cs2 = Rc::new(cs2);
         ccs.add_set(cs2.clone(),20);
         let m = CommandSuiteMember::new(5,cs2.clone(),20);
-        ccs.add_member(CommandTrigger::Instruction(InstructionSuperType::NumberConst),&m);
-        let (_,opcode) = ccs.get_by_trigger(&CommandTrigger::Instruction(InstructionSuperType::NumberConst)).expect("c");
+        ccs.add_member(CommandTrigger::Instruction(InstructionSuperType::NumberConst),&m,false);
+        let (_,opcode,_) = ccs.get_by_trigger(&CommandTrigger::Instruction(InstructionSuperType::NumberConst)).expect("c");
         assert_eq!(25,opcode);
 
         /* and here's the same thing, but subtly rearranged, at the interpreter end */
         let mut cis = CommandInterpretSuite::new();
         //
         let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1);
+        let mut cs1 = CommandSet::new(&csi1,false);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         let cs1 = Rc::new(cs1);
         let cs1i = cis.add_set(cs1.clone());
@@ -138,7 +138,7 @@ mod test {
         cis.add_member(15,&m,cs1i);
         //
         let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
-        let mut cs2 = CommandSet::new(&csi2);
+        let mut cs2 = CommandSet::new(&csi2,false);
         cs2.push("test2",5,NumberConstCommandType()).expect("a");
         let cs2 = Rc::new(cs2);
         let cs2i = cis.add_set(cs2.clone());

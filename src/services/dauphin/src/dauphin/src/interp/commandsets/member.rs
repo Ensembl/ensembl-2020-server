@@ -52,7 +52,7 @@ mod test {
     #[test]
     fn member_smoke() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
-        let mut cs = CommandSet::new(&csi);
+        let mut cs = CommandSet::new(&csi,false);
         cs.push("test1",5,ConstCommandType()).expect("a");
         let cs = Rc::new(cs);
         let mut m = CommandSuiteMember::new(5,cs.clone(),10);

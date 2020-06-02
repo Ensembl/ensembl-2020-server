@@ -274,7 +274,7 @@ impl Command for AssertCommand {
 
 pub fn make_library() -> Result<CommandSet,String> {
     let set_id = CommandSetId::new("std",(0,0),0xCE08545E3B95908A);
-    let mut set = CommandSet::new(&set_id);
+    let mut set = CommandSet::new(&set_id,false);
     library_eq_command(&mut set)?;
     set.push("len",1,LenCommandType())?;
     set.push("print_regs",2,PrintRegsCommandType())?;

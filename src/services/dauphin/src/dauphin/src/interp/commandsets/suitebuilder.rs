@@ -53,14 +53,20 @@ impl LibrarySuiteBuilder {
         let set = Rc::new(set);
         let offset = self.next_opcode;
         self.compile_suite.add_set(set.clone(),offset);
-        let set_offset = self.interpret_suite.add_set(set.clone());
+        let set_offset = if set.compile_only() {
+            None
+        } else {
+            Some(self.interpret_suite.add_set(set.clone()))
+        };
         for (trigger,local_opcode) in mappings.drain() {
             let member = CommandSuiteMember::new(local_opcode,set.clone(),offset);
             if local_opcode+offset >= self.next_opcode {
                 self.next_opcode = local_opcode+offset+1;
             }
-            self.compile_suite.add_member(trigger,&member);
-            self.interpret_suite.add_member(offset+local_opcode,&member,set_offset);
+            self.compile_suite.add_member(trigger,&member,set.compile_only());
+            if let Some(set_offset) = set_offset {
+                self.interpret_suite.add_member(offset+local_opcode,&member,set_offset);
+            }
         }
         self.seen.insert((set_name,set_major),set_id.to_string());
         for (name,value) in set.get_headers() {
@@ -113,31 +119,31 @@ mod test {
 
         //
         let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1);
+        let mut cs1 = CommandSet::new(&csi1,false);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         cb.add(cs1).expect("f");
         //
         let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
-        let mut cs2 = CommandSet::new(&csi2);
+        let mut cs2 = CommandSet::new(&csi2,false);
         cs2.push("test2",5,NumberConstCommandType()).expect("a");
         cb.add(cs2).expect("f");
         //
         let ccs = cb.make_compile_suite().expect("f");
-        let (_,opcode) = ccs.get_by_trigger(&CommandTrigger::Instruction(InstructionSuperType::Const)).expect("c");
+        let (_,opcode,_) = ccs.get_by_trigger(&CommandTrigger::Instruction(InstructionSuperType::Const)).expect("c");
         assert_eq!(5,opcode);
-        let (_,opcode) = ccs.get_by_trigger(&CommandTrigger::Instruction(InstructionSuperType::NumberConst)).expect("c");
+        let (_,opcode,_) = ccs.get_by_trigger(&CommandTrigger::Instruction(InstructionSuperType::NumberConst)).expect("c");
         assert_eq!(11,opcode);
 
         /* and here's the same thing, but with sets flipped, at the interpreter end */
         let mut cb = LibrarySuiteBuilder::new();
         //
         let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
-        let mut cs2 = CommandSet::new(&csi2);
+        let mut cs2 = CommandSet::new(&csi2,false);
         cs2.push("test2",5,NumberConstCommandType()).expect("a");
         cb.add(cs2).expect("f");
         //
         let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1);
+        let mut cs1 = CommandSet::new(&csi1,false);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         cb.add(cs1).expect("f");
         //
@@ -154,13 +160,13 @@ mod test {
         let mut cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",compiler,0xB790000000000000);
-        let cs1 = CommandSet::new(&csi1);
+        let cs1 = CommandSet::new(&csi1,false);
         cb.add(cs1).expect("a");
         let ccs = cb.make_compile_suite().expect("b");
 
         let mut cb = LibrarySuiteBuilder::new();
         let csi1 = CommandSetId::new("test",interpreter,0xB790000000000000);
-        let cs1 = CommandSet::new(&csi1);
+        let cs1 = CommandSet::new(&csi1,false);
         cb.add(cs1).expect("c");
         cb.make_interpret_suite(&ccs.serialize()).is_ok()
     }
@@ -178,10 +184,10 @@ mod test {
         let mut cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",(1,1),0xB790000000000000);
-        let cs1 = CommandSet::new(&csi1);
+        let cs1 = CommandSet::new(&csi1,false);
         cb.add(cs1).expect("a");
         let csi1 = CommandSetId::new("test",(1,2),0xB790000000000000);
-        let cs1 = CommandSet::new(&csi1);
+        let cs1 = CommandSet::new(&csi1,false);
         cb.add(cs1).expect_err("a");
     }
 
@@ -190,7 +196,7 @@ mod test {
         let mut cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1);
+        let mut cs1 = CommandSet::new(&csi1,false);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         cb.add(cs1).expect("a");
 
@@ -198,11 +204,11 @@ mod test {
 
         let mut cb = LibrarySuiteBuilder::new();
         let csi2 = CommandSetId::new("test",(2,1),0x284E7C72C8628854);
-        let mut cs2 = CommandSet::new(&csi2);
+        let mut cs2 = CommandSet::new(&csi2,false);
         cs2.push("test2",5,NumberConstCommandType()).expect("a");
         cb.add(cs2).expect("c");
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1);
+        let mut cs1 = CommandSet::new(&csi1,false);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         cb.add(cs1).expect("c");
 
@@ -216,7 +222,7 @@ mod test {
         let mut cb = LibrarySuiteBuilder::new();
 
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1);
+        let mut cs1 = CommandSet::new(&csi1,false);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         cb.add(cs1).expect("a");
 
@@ -234,7 +240,7 @@ mod test {
         let ccs = cb.make_compile_suite().expect("b");
 
         let mut cb = LibrarySuiteBuilder::new();
-        let mut cs1 = CommandSet::new(&csi1);
+        let mut cs1 = CommandSet::new(&csi1,false);
         cs1.push("test1",5,ConstCommandType()).expect("a");
         cb.add(cs1).expect("a");
 

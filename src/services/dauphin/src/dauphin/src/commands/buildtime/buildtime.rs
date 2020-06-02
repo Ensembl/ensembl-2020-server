@@ -20,7 +20,7 @@ use super::header::BUILDTIME;
 
 pub fn make_buildtime() -> Result<CommandSet,String> {
     let set_id = CommandSetId::new("buildtime",(0,0),0xB6546C18A5641C3E);
-    let mut set = CommandSet::new(&set_id);
+    let mut set = CommandSet::new(&set_id,true);
     set.push("load_ini",1,LoadIniCommandType())?;
     set.add_header("buildtime",&BUILDTIME);
     Ok(set)
