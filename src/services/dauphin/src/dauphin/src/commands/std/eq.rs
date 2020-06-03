@@ -17,8 +17,8 @@
 use crate::interp::InterpValue;
 use crate::model::{ Register, RegisterSignature };
 use super::super::common::vectorsource::RegisterVectorSource;
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
-use crate::generate::{ Instruction, InstructionType };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome };
+use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::cbor_array;
 use crate::commands::common::sharedvec::SharedVec;
@@ -149,6 +149,22 @@ impl Command for EqCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         let regs = CborValue::Array(self.1.iter().map(|x| x.serialize()).collect());
         Ok(vec![self.0.serialize(false,true)?,regs])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+        for pos in 1..3 {
+            for idx in self.0[pos].all_registers() {
+                if !context.get_reg_valid(&self.1[idx]) {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.1[0],true);
+        Ok(PreImageOutcome::Constant(vec![self.1[0]]))
     }
 }
 

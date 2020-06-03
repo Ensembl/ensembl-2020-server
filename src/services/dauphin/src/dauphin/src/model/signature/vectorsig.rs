@@ -15,6 +15,7 @@
  */
 
 use std::fmt;
+use std::collections::HashSet;
 use serde_cbor::Value as CborValue;
 use crate::model::cbor_int;
 
@@ -32,6 +33,14 @@ impl VectorRegisters {
         }
     }
 
+    pub fn all_registers(&self) -> HashSet<usize> {
+        let mut regs = HashSet::new();
+        for i in 0..self.register_count() {
+            regs.insert(self.start+i);
+        }
+        regs
+    }
+    
     pub fn deserialize(cbor: &CborValue) -> Result<VectorRegisters,String> {
         Ok(VectorRegisters::new(cbor_int(&cbor,None)? as usize))
     }

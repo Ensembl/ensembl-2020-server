@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use std::collections::HashMap;
+use std::collections::{ HashMap, HashSet };
 use std::fmt;
 use super::super::definitionstore::DefStore;
 use super::super::structenum::{ EnumDef, StructDef };
@@ -52,6 +52,14 @@ impl ComplexRegisters {
             vectors: HashMap::new(),
             vec_depth: HashMap::new()
         }
+    }
+
+    pub fn all_registers(&self) -> HashSet<usize> {
+        let mut out = HashSet::new();
+        for vr in self.vectors.values() {
+            out.extend(vr.all_registers());
+        }
+        out
     }
 
     pub fn get_root_path(&self) -> Result<&ComplexPath,String> {
