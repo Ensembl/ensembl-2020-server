@@ -179,6 +179,15 @@ impl Command for ReFilterCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct NumEqCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register);

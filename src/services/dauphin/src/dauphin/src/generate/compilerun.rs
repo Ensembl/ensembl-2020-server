@@ -18,10 +18,10 @@ use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
 use crate::resolver::Resolver;
 use crate::model::Register;
-use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
+use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes, RegisterFile };
 use crate::generate::{ Instruction, InstructionType };
 
-#[derive(Clone,Hash,PartialEq,Eq)]
+#[derive(Clone,Hash,PartialEq,Eq,Debug)] // XXX DEBUG!
 enum StealableValue {
     Empty,
     Indexes(Vec<usize>),
@@ -39,10 +39,46 @@ impl StealableValue {
     }
 }
 
+struct ReverseRegisters {
+    forward: HashMap<Register,StealableValue>,
+    reversed: HashMap<StealableValue,Register>,
+}
+
+impl ReverseRegisters {
+    fn new() -> ReverseRegisters {
+        ReverseRegisters {
+            forward: HashMap::new(),
+            reversed: HashMap::new()
+        }
+    }
+
+    fn remove_register(&mut self, reg: &Register) {
+        if let Some(sv) = self.forward.get(reg) {
+            self.reversed.remove(&sv);
+            self.forward.remove(reg);
+        }
+    }
+
+    fn update_register(&mut self, reg: &Register, value: &InterpValue) {
+        self.remove_register(reg);
+        if let Some(sv) = StealableValue::new(&value) {
+            self.reversed.insert(sv.clone(),*reg);
+            self.forward.insert(*reg,sv);
+        }
+    }
+
+    fn find_register(&self, value: &InterpValue) -> Option<Register> {
+        if let Some(sv) = StealableValue::new(value) {
+            self.reversed.get(&sv).cloned()
+        } else {
+            None
+        }
+    }
+}
+
 pub struct PreImageContext<'a,'b> {
     resolver: &'a Resolver,
-    steals: HashMap<StealableValue,Register>,
-    rev_steals: HashMap<Register,StealableValue>,
+    reverse: ReverseRegisters,
     suppressed: HashSet<Register>,
     compiler_link: CompilerLink,
     valid_registers: HashSet<Register>,
@@ -54,8 +90,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     pub fn new(compiler_link: &CompilerLink, resolver: &'a Resolver, gen_context: &'a mut GenContext<'b>) -> Result<PreImageContext<'a,'b>,String> {
         Ok(PreImageContext {
             resolver,
-            steals: HashMap::new(),
-            rev_steals: HashMap::new(),
+            reverse: ReverseRegisters::new(),
             suppressed: HashSet::new(),
             compiler_link: compiler_link.clone(),
             valid_registers: HashSet::new(),
@@ -67,35 +102,35 @@ impl<'a,'b> PreImageContext<'a,'b> {
     pub fn context(&mut self) -> &mut InterpContext { &mut self.context }
     pub fn resolver(&self) -> &Resolver { &self.resolver }
 
+    fn make_value(&mut self, reg: &Register, value: &InterpValue) -> Result<(),String> {
+        if let Some(src_reg) = self.reverse.find_register(value) {
+            self.gen_context.add(Instruction::new(InstructionType::Copy,vec![*reg,src_reg]));
+        } else {
+            self.make_constant(reg)?;
+        }
+        Ok(())
+    }
+
     pub fn add_instruction(&mut self, instr: &Instruction) -> Result<(),String> {
         let out = instr.itype.out_registers();
         let out_only = instr.itype.out_only_registers();
         for (i,reg) in instr.regs.iter().enumerate() {
-            let mut make = true;
             if !out_only.contains(&i) && self.suppressed.contains(reg) {
                 let value = self.context().registers().get(reg).borrow().get_shared()?;
-                if let Some(sv) = StealableValue::new(&value) {
-                    if let Some(other_reg) = self.steals.get(&sv) {
-                        self.gen_context.add(Instruction::new(InstructionType::Copy,vec![*reg,*other_reg]));
-                        make = false;
-                    }
-                    self.steals.insert(sv.clone(),*reg);
-                    self.rev_steals.insert(*reg,sv);
-                }
-                if make {
-                    self.make_constant(reg)?;
-                }
+                self.make_value(&reg,&value)?;
+                self.reverse.update_register(reg,&value);
             }
             self.suppressed.remove(reg);
         }
+        self.gen_context.add(instr.clone());
+        self.context().registers().commit();
         for (i,reg) in instr.regs.iter().enumerate() {
             if out.contains(&i) {
-                if let Some(sv) = self.rev_steals.remove(reg) {
-                    self.steals.remove(&sv);
+                if self.valid_registers.contains(reg) {
+                    self.reverse.remove_register(reg);
                 }
             }
         }
-        self.gen_context.add(instr.clone());
         Ok(())
     }
 
@@ -187,6 +222,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
                 self.context().registers().commit();
                 for reg in &regs {
                     self.suppressed.insert(*reg);
+                    self.reverse.remove_register(reg);
                 }
             }
         }

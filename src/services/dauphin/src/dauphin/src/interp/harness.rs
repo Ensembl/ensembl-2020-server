@@ -74,8 +74,9 @@ pub fn mini_interp_run(instrs: &Vec<Instruction>, cl: &CompilerLink, ic: &mut In
             print!("{}",ic.registers().dump_many(&regs)?);
         }
     } else {
+        let commands = interpret_linker.get_commands();
         let start_time = SystemTime::now();
-        for command in interpret_linker.get_commands() {
+        for command in commands {
             command.execute(ic)?;
             ic.registers().commit();
         }

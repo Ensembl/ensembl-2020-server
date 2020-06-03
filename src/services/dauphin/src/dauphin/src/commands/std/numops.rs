@@ -14,10 +14,10 @@
  *  limitations under the License.
  */
 
-use crate::interp::InterpValue;
+use crate::interp::{ InterpValue, PreImageOutcome };
 use crate::model::Register;
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
-use crate::generate::Instruction;
+use crate::generate::{ Instruction, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::library::std;
 
@@ -129,6 +129,15 @@ impl Command for InterpBinBoolCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.1.serialize(),self.2.serialize(),self.3.serialize()])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.2) && context.get_reg_valid(&self.3))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.1,true);
+        Ok(PreImageOutcome::Constant(vec![self.1]))
+    }
 }
 
 pub struct InterpBinNumCommandType(InterpBinNumOp);
@@ -173,6 +182,15 @@ impl Command for InterpBinNumCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.1.serialize(),self.2.serialize(),self.3.serialize()])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.2) && context.get_reg_valid(&self.3))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.1,true);
+        Ok(PreImageOutcome::Constant(vec![self.1]))
+    }
 }
 
 pub struct InterpNumModCommandType(InterpNumModOp);
@@ -214,6 +232,15 @@ impl Command for InterpNumModCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.1.serialize(),self.2.serialize()])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.1,true);
+        Ok(PreImageOutcome::Constant(vec![self.1]))
     }
 }
 

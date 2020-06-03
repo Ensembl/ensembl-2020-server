@@ -45,7 +45,13 @@ pub fn reuse_dead_once(context: &mut GenContext) -> bool {
             rewrite_rules.insert(dst,src);
             progress = true;
         } else {
-            let new_regs = instr.regs.iter().map(|r| *rewrite_rules.get(r).unwrap_or(r)).collect::<Vec<_>>();
+            let mut new_regs = vec![];
+            for mut reg in instr.regs.clone().drain(..) {
+                while let Some(new_reg) = rewrite_rules.get(&reg) {
+                    reg = *new_reg;
+                }
+                new_regs.push(reg);
+            }
             context.add(Instruction::new(instr.itype.clone(),new_regs));
         }
     }

@@ -17,7 +17,6 @@
 mod assignregs;
 mod call;
 mod codegen;
-mod cow;
 mod dealias;
 mod gencontext;
 mod generate;

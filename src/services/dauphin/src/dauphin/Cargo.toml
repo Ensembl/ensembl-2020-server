@@ -12,3 +12,6 @@ serde_cbor="*"
 crc="*"
 rust-ini="*"
 regex="*"
+
+#[profile.test]
+#opt-level = 3

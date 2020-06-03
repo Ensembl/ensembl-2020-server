@@ -103,6 +103,13 @@ impl Command for ConstCommand {
         let v = self.1.iter().map(|x| CborValue::Integer(*x as i128)).collect();
         Ok(vec![self.0.serialize(),CborValue::Array(v)])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct BooleanConstCommandType();
@@ -133,6 +140,13 @@ impl Command for BooleanConstCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),CborValue::Bool(self.1)])
+    }
+
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
 
@@ -204,7 +218,14 @@ impl Command for BytesConstCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),CborValue::Bytes(self.1.to_vec())])
-    } 
+    }
+    
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.0,true);
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
 }
 
 pub struct LineNumberCommandType();

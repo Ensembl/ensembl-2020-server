@@ -95,7 +95,6 @@ mod test {
     use super::super::call::call;
     use super::super::linearize::linearize;
     use super::super::dealias::remove_aliases;
-    use super::super::cow::copy_on_write;
     use super::super::compilerun::compile_run;
     use super::super::reusedead::reuse_dead;
     use super::super::prune::prune;
@@ -116,8 +115,6 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         compile_run(&linker,&resolver,&mut context).expect("m");
-        prune(&mut context);
-        copy_on_write(&mut context);
         prune(&mut context);
         compile_run(&linker,&resolver,&mut context).expect("n");
         reuse_dead(&mut context);
