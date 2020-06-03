@@ -16,8 +16,8 @@
 
 use crate::interp::InterpNatural;
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents };
-use crate::generate::{ Instruction, InstructionType };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome };
+use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
 use super::eq::library_eq_command;
@@ -68,6 +68,20 @@ impl Command for LenCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false,false)?])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+        if let Some((_,ass)) = &self.0[1].iter().next() {
+            let reg = ass.length_pos(ass.depth()-1)?;
+            Ok(context.get_reg_valid(&self.1[reg]))
+        } else {
+            Err("len on non-list".to_string())
+        }
+    }
+    
+    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        context.set_reg_valid(&self.1[0],true);
+        Ok(PreImageOutcome::Constant(vec![self.1[0]]))
     }
 }
 
@@ -269,6 +283,14 @@ impl Command for AssertCommand {
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![self.0.serialize(),self.1.serialize()])
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+        Ok(context.get_reg_valid(&self.0) && context.get_reg_valid(&self.1))
+    }
+    
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(PreImageOutcome::Replace(vec![]))
     }
 }
 

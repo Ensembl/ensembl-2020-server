@@ -262,6 +262,15 @@ impl Command for LineNumberCommand {
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
         Ok(vec![CborValue::Text(self.0.to_string()),CborValue::Integer(self.1 as i128)])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+        context.context().set_line_number(&self.0,self.1);
+        Ok(false)
+    }
+    
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Err(format!("preimage impossible on line-number command"))
+    }
 }
 
 pub(super) fn const_commands(set: &mut CommandSet) -> Result<(),String> {

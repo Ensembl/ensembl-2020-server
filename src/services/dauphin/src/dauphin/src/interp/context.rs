@@ -66,8 +66,7 @@ mod test {
         lexer.import("search:std/line-number").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let message = mini_interp(&mut context,&linker,&config).expect_err("x");
+        let message = generate(&linker,&stmts,&defstore,&resolver,&config).expect_err("j");
         print!("{}\n",message);
         assert!(message.ends_with("std/line-number:10"));
     }
@@ -83,8 +82,7 @@ mod test {
         lexer.import("search:std/line-number").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let message = mini_interp(&mut context,&linker,&config).expect_err("x");
+        let message = generate(&linker,&stmts,&defstore,&resolver,&config).expect_err("j");
         print!("{}\n",message);
         assert!(!message.contains(" at "));
     }

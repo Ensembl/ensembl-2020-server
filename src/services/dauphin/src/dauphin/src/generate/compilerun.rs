@@ -209,7 +209,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn preimage_instr(&mut self, instr: &Instruction) -> Result<(),String> {
         let command = self.compiler_link.compile_instruction(instr,true)?.2;
-        match command.preimage(self) ? {
+        match command.preimage(self)? {
             PreImageOutcome::Skip => {
                 self.unable_instr(&instr)?;
             },
@@ -232,7 +232,14 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     pub fn preimage(&mut self) -> Result<(),String> {
         for instr in &self.gen_context.get_instructions() {
-            self.preimage_instr(instr)?;
+            self.preimage_instr(instr).map_err(|msg| {
+                let line = self.context().get_line_number();
+                if line.1 != 0 {
+                    format!("{} at {}:{}",msg,line.0,line.1)
+                } else {
+                    msg.to_string()
+                }
+            })?
         }
         self.gen_context.phase_finished();
         Ok(())
