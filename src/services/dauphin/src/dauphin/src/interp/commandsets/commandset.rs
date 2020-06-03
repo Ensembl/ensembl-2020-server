@@ -15,8 +15,10 @@
  */
 
 use std::collections::{ HashMap, HashSet }; // hashbrown
+use std::rc::Rc;
 use super::CommandSetId;
 use super::command::{ CommandType, CommandTrigger };
+use crate::interp::PayloadFactory;
 use serde_cbor::Value as CborValue;
 use crc::crc64::checksum_iso;
 
@@ -27,7 +29,8 @@ pub struct CommandSet {
     csi: CommandSetId,
     commands: HashMap<u32,Box<dyn CommandType>>,
     mapping: Option<HashMap<CommandTrigger,u32>>,
-    compile_only: bool
+    compile_only: bool,
+    payloads: HashMap<String,Rc<Box<dyn PayloadFactory>>>
 }
 
 impl CommandSet {
@@ -39,7 +42,8 @@ impl CommandSet {
             csi: csi.clone(),
             commands: HashMap::new(),
             mapping: Some(HashMap::new()),
-            compile_only
+            compile_only,
+            payloads: HashMap::new()
         }
     }
 
@@ -55,6 +59,12 @@ impl CommandSet {
     pub fn add_header(&mut self, name: &str, value: &str) {
         self.headers.insert(name.to_string(),value.to_string());
     }
+
+    pub fn add_payload<P>(&mut self, name: &str, payload: P) where P: PayloadFactory + 'static {
+        self.payloads.insert(name.to_string(),Rc::new(Box::new(payload)));
+    }
+
+    pub(super) fn get_payloads(&self) -> &HashMap<String,Rc<Box<dyn PayloadFactory>>> { &self.payloads }
 
     pub(super) fn get_headers(&self) -> &HashMap<String,String> { &self.headers }
 

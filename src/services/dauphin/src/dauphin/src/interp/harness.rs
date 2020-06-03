@@ -19,12 +19,12 @@ use std::path::PathBuf;
 use std::time::{ SystemTime, Duration };
 use std::rc::Rc;
 use crate::cli::Config;
-use crate::commands::{ make_core, make_library, make_buildtime };
+use crate::commands::std_stream;
 use crate::generate::Instruction;
 use crate::model::Register;
 use crate::interp::context::InterpContext;
-use crate::interp::LibrarySuiteBuilder;
-use crate::interp::{ InterpValue, StreamContents };
+use crate::interp::{ LibrarySuiteBuilder, make_librarysuite_builder };
+use crate::interp::{ InterpValue, StreamContents, StreamFactory };
 use super::compilelink::CompilerLink;
 use super::interplink::InterpreterLink;
 use crate::test::cbor::hexdump;
@@ -51,16 +51,14 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
     Ok(out)
 }
 
-pub fn mini_interp_run(program: &CborValue, ic: &mut InterpContext, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
+fn serialize(program: &CborValue) -> Result<Vec<u8>,String> {
     let mut buffer = Vec::new();
-    serde_cbor::to_writer(&mut buffer,&program).expect("cbor b");
+    serde_cbor::to_writer(&mut buffer,&program).map_err(|x| format!("{} while serialising",x))?;
     print!("{}\n",hexdump(&buffer));
-    let mut suite = LibrarySuiteBuilder::new();
-    suite.add(make_core()?)?;
-    suite.add(make_library()?)?;
-    suite.add(make_buildtime()?)?;
-    let interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
+    Ok(buffer)
+}
 
+pub fn mini_interp_run(interpret_linker: &InterpreterLink, ic: &mut InterpContext, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
     if let Some(instrs) = interpret_linker.get_instructions(name)? {
         /* debug info included */
         let mut instrs = instrs.iter();
@@ -81,7 +79,9 @@ pub fn mini_interp_run(program: &CborValue, ic: &mut InterpContext, config: &Con
         }
         print!("execution time {}ms\n",start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f32()*1000.);
     }
-    Ok((export_indexes(ic)?,stream_strings(&ic.stream_take())))
+    let stream = std_stream(ic)?;
+    let strings = stream_strings(&stream.take());
+    Ok((export_indexes(ic)?,strings))
 }
 
 pub fn find_testdata() -> PathBuf {
@@ -110,10 +110,15 @@ pub fn xxx_test_config() -> Config {
 }
 
 pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
-    let mut ic = InterpContext::new();
     cl.add(name,instrs,config)?;
     let program = cl.serialize(config)?;
-    mini_interp_run(&program,&mut ic,config,name).map_err(|x| {
+    let buffer = serialize(&program)?;
+    let suite = make_librarysuite_builder(config)?;
+    let program = serde_cbor::from_slice(&buffer).map_err(|x| format!("{} while deserialising",x))?;
+    let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
+    interpret_linker.add_payload("std","stream",StreamFactory::new());
+    let mut ic = interpret_linker.new_context();
+    mini_interp_run(&interpret_linker,&mut ic,config,name).map_err(|x| {
         let line = ic.get_line_number();
         if line.1 != 0 {
             format!("{} at {}:{}",x,line.0,line.1)

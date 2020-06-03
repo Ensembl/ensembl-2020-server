@@ -14,8 +14,10 @@
  *  limitations under the License.
  */
 
- use std::collections::HashMap;
-use crate::interp::commandsets::{ Command, CommandInterpretSuite, LibrarySuiteBuilder };
+use std::collections::HashMap;
+use std::rc::Rc;
+use crate::interp::commandsets::{ Command, CommandInterpretSuite, LibrarySuiteBuilder, CommandSetId };
+use crate::interp::{ InterpContext, PayloadFactory };
 use crate::model::Register;
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string, cbor_map_iter };
@@ -52,7 +54,8 @@ pub struct InterpreterLinkProgram {
 }
 
 pub struct InterpreterLink {
-    programs: HashMap<String,InterpreterLinkProgram>
+    programs: HashMap<String,InterpreterLinkProgram>,
+    payloads: HashMap<(String,String),Rc<Box<dyn PayloadFactory>>>
 }
 
 impl InterpreterLink {
@@ -72,6 +75,10 @@ impl InterpreterLink {
         Ok(out)
     }
 
+    pub fn add_payload<P>(&mut self, set: &str, name: &str, pf: P) where P: PayloadFactory + 'static {
+        self.payloads.insert((set.to_string(),name.to_string()),Rc::new(Box::new(pf)));
+    }
+
     fn make_instruction(cbor: &CborValue) -> Result<(String,Vec<Register>),String> {
         let data = cbor_array(cbor,2,false)?;
         let regs = cbor_array(&data[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
@@ -88,7 +95,8 @@ impl InterpreterLink {
 
     pub fn new(cs: LibrarySuiteBuilder, cbor: &CborValue) -> Result<InterpreterLink,String> {
         let mut out = InterpreterLink {
-            programs: HashMap::new()
+            programs: HashMap::new(),
+            payloads: cs.payloads().clone()
         };
         let data = cbor_map(cbor,&vec!["version","suite","programs"])?;
         let ips = cs.make_interpret_suite(data[1]).map_err(|x| format!("{} while building linker",x))?;
@@ -114,5 +122,9 @@ impl InterpreterLink {
 
     pub fn get_instructions(&self, name: &str) -> Result<Option<&Vec<(String,Vec<Register>)>>,String> { 
         Ok(self.get_program(name)?.instructions.as_ref())
+    }
+
+    pub(super) fn new_context(&self) -> InterpContext {
+        InterpContext::new(&self.payloads)
     }
 }

@@ -133,7 +133,7 @@ mod test {
     #[test]
     fn lexer_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:lexer/smoke2").expect("import failed");
@@ -158,7 +158,7 @@ mod test {
     #[test]
     fn missing() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         assert!(lexer.import("file:missing").err().unwrap().contains("No such file or directory"));

@@ -20,6 +20,7 @@ use super::commandset::CommandSet;
 use super::member::CommandSuiteMember;
 use super::{ CommandCompileSuite, CommandInterpretSuite };
 use crate::commands::{ make_core, make_library, make_buildtime };
+use crate::interp::PayloadFactory;
 use crate::cli::Config;
 use serde_cbor::Value as CborValue;
 
@@ -28,7 +29,8 @@ pub struct LibrarySuiteBuilder {
     headers: HashMap<String,String>,
     seen: HashMap<(String,u32),String>,
     compile_suite: CommandCompileSuite,
-    interpret_suite: CommandInterpretSuite
+    interpret_suite: CommandInterpretSuite,
+    payloads: HashMap<(String,String),Rc<Box<dyn PayloadFactory>>>
 }
 
 impl LibrarySuiteBuilder {
@@ -38,8 +40,13 @@ impl LibrarySuiteBuilder {
             compile_suite: CommandCompileSuite::new(),
             interpret_suite: CommandInterpretSuite::new(),
             seen: HashMap::new(),
-            next_opcode: 0
+            next_opcode: 0,
+            payloads: HashMap::new()
         }
+    }
+
+    pub fn payloads(&self) -> &HashMap<(String,String),Rc<Box<dyn PayloadFactory>>> {
+        &self.payloads
     }
 
     pub fn add(&mut self, mut set: CommandSet) -> Result<(),String> {
@@ -68,9 +75,12 @@ impl LibrarySuiteBuilder {
                 self.interpret_suite.add_member(offset+local_opcode,&member,set_offset);
             }
         }
-        self.seen.insert((set_name,set_major),set_id.to_string());
+        self.seen.insert((set_name.to_string(),set_major),set_id.to_string());
         for (name,value) in set.get_headers() {
             self.headers.insert(name.to_string(),value.to_string());
+        }
+        for (name,payload) in set.get_payloads() {
+            self.payloads.insert((set_name.to_string(),name.to_string()),payload.clone());
         }
         Ok(())
     }

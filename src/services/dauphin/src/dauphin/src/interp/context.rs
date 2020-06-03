@@ -14,29 +14,36 @@
  *  limitations under the License.
  */
 
+use std::any::Any;
+use std::collections::HashMap;
+use std::rc::Rc;
 use crate::interp::RegisterFile;
-use super::stream::{ Stream, StreamContents };
+
+pub trait PayloadFactory {
+    fn make_payload(&self) -> Box<dyn Any>;
+}
 
 pub struct InterpContext {
     registers: RegisterFile,
-    stream: Stream,
+    payloads: HashMap<(String,String),Box<dyn Any>>,
     filename: String,
     line_number: u32
 }
 
 impl InterpContext {
-    pub fn new() -> InterpContext {
+    pub fn new(payloads: &HashMap<(String,String),Rc<Box<dyn PayloadFactory>>>) -> InterpContext {
         InterpContext {
             registers: RegisterFile::new(),
-            stream: Stream::new(),
+            payloads: payloads.iter().map(|(k,v)| (k.clone(),v.make_payload())).collect(),
             filename: "**anon**".to_string(),
             line_number: 0
         }
     }
 
     pub fn registers(&mut self) -> &mut RegisterFile { &mut self.registers }
-    pub fn stream_add(&mut self, contents: StreamContents) { self.stream.add(contents); }
-    pub fn stream_take(&mut self) -> Vec<StreamContents> { self.stream.take() }
+    pub fn payload(&mut self, set: &str, name: &str) -> Result<&mut Box<dyn Any>,String> {
+        self.payloads.get_mut(&(set.to_string(),name.to_string())).ok_or_else(|| format!("missing payload {}",name))
+    }
 
     pub fn set_line_number(&mut self, filename: &str, line_number: u32) {
         self.filename = filename.to_string();
@@ -54,13 +61,13 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_test_config,CompilerLink, make_librarysuite_builder };
+    use crate::interp::{ xxx_test_config,CompilerLink, make_librarysuite_builder };
 
     #[test]
     fn line_number_smoke() {
         let mut config = xxx_test_config();
         config.set_opt_seq("");
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");
@@ -76,7 +83,7 @@ mod test {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
         config.set_opt_seq("");
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");

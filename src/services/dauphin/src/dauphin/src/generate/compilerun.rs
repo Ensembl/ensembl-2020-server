@@ -18,7 +18,7 @@ use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
 use crate::resolver::Resolver;
 use crate::model::Register;
-use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes, RegisterFile };
+use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
 #[derive(Clone,Hash,PartialEq,Eq,Debug)] // XXX DEBUG!
@@ -94,7 +94,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
             suppressed: HashSet::new(),
             compiler_link: compiler_link.clone(),
             valid_registers: HashSet::new(),
-            context: InterpContext::new(),
+            context: compiler_link.new_context(),
             gen_context
         })
     }

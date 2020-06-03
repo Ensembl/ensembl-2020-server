@@ -18,6 +18,7 @@ use std::collections::{ BTreeMap, HashMap };
 use std::rc::Rc;
 use crate::cli::Config;
 use crate::generate::{ Instruction, InstructionType };
+use crate::interp::{ InterpContext, PayloadFactory };
 use crate::interp::commandsets::{ Command, CommandSchema, CommandCompileSuite, CommandTrigger, LibrarySuiteBuilder };
 use serde_cbor::Value as CborValue;
 
@@ -27,17 +28,24 @@ pub(super) const VERSION : u32 = 0;
 pub struct CompilerLink {
     cs: Rc<CommandCompileSuite>,
     headers: HashMap<String,String>,
-    programs: BTreeMap<CborValue,CborValue>
+    programs: BTreeMap<CborValue,CborValue>,
+    payloads: HashMap<(String,String),Rc<Box<dyn PayloadFactory>>>
 }
 
 impl CompilerLink {
     pub fn new(cs: LibrarySuiteBuilder) -> Result<CompilerLink,String> {
+        let payloads = cs.payloads().clone();
         let headers = cs.get_headers().clone();
         Ok(CompilerLink {
             cs: Rc::new(cs.make_compile_suite()?),
+            payloads,
             headers,
             programs: BTreeMap::new()
         })
+    }
+
+    pub fn add_payload<P>(&mut self, set: &str, name: &str, pf: P) where P: PayloadFactory + 'static {
+        self.payloads.insert((set.to_string(),name.to_string()),Rc::new(Box::new(pf)));
     }
 
     pub fn get_headers(&self) -> &HashMap<String,String> { &self.headers }
@@ -102,6 +110,10 @@ impl CompilerLink {
         out.insert(CborValue::Text("programs".to_string()),CborValue::Map(self.programs.clone()));
         Ok(CborValue::Map(out))
     }
+
+    pub fn new_context(&self) -> InterpContext {
+        InterpContext::new(&self.payloads)
+    }
 }
 
 #[cfg(test)]
@@ -112,8 +124,8 @@ mod test {
     use crate::parser::{ Parser };
     use crate::resolver::Resolver;
     use crate::generate::generate;
-    use crate::interp::{ mini_interp_run, CompilerLink, xxx_test_config, make_librarysuite_builder };
-    use crate::interp::context::InterpContext;
+    use crate::interp::{ mini_interp_run, CompilerLink, xxx_test_config, make_librarysuite_builder, StreamFactory };
+    use crate::interp::interplink::InterpreterLink;
 
     fn make_program(linker: &mut CompilerLink, resolver: &Resolver, config: &Config, name: &str, path: &str) -> Result<(),String> {
         let mut lexer = Lexer::new(&resolver);
@@ -136,9 +148,12 @@ mod test {
         make_program(&mut linker,&resolver,&config,"prog2","search:codegen/multiprog2").expect("cannot build prog2");
         make_program(&mut linker,&resolver,&config,"prog3","search:codegen/multiprog3").expect("cannot build prog3");
         let program = linker.serialize(&config).expect("serialize");
-        let mut ic = InterpContext::new();
-        let (_,a) = mini_interp_run(&program,&mut ic,&config,"prog2").expect("A");
-        let (_,b) = mini_interp_run(&program,&mut ic,&config,"prog1").expect("B");
+        let suite = make_librarysuite_builder(&config).expect("c");
+        let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x)).expect("d");
+        interpret_linker.add_payload("std","stream",StreamFactory::new());
+        let mut ic = interpret_linker.new_context();
+        let (_,a) = mini_interp_run(&interpret_linker,&mut ic,&config,"prog2").expect("A");
+        let (_,b) = mini_interp_run(&interpret_linker,&mut ic,&config,"prog1").expect("B");
         assert_eq!(vec!["prog2"],a);
     }
 }

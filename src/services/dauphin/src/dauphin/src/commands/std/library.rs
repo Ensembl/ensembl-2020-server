@@ -16,7 +16,7 @@
 
 use crate::interp::InterpNatural;
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
@@ -24,8 +24,17 @@ use super::eq::library_eq_command;
 use super::assign::library_assign_commands;
 use super::header::STD;
 
+pub fn std_id() -> CommandSetId {
+    CommandSetId::new("std",(0,0),0xDD9C0B3CD9093233)
+}
+
 pub(super) fn std(name: &str) -> Identifier {
     Identifier::new("std",name)
+}
+
+pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
+    let p = context.payload("std","stream")?;
+    Ok(p.downcast_mut().ok_or_else(|| "No stream context".to_string())?)
 }
 
 pub struct LenCommandType();
@@ -115,7 +124,7 @@ impl Command for PrintRegsCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         for r in &self.0 {
             let v = StreamContents::Data(context.registers().get(r).borrow().get_shared()?.copy());
-            context.stream_add(v);
+            std_stream(context)?.add(v);
         }
         Ok(())
     }
@@ -234,7 +243,7 @@ pub struct PrintVecCommand(pub(crate) RegisterSignature,pub(crate) Vec<Register>
 impl Command for PrintVecCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let v = StreamContents::String(print_vec(context,&self.0,&self.1)?);
-        context.stream_add(v);
+        std_stream(context)?.add(v);
         Ok(())
     }
 
@@ -367,7 +376,7 @@ impl Command for PrintCommand {
         let registers = context.registers();
         let a = &registers.get_strings(&self.0)?;
         for s in a.iter() {
-            context.stream_add(StreamContents::String(s.to_string()));
+            std_stream(context)?.add(StreamContents::String(s.to_string()));
         }
         Ok(())
     }
@@ -378,8 +387,7 @@ impl Command for PrintCommand {
 }
 
 pub fn make_library() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("std",(0,0),0xDD9C0B3CD9093233);
-    let mut set = CommandSet::new(&set_id,false);
+    let mut set = CommandSet::new(&std_id(),false);
     library_eq_command(&mut set)?;
     set.push("len",1,LenCommandType())?;
     set.push("print_regs",2,PrintRegsCommandType())?;

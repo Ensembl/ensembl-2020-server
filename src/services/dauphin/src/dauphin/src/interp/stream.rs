@@ -14,7 +14,8 @@
  *  limitations under the License.
  */
 
-use crate::interp::InterpValue;
+ use std::any::Any;
+use crate::interp::{ InterpValue, PayloadFactory };
 
 pub enum StreamContents {
     String(String),
@@ -38,5 +39,19 @@ impl Stream {
 
     pub fn take(&mut self) -> Vec<StreamContents> {
         self.contents.drain(..).collect()
+    }
+}
+
+pub struct StreamFactory {}
+
+impl StreamFactory {
+    pub fn new() -> StreamFactory {
+        StreamFactory {}
+    }
+}
+
+impl PayloadFactory for StreamFactory {
+    fn make_payload(&self) -> Box<dyn Any> {
+        Box::new(Stream::new())
     }
 }
