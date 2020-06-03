@@ -65,7 +65,7 @@ mod test {
     fn dealias_smoke() {
         // XXX check all aliases gone
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
@@ -79,7 +79,7 @@ mod test {
         print!("BEFORE {:?}\n",context);
         remove_aliases(&mut context);
         print!("AFTER {:?}\n",context);
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);

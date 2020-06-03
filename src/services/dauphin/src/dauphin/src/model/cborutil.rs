@@ -91,6 +91,17 @@ pub fn cbor_map<'a>(cbor: &'a CborValue, keys: &[&str]) -> Result<Vec<&'a CborVa
     Ok(out)
 }
 
+pub fn cbor_map_iter(cbor: &CborValue) -> Result<impl Iterator<Item=(&CborValue,&CborValue)>,String> {
+    match cbor {
+        CborValue::Map(m) => {
+            Ok(m.iter())
+        },
+        _ => {
+            return Err(format!("bad cbor: expected map, unexpected {:?}",cbor));
+        }
+    }
+}
+
 pub fn cbor_entry<'a>(cbor: &'a CborValue, key: &str) -> Result<Option<&'a CborValue>,String> {
     Ok(match cbor {
         CborValue::Map(m) => m.get(&CborValue::Text(key.to_string())),

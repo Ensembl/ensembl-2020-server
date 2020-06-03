@@ -74,7 +74,7 @@ mod test {
     #[test]
     fn reuse_dead_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
@@ -82,7 +82,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

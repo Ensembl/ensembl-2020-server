@@ -378,7 +378,7 @@ mod test {
     #[test]
     fn simplify_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/simplify-smoke").expect("cannot load file");
@@ -395,7 +395,7 @@ mod test {
     #[test]
     fn simplify_enum_nest() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/simplify-enum-nest").expect("cannot load file");
@@ -409,14 +409,14 @@ mod test {
     #[test]
     fn simplify_enum_lvalue() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/enum-lvalue").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         for s in &strings {
             print!("{}\n",s);
         }  
@@ -425,7 +425,7 @@ mod test {
     #[test]
     fn simplify_struct_lvalue() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/struct-lvalue").expect("cannot load file");
@@ -433,7 +433,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -442,7 +442,7 @@ mod test {
     #[test]
     fn simplify_both_lvalue() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/both-lvalue").expect("cannot load file");
@@ -450,7 +450,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         for s in &strings {
             print!("{}\n",s);
         }  

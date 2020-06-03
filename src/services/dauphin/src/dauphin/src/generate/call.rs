@@ -65,13 +65,13 @@ mod test {
     #[test]
     fn module_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/module-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        mini_interp(&instrs,&linker,&config).expect("x");
+        mini_interp(&instrs,&mut linker,&config,"main").expect("x");
     }
 }

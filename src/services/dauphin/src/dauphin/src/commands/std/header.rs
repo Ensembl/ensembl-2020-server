@@ -48,4 +48,6 @@ inline "(+)" extend left 14;
 
 proc alienate(out _A);
 
+proc print(string);
+
 "#;

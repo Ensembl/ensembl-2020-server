@@ -60,7 +60,7 @@ mod test {
     fn line_number_smoke() {
         let mut config = xxx_test_config();
         config.set_opt_seq("");
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");
@@ -76,7 +76,7 @@ mod test {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
         config.set_opt_seq("");
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");

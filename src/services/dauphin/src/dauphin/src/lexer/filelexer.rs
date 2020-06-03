@@ -101,7 +101,7 @@ mod test {
 
     fn try_lex(path_in: &str) -> Vec<(Token,String,u32,u32)> {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let mut path = String::from_str("search:").ok().unwrap();
         path.push_str(path_in);
         let resolver = Rc::new(common_resolver(&config,&linker).expect("a"));

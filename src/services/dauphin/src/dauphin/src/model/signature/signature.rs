@@ -106,7 +106,7 @@ mod test {
     // XXX move to common test utils
     fn make_type(defstore: &DefStore, name: &str) -> MemberType {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import(&format!("data:{}",name)).expect("cannot load file");
@@ -133,7 +133,7 @@ mod test {
     #[test]
     fn offset_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
@@ -149,7 +149,7 @@ mod test {
     #[test]
     fn offset_enums() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/offset-enums").expect("cannot load file");
@@ -158,7 +158,7 @@ mod test {
         let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"offset_enums::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let (_,strings) = mini_interp(&instrs,&linker,&config).expect("x");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         for s in &strings {
             print!("{}\n",s);
         }
@@ -167,7 +167,7 @@ mod test {
     #[test]
     fn test_cbor() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");

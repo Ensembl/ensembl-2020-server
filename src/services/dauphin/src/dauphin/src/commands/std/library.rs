@@ -336,8 +336,49 @@ impl Command for AlienateCommand {
     }
 }
 
+pub struct PrintCommandType();
+
+impl CommandType for PrintCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 1,
+            trigger: CommandTrigger::Command(std("print"))
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,_,_) = &it.itype {
+            Ok(Box::new(PrintCommand(it.regs[0])))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let reg = Register::deserialize(value[0])?;
+        Ok(Box::new(PrintCommand(reg)))
+    }
+}
+
+pub struct PrintCommand(Register);
+
+impl Command for PrintCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let registers = context.registers();
+        let a = &registers.get_strings(&self.0)?;
+        for s in a.iter() {
+            context.stream_add(StreamContents::String(s.to_string()));
+        }
+        Ok(())
+    }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+       Ok(vec![self.0.serialize()])
+    }    
+}
+
 pub fn make_library() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("std",(0,0),0x2070E101C29EF8C2);
+    let set_id = CommandSetId::new("std",(0,0),0xDD9C0B3CD9093233);
     let mut set = CommandSet::new(&set_id,false);
     library_eq_command(&mut set)?;
     set.push("len",1,LenCommandType())?;
@@ -345,6 +386,7 @@ pub fn make_library() -> Result<CommandSet,String> {
     set.push("print_vec",3,PrintVecCommandType())?;
     set.push("assert",4,AssertCommandType())?;
     set.push("alienate",13,AlienateCommandType())?;
+    set.push("print",14,PrintCommandType())?;
     set.add_header("std",&STD);
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;

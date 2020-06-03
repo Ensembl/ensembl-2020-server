@@ -269,7 +269,7 @@ mod test {
     #[test]
     fn runnums_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
@@ -288,7 +288,7 @@ mod test {
         let lines = format!("{:?}",context).as_bytes().iter().filter(|&&c| c == b'\n').count();
         print!("{}\n",lines);
         assert!(lines<350);
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
+        let (values,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
@@ -299,7 +299,7 @@ mod test {
     #[test]
     fn runnums2_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/runnums").expect("cannot load file");

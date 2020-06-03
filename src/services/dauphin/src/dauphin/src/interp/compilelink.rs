@@ -26,7 +26,8 @@ pub(super) const VERSION : u32 = 0;
 #[derive(Clone)]
 pub struct CompilerLink {
     cs: Rc<CommandCompileSuite>,
-    headers: HashMap<String,String>
+    headers: HashMap<String,String>,
+    programs: BTreeMap<CborValue,CborValue>
 }
 
 impl CompilerLink {
@@ -34,7 +35,8 @@ impl CompilerLink {
         let headers = cs.get_headers().clone();
         Ok(CompilerLink {
             cs: Rc::new(cs.make_compile_suite()?),
-            headers
+            headers,
+            programs: BTreeMap::new()
         })
     }
 
@@ -73,19 +75,70 @@ impl CompilerLink {
         ])
     }
 
-    pub fn serialize(&self, instrs: &[Instruction], config: &Config) -> Result<CborValue,String> {
+    pub fn add(&mut self, name: &str, instrs: &[Instruction], config: &Config) -> Result<(),String> {
+        self.programs.insert(CborValue::Text(name.to_string()),self.serialize_program(instrs,config)?);
+        Ok(())
+    }
+
+    fn serialize_program(&self, instrs: &[Instruction], config: &Config) -> Result<CborValue,String> {
         let cmds = instrs.iter().map(|x| self.compile_instruction(x,false)).collect::<Result<Vec<_>,_>>()?;
-        let mut out = BTreeMap::new();
         let mut cmds_s = vec![];
         for (opcode,sch,cmd) in &cmds {
             self.serialize_command(&mut cmds_s,*opcode,sch,cmd)?;
         }
+        let mut program = BTreeMap::new();
+        program.insert(CborValue::Text("cmds".to_string()),CborValue::Array(cmds_s));
+        if config.get_generate_debug() {
+            let symbols = instrs.iter().map(|x| self.serialize_instruction(x)).collect::<Vec<_>>();
+            program.insert(CborValue::Text("symbols".to_string()),CborValue::Array(symbols));
+        }
+        Ok(CborValue::Map(program))
+    }
+
+    pub fn serialize(&mut self, config: &Config) -> Result<CborValue,String> {
+        let mut out = BTreeMap::new();
         out.insert(CborValue::Text("version".to_string()),CborValue::Integer(VERSION as i128));
         out.insert(CborValue::Text("suite".to_string()),self.cs.serialize().clone());
-        out.insert(CborValue::Text("program".to_string()),CborValue::Array(cmds_s));
-        if config.get_generate_debug() {
-            out.insert(CborValue::Text("instructions".to_string()),CborValue::Array(instrs.iter().map(|x| self.serialize_instruction(x)).collect::<Vec<_>>()));
-        }
+        out.insert(CborValue::Text("programs".to_string()),CborValue::Map(self.programs.clone()));
         Ok(CborValue::Map(out))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::cli::Config;
+    use crate::lexer::Lexer;
+    use crate::resolver::common_resolver;
+    use crate::parser::{ Parser };
+    use crate::resolver::Resolver;
+    use crate::generate::generate;
+    use crate::interp::{ mini_interp_run, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::context::InterpContext;
+
+    fn make_program(linker: &mut CompilerLink, resolver: &Resolver, config: &Config, name: &str, path: &str) -> Result<(),String> {
+        let mut lexer = Lexer::new(&resolver);
+        lexer.import(path).expect("cannot load file");
+        let p = Parser::new(&mut lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        linker.add(name,&instrs,config)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_multi_program() {
+        let mut config = xxx_test_config();
+        config.set_generate_debug(false);
+        config.set_verbose(2);
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
+        make_program(&mut linker,&resolver,&config,"prog1","search:codegen/multiprog1").expect("cannot build prog1");
+        make_program(&mut linker,&resolver,&config,"prog2","search:codegen/multiprog2").expect("cannot build prog2");
+        make_program(&mut linker,&resolver,&config,"prog3","search:codegen/multiprog3").expect("cannot build prog3");
+        let program = linker.serialize(&config).expect("serialize");
+        let mut ic = InterpContext::new();
+        let (_,a) = mini_interp_run(&program,&mut ic,&config,"prog2").expect("A");
+        let (_,b) = mini_interp_run(&program,&mut ic,&config,"prog1").expect("B");
+        assert_eq!(vec!["prog2"],a);
     }
 }

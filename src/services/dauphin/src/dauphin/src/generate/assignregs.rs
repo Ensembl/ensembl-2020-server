@@ -103,7 +103,7 @@ mod test {
     #[test]
     fn assign_regs_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
@@ -120,7 +120,7 @@ mod test {
         reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
-        let (_,strings) = mini_interp(&mut context.get_instructions(),&linker,&config).expect("x");
+        let (_,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
         for s in &strings {
             print!("{}\n",s);
         }

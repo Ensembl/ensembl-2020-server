@@ -14,10 +14,11 @@
  *  limitations under the License.
  */
 
+ use std::collections::HashMap;
 use crate::interp::commandsets::{ Command, CommandInterpretSuite, LibrarySuiteBuilder };
 use crate::model::Register;
 use serde_cbor::Value as CborValue;
-use crate::model::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string };
+use crate::model::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string, cbor_map_iter };
 
 pub(super) const VERSION : u32 = 0;
 
@@ -45,13 +46,17 @@ impl<'a> ProgramCursor<'a> {
     }
 }
 
-pub struct InterpreterLink {
+pub struct InterpreterLinkProgram {
     commands: Vec<Box<dyn Command>>,
     instructions: Option<Vec<(String,Vec<Register>)>>
 }
 
+pub struct InterpreterLink {
+    programs: HashMap<String,InterpreterLinkProgram>
+}
+
 impl InterpreterLink {
-    fn make_commands(ips: CommandInterpretSuite, program: &CborValue) -> Result<Vec<Box<dyn Command>>,String> {
+    fn make_commands(ips: &CommandInterpretSuite, program: &CborValue) -> Result<Vec<Box<dyn Command>>,String> {
         let mut cursor = ProgramCursor {
             value: cbor_array(program,0,true)?,
             index: 0
@@ -77,19 +82,37 @@ impl InterpreterLink {
         cbor_array(cbor,0,true)?.iter().map(|x| InterpreterLink::make_instruction(x)).collect()
     }
 
-    pub fn new(cs: LibrarySuiteBuilder, cbor: &CborValue) -> Result<InterpreterLink,String> {
-        let data = cbor_map(cbor,&vec!["version","suite","program"])?;
-        let got_ver = cbor_int(data[0],None)? as u32;
-        if got_ver != VERSION {
-            return Err(format!("Incompatible code. got v{} understand v{}",got_ver,VERSION));
-        }
-        let ips = cs.make_interpret_suite(data[1]).map_err(|x| format!("{} while building linker",x))?;
-        Ok(InterpreterLink {
-            commands: InterpreterLink::make_commands(ips,data[2]).map_err(|x| format!("{} while making commands",x))?,
-            instructions: cbor_entry(cbor,"instructions")?.map(|x| InterpreterLink::make_instructions(x)).transpose()?
-        })
+    fn get_program<'a>(&'a self, name: &str) -> Result<&'a InterpreterLinkProgram,String> {
+        Ok(self.programs.get(name).ok_or_else(|| format!("No such program {}",name))?)
     }
 
-    pub fn get_commands(&self) -> &Vec<Box<dyn Command>> { &self.commands }
-    pub fn get_instructions(&self) -> Option<&Vec<(String,Vec<Register>)>> { self.instructions.as_ref() }
+    pub fn new(cs: LibrarySuiteBuilder, cbor: &CborValue) -> Result<InterpreterLink,String> {
+        let mut out = InterpreterLink {
+            programs: HashMap::new()
+        };
+        let data = cbor_map(cbor,&vec!["version","suite","programs"])?;
+        let ips = cs.make_interpret_suite(data[1]).map_err(|x| format!("{} while building linker",x))?;
+        for (name,program) in cbor_map_iter(data[2])? {
+            let name = cbor_string(name)?;
+            let cmds = cbor_entry(program,"cmds")?.ok_or_else(|| "bad cbor: no cmds section".to_string())?;
+            let symbols = cbor_entry(program,"symbols")?;
+            let got_ver = cbor_int(data[0],None)? as u32;
+            if got_ver != VERSION {
+                return Err(format!("Incompatible code. got v{} understand v{}",got_ver,VERSION));
+            }
+            out.programs.insert(name.to_string(),InterpreterLinkProgram {
+                commands: InterpreterLink::make_commands(&ips,cmds).map_err(|x| format!("{} while making commands",x))?,
+                instructions: symbols.map(|x| InterpreterLink::make_instructions(x)).transpose()?
+            });
+        }
+        Ok(out)
+    }
+
+    pub fn get_commands(&self, name: &str) -> Result<&Vec<Box<dyn Command>>,String> {
+        Ok(&self.get_program(name)?.commands)
+    }
+
+    pub fn get_instructions(&self, name: &str) -> Result<Option<&Vec<(String,Vec<Register>)>>,String> { 
+        Ok(self.get_program(name)?.instructions.as_ref())
+    }
 }

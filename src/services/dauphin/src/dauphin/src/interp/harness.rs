@@ -28,6 +28,7 @@ use crate::interp::{ InterpValue, StreamContents };
 use super::compilelink::CompilerLink;
 use super::interplink::InterpreterLink;
 use crate::test::cbor::hexdump;
+use serde_cbor::Value as CborValue;
 
 fn stream_strings(stream: &[StreamContents]) -> Vec<String> {
     let mut out = vec![];
@@ -50,22 +51,20 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
     Ok(out)
 }
 
-pub fn mini_interp_run(instrs: &Vec<Instruction>, cl: &CompilerLink, ic: &mut InterpContext, config: &Config) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
-    let program = cl.serialize(instrs,config)?;
+pub fn mini_interp_run(program: &CborValue, ic: &mut InterpContext, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
     let mut buffer = Vec::new();
     serde_cbor::to_writer(&mut buffer,&program).expect("cbor b");
     print!("{}\n",hexdump(&buffer));
-
     let mut suite = LibrarySuiteBuilder::new();
     suite.add(make_core()?)?;
     suite.add(make_library()?)?;
     suite.add(make_buildtime()?)?;
     let interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
 
-    if let Some(instrs) = interpret_linker.get_instructions() {
+    if let Some(instrs) = interpret_linker.get_instructions(name)? {
         /* debug info included */
         let mut instrs = instrs.iter();
-        for command in interpret_linker.get_commands() {
+        for command in interpret_linker.get_commands(name)? {
             let (instr,regs) = instrs.next().unwrap();
             print!("{}",ic.registers().dump_many(&regs)?);
             print!("{}",instr);
@@ -74,7 +73,7 @@ pub fn mini_interp_run(instrs: &Vec<Instruction>, cl: &CompilerLink, ic: &mut In
             print!("{}",ic.registers().dump_many(&regs)?);
         }
     } else {
-        let commands = interpret_linker.get_commands();
+        let commands = interpret_linker.get_commands(name)?;
         let start_time = SystemTime::now();
         for command in commands {
             command.execute(ic)?;
@@ -110,9 +109,11 @@ pub fn xxx_test_config() -> Config {
     cfg
 }
 
-pub fn mini_interp(instrs: &Vec<Instruction>, cl: &CompilerLink, config: &Config) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
+pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
     let mut ic = InterpContext::new();
-    mini_interp_run(instrs,&cl,&mut ic,config).map_err(|x| {
+    cl.add(name,instrs,config)?;
+    let program = cl.serialize(config)?;
+    mini_interp_run(&program,&mut ic,config,name).map_err(|x| {
         let line = ic.get_line_number();
         if line.1 != 0 {
             format!("{} at {}:{}",x,line.0,line.1)
