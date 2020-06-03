@@ -294,14 +294,57 @@ impl Command for AssertCommand {
     }
 }
 
+pub struct AlienateCommandType();
+
+impl CommandType for AlienateCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 2,
+            trigger: CommandTrigger::Command(std("alienate"))
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,_,_) = &it.itype {
+            Ok(Box::new(AlienateCommand(it.regs.clone())))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Err(format!("alienate can only be executed at compile time"))
+    }
+}
+
+pub struct AlienateCommand(pub(crate) Vec<Register>);
+
+impl Command for AlienateCommand {
+    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
+        Err(format!("alienate can only be executed at compile time"))
+    }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Err(format!("alienate can only be executed at compile time"))
+    }
+    
+    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        for reg in self.0.iter() {
+            context.set_reg_valid(reg,false);
+        }
+        Ok(PreImageOutcome::Replace(vec![]))
+    }
+}
+
 pub fn make_library() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("std",(0,0),0xCE08545E3B95908A);
+    let set_id = CommandSetId::new("std",(0,0),0x2070E101C29EF8C2);
     let mut set = CommandSet::new(&set_id,false);
     library_eq_command(&mut set)?;
     set.push("len",1,LenCommandType())?;
     set.push("print_regs",2,PrintRegsCommandType())?;
     set.push("print_vec",3,PrintVecCommandType())?;
     set.push("assert",4,AssertCommandType())?;
+    set.push("alienate",13,AlienateCommandType())?;
     set.add_header("std",&STD);
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;

@@ -148,11 +148,32 @@ impl Command for AssignCommand {
         Ok(vec![CborValue::Bool(self.0),self.1.serialize(false,false)?,regs])
     }
 
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+        if !context.get_reg_valid(&self.2[0]) {
+            return Ok(false);
+        }
+        for idx in self.1[2].all_registers() {
+            if !context.get_reg_valid(&self.2[idx]) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+    
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(PreImageOutcome::Constant(self.1[1].all_registers().iter().map(|x| self.2[*x]).collect()))
+    }
+
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> { 
         if !self.0 && preimage_possible(context,&self.2)? {
             Ok(PreImageOutcome::Replace(preimage_instrs(&self.2)?))
         } else {
-            Ok(PreImageOutcome::Skip)
+            Ok(if self.simple_preimage(context)? {
+                self.execute(context.context())?;
+                self.preimage_post(context)?
+            } else {
+                PreImageOutcome::Skip
+            })
         }
     }
 }
@@ -219,8 +240,24 @@ impl Command for ExtendCommand {
         let regs = CborValue::Array(self.1.iter().map(|x| x.serialize()).collect());
         Ok(vec![self.0.serialize(false,false)?,regs])
     }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+        for pos in 1..3 {
+            for idx in self.0[pos].all_registers() {
+                if !context.get_reg_valid(&self.1[idx]) {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    }
+    
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(PreImageOutcome::Constant(self.0[0].all_registers().iter().map(|x| self.1[*x]).collect()))
+    }
 }
 
+// TODO filtered-assign rewrite
 pub(super) fn library_assign_commands(set: &mut CommandSet) -> Result<(),String> {
     set.push("assign",9,AssignCommandType())?;
     set.push("extend",10,ExtendCommandType())?;
