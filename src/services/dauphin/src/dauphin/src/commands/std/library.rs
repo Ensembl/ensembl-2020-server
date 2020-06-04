@@ -308,7 +308,7 @@ pub struct AlienateCommandType();
 impl CommandType for AlienateCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            values: 2,
+            values: 0,
             trigger: CommandTrigger::Command(std("alienate"))
         }
     }
@@ -322,7 +322,7 @@ impl CommandType for AlienateCommandType {
     }
     
     fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err(format!("alienate can only be executed at compile time"))
+        Ok(Box::new(AlienateCommand(vec![])))
     }
 }
 
@@ -330,18 +330,18 @@ pub struct AlienateCommand(pub(crate) Vec<Register>);
 
 impl Command for AlienateCommand {
     fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Err(format!("alienate can only be executed at compile time"))
+        Ok(())
     }
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Err(format!("alienate can only be executed at compile time"))
+        Ok(vec![])
     }
     
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         for reg in self.0.iter() {
             context.set_reg_valid(reg,false);
         }
-        Ok(PreImageOutcome::Replace(vec![]))
+        Ok(PreImageOutcome::Skip)
     }
 }
 

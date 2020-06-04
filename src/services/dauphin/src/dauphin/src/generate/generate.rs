@@ -31,6 +31,7 @@ use super::reusedead::reuse_dead;
 use super::call::call;
 use super::linearize::linearize;
 use super::simplify::simplify;
+use super::pauses::pauses;
 
 struct GenerateStep {
     name: String,
@@ -62,13 +63,15 @@ impl GenerateStep {
 
 struct GenerateMenu {
     gen_steps: Vec<GenerateStep>,
-    opt_steps: HashMap<String,GenerateStep>
+    opt_steps: HashMap<String,GenerateStep>,
+    post_steps: Vec<GenerateStep>
 }
 
 impl GenerateMenu {
     fn new() -> GenerateMenu {
         let mut gen_steps = vec![];
         let mut opt_steps = HashMap::new();
+        let mut post_steps = vec![];
         gen_steps.push(GenerateStep::new("call", |_,_,_,gc| { call(gc) }));
         gen_steps.push(GenerateStep::new("simplify", |_,ds,_,gc| { simplify(ds,gc) }));
         gen_steps.push(GenerateStep::new("linearize", |_,_,_,gc| { linearize(gc) }));
@@ -78,7 +81,8 @@ impl GenerateMenu {
         opt_steps.insert("p".to_string(),GenerateStep::new("prune", |_,_,_,gc| { prune(gc); Ok(()) }));
         opt_steps.insert("d".to_string(),GenerateStep::new("reuse-dead", |_,_,_,gc| { reuse_dead(gc); Ok(()) }));
         opt_steps.insert("a".to_string(),GenerateStep::new("assign-regs", |_,_,_,gc| { assign_regs(gc); Ok(()) }));
-        GenerateMenu { gen_steps, opt_steps }
+        post_steps.push(GenerateStep::new("pauses",|cl,_,res,gc| { pauses(cl,res,gc) }));
+        GenerateMenu { gen_steps, opt_steps, post_steps }
     }
 
     fn run_steps(&self, config: &Config, sequence: &str, compiler_link: &CompilerLink, defstore: &DefStore, resolver: &Resolver, context: &mut GenContext) -> Result<(),String> {
@@ -89,6 +93,10 @@ impl GenerateMenu {
         }
         for k in sequence.chars() {
             let step = self.opt_steps.get(&k.to_string()).ok_or_else(|| format!("No such step '{}'",k))?;
+            step.run(index,config,compiler_link,defstore,resolver,context)?;
+            index += 1;
+        }
+        for step in &self.post_steps {
             step.run(index,config,compiler_link,defstore,resolver,context)?;
             index += 1;
         }

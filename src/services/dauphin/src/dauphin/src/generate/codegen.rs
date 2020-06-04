@@ -202,8 +202,7 @@ impl<'a> CodeGen<'a> {
                 if !self.rvalue_regnames.contains_key(id) {
                     return Err(format!("Unset variable {:?}",id));
                 }
-                let real_reg = self.rvalue_regnames[id];
-                addf!(self,Copy,real_reg)
+                self.rvalue_regnames[id]
             },
             Expression::Number(n) =>        addf!(self,NumberConst(*n)),
             Expression::LiteralString(s) => addf!(self,StringConst(s.to_string())),

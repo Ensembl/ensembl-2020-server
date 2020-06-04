@@ -22,6 +22,7 @@ mod gencontext;
 mod generate;
 mod instruction;
 mod linearize;
+mod pauses;
 mod prune;
 mod reusedead;
 mod compilerun;

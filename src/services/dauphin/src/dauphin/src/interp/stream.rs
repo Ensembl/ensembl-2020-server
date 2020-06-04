@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
- use std::any::Any;
+use std::any::Any;
 use crate::interp::{ InterpValue, PayloadFactory };
 
 pub enum StreamContents {

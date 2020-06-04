@@ -46,7 +46,7 @@ proc print_regs(_A);
 func extend(_A,_A) becomes _A;
 inline "(+)" extend left 14;
 
-proc alienate(out _A);
+proc alienate(lvalue _A);
 
 proc print(string);
 

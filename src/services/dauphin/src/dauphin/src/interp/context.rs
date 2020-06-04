@@ -27,7 +27,8 @@ pub struct InterpContext {
     registers: RegisterFile,
     payloads: HashMap<(String,String),Box<dyn Any>>,
     filename: String,
-    line_number: u32
+    line_number: u32,
+    pause: bool
 }
 
 impl InterpContext {
@@ -36,10 +37,17 @@ impl InterpContext {
             registers: RegisterFile::new(),
             payloads: payloads.iter().map(|(k,v)| (k.clone(),v.make_payload())).collect(),
             filename: "**anon**".to_string(),
-            line_number: 0
+            line_number: 0,
+            pause: false
         }
     }
 
+    pub fn do_pause(&mut self) { self.pause = true; }
+    pub fn test_pause(&mut self) -> bool {
+        let out = self.pause;
+        self.pause = false;
+        out
+    }
     pub fn registers(&mut self) -> &mut RegisterFile { &mut self.registers }
     pub fn payload(&mut self, set: &str, name: &str) -> Result<&mut Box<dyn Any>,String> {
         self.payloads.get_mut(&(set.to_string(),name.to_string())).ok_or_else(|| format!("missing payload {}",name))
@@ -61,19 +69,21 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ xxx_test_config,CompilerLink, make_librarysuite_builder };
+    use crate::interp::{ xxx_test_config,CompilerLink, make_librarysuite_builder, mini_interp, comp_interpret };
 
     #[test]
     fn line_number_smoke() {
         let mut config = xxx_test_config();
         config.set_opt_seq("");
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let message = generate(&linker,&stmts,&defstore,&resolver,&config).expect_err("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        linker.add("main",&instrs,&config).expect("a");
+        let message = comp_interpret(&mut linker,&config,"main").map(|_| ()).expect_err("x");
         print!("{}\n",message);
         assert!(message.ends_with("std/line-number:10"));
     }
@@ -83,13 +93,15 @@ mod test {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
         config.set_opt_seq("");
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:std/line-number").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let message = generate(&linker,&stmts,&defstore,&resolver,&config).expect_err("j");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        linker.add("main",&instrs,&config).expect("a");
+        let message = comp_interpret(&mut linker,&config,"main").map(|_| ()).expect_err("x");
         print!("{}\n",message);
         assert!(!message.contains(" at "));
     }

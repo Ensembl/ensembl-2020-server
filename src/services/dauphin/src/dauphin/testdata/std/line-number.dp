@@ -4,7 +4,7 @@ use "std";
 
 this error is on line 10
 
-
-
 */
-assert(false,true);
+x := false;
+alienate(x);
+assert(x,true);

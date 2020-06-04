@@ -41,6 +41,7 @@ fn fixed(bt: BaseType) -> ArgumentConstraint {
 
 #[derive(Clone,Copy,PartialEq,Debug,Hash,Eq)]
 pub enum InstructionSuperType {
+    Pause,
     Nil,
     Copy,
     Append,
@@ -64,6 +65,7 @@ pub enum InstructionSuperType {
 
 #[derive(Clone,PartialEq,Debug)]
 pub enum InstructionType {
+    Pause,
     Nil,
     Alias,
     Copy,
@@ -105,6 +107,7 @@ impl InstructionType {
     pub fn supertype(&self) -> Result<InstructionSuperType,String> {
         Ok(match self {
             InstructionType::Nil => InstructionSuperType::Nil,
+            InstructionType::Pause => InstructionSuperType::Pause,
             InstructionType::Copy => InstructionSuperType::Copy,
             InstructionType::Append => InstructionSuperType::Append,
             InstructionType::Filter => InstructionSuperType::Filter,
@@ -129,6 +132,7 @@ impl InstructionType {
 
     pub fn get_name(&self) -> Vec<String> {
         let call = match self {
+            InstructionType::Pause => "pause",
             InstructionType::Nil => "nil",
             InstructionType::Alias => "alias",
             InstructionType::Copy => "copy",
@@ -211,6 +215,7 @@ impl InstructionType {
         match self {
             InstructionType::Call(_,impure,_,_) => *impure,
             InstructionType::LineNumber(_,_) => true,
+            InstructionType::Pause => true,
             _ => false
         }
     }
@@ -218,6 +223,7 @@ impl InstructionType {
     pub fn out_only_registers(&self) -> Vec<usize> {
         match self {
             InstructionType::LineNumber(_,_) => vec![],
+            InstructionType::Pause => vec![],
 
             InstructionType::Call(_,_,sigs,dataflow) => {
                 let mut out = Vec::new();
@@ -245,6 +251,7 @@ impl InstructionType {
     pub fn out_registers(&self) -> Vec<usize> {
         match self {
             InstructionType::LineNumber(_,_) => vec![],
+            InstructionType::Pause => vec![],
 
             InstructionType::Call(_,_,sigs,dataflow) => {
                 let mut out = Vec::new();
@@ -385,6 +392,7 @@ impl InstructionType {
             InstructionType::ReFilter => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
 
             InstructionType::LineNumber(_,_) |
+            InstructionType::Pause |
             InstructionType::NumEq |
             InstructionType::Length |
             InstructionType::Add |

@@ -23,14 +23,14 @@ use crate::commands::std_stream;
 use crate::generate::Instruction;
 use crate::model::Register;
 use crate::interp::context::InterpContext;
-use crate::interp::{ LibrarySuiteBuilder, make_librarysuite_builder };
+use crate::interp::{ LibrarySuiteBuilder, make_librarysuite_builder, interpreter, InterpretInstance };
 use crate::interp::{ InterpValue, StreamContents, StreamFactory };
 use super::compilelink::CompilerLink;
 use super::interplink::InterpreterLink;
 use crate::test::cbor::hexdump;
 use serde_cbor::Value as CborValue;
 
-fn stream_strings(stream: &[StreamContents]) -> Vec<String> {
+pub fn stream_strings(stream: &[StreamContents]) -> Vec<String> {
     let mut out = vec![];
     for s in stream {
         match s {
@@ -58,30 +58,29 @@ fn serialize(program: &CborValue) -> Result<Vec<u8>,String> {
     Ok(buffer)
 }
 
-pub fn mini_interp_run(interpret_linker: &InterpreterLink, ic: &mut InterpContext, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
-    if let Some(instrs) = interpret_linker.get_instructions(name)? {
-        /* debug info included */
-        let mut instrs = instrs.iter();
-        for command in interpret_linker.get_commands(name)? {
-            let (instr,regs) = instrs.next().unwrap();
-            print!("{}",ic.registers().dump_many(&regs)?);
-            print!("{}",instr);
-            command.execute(ic)?;
-            ic.registers().commit();
-            print!("{}",ic.registers().dump_many(&regs)?);
-        }
-    } else {
-        let commands = interpret_linker.get_commands(name)?;
-        let start_time = SystemTime::now();
-        for command in commands {
-            command.execute(ic)?;
-            ic.registers().commit();
-        }
-        print!("execution time {}ms\n",start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f32()*1000.);
-    }
-    let stream = std_stream(ic)?;
-    let strings = stream_strings(&stream.take());
-    Ok((export_indexes(ic)?,strings))
+#[cfg(test)]
+pub fn mini_interp_run(interpret_linker: &InterpreterLink, config: &Config, name: &str) -> Result<InterpContext,String> {
+    let mut interp = interpreter(interpret_linker,config,name)?;
+    let start_time = SystemTime::now();
+    let out = interpret(interpret_linker,config,name)?;
+    print!("execution time {}ms\n",start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f32()*1000.);
+    Ok(out)
+}
+
+#[cfg(test)]
+pub fn interpret(interpret_linker: &InterpreterLink, config: &Config, name: &str) -> Result<InterpContext,String> {
+    let mut interp = interpreter(interpret_linker,config,name)?;
+    while interp.more()? {}
+    Ok(interp.finish())
+}
+
+#[cfg(test)]
+pub fn comp_interpret(compiler_linker: &CompilerLink, config: &Config, name: &str) -> Result<InterpContext,String> {
+    let suite = make_librarysuite_builder(config)?;
+    let program = compiler_linker.serialize(config)?;
+    let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
+    interpret_linker.add_payload("std","stream",StreamFactory::new()); 
+    interpret(&interpret_linker,config,name)
 }
 
 pub fn find_testdata() -> PathBuf {
@@ -102,6 +101,7 @@ pub fn xxx_test_config() -> Config {
     cfg.set_generate_debug(true);
     cfg.set_verbose(3);
     cfg.set_opt_level(2);
+    cfg.set_debug_run(true);
     cfg.add_lib("buildtime");
     cfg.add_file_search_path("*.dp");
     cfg.add_file_search_path("parser/*.dp");
@@ -109,6 +109,7 @@ pub fn xxx_test_config() -> Config {
     cfg
 }
 
+#[cfg(test)]
 pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
     cl.add(name,instrs,config)?;
     let program = cl.serialize(config)?;
@@ -117,13 +118,8 @@ pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Co
     let program = serde_cbor::from_slice(&buffer).map_err(|x| format!("{} while deserialising",x))?;
     let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
     interpret_linker.add_payload("std","stream",StreamFactory::new());
-    let mut ic = interpret_linker.new_context();
-    mini_interp_run(&interpret_linker,&mut ic,config,name).map_err(|x| {
-        let line = ic.get_line_number();
-        if line.1 != 0 {
-            format!("{} at {}:{}",x,line.0,line.1)
-        } else {
-            x
-        }
-    })
+    let mut ic = mini_interp_run(&interpret_linker,config,name)?;
+    let stream = std_stream(&mut ic)?;
+    let strings = stream_strings(&stream.take());
+    Ok((export_indexes(&mut ic)?,strings))
 }

@@ -103,7 +103,7 @@ impl CompilerLink {
         Ok(CborValue::Map(program))
     }
 
-    pub fn serialize(&mut self, config: &Config) -> Result<CborValue,String> {
+    pub fn serialize(&self, config: &Config) -> Result<CborValue,String> {
         let mut out = BTreeMap::new();
         out.insert(CborValue::Text("version".to_string()),CborValue::Integer(VERSION as i128));
         out.insert(CborValue::Text("suite".to_string()),self.cs.serialize().clone());
@@ -124,7 +124,8 @@ mod test {
     use crate::parser::{ Parser };
     use crate::resolver::Resolver;
     use crate::generate::generate;
-    use crate::interp::{ mini_interp_run, CompilerLink, xxx_test_config, make_librarysuite_builder, StreamFactory };
+    use crate::commands::std_stream;
+    use crate::interp::{ mini_interp_run, CompilerLink, xxx_test_config, make_librarysuite_builder, StreamFactory, stream_strings };
     use crate::interp::interplink::InterpreterLink;
 
     fn make_program(linker: &mut CompilerLink, resolver: &Resolver, config: &Config, name: &str, path: &str) -> Result<(),String> {
@@ -151,9 +152,13 @@ mod test {
         let suite = make_librarysuite_builder(&config).expect("c");
         let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x)).expect("d");
         interpret_linker.add_payload("std","stream",StreamFactory::new());
-        let mut ic = interpret_linker.new_context();
-        let (_,a) = mini_interp_run(&interpret_linker,&mut ic,&config,"prog2").expect("A");
-        let (_,b) = mini_interp_run(&interpret_linker,&mut ic,&config,"prog1").expect("B");
+        let mut ic_a = mini_interp_run(&interpret_linker,&config,"prog2").expect("A");
+        let mut ic_b = mini_interp_run(&interpret_linker,&config,"prog1").expect("B");
+        let s_a = std_stream(&mut ic_a).expect("d");
+        let s_b = std_stream(&mut ic_b).expect("e");
+        let a = stream_strings(&s_a.take());
+        let b = stream_strings(&s_b.take());    
         assert_eq!(vec!["prog2"],a);
+        assert_eq!(vec!["prog1"],b);
     }
 }

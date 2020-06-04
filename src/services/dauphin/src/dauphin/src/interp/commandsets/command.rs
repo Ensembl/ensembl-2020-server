@@ -65,4 +65,5 @@ pub trait Command {
             PreImageOutcome::Skip
         })
     }
+    fn execution_time(&self) -> f64 { 0.1 }
 }

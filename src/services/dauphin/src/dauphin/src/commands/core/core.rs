@@ -404,8 +404,21 @@ impl Command for SeqAtCommand {
     }
 }
 
+pub struct PauseCommand();
+
+impl Command for PauseCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        context.do_pause();
+        Ok(())
+    }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Ok(vec![])
+    }
+}
+
 pub fn make_core() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("core",(0,0),0xC1ED479408579BD);
+    let set_id = CommandSetId::new("core",(0,0),0xD8DA0F075C671A8A);
     let mut set = CommandSet::new(&set_id,false);
     const_commands(&mut set)?;
     set.push("nil",5,BuiltinCommandType::new(InstructionSuperType::Nil,1,Box::new(|x| Ok(Box::new(NilCommand(x[0]))))))?;
@@ -420,5 +433,6 @@ pub fn make_core() -> Result<CommandSet,String> {
     set.push("seqat",14,BuiltinCommandType::new(InstructionSuperType::SeqAt,2,Box::new(|x| Ok(Box::new(SeqAtCommand(x[0],x[1]))))))?;
     set.push("at",15,BuiltinCommandType::new(InstructionSuperType::At,2,Box::new(|x| Ok(Box::new(AtCommand(x[0],x[1]))))))?;
     set.push("refilter",16,BuiltinCommandType::new(InstructionSuperType::ReFilter,3,Box::new(|x| Ok(Box::new(ReFilterCommand(x[0],x[1],x[2]))))))?;
+    set.push("pause",18,BuiltinCommandType::new(InstructionSuperType::Pause,0,Box::new(|x| Ok(Box::new(PauseCommand())))))?;
     Ok(set)
 }

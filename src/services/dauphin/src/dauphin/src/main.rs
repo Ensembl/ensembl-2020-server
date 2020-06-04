@@ -43,7 +43,8 @@ use crate::resolver::common_resolver;
 use crate::parser::Parser;
 use crate::generate::generate;
 use crate::test::files::load_testdata;
-use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+use crate::interp::{ CompilerLink, xxx_test_config, make_librarysuite_builder };
+use crate::interp::{ LibrarySuiteBuilder, interpreter, InterpreterLink, StreamFactory };
 
 fn main() {
     let config = xxx_test_config();
@@ -58,5 +59,12 @@ fn main() {
     let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
     assert_eq!(outdata,out.join("\n"));
     let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("codegen");
-    mini_interp(&instrs,&mut linker,&config,"main").expect("A");
+    let suite = make_librarysuite_builder(&config).expect("suite");
+    linker.add("main",&instrs,&config).expect("adding program");
+    let program = linker.serialize(&config).expect("serialize");
+    let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x)).expect("linking");
+    interpret_linker.add_payload("std","stream",StreamFactory::new()); 
+    let mut interp = interpreter(&interpret_linker,&config,"main").expect("interpreter");
+    while interp.more().expect("interpreting") {}
+    interp.finish();
 }

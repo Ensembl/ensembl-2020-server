@@ -154,6 +154,7 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
         InstructionType::Length |
         InstructionType::Add |
         InstructionType::SeqFilter |
+        InstructionType::Pause |
         InstructionType::SeqAt =>
             panic!("Impossible instruction {:?}",instr),
 
