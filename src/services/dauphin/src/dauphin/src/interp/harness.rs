@@ -51,7 +51,7 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
     Ok(out)
 }
 
-fn serialize(program: &CborValue) -> Result<Vec<u8>,String> {
+pub fn serialize(program: &CborValue) -> Result<Vec<u8>,String> {
     let mut buffer = Vec::new();
     serde_cbor::to_writer(&mut buffer,&program).map_err(|x| format!("{} while serialising",x))?;
     print!("{}\n",hexdump(&buffer));

@@ -16,6 +16,7 @@
 
 use std::fmt::Debug;
 use std::collections::HashMap;
+use serde_cbor::Value as CborValue;
 
 #[derive(Clone,Debug)]
 pub struct IdentifierUse(pub Identifier,pub bool);
@@ -28,6 +29,9 @@ impl Identifier {
         Identifier(library.to_string(),name.to_string())
     }
 
+    pub fn serialize(&self) -> CborValue {
+        CborValue::Array(vec![CborValue::Text(self.0.clone()),CborValue::Text(self.1.clone())])
+    }
 
     pub fn module(&self) -> &str { &self.0 }
     pub fn name(&self) -> &str { &self.1 }

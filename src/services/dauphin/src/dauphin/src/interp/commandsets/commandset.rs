@@ -14,7 +14,8 @@
  *  limitations under the License.
  */
 
-use std::collections::{ HashMap, HashSet }; // hashbrown
+ use crate::cli::Config;
+use std::collections::{ HashMap, HashSet, BTreeMap }; // hashbrown
 use std::rc::Rc;
 use super::CommandSetId;
 use super::command::{ CommandType, CommandTrigger };
@@ -28,7 +29,7 @@ pub struct CommandSet {
     trace: HashMap<u32,String>,
     csi: CommandSetId,
     commands: HashMap<u32,Box<dyn CommandType>>,
-    mapping: Option<HashMap<CommandTrigger,u32>>,
+    mapping: HashMap<CommandTrigger,u32>,
     compile_only: bool,
     payloads: HashMap<String,Rc<Box<dyn PayloadFactory>>>
 }
@@ -41,15 +42,15 @@ impl CommandSet {
             trace: HashMap::new(),
             csi: csi.clone(),
             commands: HashMap::new(),
-            mapping: Some(HashMap::new()),
+            mapping: HashMap::new(),
             compile_only,
             payloads: HashMap::new()
         }
     }
 
     pub(super) fn id(&self) -> &CommandSetId { &self.csi }
-    pub(super) fn take_mappings(&mut self) -> HashMap<CommandTrigger,u32> {
-        self.mapping.take().unwrap()
+    pub(super) fn get_mappings(&mut self) -> &HashMap<CommandTrigger,u32> {
+        &self.mapping
     }
     pub(super) fn get(&self, opcode: u32) -> Result<&Box<dyn CommandType>,String> {
         self.commands.get(&opcode).ok_or_else(|| format!("No such opcode {}",opcode))
@@ -58,6 +59,18 @@ impl CommandSet {
 
     pub fn add_header(&mut self, name: &str, value: &str) {
         self.headers.insert(name.to_string(),value.to_string());
+    }
+
+    pub fn generate_dynamic_data(&self, config: &Config) -> Result<CborValue,String> {
+        let mut out = BTreeMap::new();
+        for (trigger,id) in self.mapping.iter() {
+            if config.get_verbose() > 1 {
+                print!("dynamic data for {}\n",trigger);
+            }
+            let command = self.commands.get(id).ok_or_else(|| format!("internal inconsistency for id {}",id))?;
+            out.insert(trigger.serialize(),command.generate_dynamic_data()?);
+        }
+        Ok(CborValue::Map(out))
     }
 
     pub fn add_payload<P>(&mut self, name: &str, payload: P) where P: PayloadFactory + 'static {
@@ -98,11 +111,11 @@ impl CommandSet {
         if self.commands.contains_key(&opcode) {
             return Err(format!("Duplicate opcode {}",opcode));
         }
-        if self.mapping.as_ref().unwrap().contains_key(&schema.trigger) {
+        if self.mapping.contains_key(&schema.trigger) {
             return Err(format!("Duplicate trigger {}",schema.trigger));
         }
         self.commands.insert(opcode,Box::new(commandtype));
-        self.mapping.as_mut().unwrap().insert(schema.trigger,opcode);
+        self.mapping.insert(schema.trigger,opcode);
         Ok(())
     }
 }
@@ -186,7 +199,7 @@ mod test {
         let mut cs = CommandSet::new(&csi,false);
         cs.push("test1",0,ConstCommandType()).expect("a");
         cs.push("test2",1,NumberConstCommandType()).expect("c");
-        let mappings = cs.take_mappings();
+        let mappings = cs.get_mappings();
         assert_eq!(2,mappings.len());
         assert_eq!(Some(&0),mappings.get(&CommandTrigger::Instruction(InstructionSuperType::Const)));
         assert_eq!(Some(&1),mappings.get(&CommandTrigger::Instruction(InstructionSuperType::NumberConst)));

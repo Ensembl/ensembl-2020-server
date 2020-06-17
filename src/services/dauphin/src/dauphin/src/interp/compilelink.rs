@@ -19,7 +19,7 @@ use std::rc::Rc;
 use crate::cli::Config;
 use crate::generate::{ Instruction, InstructionType };
 use crate::interp::{ InterpContext, PayloadFactory };
-use crate::interp::commandsets::{ Command, CommandSchema, CommandCompileSuite, CommandTrigger, LibrarySuiteBuilder };
+use crate::interp::commandsets::{ Command, CommandSchema, CommandCompileSuite, CommandTrigger, LibrarySuiteBuilder, CommandSetId };
 use serde_cbor::Value as CborValue;
 
 pub(super) const VERSION : u32 = 0;
@@ -42,6 +42,10 @@ impl CompilerLink {
             headers,
             programs: BTreeMap::new()
         })
+    }
+
+    pub fn generate_dynamic_data(&self, config: &Config) -> Result<HashMap<CommandSetId,CborValue>,String> {
+        Ok(self.cs.generate_dynamic_data(config)?)
     }
 
     pub fn add_payload<P>(&mut self, set: &str, name: &str, pf: P) where P: PayloadFactory + 'static {

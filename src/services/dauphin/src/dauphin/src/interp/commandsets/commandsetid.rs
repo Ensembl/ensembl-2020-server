@@ -18,7 +18,7 @@ use std::fmt;
 use crate::model::{ cbor_array, cbor_int, cbor_string };
 use serde_cbor::Value as CborValue;
 
-#[derive(Clone,PartialEq,Eq,Hash,Debug)]
+#[derive(Clone,PartialEq,Eq,Hash,Debug,PartialOrd,Ord)]
 pub struct CommandSetId {
     name: String,
     version: (u32,u32),

@@ -18,6 +18,7 @@ use std::fmt;
 
 use crate::model::{ DefStore, Register, RegisterSignature, Identifier };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
+use serde_cbor::Value as CborValue;
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
     if ref_ {
@@ -61,6 +62,33 @@ pub enum InstructionSuperType {
     BytesConst,
     Call,
     LineNumber
+}
+
+impl InstructionSuperType {
+    pub fn serialize(&self) -> CborValue {
+        CborValue::Integer(match self {
+            InstructionSuperType::Pause => 0,
+            InstructionSuperType::Nil => 1,
+            InstructionSuperType::Copy => 2,
+            InstructionSuperType::Append => 3,
+            InstructionSuperType::Filter => 4,
+            InstructionSuperType::Run => 5,
+            InstructionSuperType::At => 6,
+            InstructionSuperType::NumEq => 7,
+            InstructionSuperType::ReFilter => 8,
+            InstructionSuperType::Length => 9,
+            InstructionSuperType::Add => 10,
+            InstructionSuperType::SeqFilter => 11,
+            InstructionSuperType::SeqAt => 12,
+            InstructionSuperType::Const => 13,
+            InstructionSuperType::NumberConst => 14,
+            InstructionSuperType::BooleanConst => 15,
+            InstructionSuperType::StringConst => 16,
+            InstructionSuperType::BytesConst => 17,
+            InstructionSuperType::Call => 18,
+            InstructionSuperType::LineNumber => 19
+        })
+    }
 }
 
 #[derive(Clone,PartialEq,Debug)]

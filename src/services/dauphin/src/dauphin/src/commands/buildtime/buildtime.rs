@@ -25,4 +25,3 @@ pub fn make_buildtime() -> Result<CommandSet,String> {
     set.add_header("buildtime",&BUILDTIME);
     Ok(set)
 }
-

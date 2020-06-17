@@ -14,10 +14,12 @@
  *  limitations under the License.
  */
 
-use std::collections::{ HashMap, HashSet };
+use crate::cli::Config;
+use std::collections::{ HashMap, HashSet, BTreeMap };
 use std::rc::Rc;
 use super::command::{ CommandTrigger, CommandType };
 use super::commandset::CommandSet;
+use super::commandsetid::CommandSetId;
 use super::member::CommandSuiteMember;
 use serde_cbor::Value as CborValue;
 
@@ -45,6 +47,14 @@ impl CommandCompileSuite {
         if compile_only {
             self.compile_only.insert(trigger);
         }
+    }
+
+    pub fn generate_dynamic_data(&self, config: &Config) -> Result<HashMap<CommandSetId,CborValue>,String> {
+        let mut out = HashMap::new();
+        for (set,_) in self.sets.iter() {
+            out.insert(set.id().clone(),set.generate_dynamic_data(config)?);
+        }
+        Ok(out)
     }
 
     pub(super) fn check_traces(&self) -> Result<(),String> {

@@ -56,7 +56,7 @@ impl LibrarySuiteBuilder {
         if let Some(name) = self.seen.get(&(set_name.to_string(),set_major)) {
             return Err(format!("Attempt to register multiple versions {} and {}",set_id,name));
         }
-        let mut mappings = set.take_mappings();
+        let mut mappings = set.get_mappings().clone();
         let set = Rc::new(set);
         let offset = self.next_opcode;
         self.compile_suite.add_set(set.clone(),offset);
@@ -121,6 +121,7 @@ mod test {
     use super::super::{ CommandSetId, CommandTrigger };
     use crate::commands::{ ConstCommandType, NumberConstCommandType };
     use crate::generate::InstructionSuperType;
+    use crate::interp::{ xxx_test_config, make_librarysuite_builder, serialize };
 
     #[test]
     fn test_suite_smoke() {
@@ -255,5 +256,18 @@ mod test {
         cb.add(cs1).expect("a");
 
         assert!(cb.make_interpret_suite(&ccs.serialize()).is_ok());
+    }
+
+    #[test]
+    fn test_dynamic_data() {
+        let mut config = xxx_test_config();
+        config.set_generate_debug(false);
+        config.set_verbose(2);
+        let builder = make_librarysuite_builder(&config).expect("y");
+        let data = builder.make_compile_suite().expect("z").generate_dynamic_data(&config).expect("x");
+        for (suite,data) in data.iter() {
+            print!("command set {}\n",suite);
+            serialize(&data).expect("a");
+        }
     }
 }

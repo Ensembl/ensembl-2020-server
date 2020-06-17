@@ -26,6 +26,17 @@ pub enum CommandTrigger {
     Command(Identifier)
 }
 
+impl CommandTrigger {
+    pub fn serialize(&self) -> CborValue {
+        match self {
+            CommandTrigger::Instruction(instr) =>
+                CborValue::Array(vec![CborValue::Integer(0),instr.serialize()]),
+            CommandTrigger::Command(ident) =>
+                CborValue::Array(vec![CborValue::Integer(1),ident.serialize()])
+        }
+    }
+}
+
 pub enum PreImageOutcome {
     Skip,
     Constant(Vec<Register>),
@@ -50,6 +61,7 @@ pub trait CommandType {
     fn get_schema(&self) -> CommandSchema;
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String>;
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String>;
+    fn generate_dynamic_data(&self) -> Result<CborValue,String> { Ok(CborValue::Null) }
 }
 
 pub trait Command {
