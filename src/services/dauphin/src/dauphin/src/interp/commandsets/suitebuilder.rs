@@ -121,7 +121,7 @@ mod test {
     use super::super::{ CommandSetId, CommandTrigger };
     use crate::commands::{ ConstCommandType, NumberConstCommandType };
     use crate::generate::InstructionSuperType;
-    use crate::interp::{ xxx_test_config, make_librarysuite_builder, serialize };
+    use crate::interp::{ xxx_test_config, make_librarysuite_builder, serialize, CompilerLink };
 
     #[test]
     fn test_suite_smoke() {
@@ -264,7 +264,8 @@ mod test {
         config.set_generate_debug(false);
         config.set_verbose(2);
         let builder = make_librarysuite_builder(&config).expect("y");
-        let data = builder.make_compile_suite().expect("z").generate_dynamic_data(&config).expect("x");
+        let linker = CompilerLink::new(builder).expect("z");
+        let data = linker.generate_dynamic_data(&config).expect("x");
         for (suite,data) in data.iter() {
             print!("command set {}\n",suite);
             serialize(&data).expect("a");

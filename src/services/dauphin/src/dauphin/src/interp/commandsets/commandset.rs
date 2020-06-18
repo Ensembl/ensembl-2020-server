@@ -19,7 +19,7 @@ use std::collections::{ HashMap, HashSet, BTreeMap }; // hashbrown
 use std::rc::Rc;
 use super::CommandSetId;
 use super::command::{ CommandType, CommandTrigger };
-use crate::interp::PayloadFactory;
+use crate::interp::{ PayloadFactory, CompilerLink };
 use serde_cbor::Value as CborValue;
 use crc::crc64::checksum_iso;
 
@@ -61,14 +61,14 @@ impl CommandSet {
         self.headers.insert(name.to_string(),value.to_string());
     }
 
-    pub fn generate_dynamic_data(&self, config: &Config) -> Result<CborValue,String> {
+    pub fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let mut out = BTreeMap::new();
         for (trigger,id) in self.mapping.iter() {
             if config.get_verbose() > 1 {
                 print!("dynamic data for {}\n",trigger);
             }
             let command = self.commands.get(id).ok_or_else(|| format!("internal inconsistency for id {}",id))?;
-            out.insert(trigger.serialize(),command.generate_dynamic_data()?);
+            out.insert(trigger.serialize(),command.generate_dynamic_data(linker,config)?);
         }
         Ok(CborValue::Map(out))
     }

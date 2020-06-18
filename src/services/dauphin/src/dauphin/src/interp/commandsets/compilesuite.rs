@@ -21,6 +21,7 @@ use super::command::{ CommandTrigger, CommandType };
 use super::commandset::CommandSet;
 use super::commandsetid::CommandSetId;
 use super::member::CommandSuiteMember;
+use crate::interp::CompilerLink;
 use serde_cbor::Value as CborValue;
 
 pub struct CommandCompileSuite {
@@ -49,10 +50,10 @@ impl CommandCompileSuite {
         }
     }
 
-    pub fn generate_dynamic_data(&self, config: &Config) -> Result<HashMap<CommandSetId,CborValue>,String> {
+    pub fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<HashMap<CommandSetId,CborValue>,String> {
         let mut out = HashMap::new();
         for (set,_) in self.sets.iter() {
-            out.insert(set.id().clone(),set.generate_dynamic_data(config)?);
+            out.insert(set.id().clone(),set.generate_dynamic_data(linker,config)?);
         }
         Ok(out)
     }

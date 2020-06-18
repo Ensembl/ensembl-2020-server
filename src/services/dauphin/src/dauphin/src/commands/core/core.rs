@@ -15,16 +15,91 @@
  */
 
 use std::rc::Rc;
+use std::time::{ SystemTime, Duration };
 use crate::interp::InterpValue;
 use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext, PreImageOutcome };
-use crate::model::Register;
+use crate::model::{ Register, cbor_make_map };
 use serde_cbor::Value as CborValue;
 use super::commontype::BuiltinCommandType;
 use crate::commands::common::polymorphic::arbitrate_type;
 use super::consts::const_commands;
-use crate::generate::{ InstructionSuperType, PreImageContext };
+use crate::generate::{ Instruction, InstructionSuperType, PreImageContext };
+use crate::interp::{ CommandSchema, CommandType, CommandTrigger };
+use crate::cli::Config;
+use crate::interp::CompilerLink;
 
-// XXX read is coerce
+fn regress(input: &[(u64,f64)]) -> Result<f64,String> {
+    if input.len() == 0 {
+        return Err("no data to regress".to_string());
+    }
+    let total_x : u64 = input.iter().map(|x| x.0).sum();
+    let total_y : f64 = input.iter().map(|x| x.1).sum();
+    let mean_x = total_x as f64 / input.len() as f64;
+    let mean_y = total_y / input.len() as f64;
+    let mut numer = 0.;
+    let mut denom = 0.;
+    for (x,y) in input {
+        let x_delta = *x as f64 - mean_x;
+        let y_delta = y         - mean_y;
+        numer += x_delta*y_delta;
+        denom += x_delta*x_delta;
+    }
+    if denom == 0. {
+        return Err("no x-variance to regress".to_string());
+    }
+    Ok(numer/denom)
+}
+
+pub struct NilCommandType();
+
+impl NilCommandType {
+    fn run_time_trial(&self, linker: &CompilerLink, _config: &Config, loops: u64) -> Result<f64,String> {
+        let command = NilCommand(Register(0));
+        let mut context = linker.new_context();
+        let start_time = SystemTime::now();
+        for _ in 0..loops {
+            command.execute(&mut context)?;
+            context.registers().commit();
+        }
+        Ok(start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f64()*1000.)
+    }
+
+    fn generate_timings(&self, linker: &CompilerLink, config: &Config) -> Result<f64,String> {
+        let mut data = vec![];
+        for i in 0..101 {
+            let t = self.run_time_trial(linker,config,i*100)?;
+            data.push((i*100,t));
+            if config.get_verbose() > 2 {
+                print!("loops={} time={:.2}ms\n",i*100,t);
+            }
+        }
+        let r = regress(&data)?;
+        if config.get_verbose() > 1 {
+            print!("nil takes {:.3}ms\n",r);
+        }
+        Ok(r)
+    }
+}
+
+impl CommandType for NilCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 1,
+            trigger: CommandTrigger::Instruction(InstructionSuperType::Nil)
+        }
+    }
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(NilCommand(it.regs[0])))
+    }
+
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(NilCommand(Register::deserialize(value[0])?)))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        Ok(cbor_make_map(&vec!["t"],vec![CborValue::Float(self.generate_timings(linker,config)?)])?)
+    }
+}
 
 pub struct NilCommand(pub(crate) Register);
 
@@ -421,7 +496,7 @@ pub fn make_core() -> Result<CommandSet,String> {
     let set_id = CommandSetId::new("core",(0,0),0xD8DA0F075C671A8A);
     let mut set = CommandSet::new(&set_id,false);
     const_commands(&mut set)?;
-    set.push("nil",5,BuiltinCommandType::new(InstructionSuperType::Nil,1,Box::new(|x| Ok(Box::new(NilCommand(x[0]))))))?;
+    set.push("nil",5,NilCommandType())?;
     set.push("copy",6,BuiltinCommandType::new(InstructionSuperType::Copy,2,Box::new(|x| Ok(Box::new(CopyCommand(x[0],x[1]))))))?;
     set.push("append",7,BuiltinCommandType::new(InstructionSuperType::Append,2,Box::new(|x| Ok(Box::new(AppendCommand(x[0],x[1]))))))?;
     set.push("length",8,BuiltinCommandType::new(InstructionSuperType::Length,2,Box::new(|x| Ok(Box::new(LengthCommand(x[0],x[1]))))))?;
@@ -433,6 +508,6 @@ pub fn make_core() -> Result<CommandSet,String> {
     set.push("seqat",14,BuiltinCommandType::new(InstructionSuperType::SeqAt,2,Box::new(|x| Ok(Box::new(SeqAtCommand(x[0],x[1]))))))?;
     set.push("at",15,BuiltinCommandType::new(InstructionSuperType::At,2,Box::new(|x| Ok(Box::new(AtCommand(x[0],x[1]))))))?;
     set.push("refilter",16,BuiltinCommandType::new(InstructionSuperType::ReFilter,3,Box::new(|x| Ok(Box::new(ReFilterCommand(x[0],x[1],x[2]))))))?;
-    set.push("pause",18,BuiltinCommandType::new(InstructionSuperType::Pause,0,Box::new(|x| Ok(Box::new(PauseCommand())))))?;
+    set.push("pause",18,BuiltinCommandType::new(InstructionSuperType::Pause,0,Box::new(|_| Ok(Box::new(PauseCommand())))))?;
     Ok(set)
 }

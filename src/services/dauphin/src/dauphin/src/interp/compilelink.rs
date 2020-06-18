@@ -45,7 +45,7 @@ impl CompilerLink {
     }
 
     pub fn generate_dynamic_data(&self, config: &Config) -> Result<HashMap<CommandSetId,CborValue>,String> {
-        Ok(self.cs.generate_dynamic_data(config)?)
+        Ok(self.cs.generate_dynamic_data(&self,config)?)
     }
 
     pub fn add_payload<P>(&mut self, set: &str, name: &str, pf: P) where P: PayloadFactory + 'static {

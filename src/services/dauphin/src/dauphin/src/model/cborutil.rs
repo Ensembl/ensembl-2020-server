@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+use std::collections::BTreeMap;
 use serde_cbor::Value as CborValue;
 
 #[derive(Debug,PartialEq)]
@@ -27,6 +28,17 @@ pub enum CborType {
     Null,
     Float,
     Bytes
+}
+
+pub fn cbor_make_map(keys: &[&str], mut values: Vec<CborValue>) -> Result<CborValue,String> {
+    if keys.len() != values.len() {
+        return Err("Bad cbor_make_map()".to_string());
+    }
+    let mut out = BTreeMap::new();
+    for (i,v) in values.drain(..).enumerate() {
+        out.insert(CborValue::Text(keys[i].to_string()),v);
+    }
+    Ok(CborValue::Map(out))
 }
 
 pub fn cbor_type(cbor: &CborValue, allowed: Option<&[CborType]>) -> Result<CborType,String> {

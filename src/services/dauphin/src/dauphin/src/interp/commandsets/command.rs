@@ -15,7 +15,9 @@
  */
 
 use std::fmt;
+use crate::cli::Config;
 use crate::interp::context::InterpContext;
+use crate::interp::CompilerLink;
 use crate::model::{ Identifier, Register };
 use crate::generate::{ Instruction, InstructionSuperType, PreImageContext };
 use serde_cbor::Value as CborValue;
@@ -61,7 +63,7 @@ pub trait CommandType {
     fn get_schema(&self) -> CommandSchema;
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String>;
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String>;
-    fn generate_dynamic_data(&self) -> Result<CborValue,String> { Ok(CborValue::Null) }
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> { Ok(CborValue::Null) }
 }
 
 pub trait Command {
