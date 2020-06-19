@@ -26,6 +26,7 @@ mod commandsets {
     pub mod commandsetid;
     pub mod interpretsuite;
     mod member;
+    pub mod timetrial;
     pub mod compilesuite;
     pub mod suitebuilder;
 
@@ -35,6 +36,7 @@ mod commandsets {
     pub use interpretsuite::CommandInterpretSuite;
     pub use compilesuite::CommandCompileSuite;
     pub use suitebuilder::{ LibrarySuiteBuilder, make_librarysuite_builder };
+    pub use timetrial::{ TimeTrialCommandType, TimeTrial };
 }
 mod values {
     pub mod registers;
@@ -51,7 +53,10 @@ pub use self::values::value::{ to_index, InterpValue, InterpNatural, InterpValue
 pub use self::values::supercow::SuperCow;
 pub use self::values::registers::RegisterFile;
 pub use self::stream::{ Stream, StreamContents, StreamFactory };
-pub use self::commandsets::{ CommandSet, CommandSetId, CommandInterpretSuite, CommandCompileSuite, LibrarySuiteBuilder, Command, CommandSchema, CommandTrigger, CommandType, PreImageOutcome, make_librarysuite_builder };
+pub use self::commandsets::{
+    CommandSet, CommandSetId, CommandInterpretSuite, CommandCompileSuite, LibrarySuiteBuilder, Command, CommandSchema, CommandTrigger, CommandType, 
+    PreImageOutcome, make_librarysuite_builder, TimeTrialCommandType, TimeTrial
+};
 pub use self::context::{ InterpContext, PayloadFactory };
 pub use self::interpret::{ InterpretInstance, interpreter };
 pub use self::interplink::InterpreterLink;

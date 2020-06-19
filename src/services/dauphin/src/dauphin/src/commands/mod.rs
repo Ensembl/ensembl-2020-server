@@ -24,6 +24,7 @@ mod common {
     pub(super) mod writevec;
 }
 mod core {
+    #[macro_use]
     pub(super) mod commontype;
     pub(super) mod consts;
     pub(super) mod core;

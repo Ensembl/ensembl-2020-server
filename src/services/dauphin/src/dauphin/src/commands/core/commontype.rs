@@ -14,37 +14,88 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger };
-use crate::model::Register;
-use crate::generate::{ Instruction, InstructionSuperType };
-use serde_cbor::Value as CborValue;
+#[macro_export]
+macro_rules! type_instr2 {
+    ($type:ident,$command:ident,$supertype:expr,$trial:ident) => {
+        pub struct $type();
 
-pub struct BuiltinCommandType {
-    supertype: InstructionSuperType,
-    values: usize,
-    ctor: Box<dyn Fn(&[Register]) -> Result<Box<dyn Command>,String>>
+        impl CommandType for $type {
+            fn get_schema(&self) -> CommandSchema {
+                CommandSchema {
+                    values: 2,
+                    trigger: CommandTrigger::Instruction($supertype)
+                }
+            }
+            fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+                Ok(Box::new($command(it.regs[0],it.regs[1])))
+            }
+
+            fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+                Ok(Box::new($command(Register::deserialize(value[0])?,Register::deserialize(value[1])?)))
+            }
+
+            fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+                let timings = TimeTrial::run(&$trial(),linker,config)?;
+                Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
+            }
+        }
+    };
 }
 
-impl BuiltinCommandType {
-    pub fn new(supertype: InstructionSuperType, values: usize, ctor: Box<dyn Fn(&[Register]) -> Result<Box<dyn Command>,String>>) -> BuiltinCommandType {
-        BuiltinCommandType {
-            supertype, values, ctor
+#[macro_export]
+macro_rules! type_instr3 {
+    ($type:ident,$command:ident,$supertype:expr,$trial:ident) => {
+        pub struct $type();
+
+        impl CommandType for $type {
+            fn get_schema(&self) -> CommandSchema {
+                CommandSchema {
+                    values: 3,
+                    trigger: CommandTrigger::Instruction($supertype)
+                }
+            }
+            fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+                Ok(Box::new($command(it.regs[0],it.regs[1],it.regs[2])))
+            }
+
+            fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+                Ok(Box::new($command(Register::deserialize(value[0])?,Register::deserialize(value[1])?,
+                                     Register::deserialize(value[2])?)))
+            }
+
+            fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+                let timings = TimeTrial::run(&$trial(),linker,config)?;
+                Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
+            }
         }
-    }
+    };
 }
 
-impl CommandType for BuiltinCommandType {
-    fn get_schema(&self) -> CommandSchema {
-        CommandSchema {
-            values: self.values,
-            trigger: CommandTrigger::Instruction(self.supertype)
-        }
-    }
-    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        (self.ctor)(&it.regs)
-    }
+#[macro_export]
+macro_rules! type_instr4 {
+    ($type:ident,$command:ident,$supertype:expr,$trial:ident) => {
+        pub struct $type();
 
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        (self.ctor)(&(0..self.values).map(|x| Register::deserialize(value[x])).collect::<Result<Vec<_>,String>>()?)
-    }
+        impl CommandType for $type {
+            fn get_schema(&self) -> CommandSchema {
+                CommandSchema {
+                    values: 4,
+                    trigger: CommandTrigger::Instruction($supertype)
+                }
+            }
+            fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+                Ok(Box::new($command(it.regs[0],it.regs[1],it.regs[2],it.regs[3])))
+            }
+
+            fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+                Ok(Box::new($command(Register::deserialize(value[0])?,Register::deserialize(value[1])?,
+                                     Register::deserialize(value[2])?,Register::deserialize(value[3])?)))
+            }
+
+            fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+                let timings = TimeTrial::run(&$trial(),linker,config)?;
+                Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
+            }
+        }
+    };
 }
