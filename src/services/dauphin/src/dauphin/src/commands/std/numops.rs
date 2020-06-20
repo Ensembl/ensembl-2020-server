@@ -14,31 +14,14 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ InterpValue, PreImageOutcome };
-use crate::model::Register;
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext };
+use crate::interp::{ InterpValue, PreImageOutcome, TimeTrial };
+use crate::model::{ Register, cbor_make_map };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, TimeTrialCommandType };
 use crate::generate::{ Instruction, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::library::std;
-
-#[derive(Copy,Clone)]
-pub enum InterpNumModOp {
-    Incr
-}
-
-impl InterpNumModOp {
-    fn evaluate(&self, a: &mut f64, b: f64) {
-        match self {
-            InterpNumModOp::Incr => *a += b
-        }
-    }
-
-    fn name(&self) -> &str {
-        match self {
-            InterpNumModOp::Incr => "incr",
-        }
-    }
-}
+use crate::cli::Config;
+use crate::interp::CompilerLink;
 
 #[derive(Copy,Clone)]
 pub enum InterpBinNumOp {
@@ -87,6 +70,25 @@ impl InterpBinBoolOp {
     }
 }
 
+struct BinBoolTimeTrial(InterpBinBoolOp);
+
+impl TimeTrialCommandType for BinBoolTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = (t*100) as usize;
+        let a : Vec<usize> = (0..t).map(|x| x as usize).collect();
+        context.registers().write(&Register(1),InterpValue::Indexes(a));
+        let b : Vec<usize> = (0..t).map(|x| (x as usize * 40503 )%t).collect();
+        context.registers().write(&Register(2),InterpValue::Indexes(b));
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(InterpBinBoolCommand(self.0,Register(0),Register(1),Register(2))))
+    }
+}
+
 pub struct InterpBinBoolCommandType(InterpBinBoolOp);
 
 impl CommandType for InterpBinBoolCommandType {
@@ -107,6 +109,11 @@ impl CommandType for InterpBinBoolCommandType {
             Register::deserialize(&value[0])?,
             Register::deserialize(&value[1])?,
             Register::deserialize(&value[2])?)))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let timings = TimeTrial::run(&BinBoolTimeTrial(self.0),linker,config)?;
+        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
     }
 }
 
@@ -140,6 +147,25 @@ impl Command for InterpBinBoolCommand {
     }
 }
 
+struct BinNumTimeTrial(InterpBinNumOp);
+
+impl TimeTrialCommandType for BinNumTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = (t*100) as usize;
+        let a : Vec<usize> = (0..t).map(|x| x as usize).collect();
+        context.registers().write(&Register(1),InterpValue::Indexes(a));
+        let b : Vec<usize> = (0..t).map(|x| (x as usize * 40503 )%t).collect();
+        context.registers().write(&Register(2),InterpValue::Indexes(b));
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(InterpBinNumCommand(self.0,Register(0),Register(1),Register(2))))
+    }
+}
+
 pub struct InterpBinNumCommandType(InterpBinNumOp);
 
 impl CommandType for InterpBinNumCommandType {
@@ -160,6 +186,11 @@ impl CommandType for InterpBinNumCommandType {
             Register::deserialize(&value[0])?,
             Register::deserialize(&value[1])?,
             Register::deserialize(&value[2])?)))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let timings = TimeTrial::run(&BinNumTimeTrial(self.0),linker,config)?;
+        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
     }
 }
 
@@ -193,6 +224,25 @@ impl Command for InterpBinNumCommand {
     }
 }
 
+struct NumModTimeTrial(InterpNumModOp);
+
+impl TimeTrialCommandType for NumModTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = (t*100) as usize;
+        let a : Vec<usize> = (1..t).map(|x| x as usize).collect();
+        context.registers().write(&Register(0),InterpValue::Indexes(a));
+        let b : Vec<usize> = (1..t).map(|x| (x as usize * 40503 )%t).collect();
+        context.registers().write(&Register(1),InterpValue::Indexes(b));
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(InterpNumModCommand(self.0,Register(0),Register(1))))
+    }
+}
+
 pub struct InterpNumModCommandType(InterpNumModOp);
 
 impl CommandType for InterpNumModCommandType {
@@ -212,6 +262,30 @@ impl CommandType for InterpNumModCommandType {
             self.0,
             Register::deserialize(&value[0])?,
             Register::deserialize(&value[1])?)))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let timings = TimeTrial::run(&NumModTimeTrial(self.0),linker,config)?;
+        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
+    }
+}
+
+#[derive(Copy,Clone)]
+pub enum InterpNumModOp {
+    Incr
+}
+
+impl InterpNumModOp {
+    fn evaluate(&self, a: &mut f64, b: f64) {
+        match self {
+            InterpNumModOp::Incr => *a += b
+        }
+    }
+
+    fn name(&self) -> &str {
+        match self {
+            InterpNumModOp::Incr => "incr",
+        }
     }
 }
 
