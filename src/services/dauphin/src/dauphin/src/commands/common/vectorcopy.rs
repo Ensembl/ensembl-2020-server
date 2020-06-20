@@ -22,10 +22,28 @@ use super::writevec::WriteVec;
 use super::vectorsource::RegisterVectorSource;
 use crate::model::VectorRegisters;
 
+/*
 pub fn vector_update<F,T>(dst: &mut Vec<T>, src: &[T], filter: &[usize], mut cb: F) where F: FnMut(&T) -> T {
     let src_len = src.len();
     for (i,filter_pos) in filter.iter().enumerate() {
         dst[*filter_pos] = cb(&src[i%src_len]);
+    }
+}
+*/
+
+pub fn vector_update_lengths(dst: &mut Vec<usize>, src: &[usize], filter: &[usize]) {
+    let mut src_it = src.iter().cycle();
+    for filter_pos in filter.iter() {
+        dst[*filter_pos] = *src_it.next().unwrap();
+    }
+}
+
+pub fn vector_update_offsets(dst: &mut Vec<usize>, src: &[usize], filter: &[usize], offsets: (usize,usize)) {
+    let mut src_it = src.iter().cycle();
+    let mut offset = offsets.0;
+    for filter_pos in filter.iter() {
+        dst[*filter_pos] = *src_it.next().unwrap() + offset;
+        offset += offsets.1;
     }
 }
 
@@ -34,8 +52,27 @@ pub fn vector_append<F,T>(dst: &mut Vec<T>, src: &[T], mut cb: F) where F: FnMut
     dst.append(&mut new_values);
 }
 
+pub fn vector_append_lengths(dst: &mut Vec<usize>, src: &[usize]) {
+    dst.append(&mut src.to_vec());
+}
+
+pub fn vector_append_offsets(dst: &mut Vec<usize>, src: &[usize], delta: usize) {
+    let mut src = src.to_vec();
+    for v in &mut src {
+        *v += delta;
+    }
+    dst.append(&mut src);
+}
+
 fn update_poly<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: &[usize]) where T: Clone {
-    vector_update(dst,src,filter,|v| v.clone())
+    let mut target = vec![];
+    while target.len() < filter.len() {
+        target.append(&mut src.to_vec());
+    }
+    let mut value_it = target.drain(..);
+    for index in filter.iter() {
+        dst[*index] = value_it.next().unwrap();
+    }
 }
 
 pub fn vector_update_poly(dst: InterpValue, src: &Rc<InterpValue>, filter_val: &[usize]) -> Result<InterpValue,String> {
@@ -48,41 +85,39 @@ pub fn vector_update_poly(dst: InterpValue, src: &Rc<InterpValue>, filter_val: &
     }
 }
 
-pub fn append_data(dst: InterpValue, src: &Rc<InterpValue>) -> Result<(InterpValue,usize),String> {
+pub fn append_data(dst: InterpValue, src: &Rc<InterpValue>, copies: usize) -> Result<(InterpValue,usize),String> {
     let offset = src.len();
     if let Some(natural) = arbitrate_type(&dst,src,false) {
         Ok((polymorphic!(dst,[src],natural,(|d: &mut Vec<_>, s: &[_]| {
-            d.append(&mut s.to_vec());
+            for _ in 0..copies {
+                d.append(&mut s.to_vec());
+            }
         })),offset))
     } else {
         Ok((dst,offset))
     }
 }
 
-pub fn vector_push<'e>(left: &mut WriteVec<'e>, right: &SharedVec, copies: usize) -> Result<Vec<usize>,String> {
+pub fn vector_push<'e>(left: &mut WriteVec<'e>, right: &SharedVec, copies: usize) -> Result<(usize,usize),String> {
     let depth = left.depth();
     /* data for top-level */
-    let mut offsets = vec![];
     let start = if depth > 1 { left.get_offset(depth-2)?.len() } else { left.get_data().len() };
     let stride = if depth > 1 { right.get_offset(depth-2)?.len() } else { right.get_data().len() };
-    for i in 0..copies {
-        offsets.push(start+i*stride);
-    }
     /* intermediate levels */
     for level in (0..(depth-1)).rev() {
         let start = if level > 0 { left.get_offset(level-1)?.len() } else { left.get_data().len() };
         let stride = if level > 0 { right.get_offset(level-1)?.len() } else { right.get_data().len() };
         for i in 0..copies {
-            vector_append(left.get_offset_mut(level)?,right.get_offset(level)?,|v| *v+start+i*stride);
-            vector_append(left.get_length_mut(level)?,right.get_length(level)?,|v| *v);
+            vector_append_offsets(left.get_offset_mut(level)?,right.get_offset(level)?,start+i*stride);
+            vector_append_lengths(left.get_length_mut(level)?,right.get_length(level)?);
         }
     }
     /* bottom-level */
-    for _ in 0..copies {
-        let data = append_data(left.take_data()?,right.get_data())?.0;
-        left.replace_data(data)?;
-    }
-    Ok(offsets)
+    let mut leftdata = left.take_data()?;
+    let rightdata = right.get_data();
+    leftdata = append_data(leftdata,&rightdata,copies)?.0;
+    left.replace_data(leftdata)?;
+    Ok((start,stride))
 }
 
 pub fn vector_register_copy<'e>(context: &mut InterpContext, rvs: &RegisterVectorSource<'e>, dst: &VectorRegisters, src: &VectorRegisters) -> Result<(),String> {

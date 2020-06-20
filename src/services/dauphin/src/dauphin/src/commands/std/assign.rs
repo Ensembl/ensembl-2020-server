@@ -14,17 +14,19 @@
  *  limitations under the License.
  */
 
-use crate::model::{ Register, RegisterSignature };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome };
+use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters, cbor_make_map };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, InterpValue, TimeTrialCommandType, TimeTrial, regress };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
 use crate::typeinf::MemberMode;
-use super::super::common::vectorcopy::{ vector_update, vector_update_poly, vector_push, vector_register_copy, vector_append, append_data };
+use super::super::common::vectorcopy::{ vector_update_offsets, vector_update_lengths, vector_update_poly, vector_push, vector_register_copy, vector_append, append_data };
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::SharedVec;
 use super::super::common::writevec::WriteVec;
 use super::library::std;
+use crate::cli::Config;
+use crate::interp::CompilerLink;
 
 fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Result<(),String> {
     let registers = context.registers();
@@ -58,22 +60,17 @@ fn copy_deep<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -
     if filter.len() > 0 {
         let offsets = vector_push(left,right,filter.len())?;
         let depth = left.depth();
-        let off_len = offsets.len();
-        let mut i = 0;
-        vector_update(left.get_offset_mut(depth-1)?,right.get_offset(depth-1)?,filter,|v| {
-            i += 1;
-            *v+offsets[i%off_len]
-        });
-        vector_update(left.get_length_mut(depth-1)?,right.get_length(depth-1)?,filter,|v| *v);
+        vector_update_offsets(left.get_offset_mut(depth-1)?,right.get_offset(depth-1)?,filter,offsets);
+        vector_update_lengths(left.get_length_mut(depth-1)?,right.get_length(depth-1)?,filter);
     }
     Ok(())
 }
 
 fn copy_shallow<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
-    for _ in 0..filter.len() {
-        let data = vector_update_poly(left.take_data()?,right.get_data(),filter)?;
-        left.replace_data(data)?;
-    }
+    let rightval = right.get_data();
+    let mut leftval = left.take_data()?;
+    leftval = vector_update_poly(leftval,rightval,filter)?;
+    left.replace_data(leftval)?;
     Ok(())
 }
 
@@ -110,6 +107,103 @@ fn assign(context: &mut InterpContext, filtered: bool, purposes: &RegisterSignat
     Ok(())
 }
 
+fn trial_write<F>(context: &mut InterpContext, i: usize, t: usize, cb: F) where F: Fn(usize) -> usize {
+    let a : Vec<usize> = (0..t).map(|x| cb(x as usize)).collect();
+    context.registers().write(&Register(i),InterpValue::Indexes(a));
+}
+
+struct UnfilteredAssignTimeTrial();
+
+impl TimeTrialCommandType for UnfilteredAssignTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        for i in 0..10 {
+            trial_write(context,i,t*100,|x| x);
+        }    
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let mut sigs = RegisterSignature::new();
+        let mut output = ComplexRegisters::new_empty(MemberMode::LValue);
+        output.add(ComplexPath::new_empty(),VectorRegisters::new(2),2);
+        let mut input = ComplexRegisters::new_empty(MemberMode::RValue);
+        input.add(ComplexPath::new_empty(),VectorRegisters::new(2),2);
+        sigs.add(output);
+        sigs.add(input);
+        let regs : Vec<Register> = (0..10).map(|x| Register(x)).collect();
+        Ok(Box::new(AssignCommand(false,sigs,regs)))
+    }
+}
+
+struct FilteredAssignTimeTrial(usize);
+
+impl TimeTrialCommandType for FilteredAssignTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn local_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        trial_write(context,0,t*10,|x| x);    /* 10t writes */
+        trial_write(context,1,t*100,|x| x);   /* 100t data */
+        trial_write(context,2,t*10,|x| x*10); /* 10t arrays (offset 10x) */
+        trial_write(context,3,t*10,|_| 10);   /* 10t arrays (len 10) */
+        trial_write(context,4,t*10*self.0,|x| x);   /* 10tm data */
+        trial_write(context,5,t*10,|x| x*self.0); /* 10t arrays (offset xm) */
+        trial_write(context,6,t*10,|_| self.0);   /* 10t arrays (len m) */
+        context.registers().commit();
+    }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {}
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let mut sigs = RegisterSignature::new();
+        let mut filter = ComplexRegisters::new_empty(MemberMode::FValue);
+        filter.add(ComplexPath::new_empty(),VectorRegisters::new(0),0);        
+        let mut output = ComplexRegisters::new_empty(MemberMode::LValue);
+        output.add(ComplexPath::new_empty(),VectorRegisters::new(1),1);
+        let mut input = ComplexRegisters::new_empty(MemberMode::RValue);
+        input.add(ComplexPath::new_empty(),VectorRegisters::new(1),1);
+        sigs.add(filter);
+        sigs.add(output);
+        sigs.add(input);
+        let regs : Vec<Register> = (0..7).map(|x| Register(x)).collect();
+        Ok(Box::new(AssignCommand(true,sigs,regs)))
+    }
+}
+
+struct ShallowAssignTimeTrial();
+
+impl TimeTrialCommandType for ShallowAssignTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn local_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        trial_write(context,0,t*100,|x| x);    /* 100t writes */
+        trial_write(context,1,t*1000,|x| x);   /* 1000t data */
+        trial_write(context,2,t*100,|x| x);   /* 100t reads */
+        context.registers().commit();
+    }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {}
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let mut sigs = RegisterSignature::new();
+        let mut filter = ComplexRegisters::new_empty(MemberMode::FValue);
+        filter.add(ComplexPath::new_empty(),VectorRegisters::new(0),0);        
+        let mut output = ComplexRegisters::new_empty(MemberMode::LValue);
+        output.add(ComplexPath::new_empty(),VectorRegisters::new(0),0);
+        let mut input = ComplexRegisters::new_empty(MemberMode::RValue);
+        input.add(ComplexPath::new_empty(),VectorRegisters::new(0),0);
+        sigs.add(filter);
+        sigs.add(output);
+        sigs.add(input);
+        let regs : Vec<Register> = (0..3).map(|x| Register(x)).collect();
+        Ok(Box::new(AssignCommand(true,sigs,regs)))
+    }
+}
+
 pub struct AssignCommandType();
 
 impl CommandType for AssignCommandType {
@@ -132,6 +226,19 @@ impl CommandType for AssignCommandType {
         let regs = cbor_array(&value[2],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
         let sig = RegisterSignature::deserialize(&value[1],false,false)?;
         Ok(Box::new(AssignCommand(cbor_bool(&value[0])?,sig,regs)))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let unfiltered = TimeTrial::run(&UnfilteredAssignTimeTrial(),linker,config)?;
+        let shallow = TimeTrial::run(&ShallowAssignTimeTrial(),linker,config)?;
+        let filtered = TimeTrial::run(&FilteredAssignTimeTrial(1),linker,config)?;
+        let mut mul_regress = vec![];
+        for ramp in 1..6 {
+            let trial = TimeTrial::run(&FilteredAssignTimeTrial(ramp),linker,config)?;
+            mul_regress.push((ramp as f64,trial.0));
+        }
+        let mul_ramp = regress(&mul_regress)?.0/filtered.0;
+        Ok(cbor_make_map(&vec!["tu","tf","ts","tr"],vec![unfiltered.serialize(),filtered.serialize(),shallow.serialize(),CborValue::Float(mul_ramp)])?)
     }
 }
 
@@ -191,11 +298,11 @@ fn extend(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Regis
     for (z,b) in zz.iter_mut().zip(bb.iter()) {
         let depth = z.depth();
         if depth > 0 {
-            let offset = vector_push(z,b,1)?[0];
+            let offset = vector_push(z,b,1)?.0;
             vector_append(z.get_offset_mut(depth-1)?,b.get_offset(depth-1)?, |v| *v+offset);
             vector_append(z.get_length_mut(depth-1)?,b.get_length(depth-1)?, |v| *v);
         } else {
-            let data = append_data(z.take_data()?,b.get_data())?.0;
+            let data = append_data(z.take_data()?,b.get_data(),1)?.0;
             z.replace_data(data)?;
         }
         z.write(context)?;
@@ -286,5 +393,19 @@ mod test {
         for s in &strings {
             print!("{}\n",s);
         }
+    }
+
+    #[test]
+    fn assign_filtered() {
+        let config = xxx_test_config();
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
+        let mut lexer = Lexer::new(&resolver);
+        lexer.import("search:std/filterassign").expect("cannot load file");
+        let p = Parser::new(&mut lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
+        // XXX todo test it!
     }
 }

@@ -44,7 +44,7 @@ impl fmt::Display for ComplexRegisters {
 }
 
 impl ComplexRegisters {
-    fn new_empty(mode: MemberMode) -> ComplexRegisters {
+    pub fn new_empty(mode: MemberMode) -> ComplexRegisters {
         ComplexRegisters {
             mode,
             start: 0,
@@ -127,7 +127,7 @@ impl ComplexRegisters {
 
     pub fn get_mode(&self) -> MemberMode { self.mode }
 
-    fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters, vec_depth: usize) {
+    pub fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters, vec_depth: usize) {
         vr.add_start(self.start);
         self.start += vr.register_count();
         self.order.push(complex.clone());

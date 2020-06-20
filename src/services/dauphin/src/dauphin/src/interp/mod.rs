@@ -36,7 +36,7 @@ mod commandsets {
     pub use interpretsuite::CommandInterpretSuite;
     pub use compilesuite::CommandCompileSuite;
     pub use suitebuilder::{ LibrarySuiteBuilder, make_librarysuite_builder };
-    pub use timetrial::{ TimeTrialCommandType, TimeTrial };
+    pub use timetrial::{ TimeTrialCommandType, TimeTrial, regress };
 }
 mod values {
     pub mod registers;
@@ -55,7 +55,7 @@ pub use self::values::registers::RegisterFile;
 pub use self::stream::{ Stream, StreamContents, StreamFactory };
 pub use self::commandsets::{
     CommandSet, CommandSetId, CommandInterpretSuite, CommandCompileSuite, LibrarySuiteBuilder, Command, CommandSchema, CommandTrigger, CommandType, 
-    PreImageOutcome, make_librarysuite_builder, TimeTrialCommandType, TimeTrial
+    PreImageOutcome, make_librarysuite_builder, TimeTrialCommandType, TimeTrial, regress
 };
 pub use self::context::{ InterpContext, PayloadFactory };
 pub use self::interpret::{ InterpretInstance, interpreter };

@@ -20,7 +20,7 @@ use crate::interp::{ CompilerLink, InterpContext };
 use crate::interp::{ Command };
 use serde_cbor::Value as CborValue;
 
-fn regress(input: &[(f64,f64)]) -> Result<(f64,f64),String> {
+pub fn regress(input: &[(f64,f64)]) -> Result<(f64,f64),String> {
     if input.len() == 0 {
         return Err("no data to regress".to_string());
     }
@@ -44,31 +44,43 @@ fn regress(input: &[(f64,f64)]) -> Result<(f64,f64),String> {
     Ok((grad,icept))
 }
 
-fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Command>, linker: &CompilerLink, _config: &Config, t: i64, loops: i64) -> Result<f64,String> {
+fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Command>, linker: &CompilerLink, _config: &Config, t: i64, loops: i64, dry: bool) -> Result<f64,String> {
     let mut context = linker.new_context();
     command_type.global_prepare(&mut context,t);
     let start_time = SystemTime::now();
-    for _ in 0..loops {
-        command.execute(&mut context)?;
-        context.registers().commit();
+    if dry {
+        for _ in 0..loops {
+            command_type.local_prepare(&mut context,t);
+            context.registers().commit();
+        }
+    } else {
+        for _ in 0..loops {
+            command_type.local_prepare(&mut context,t);
+            context.registers().commit();
+            command.execute(&mut context)?;
+            context.registers().commit();
+        }
     }
     Ok(start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f64()*1000.)
 }
 
 fn generate_one_timing(command_type: &dyn TimeTrialCommandType, linker: &CompilerLink, config: &Config, param: i64) -> Result<f64,String> {
     let mut data = vec![];
+    let BLOCK = 100;  /* 1000! */
     for i in 0..5 {
         let command = command_type.timetrial_make_command(param,linker,config)?;
-        let t = run_time_trial(command_type,&command,linker,config,param,i*1000)?;
-        data.push((i as f64*1000.,t));
+        let run = run_time_trial(command_type,&command,linker,config,param,i*BLOCK,false)?;
+        let dry = run_time_trial(command_type,&command,linker,config,param,i*BLOCK,true)?;
+        data.push(((i*BLOCK) as f64,run-dry));
         if config.get_verbose() > 2 {
-            print!("loops={} time={:.2}ms\n",i*1000,t);
+            print!("loops={} time={:.2}ms\n",i*BLOCK,run-dry);
         }
     }
     Ok(regress(&data)?.0)
 }
 
-pub struct TimeTrial(f64,f64);
+#[derive(Debug)]
+pub struct TimeTrial(pub f64,pub f64);
 
 impl TimeTrial {
     pub fn run(command: &dyn TimeTrialCommandType, linker: &CompilerLink, config: &Config) -> Result<TimeTrial,String> {
@@ -86,7 +98,7 @@ impl TimeTrial {
         }
         let (m,c) = if data.len() > 1 { regress(&data)? } else { (0.,data[0].1) };
         if config.get_verbose() > 1 {
-            print!("trend m={:.6} c={:.6}\n",m,c);
+            print!("trend m={:.4} c={:.4}\n",m,c);
         }
         Ok(TimeTrial(m,c))
     }
@@ -98,6 +110,7 @@ impl TimeTrial {
 
 pub trait TimeTrialCommandType {
     fn timetrial_make_trials(&self) -> (i64,i64);
+    fn local_prepare(&self, _context: &mut InterpContext, _: i64) {}
     fn global_prepare(&self, _context: &mut InterpContext, _: i64) {}
 
     fn timetrial_make_command(&self, instance: i64, linker: &CompilerLink, config: &Config) -> Result<Box<dyn Command>,String>;

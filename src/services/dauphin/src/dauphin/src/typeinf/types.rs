@@ -81,7 +81,7 @@ pub enum ExpressionType {
 }
 
 impl ExpressionType {
-    pub(super) fn to_membertype(&self, catchall: &BaseType) -> MemberType {
+    pub fn to_membertype(&self, catchall: &BaseType) -> MemberType {
         match self {
             ExpressionType::Base(b) => MemberType::Base(b.clone()),
             ExpressionType::Vec(v) => MemberType::Vec(Box::new(v.to_membertype(catchall))),
