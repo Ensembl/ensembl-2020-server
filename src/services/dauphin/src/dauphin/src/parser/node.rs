@@ -56,7 +56,7 @@ impl Expression {
     pub fn alpha(&self, args: &[Identifier], exprs: &[Expression]) -> Expression {
         match self {
             Expression::Identifier(s) => alpha_id(s,args,exprs),
-            Expression::Operator(id,exprs) => Expression::Operator(id.clone(),exprs.iter().map(|x| x.alpha(args,exprs)).collect()),
+            Expression::Operator(id,x) => Expression::Operator(id.clone(),x.iter().map(|x| x.alpha(args,exprs)).collect()),
             Expression::Star(expr) => Expression::Star(Box::new(expr.alpha(args,exprs))),
             Expression::Square(expr) => Expression::Square(Box::new(expr.alpha(args,exprs))),
             Expression::Bracket(a,b) => Expression::Bracket(Box::new(a.alpha(args,exprs)),Box::new(b.alpha(args,exprs))),
@@ -64,8 +64,8 @@ impl Expression {
             Expression::Dot(a,s) => Expression::Dot(Box::new(a.alpha(args,exprs)),s.to_string()),
             Expression::Query(a,s) => Expression::Query(Box::new(a.alpha(args,exprs)),s.to_string()),
             Expression::Pling(a,s) => Expression::Pling(Box::new(a.alpha(args,exprs)),s.to_string()),
-            Expression::Vector(exprs) => Expression::Vector(exprs.iter().map(|x| x.alpha(args,exprs)).collect()),
-            Expression::CtorStruct(id,exprs,f) => Expression::CtorStruct(id.clone(),exprs.iter().map(|x| x.alpha(args,exprs)).collect(),f.to_vec()),
+            Expression::Vector(x) => Expression::Vector(x.iter().map(|x| x.alpha(args,exprs)).collect()),
+            Expression::CtorStruct(id,x,f) => Expression::CtorStruct(id.clone(),x.iter().map(|x| x.alpha(args,exprs)).collect(),f.to_vec()),
             Expression::CtorEnum(id,f,a) => Expression::CtorEnum(id.clone(),f.to_string(),Box::new(a.alpha(args,exprs))),
             x => x.clone()
         }
@@ -167,7 +167,7 @@ pub enum ParserStatement {
     Use(String),
     Module(String),
     Inline(String,IdentifierPattern,InlineMode,f64),
-    ExprMacro(IdentifierPattern),
+    ExprMacro(IdentifierPattern,Vec<IdentifierPattern>,Expression),
     StmtMacro(IdentifierPattern,Vec<IdentifierPattern>,Vec<Statement>),
     FuncDecl(IdentifierPattern,SignatureConstraint),
     ProcDecl(IdentifierPattern,SignatureConstraint),

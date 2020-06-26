@@ -20,16 +20,18 @@ use crate::model::{ DefStore, IdentifierPattern };
 use crate::typeinf::{ ArgumentExpressionConstraint, SignatureConstraint, SignatureMemberConstraint, MemberType };
 use crate::typeinf::BaseType as BaseType2;
 use super::lexutil::{ get_other, get_identifier };
-use super::parseexpr::parse_full_identifier;
+use super::parseexpr::{ parse_full_identifier, parse_expr };
 use super::parsestmt::{ parse_statement };
 
-pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<Vec<ParserStatement>,ParseError> {
+pub(in super) fn parse_exprdecl(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let identifier = parse_full_identifier(lexer,None)?;
-    Ok(vec![ParserStatement::ExprMacro(identifier)])
+    let args = parse_args(lexer)?;
+    let expr = parse_expr(lexer,defstore,false)?;
+    Ok(vec![ParserStatement::ExprMacro(identifier,args,expr)])
 }
 
-fn parse_args(lexer: &mut Lexer, _defstore: &DefStore) -> Result<Vec<IdentifierPattern>,ParseError> {
+fn parse_args(lexer: &mut Lexer) -> Result<Vec<IdentifierPattern>,ParseError> {
     let mut out = vec![];
     get_other(lexer,"(")?;
     loop {
@@ -98,7 +100,7 @@ fn parse_block(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<Statement>,
 pub(in super) fn parse_stmtdecl(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let identifier = parse_full_identifier(lexer,None)?;
-    let args = parse_args(lexer,defstore)?;
+    let args = parse_args(lexer)?;
     let block = parse_block(lexer,defstore)?;
     Ok(vec![ParserStatement::StmtMacro(identifier,args,block)])
 }

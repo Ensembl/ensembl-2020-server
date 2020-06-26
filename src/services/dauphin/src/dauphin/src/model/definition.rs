@@ -52,15 +52,21 @@ impl Inline {
 
 #[derive(Debug)]
 pub struct ExprMacro {
-    identifier: Identifier
+    identifier: Identifier,
+    args: Vec<Identifier>,
+    expr: Expression
 }
 
 impl ExprMacro {
-    pub fn new(identifier: &Identifier) -> ExprMacro {
-        ExprMacro { identifier: identifier.clone() }
+    pub fn new(identifier: &Identifier, args: Vec<Identifier>, expr: Expression) -> ExprMacro {
+        ExprMacro { identifier: identifier.clone(), args, expr }
     }
 
     pub fn identifier(&self) -> &Identifier { &self.identifier }
+
+    pub fn expression(&self, exprs: &[Expression]) -> Expression {
+        self.expr.alpha(&self.args,exprs)
+    }
 }
 
 #[derive(Debug)]

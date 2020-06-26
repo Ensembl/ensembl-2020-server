@@ -1,20 +1,29 @@
 proc assign(out _A, _A);
 inline ":=" assign left 14;
 proc incr(out _A, _A);
-inline "+=" incr left 14;
+inline "~=" incr left 14;
+
+func plus(number,number) becomes number;
+inline "+" plus left 4;
+
 func eq(number,number) becomes boolean;
 inline "==" eq left 10;
 
 x := [[1,2,3],[4,5,6],[7,8,9]];
 z := 0;
 
+expr one() 1;
+expr one_more(x) x+one();
+expr eq_one(x) x==1;
+
 stmt more(x) {
-    x += 1;
+    x ~= one_more(0);
 }
 
 stmt increase(x,y) {
-    x[@==1] += 1;
+    x[eq_one(@)] ~= 1;
     more(y);
+    y := plus(y,0);
 }
 
 increase(x[@==0],z);
