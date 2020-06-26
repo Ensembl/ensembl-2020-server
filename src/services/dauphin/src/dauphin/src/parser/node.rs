@@ -43,6 +43,35 @@ pub enum Expression {
     At
 }
 
+fn alpha_id(id: &str, args: &[Identifier], exprs: &[Expression]) -> Expression {
+    for (i,arg) in args.iter().enumerate() {
+        if arg.name() == id {
+            return exprs[i].clone();
+        }
+    }
+    Expression::Identifier(id.to_string())
+}
+
+impl Expression {
+    pub fn alpha(&self, args: &[Identifier], exprs: &[Expression]) -> Expression {
+        match self {
+            Expression::Identifier(s) => alpha_id(s,args,exprs),
+            Expression::Operator(id,exprs) => Expression::Operator(id.clone(),exprs.iter().map(|x| x.alpha(args,exprs)).collect()),
+            Expression::Star(expr) => Expression::Star(Box::new(expr.alpha(args,exprs))),
+            Expression::Square(expr) => Expression::Square(Box::new(expr.alpha(args,exprs))),
+            Expression::Bracket(a,b) => Expression::Bracket(Box::new(a.alpha(args,exprs)),Box::new(b.alpha(args,exprs))),
+            Expression::Filter(a,b) => Expression::Filter(Box::new(a.alpha(args,exprs)),Box::new(b.alpha(args,exprs))),
+            Expression::Dot(a,s) => Expression::Dot(Box::new(a.alpha(args,exprs)),s.to_string()),
+            Expression::Query(a,s) => Expression::Query(Box::new(a.alpha(args,exprs)),s.to_string()),
+            Expression::Pling(a,s) => Expression::Pling(Box::new(a.alpha(args,exprs)),s.to_string()),
+            Expression::Vector(exprs) => Expression::Vector(exprs.iter().map(|x| x.alpha(args,exprs)).collect()),
+            Expression::CtorStruct(id,exprs,f) => Expression::CtorStruct(id.clone(),exprs.iter().map(|x| x.alpha(args,exprs)).collect(),f.to_vec()),
+            Expression::CtorEnum(id,f,a) => Expression::CtorEnum(id.clone(),f.to_string(),Box::new(a.alpha(args,exprs))),
+            x => x.clone()
+        }
+    }
+}
+
 fn write_csl(f: &mut fmt::Formatter<'_>, exprs: &Vec<Expression>) -> fmt::Result {
     for (i,sub) in exprs.iter().enumerate() {
         if i > 0 {
@@ -110,6 +139,13 @@ impl fmt::Debug for Expression {
 
 #[derive(PartialEq,Clone)]
 pub struct Statement(pub Identifier,pub Vec<Expression>,pub String,pub u32);
+
+impl Statement {
+    pub fn alpha(&self, args: &[Identifier], exprs: &[Expression]) -> Statement {
+        let out = self.1.iter().map(|x| x.alpha(args,exprs)).collect();
+        Statement(self.0.clone(),out,self.2.clone(),self.3.clone())
+    }
+}
 
 impl fmt::Debug for Statement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

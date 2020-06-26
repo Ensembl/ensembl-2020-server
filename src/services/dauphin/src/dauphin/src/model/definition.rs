@@ -16,7 +16,7 @@
 
 use crate::typeinf::SignatureConstraint;
 use crate::model::{ Identifier, IdentifierUse };
-use crate::parser::Statement;
+use crate::parser::{ Expression, Statement };
 
 #[derive(Debug,PartialEq,Clone,Copy)]
 pub enum InlineMode {
@@ -76,7 +76,10 @@ impl StmtMacro {
     }
 
     pub fn identifier(&self) -> &Identifier { &self.identifier }
-    pub fn block(&self) -> &Vec<Statement> { &self.block }
+
+    pub fn block(&self, exprs: &[Expression]) -> Vec<Statement> {
+        self.block.iter().map(|x| x.alpha(&self.args,exprs)).collect()
+    }
 }
 
 #[derive(Debug)]

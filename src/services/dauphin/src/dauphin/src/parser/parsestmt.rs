@@ -15,7 +15,7 @@
  */
 
 use crate::lexer::{ Lexer, Token };
-use super::node::{ Statement, ParserStatement, ParseError };
+use super::node::{ Statement, ParserStatement, ParseError, Expression };
 use super::lexutil::{ get_string, get_other, id_not_reserved, get_identifier, get_number, get_operator };
 use crate::model::{ DefStore, InlineMode, StmtMacro };
 use super::parsedecl::{ 
@@ -64,9 +64,9 @@ fn parse_inline(lexer: &mut Lexer) -> Result<Vec<ParserStatement>,ParseError> {
     Ok(vec![ParserStatement::Inline(symbol,pattern,mode,prio)])
 }
 
-fn apply_macro(s: &StmtMacro, lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserStatement>,ParseError> {
+fn apply_macro(s: &StmtMacro, exprs: &[Expression], lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserStatement>,ParseError> {
     print!("73 {:?}\n",s);
-    Ok(s.block().iter().map(|x| ParserStatement::Regular(x.clone())).collect())
+    Ok(s.block(exprs).iter().map(|x| ParserStatement::Regular(x.clone())).collect())
 }
 
 fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserStatement>,ParseError> {
@@ -76,7 +76,7 @@ fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserSta
     let (file,line,_) = lexer.position();
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
     match defstore.get_stmt_id(&identifier.0) {
-        Ok(s) => apply_macro(s,lexer,defstore),
+        Ok(s) => apply_macro(s,&exprs,lexer,defstore),
         Err(_) => {
             Ok(vec![ParserStatement::Regular(Statement(identifier.0,exprs,file.to_string(),line))])
         }

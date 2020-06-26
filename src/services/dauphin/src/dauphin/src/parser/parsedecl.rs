@@ -34,7 +34,11 @@ fn parse_args(lexer: &mut Lexer, _defstore: &DefStore) -> Result<Vec<IdentifierP
     get_other(lexer,"(")?;
     loop {
         if lexer.peek(None,1)[0] == Token::Other(')') { lexer.get(); break; }
-        out.push(parse_full_identifier(lexer,None)?);
+        let id = parse_full_identifier(lexer,None)?;
+        if id.0.is_some() {
+            return Err(ParseError::new("module illegal in argument specifier",lexer));
+        }
+        out.push(id);
         match lexer.get() {
             Token::Other(',') => (),
             Token::Other(')') => break,

@@ -1,15 +1,20 @@
 proc assign(out _A, _A);
 inline ":=" assign left 14;
 proc incr(out _A, _A);
-inline "+=" assign left 14;
+inline "+=" incr left 14;
 func eq(number,number) becomes boolean;
 inline "==" eq left 10;
 
 x := [[1,2,3],[4,5,6],[7,8,9]];
+z := 0;
+
+stmt more(x) {
+    x += 1;
+}
 
 stmt increase(x,y) {
     x[@==1] += 1;
-    y += 1;
+    more(y);
 }
 
-increase(x[@==0]);
+increase(x[@==0],z);
