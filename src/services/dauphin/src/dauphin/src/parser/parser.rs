@@ -50,40 +50,48 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn recover_parse_statement(&mut self) -> Result<ParserStatement,ParseError> {
-        loop {
-            let s = parse_statement(&mut self.lexer,&self.defstore,false);
-            if s.is_err() {
-                self.ffwd_error();
-                return Err(s.err().unwrap());
-            }
-            if let Ok(Some(stmt)) = s {
-                return Ok(stmt)
+    fn recover_parse_statement(&mut self) -> Result<Vec<ParserStatement>,ParseError> {
+        let s = parse_statement(&mut self.lexer,&self.defstore,false);
+        if s.is_err() {
+            self.ffwd_error();
+            return Err(s.err().unwrap());
+        }
+        s
+    }
+
+    fn run_declare(&mut self, stmt: &ParserStatement) -> Result<bool,ParseError> {
+        declare(&stmt,&mut self.lexer,&mut self.defstore)
+    }
+
+    fn get_non_declare(&mut self) -> Result<Vec<ParserStatement>,ParseError> {
+        let mut out = vec![];
+        for stmt in &self.recover_parse_statement()? {
+            if !self.run_declare(stmt)? {
+                out.push(stmt.clone());
             }
         }
-    }
-
-    fn run_declare(&mut self, stmt: ParserStatement) -> Result<Option<ParserStatement>,ParseError> {
-        declare(&stmt,&mut self.lexer,&mut self.defstore).map(|done| if done { None } else { Some(stmt) })
-    }
-
-    fn get_non_declare(&mut self) -> Result<Option<ParserStatement>,ParseError> {
-        self.recover_parse_statement().and_then(|stmt| self.run_declare(stmt))
+        Ok(out)
     }
 
     pub fn parse(mut self) -> Result<(Vec<Statement>,DefStore),Vec<ParseError>> {
         loop {
             match self.get_non_declare() {
-                Ok(Some(ParserStatement::EndOfParse)) => {
-                    if self.errors.len() > 0 {
-                        return Err(self.errors)
-                    } else {
-                        return Ok((self.stmts,self.defstore))
+                Ok(mut stmts) => {
+                    for stmt in stmts.drain(..) {
+                        match stmt {
+                            ParserStatement::EndOfParse => {
+                                if self.errors.len() > 0 {
+                                    return Err(self.errors)
+                                } else {
+                                    return Ok((self.stmts,self.defstore))
+                                }
+                            },
+                            ParserStatement::Regular(stmt) =>  self.stmts.push(stmt),
+                            _ => (),
+                        }
                     }
                 },
-                Ok(Some(ParserStatement::Regular(stmt))) =>  self.stmts.push(stmt),
-                Err(error) => self.errors.push(error),
-                _ => (),
+                Err(error) => self.errors.push(error)
             }
         }
     }
@@ -100,9 +108,11 @@ mod test {
     fn last_statement(p: &mut Parser) -> Result<ParserStatement,ParseError> {
         let mut prev = Err(ParseError::new("unexpected EOF",&mut p.lexer));
         loop {
-            match p.recover_parse_statement()? {
-                ParserStatement::EndOfParse => break,
-                x => prev = Ok(x)
+            let mut stmts = p.recover_parse_statement()?;
+            match stmts.pop() {
+                Some(ParserStatement::EndOfParse) => break,
+                Some(x) => prev = Ok(x),
+                None => ()
             }
         }
         return prev;

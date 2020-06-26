@@ -125,7 +125,7 @@ impl fmt::Debug for Statement {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Clone)]
 pub enum ParserStatement {
     Import(String),
     Use(String),
@@ -138,6 +138,7 @@ pub enum ParserStatement {
     Regular(Statement),
     StructDef(IdentifierPattern,Vec<MemberType>,Vec<String>),
     EnumDef(IdentifierPattern,Vec<MemberType>,Vec<String>),
+    EndOfBlock,
     EndOfParse
 }
 

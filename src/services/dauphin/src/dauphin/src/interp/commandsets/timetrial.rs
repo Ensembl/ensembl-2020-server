@@ -66,7 +66,7 @@ fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Com
 
 fn generate_one_timing(command_type: &dyn TimeTrialCommandType, linker: &CompilerLink, config: &Config, param: i64) -> Result<f64,String> {
     let mut data = vec![];
-    let BLOCK = 100;  /* 1000! */
+    let BLOCK = 10;  /* 1000! */
     for i in 0..5 {
         let command = command_type.timetrial_make_command(param,linker,config)?;
         let run = run_time_trial(command_type,&command,linker,config,param,i*BLOCK,false)?;

@@ -16,20 +16,20 @@
 
 use crate::lexer::{ Lexer, Token };
 use super::node::{ ParserStatement, ParseError, Statement };
-use crate::model::{ DefStore, IdentifierPattern, Identifier };
+use crate::model::{ DefStore, IdentifierPattern };
 use crate::typeinf::{ ArgumentExpressionConstraint, SignatureConstraint, SignatureMemberConstraint, MemberType };
 use crate::typeinf::BaseType as BaseType2;
 use super::lexutil::{ get_other, get_identifier };
 use super::parseexpr::parse_full_identifier;
 use super::parsestmt::{ parse_statement };
 
-pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let identifier = parse_full_identifier(lexer,None)?;
-    Ok(ParserStatement::ExprMacro(identifier))
+    Ok(vec![ParserStatement::ExprMacro(identifier)])
 }
 
-fn parse_args(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<IdentifierPattern>,ParseError> {
+fn parse_args(lexer: &mut Lexer, _defstore: &DefStore) -> Result<Vec<IdentifierPattern>,ParseError> {
     let mut out = vec![];
     get_other(lexer,"(")?;
     loop {
@@ -55,14 +55,22 @@ fn ffwd_error(lexer: &mut Lexer) {
     }
 }
 
-fn parse_block_statement(lexer: &mut Lexer, defstore: &DefStore) -> Result<Option<Statement>,ParseError> {
-    let s = parse_statement(lexer,defstore,true);
-    match s {
-        Ok(None) => Ok(None),
-        Ok(Some(ParserStatement::Regular(r))) => Ok(Some(r)),
-        Ok(Some(_)) => {
-            ffwd_error(lexer);
-            Err(ParseError::new("Only regular statements allowed in macros",lexer))
+fn parse_block_statement(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<Statement>,bool),ParseError> {
+    let mut eof_seen = false;
+    match parse_statement(lexer,defstore,true) {
+        Ok(mut stmts) => {
+            let mut out = vec![];
+            for stmt in stmts.drain(..) {
+                match stmt {
+                    ParserStatement::Regular(r) => out.push(r),
+                    ParserStatement::EndOfBlock => { eof_seen = true; },
+                    _ => {
+                        ffwd_error(lexer);
+                        return Err(ParseError::new("Only regular statements allowed in macros",lexer));
+                    }
+                }            
+            }
+            Ok((out,eof_seen))
         },
         Err(s) => {
             ffwd_error(lexer);
@@ -75,24 +83,23 @@ fn parse_block(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<Statement>,
     let mut out = vec![];
     get_other(lexer,"{")?;
     loop {
-        match parse_block_statement(lexer,defstore)? {
-            Some(s) => out.push(s),
-            None => break
-        }
+        let (mut stmts,eof_seen) = parse_block_statement(lexer,defstore)?;
+        out.append(&mut stmts);
+        if eof_seen { break; }
     }
     get_other(lexer,"}")?;
     Ok(out)
 }
 
-pub(in super) fn parse_stmtdecl(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_stmtdecl(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let identifier = parse_full_identifier(lexer,None)?;
     let args = parse_args(lexer,defstore)?;
     let block = parse_block(lexer,defstore)?;
-    Ok(ParserStatement::StmtMacro(identifier,args,block))
+    Ok(vec![ParserStatement::StmtMacro(identifier,args,block)])
 }
 
-pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let mut members = Vec::new();
     let identifier = parse_full_identifier(lexer,None)?;
@@ -110,10 +117,10 @@ pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<Pa
         return Err(ParseError::new("missing 'becomes'",lexer));
     }
     members.insert(0,SignatureMemberConstraint::RValue(parse_typesigexpr(lexer,defstore)?));
-    Ok(ParserStatement::FuncDecl(identifier,SignatureConstraint::new(&members)))
+    Ok(vec![ParserStatement::FuncDecl(identifier,SignatureConstraint::new(&members))])
 }
 
-pub(in super) fn parse_proc(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_proc(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let identifier = parse_full_identifier(lexer,None)?;
     let mut members = Vec::new();
@@ -128,7 +135,7 @@ pub(in super) fn parse_proc(lexer: &mut Lexer, defstore: &DefStore) -> Result<Pa
             _ => return Err(ParseError::new("Unexpected token (expected ) or ,)",lexer))
         };
     }
-    Ok(ParserStatement::ProcDecl(identifier,SignatureConstraint::new(&members)))
+    Ok(vec![ParserStatement::ProcDecl(identifier,SignatureConstraint::new(&members))])
 }
 
 pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<SignatureMemberConstraint,ParseError> {
@@ -277,18 +284,18 @@ fn parse_struct_contents(lexer: &mut Lexer, defstore: &DefStore) -> Result<(Vec<
     })
 }
 
-pub(in super) fn parse_struct(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_struct(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let identifier = parse_full_identifier(lexer,None)?;
     get_other(lexer, "{")?;
     let (member_types,names) = parse_struct_contents(lexer,defstore)?;
-    Ok(ParserStatement::StructDef(identifier,member_types,names))
+    Ok(vec![ParserStatement::StructDef(identifier,member_types,names)])
 }
 
-pub(in super) fn parse_enum(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
+pub(in super) fn parse_enum(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let identifier = parse_full_identifier(lexer,None)?;
     get_other(lexer, "{")?;
     let (member_types,names) = parse_struct_enum_full(lexer,defstore)?;
-    Ok(ParserStatement::EnumDef(identifier,member_types,names))
+    Ok(vec![ParserStatement::EnumDef(identifier,member_types,names)])
 }

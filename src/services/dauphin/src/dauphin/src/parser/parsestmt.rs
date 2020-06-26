@@ -17,14 +17,14 @@
 use crate::lexer::{ Lexer, Token };
 use super::node::{ Statement, ParserStatement, ParseError };
 use super::lexutil::{ get_string, get_other, id_not_reserved, get_identifier, get_number, get_operator };
-use crate::model::{ DefStore, InlineMode };
+use crate::model::{ DefStore, InlineMode, StmtMacro };
 use super::parsedecl::{ 
     parse_proc, parse_exprdecl, parse_stmtdecl, parse_func, parse_struct,
     parse_enum
 };
 use super::parseexpr::{ parse_expr, parse_exprlist, parse_full_identifier, peek_full_identifier };
 
-fn parse_regular(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
+fn parse_regular(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     if let Some(pattern) = peek_full_identifier(lexer,None) {
         let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
         if defstore.stmt_like(&identifier.0,lexer).unwrap_or(false) {
@@ -34,22 +34,22 @@ fn parse_regular(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStateme
     parse_inlinestmt(lexer,defstore)
 }
 
-fn parse_import(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+fn parse_import(lexer: &mut Lexer) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
-    Ok(ParserStatement::Import(get_string(lexer)?))
+    Ok(vec![ParserStatement::Import(get_string(lexer)?)])
 }
 
-fn parse_use(lexer: &mut Lexer, _defstore: &DefStore) -> Result<ParserStatement,ParseError> {
+fn parse_use(lexer: &mut Lexer, _defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
-    Ok(ParserStatement::Use(get_string(lexer)?))
+    Ok(vec![ParserStatement::Use(get_string(lexer)?)])
 }
 
-fn parse_module(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+fn parse_module(lexer: &mut Lexer) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
-    Ok(ParserStatement::Module(get_string(lexer)?))
+    Ok(vec![ParserStatement::Module(get_string(lexer)?)])
 }
 
-fn parse_inline(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+fn parse_inline(lexer: &mut Lexer) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
     let symbol = get_string(lexer)?;
     let pattern = parse_full_identifier(lexer,None)?;
@@ -61,19 +61,31 @@ fn parse_inline(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
         _ => Err(ParseError::new("Bad oper mode, expected left, right, prefix, or suffix",lexer))
     }?;
     let prio = get_number(lexer)?;
-    Ok(ParserStatement::Inline(symbol,pattern,mode,prio))
+    Ok(vec![ParserStatement::Inline(symbol,pattern,mode,prio)])
 }
 
-fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
+/*
+fn apply_macro(s: &StmtMacro, lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
+    print!("73 {:?}\n",s);
+    Ok(s.block)
+}
+*/
+
+fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserStatement>,ParseError> {
     let pattern = parse_full_identifier(lexer,None)?;
     get_other(lexer,"(")?;
     let exprs = parse_exprlist(lexer,defstore,')',false)?;
     let (file,line,_) = lexer.position();
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-    Ok(ParserStatement::Regular(Statement(identifier.0,exprs,file.to_string(),line)))
+    //match defstore.get_stmt_id(&identifier.0) {
+      //  Ok(s) => apply_macro(s,lexer,defstore),
+        //Err(_) => {
+            Ok(vec![ParserStatement::Regular(Statement(identifier.0,exprs,file.to_string(),line))])
+        //}
+    //}    
 } 
 
-fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserStatement,ParseError> {
+fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserStatement>,ParseError> {
     let left = parse_expr(lexer,defstore,false)?;
     let op = get_operator(lexer,false)?;
     let right = parse_expr(lexer,defstore,false)?;
@@ -82,10 +94,10 @@ fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserState
         Err(ParseError::new("Got inline expr, expected inline stmt",lexer))?;
     }
     let (file,line,_) = lexer.position();
-    Ok(ParserStatement::Regular(Statement(inline.identifier().0.clone(),vec![left,right],file.to_string(),line)))
+    Ok(vec![ParserStatement::Regular(Statement(inline.identifier().0.clone(),vec![left,right],file.to_string(),line))])
 }
 
-pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore, in_defn: bool) -> Result<Option<ParserStatement>,ParseError> {
+pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore, in_defn: bool) -> Result<Vec<ParserStatement>,ParseError> {
     let token = &lexer.peek(None,1)[0];
     match token {
         Token::Identifier(id) => {
@@ -109,15 +121,15 @@ pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore, in_defn
             if need_semicolon {
                 get_other(lexer,";")?;
             }
-            Ok(Some(out))
+            Ok(out)
         },
-        Token::EndOfFile => { lexer.get(); Ok(None) },
-        Token::Other('}') if in_defn => { Ok(None) },
-        Token::EndOfLex => Ok(Some(ParserStatement::EndOfParse)),
+        Token::EndOfFile => { lexer.get(); Ok(vec![]) },
+        Token::Other('}') if in_defn => { Ok(vec![ParserStatement::EndOfBlock]) },
+        Token::EndOfLex => Ok(vec![ParserStatement::EndOfParse]),
         _ => {
             let out = parse_regular(lexer,defstore)?;
             get_other(lexer,";")?;
-            Ok(Some(out))
+            Ok(out)
         }            
     }
 }
