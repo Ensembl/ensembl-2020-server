@@ -76,6 +76,7 @@ impl StmtMacro {
     }
 
     pub fn identifier(&self) -> &Identifier { &self.identifier }
+    pub fn block(&self) -> &Vec<Statement> { &self.block }
 }
 
 #[derive(Debug)]
