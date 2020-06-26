@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use super::node::{ ParserStatement, ParseError };
+use super::node::{ ParserStatement, ParseError, Statement };
 use super::lexutil::not_reserved;
 use crate::model::{
     InlineMode, Inline, DefStore, ExprMacro, StmtMacro, FuncDecl, ProcDecl,
@@ -54,10 +54,14 @@ fn run_expr(pattern: &IdentifierPattern, defstore: &mut DefStore, lexer: &mut Le
     Ok(())
 }
 
-fn run_stmt(pattern: &IdentifierPattern, defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
+fn run_stmt(pattern: &IdentifierPattern, args_in: &[IdentifierPattern], block: &[Statement], defstore: &mut DefStore, lexer: &mut Lexer) -> Result<(),ParseError> {
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
+    let mut args = vec![];
+    for pattern in args_in.iter() {
+        args.push(defstore.pattern_to_identifier(lexer,&pattern,false).map_err(|e| ParseError::new(&e.to_string(),lexer))?.0);
+    }
     not_reserved(&identifier.0,lexer)?;
-    defstore.add_stmt(StmtMacro::new(&identifier.0),lexer)?;
+    defstore.add_stmt(StmtMacro::new(&identifier.0,args,block.to_vec()),lexer)?;
     Ok(())
 }
 
@@ -104,8 +108,8 @@ pub fn declare(stmt: &ParserStatement, lexer: &mut Lexer, defstore: &mut DefStor
             run_inline(&symbol,&pattern,mode,*prio,lexer,defstore).map(|_| true),
         ParserStatement::ExprMacro(pattern) =>
             run_expr(&pattern,defstore,lexer).map(|_| true),
-        ParserStatement::StmtMacro(pattern) =>
-            run_stmt(&pattern,defstore,lexer).map(|_| true),
+        ParserStatement::StmtMacro(pattern,args,block) =>
+            run_stmt(&pattern,args,block,defstore,lexer).map(|_| true),
         ParserStatement::ProcDecl(pattern,signature) =>
             run_proc(pattern,&signature,defstore,lexer).map(|_| true),
         ParserStatement::FuncDecl(pattern,signature) =>

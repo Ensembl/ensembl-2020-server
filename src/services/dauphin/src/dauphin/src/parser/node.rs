@@ -21,7 +21,7 @@ use crate::model::{ InlineMode, IdentifierPattern, Identifier };
 use crate::lexer::Lexer;
 use crate::typeinf::{ MemberType, SignatureConstraint };
 
-#[derive(PartialEq)]
+#[derive(PartialEq,Clone)]
 pub enum Expression {
     Identifier(String),
     Number(f64),
@@ -108,7 +108,7 @@ impl fmt::Debug for Expression {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq,Clone)]
 pub struct Statement(pub Identifier,pub Vec<Expression>,pub String,pub u32);
 
 impl fmt::Debug for Statement {
@@ -132,7 +132,7 @@ pub enum ParserStatement {
     Module(String),
     Inline(String,IdentifierPattern,InlineMode,f64),
     ExprMacro(IdentifierPattern),
-    StmtMacro(IdentifierPattern),
+    StmtMacro(IdentifierPattern,Vec<IdentifierPattern>,Vec<Statement>),
     FuncDecl(IdentifierPattern,SignatureConstraint),
     ProcDecl(IdentifierPattern,SignatureConstraint),
     Regular(Statement),

@@ -16,6 +16,7 @@
 
 use crate::typeinf::SignatureConstraint;
 use crate::model::{ Identifier, IdentifierUse };
+use crate::parser::Statement;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
 pub enum InlineMode {
@@ -64,12 +65,14 @@ impl ExprMacro {
 
 #[derive(Debug)]
 pub struct StmtMacro {
-    identifier: Identifier
+    identifier: Identifier,
+    args: Vec<Identifier>,
+    block: Vec<Statement>
 }
 
 impl StmtMacro {
-    pub fn new(identifier: &Identifier) -> StmtMacro {
-        StmtMacro { identifier: identifier.clone() }
+    pub fn new(identifier: &Identifier, args: Vec<Identifier>, block: Vec<Statement>) -> StmtMacro {
+        StmtMacro { identifier: identifier.clone(), args, block }
     }
 
     pub fn identifier(&self) -> &Identifier { &self.identifier }

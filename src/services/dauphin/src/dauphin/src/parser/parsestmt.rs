@@ -85,16 +85,17 @@ fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<ParserState
     Ok(ParserStatement::Regular(Statement(inline.identifier().0.clone(),vec![left,right],file.to_string(),line)))
 }
 
-pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore) -> Result<Option<ParserStatement>,ParseError> {
+pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore, in_defn: bool) -> Result<Option<ParserStatement>,ParseError> {
     let token = &lexer.peek(None,1)[0];
     match token {
         Token::Identifier(id) => {
+            let mut need_semicolon = true;
             let out = match &id[..] {
                 "module" => parse_module(lexer),
                 "import" => parse_import(lexer),
                 "inline" => parse_inline(lexer),
                 "expr" => parse_exprdecl(lexer),
-                "stmt" => parse_stmtdecl(lexer),
+                "stmt" => { need_semicolon = false; parse_stmtdecl(lexer,defstore) },
                 "func" => parse_func(lexer,defstore),
                 "proc" => parse_proc(lexer,defstore),
                 "struct" => parse_struct(lexer,defstore),
@@ -105,10 +106,13 @@ pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore) -> Resu
                     parse_regular(lexer,defstore)
                 }
             }?;
-            get_other(lexer,";")?;
+            if need_semicolon {
+                get_other(lexer,";")?;
+            }
             Ok(Some(out))
         },
         Token::EndOfFile => { lexer.get(); Ok(None) },
+        Token::Other('}') if in_defn => { Ok(None) },
         Token::EndOfLex => Ok(Some(ParserStatement::EndOfParse)),
         _ => {
             let out = parse_regular(lexer,defstore)?;

@@ -15,12 +15,13 @@
  */
 
 use crate::lexer::{ Lexer, Token };
-use super::node::{ ParserStatement, ParseError };
-use crate::model::{ DefStore, IdentifierPattern };
+use super::node::{ ParserStatement, ParseError, Statement };
+use crate::model::{ DefStore, IdentifierPattern, Identifier };
 use crate::typeinf::{ ArgumentExpressionConstraint, SignatureConstraint, SignatureMemberConstraint, MemberType };
 use crate::typeinf::BaseType as BaseType2;
 use super::lexutil::{ get_other, get_identifier };
 use super::parseexpr::parse_full_identifier;
+use super::parsestmt::{ parse_statement };
 
 pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
     lexer.get();
@@ -28,10 +29,67 @@ pub(in super) fn parse_exprdecl(lexer: &mut Lexer) -> Result<ParserStatement,Par
     Ok(ParserStatement::ExprMacro(identifier))
 }
 
-pub(in super) fn parse_stmtdecl(lexer: &mut Lexer) -> Result<ParserStatement,ParseError> {
+fn parse_args(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<IdentifierPattern>,ParseError> {
+    let mut out = vec![];
+    get_other(lexer,"(")?;
+    loop {
+        if lexer.peek(None,1)[0] == Token::Other(')') { lexer.get(); break; }
+        out.push(parse_full_identifier(lexer,None)?);
+        match lexer.get() {
+            Token::Other(',') => (),
+            Token::Other(')') => break,
+            _ => return Err(ParseError::new("Unexpected token (expected ) or ,)",lexer))
+        };
+    }
+    Ok(out)
+}
+
+/* TODO dedup these from parser class */
+fn ffwd_error(lexer: &mut Lexer) {
+    loop {
+        match lexer.get() {
+            Token::Other(';') => return,
+            Token::EndOfLex => return,
+            _ => ()
+        }
+    }
+}
+
+fn parse_block_statement(lexer: &mut Lexer, defstore: &DefStore) -> Result<Option<Statement>,ParseError> {
+    let s = parse_statement(lexer,defstore,true);
+    match s {
+        Ok(None) => Ok(None),
+        Ok(Some(ParserStatement::Regular(r))) => Ok(Some(r)),
+        Ok(Some(_)) => {
+            ffwd_error(lexer);
+            Err(ParseError::new("Only regular statements allowed in macros",lexer))
+        },
+        Err(s) => {
+            ffwd_error(lexer);
+            Err(s)
+        }
+    }
+}
+
+fn parse_block(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<Statement>,ParseError> {
+    let mut out = vec![];
+    get_other(lexer,"{")?;
+    loop {
+        match parse_block_statement(lexer,defstore)? {
+            Some(s) => out.push(s),
+            None => break
+        }
+    }
+    get_other(lexer,"}")?;
+    Ok(out)
+}
+
+pub(in super) fn parse_stmtdecl(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
     lexer.get();
     let identifier = parse_full_identifier(lexer,None)?;
-    Ok(ParserStatement::StmtMacro(identifier))
+    let args = parse_args(lexer,defstore)?;
+    let block = parse_block(lexer,defstore)?;
+    Ok(ParserStatement::StmtMacro(identifier,args,block))
 }
 
 pub(in super) fn parse_func(lexer: &mut Lexer, defstore: &DefStore) -> Result<ParserStatement,ParseError> {
