@@ -41,16 +41,6 @@ impl InlineTokensLen {
         self.set.contains(op)
     }
 
-    fn is_prefix_of(&self, op: &str) -> bool {
-        self.set.iter().filter(|x| {
-            if x as &str == op {
-                false
-            } else {
-                op.starts_with(x as &str) || x.starts_with(op)
-            }
-        }).next().is_some()
-    }
-
     fn add(&mut self, op: &str) {
         self.set.insert(op.to_string());
     }
@@ -89,20 +79,6 @@ impl InlineTokensSection {
         } else {
             false
         }
-    }
-
-    pub fn is_prefix_of(&self, op: &str) -> bool {
-        if let Some(start) = op.chars().next() {
-            if let Some(lens) = self.starts.get(&start) {
-                for len in lens {
-                    let len = *len as usize;
-                    if self.lens.get(&len).unwrap().is_prefix_of(op) {
-                        return true;
-                    }
-                }
-            }
-        }
-        false
     }
 
     pub fn add(&mut self, op: &str) -> Result<(),String> {
@@ -145,10 +121,6 @@ impl InlineTokens {
 
     pub fn equal(&self, op: &str, prefix: bool) -> bool {
         self.part(prefix).equal(op)
-    }
-
-    pub(in super) fn is_prefix_of(&self, op: &str) -> bool {
-        self.part(false).is_prefix_of(op) || self.part(true).is_prefix_of(op)
     }
 
     pub fn add(&mut self, op: &str, prefix: bool) -> Result<(),String> {

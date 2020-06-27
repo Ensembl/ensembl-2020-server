@@ -115,20 +115,19 @@ fn peek_enum_ctor(lexer: &mut Lexer) -> bool {
 fn parse_expr_use(lexer: &mut Lexer, defstore: &DefStore, em: &ExprMacro, nested: bool) -> Result<Expression,ParseError> {
     get_other(lexer,"(")?;
     let exprs = parse_exprlist(lexer,defstore,')',nested)?;
-    Ok(em.expression(&exprs))
+    em.expression(&exprs).map_err(|e| ParseError::new(&e.to_string(),lexer))
 }
 
 fn parse_atom(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Expression,ParseError> {
     if peek_full_identifier(lexer,Some(true)).is_some() {
         let pattern = parse_full_identifier(lexer,Some(true)).unwrap();
         let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
-        Ok(if lexer.peek(None,1)[0] == Token::Other('(') {
-            match defstore.get_expr_id(&identifier.0) {
-                Ok(em) => parse_expr_use(lexer,defstore,&em,nested)?,
-                _ => parse_atom_id(lexer,defstore,&identifier,nested)?
+        if lexer.peek(None,1)[0] == Token::Other('(') {
+            if let Ok(em) = defstore.get_expr_id(&identifier.0) {
+                return Ok(parse_expr_use(lexer,defstore,&em,nested)?);
             }
-            
-        } else if lexer.peek(None,1)[0] == Token::Other('{') {
+        }
+        Ok(if lexer.peek(None,1)[0] == Token::Other('{') {
             parse_struct_ctor(lexer,defstore,&identifier.0,nested)?
         } else if peek_enum_ctor(lexer) {
             lexer.get();

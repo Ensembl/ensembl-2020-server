@@ -43,32 +43,35 @@ pub enum Expression {
     At
 }
 
-fn alpha_id(id: &str, args: &[Identifier], exprs: &[Expression]) -> Expression {
+fn alpha_id(id: &str, args: &[Identifier], exprs: &[Expression]) -> Result<Expression,String> {
+    if args.len() != exprs.len() {
+        return Err(format!("{}: expected {} args, got {}",id,args.len(),exprs.len()));
+    }
     for (i,arg) in args.iter().enumerate() {
         if arg.name() == id {
-            return exprs[i].clone();
+            return Ok(exprs[i].clone());
         }
     }
-    Expression::Identifier(id.to_string())
+    Ok(Expression::Identifier(id.to_string()))
 }
 
 impl Expression {
-    pub fn alpha(&self, args: &[Identifier], exprs: &[Expression]) -> Expression {
-        match self {
-            Expression::Identifier(s) => alpha_id(s,args,exprs),
-            Expression::Operator(id,x) => Expression::Operator(id.clone(),x.iter().map(|x| x.alpha(args,exprs)).collect()),
-            Expression::Star(expr) => Expression::Star(Box::new(expr.alpha(args,exprs))),
-            Expression::Square(expr) => Expression::Square(Box::new(expr.alpha(args,exprs))),
-            Expression::Bracket(a,b) => Expression::Bracket(Box::new(a.alpha(args,exprs)),Box::new(b.alpha(args,exprs))),
-            Expression::Filter(a,b) => Expression::Filter(Box::new(a.alpha(args,exprs)),Box::new(b.alpha(args,exprs))),
-            Expression::Dot(a,s) => Expression::Dot(Box::new(a.alpha(args,exprs)),s.to_string()),
-            Expression::Query(a,s) => Expression::Query(Box::new(a.alpha(args,exprs)),s.to_string()),
-            Expression::Pling(a,s) => Expression::Pling(Box::new(a.alpha(args,exprs)),s.to_string()),
-            Expression::Vector(x) => Expression::Vector(x.iter().map(|x| x.alpha(args,exprs)).collect()),
-            Expression::CtorStruct(id,x,f) => Expression::CtorStruct(id.clone(),x.iter().map(|x| x.alpha(args,exprs)).collect(),f.to_vec()),
-            Expression::CtorEnum(id,f,a) => Expression::CtorEnum(id.clone(),f.to_string(),Box::new(a.alpha(args,exprs))),
+    pub fn alpha(&self, args: &[Identifier], exprs: &[Expression]) -> Result<Expression,String> {
+        Ok(match self {
+            Expression::Identifier(s) => alpha_id(s,args,exprs)?,
+            Expression::Operator(id,x) => Expression::Operator(id.clone(),x.iter().map(|x| x.alpha(args,exprs)).collect::<Result<_,String>>()?),
+            Expression::Star(expr) => Expression::Star(Box::new(expr.alpha(args,exprs)?)),
+            Expression::Square(expr) => Expression::Square(Box::new(expr.alpha(args,exprs)?)),
+            Expression::Bracket(a,b) => Expression::Bracket(Box::new(a.alpha(args,exprs)?),Box::new(b.alpha(args,exprs)?)),
+            Expression::Filter(a,b) => Expression::Filter(Box::new(a.alpha(args,exprs)?),Box::new(b.alpha(args,exprs)?)),
+            Expression::Dot(a,s) => Expression::Dot(Box::new(a.alpha(args,exprs)?),s.to_string()),
+            Expression::Query(a,s) => Expression::Query(Box::new(a.alpha(args,exprs)?),s.to_string()),
+            Expression::Pling(a,s) => Expression::Pling(Box::new(a.alpha(args,exprs)?),s.to_string()),
+            Expression::Vector(x) => Expression::Vector(x.iter().map(|x| x.alpha(args,exprs)).collect::<Result<_,String>>()?),
+            Expression::CtorStruct(id,x,f) => Expression::CtorStruct(id.clone(),x.iter().map(|x| x.alpha(args,exprs)).collect::<Result<_,String>>()?,f.to_vec()),
+            Expression::CtorEnum(id,f,a) => Expression::CtorEnum(id.clone(),f.to_string(),Box::new(a.alpha(args,exprs)?)),
             x => x.clone()
-        }
+        })
     }
 }
 
@@ -141,9 +144,9 @@ impl fmt::Debug for Expression {
 pub struct Statement(pub Identifier,pub Vec<Expression>,pub String,pub u32);
 
 impl Statement {
-    pub fn alpha(&self, args: &[Identifier], exprs: &[Expression]) -> Statement {
-        let out = self.1.iter().map(|x| x.alpha(args,exprs)).collect();
-        Statement(self.0.clone(),out,self.2.clone(),self.3.clone())
+    pub fn alpha(&self, args: &[Identifier], exprs: &[Expression]) -> Result<Statement,String> {
+        let out = self.1.iter().map(|x| x.alpha(args,exprs)).collect::<Result<_,String>>()?;
+        Ok(Statement(self.0.clone(),out,self.2.clone(),self.3.clone()))
     }
 }
 

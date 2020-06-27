@@ -64,8 +64,9 @@ fn parse_inline(lexer: &mut Lexer) -> Result<Vec<ParserStatement>,ParseError> {
     Ok(vec![ParserStatement::Inline(symbol,pattern,mode,prio)])
 }
 
-fn apply_macro(s: &StmtMacro, exprs: &[Expression])-> Result<Vec<ParserStatement>,ParseError> {
-    Ok(s.block(exprs).iter().map(|x| ParserStatement::Regular(x.clone())).collect())
+fn apply_macro(s: &StmtMacro, exprs: &[Expression], lexer: &mut Lexer)-> Result<Vec<ParserStatement>,ParseError> {
+    let exprs = s.block(exprs).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
+    Ok(exprs.iter().map(|x| ParserStatement::Regular(x.clone())).collect())
 }
 
 fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserStatement>,ParseError> {
@@ -75,7 +76,7 @@ fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserSta
     let (file,line,_) = lexer.position();
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
     match defstore.get_stmt_id(&identifier.0) {
-        Ok(s) => apply_macro(s,&exprs),
+        Ok(s) => apply_macro(s,&exprs,lexer),
         Err(_) => {
             Ok(vec![ParserStatement::Regular(Statement(identifier.0,exprs,file.to_string(),line))])
         }

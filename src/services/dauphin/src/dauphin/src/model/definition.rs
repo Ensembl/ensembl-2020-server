@@ -64,7 +64,7 @@ impl ExprMacro {
 
     pub fn identifier(&self) -> &Identifier { &self.identifier }
 
-    pub fn expression(&self, exprs: &[Expression]) -> Expression {
+    pub fn expression(&self, exprs: &[Expression]) -> Result<Expression,String> {
         self.expr.alpha(&self.args,exprs)
     }
 }
@@ -83,7 +83,7 @@ impl StmtMacro {
 
     pub fn identifier(&self) -> &Identifier { &self.identifier }
 
-    pub fn block(&self, exprs: &[Expression]) -> Vec<Statement> {
+    pub fn block(&self, exprs: &[Expression]) -> Result<Vec<Statement>,String> {
         self.block.iter().map(|x| x.alpha(&self.args,exprs)).collect()
     }
 }

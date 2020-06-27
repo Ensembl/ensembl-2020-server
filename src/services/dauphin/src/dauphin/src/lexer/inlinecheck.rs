@@ -94,10 +94,6 @@ pub fn check_inline(tokens: &InlineTokens, c: &str, prefix: bool) -> Result<(),S
     if tokens.equal(c,prefix) {
         return Err("operator already defined".to_string());
     }
-    /* cannot be the prefix of any other */
-    if tokens.is_prefix_of(c) {
-        return Err("one operator cannot be a prefix of another".to_string());
-    }
     /* character check */
     if let Some(first) = c.chars().next() {
         if first == '(' || first == '[' && c != "[" {
@@ -119,14 +115,11 @@ mod test {
         it.add("(*)",true).expect("(*)");
         it.add("(+)",false).expect("(+)");
         it.add("(+)",false).expect_err("(+)");
-        assert_eq!("one operator cannot be a prefix of another",
-                    check_inline(&it,"(+)+",false).expect_err("(+)+"));
         it.add("(+)(*)",false).expect_err("(+)(*)");
         it.add("&hello&",false).expect("(+)");
         it.add(".fred",false).expect_err(".fred");
         it.add("..",false).expect("..");
         it.add("(.)",false).expect("(.)");
         it.add("(.f)",false).expect("(.f)");
-        it.add("&he",false).expect_err("&he");
     }
 }
