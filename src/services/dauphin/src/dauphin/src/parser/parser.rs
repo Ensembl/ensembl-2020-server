@@ -270,7 +270,9 @@ mod test {
         lexer.import("search:parser/macro").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,_defstore) = p.parse().expect("error");
-        print!("{:?}\n",stmts);
+        let x = format!("{:?}",stmts);
+        print!("{}\n",x);
+        assert_eq!("[assign(x,[[1,2,3],[4,5,6],[7,8,9]]), assign(z,0), incr(((x)[eq(@,0)])[eq(@,1)],1), incr(z,plus(0,1)), assign(z,plus(z,0))]",x);
     }
 
 }

@@ -33,14 +33,12 @@ mod std {
     pub(super) mod assign; // XXX unexport
     pub(super) mod library;
     mod numops;
-    mod header;
     mod eq;
 }
 
 mod buildtime {
     pub(super) mod buildtime;
     pub(super) mod ini;
-    mod header;
 }
 
 // XXX unexport

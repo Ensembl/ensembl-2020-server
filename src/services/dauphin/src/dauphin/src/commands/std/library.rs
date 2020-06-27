@@ -22,7 +22,6 @@ use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
 use super::eq::library_eq_command;
 use super::assign::library_assign_commands;
-use super::header::STD;
 
 pub fn std_id() -> CommandSetId {
     CommandSetId::new("std",(0,0),0xDD9C0B3CD9093233)
@@ -395,7 +394,7 @@ pub fn make_library() -> Result<CommandSet,String> {
     set.push("assert",4,AssertCommandType())?;
     set.push("alienate",13,AlienateCommandType())?;
     set.push("print",14,PrintCommandType())?;
-    set.add_header("std",&STD);
+    set.add_header("std",include_str!("header.dp"));
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;
     Ok(set)
