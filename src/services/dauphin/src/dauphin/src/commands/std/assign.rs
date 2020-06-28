@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 
-use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters, cbor_make_map };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, InterpValue, TimeTrialCommandType, TimeTrial, regress };
+use crate::model::{ Register, RegisterSignature, cbor_make_map };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
@@ -107,11 +107,6 @@ fn assign(context: &mut InterpContext, filtered: bool, purposes: &RegisterSignat
     Ok(())
 }
 
-fn trial_write<F>(context: &mut InterpContext, i: usize, t: usize, cb: F) where F: Fn(usize) -> usize {
-    let a : Vec<usize> = (0..t).map(|x| cb(x as usize)).collect();
-    context.registers().write(&Register(i),InterpValue::Indexes(a));
-}
-
 struct UnfilteredAssignTimeTrial();
 
 impl TimeTrialCommandType for UnfilteredAssignTimeTrial {
@@ -126,21 +121,15 @@ impl TimeTrialCommandType for UnfilteredAssignTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let mut sigs = RegisterSignature::new();
-        let mut output = ComplexRegisters::new_empty(MemberMode::LValue);
-        output.add(ComplexPath::new_empty(),VectorRegisters::new(2),2);
-        let mut input = ComplexRegisters::new_empty(MemberMode::RValue);
-        input.add(ComplexPath::new_empty(),VectorRegisters::new(2),2);
-        sigs.add(output);
-        sigs.add(input);
+        let sigs = trial_signature(&vec![(MemberMode::LValue,2),(MemberMode::RValue,2)]);
         let regs : Vec<Register> = (0..10).map(|x| Register(x)).collect();
         Ok(Box::new(AssignCommand(false,sigs,regs)))
     }
 }
 
-struct FilteredAssignTimeTrial(usize);
+struct FilteredNumberAssignTimeTrial();
 
-impl TimeTrialCommandType for FilteredAssignTimeTrial {
+impl TimeTrialCommandType for FilteredNumberAssignTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
 
     fn local_prepare(&self, context: &mut InterpContext, t: i64) {
@@ -149,25 +138,42 @@ impl TimeTrialCommandType for FilteredAssignTimeTrial {
         trial_write(context,1,t*100,|x| x);   /* 100t data */
         trial_write(context,2,t*10,|x| x*10); /* 10t arrays (offset 10x) */
         trial_write(context,3,t*10,|_| 10);   /* 10t arrays (len 10) */
-        trial_write(context,4,t*10*self.0,|x| x);   /* 10tm data */
-        trial_write(context,5,t*10,|x| x*self.0); /* 10t arrays (offset xm) */
-        trial_write(context,6,t*10,|_| self.0);   /* 10t arrays (len m) */
+        trial_write(context,4,t*10,|x| x);   /* 10tm data */
+        trial_write(context,5,t*10,|x| x); /* 10t arrays (offset xm) */
+        trial_write(context,6,t*10,|_| 1);   /* 10t arrays (len m) */
         context.registers().commit();
     }
 
-    fn global_prepare(&self, context: &mut InterpContext, t: i64) {}
+    fn global_prepare(&self, _context: &mut InterpContext, _t: i64) {}
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let mut sigs = RegisterSignature::new();
-        let mut filter = ComplexRegisters::new_empty(MemberMode::FValue);
-        filter.add(ComplexPath::new_empty(),VectorRegisters::new(0),0);        
-        let mut output = ComplexRegisters::new_empty(MemberMode::LValue);
-        output.add(ComplexPath::new_empty(),VectorRegisters::new(1),1);
-        let mut input = ComplexRegisters::new_empty(MemberMode::RValue);
-        input.add(ComplexPath::new_empty(),VectorRegisters::new(1),1);
-        sigs.add(filter);
-        sigs.add(output);
-        sigs.add(input);
+        let sigs = trial_signature(&vec![(MemberMode::FValue,0),(MemberMode::LValue,1),(MemberMode::RValue,1)]);
+        let regs : Vec<Register> = (0..7).map(|x| Register(x)).collect();
+        Ok(Box::new(AssignCommand(true,sigs,regs)))
+    }
+}
+
+struct FilteredDepthAssignTimeTrial();
+
+impl TimeTrialCommandType for FilteredDepthAssignTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn local_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        trial_write(context,0,10,|x| x);    /* 10t writes */
+        trial_write(context,1,100,|x| x);   /* 100t data */
+        trial_write(context,2,10,|x| x*10); /* 10t arrays (offset 10x) */
+        trial_write(context,3,10,|_| 10);   /* 10t arrays (len 10) */
+        trial_write(context,4,t*1000,|x| x);   /* 10tm data */
+        trial_write(context,5,10,|x| t*100*x); /* 10t arrays (offset xm) */
+        trial_write(context,6,10,|_| t*100);   /* 10t arrays (len m) */
+        context.registers().commit();
+    }
+
+    fn global_prepare(&self, _context: &mut InterpContext, _t: i64) {}
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let sigs = trial_signature(&vec![(MemberMode::FValue,0),(MemberMode::LValue,1),(MemberMode::RValue,1)]);
         let regs : Vec<Register> = (0..7).map(|x| Register(x)).collect();
         Ok(Box::new(AssignCommand(true,sigs,regs)))
     }
@@ -186,19 +192,8 @@ impl TimeTrialCommandType for ShallowAssignTimeTrial {
         context.registers().commit();
     }
 
-    fn global_prepare(&self, context: &mut InterpContext, t: i64) {}
-
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let mut sigs = RegisterSignature::new();
-        let mut filter = ComplexRegisters::new_empty(MemberMode::FValue);
-        filter.add(ComplexPath::new_empty(),VectorRegisters::new(0),0);        
-        let mut output = ComplexRegisters::new_empty(MemberMode::LValue);
-        output.add(ComplexPath::new_empty(),VectorRegisters::new(0),0);
-        let mut input = ComplexRegisters::new_empty(MemberMode::RValue);
-        input.add(ComplexPath::new_empty(),VectorRegisters::new(0),0);
-        sigs.add(filter);
-        sigs.add(output);
-        sigs.add(input);
+        let sigs = trial_signature(&vec![(MemberMode::FValue,0),(MemberMode::LValue,0),(MemberMode::RValue,0)]);
         let regs : Vec<Register> = (0..3).map(|x| Register(x)).collect();
         Ok(Box::new(AssignCommand(true,sigs,regs)))
     }
@@ -231,14 +226,9 @@ impl CommandType for AssignCommandType {
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let unfiltered = TimeTrial::run(&UnfilteredAssignTimeTrial(),linker,config)?;
         let shallow = TimeTrial::run(&ShallowAssignTimeTrial(),linker,config)?;
-        let filtered = TimeTrial::run(&FilteredAssignTimeTrial(1),linker,config)?;
-        let mut mul_regress = vec![];
-        for ramp in 1..6 {
-            let trial = TimeTrial::run(&FilteredAssignTimeTrial(ramp),linker,config)?;
-            mul_regress.push((ramp as f64,trial.0));
-        }
-        let mul_ramp = regress(&mul_regress)?.0/filtered.0;
-        Ok(cbor_make_map(&vec!["tu","tf","ts","tr"],vec![unfiltered.serialize(),filtered.serialize(),shallow.serialize(),CborValue::Float(mul_ramp)])?)
+        let filtered_number = TimeTrial::run(&FilteredNumberAssignTimeTrial(),linker,config)?;
+        let filtered_depth = TimeTrial::run(&FilteredDepthAssignTimeTrial(),linker,config)?;
+        Ok(cbor_make_map(&vec!["tu","tfn","ts","tfd"],vec![unfiltered.serialize(),filtered_number.serialize(),shallow.serialize(),filtered_depth.serialize()])?)
     }
 }
 
@@ -287,10 +277,10 @@ impl Command for AssignCommand {
 
 fn extend(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
     let vrs = RegisterVectorSource::new(&regs);
-    let bb = sig[2].iter().map(|vr| SharedVec::new(context,&vrs,vr.1)).collect::<Result<Vec<_>,_>>()?;
+    let bb = sig[2].iter().map(|vr| SharedVec::new(context,&vrs,vr.1)).collect::<Result<Vec<_>,_>>()?; /* ~100us */
     let mut zz = vec![];
     for (vr_z,vr_a) in sig[0].iter().zip(sig[1].iter()) {
-        vector_register_copy(context,&vrs,vr_z.1,vr_a.1)?;
+        vector_register_copy(context,&vrs,vr_z.1,vr_a.1)?; /* ~200us */
     }
     for vr_z in sig[0].iter() {
         zz.push(WriteVec::new(context,&vrs,vr_z.1)?);
@@ -308,6 +298,76 @@ fn extend(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Regis
         z.write(context)?;
     }
     Ok(())
+}
+
+struct ExtendDataTimeTrial(bool); /* true = right, false = left */
+
+impl TimeTrialCommandType for ExtendDataTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn local_prepare(&self, context: &mut InterpContext, t: i64) {
+        let (left,right) = if self.0 { (1,t as usize*100) } else { (t as usize*100,1) };
+        trial_write(context,1,left,|x| x);
+        trial_write(context,2,right,|x| x);
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let sigs = trial_signature(&vec![(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]);
+        let regs : Vec<Register> = (0..3).map(|x| Register(x)).collect();
+        Ok(Box::new(ExtendCommand(sigs,regs)))
+    }
+}
+
+struct ExtendBaseTimeTrial(bool); /* true = right, false = left */
+
+impl TimeTrialCommandType for ExtendBaseTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let (left,right) = if self.0 { (1,t as usize*100) } else { (t as usize*100,1) };
+        trial_write(context,3,left,|x| x);
+        trial_write(context,4,1,|_| 0);
+        trial_write(context,5,1,|_| left);
+        trial_write(context,6,right,|x| x);
+        trial_write(context,7,1,|_| 0);
+        trial_write(context,8,1,|_| right);
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let sigs = trial_signature(&vec![(MemberMode::RValue,1),(MemberMode::RValue,1),(MemberMode::RValue,1)]);
+        let regs : Vec<Register> = (0..9).map(|x| Register(x)).collect();
+        Ok(Box::new(ExtendCommand(sigs,regs)))
+    }
+}
+
+struct ExtendHeightTimeTrial();
+
+impl TimeTrialCommandType for ExtendHeightTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        for pos in 1..3 {
+            let offset = (t*2+1)*pos;
+            trial_write(context,offset,t*100,|x| x);
+            trial_write(context,offset+1,1,|_| 0);
+            trial_write(context,offset+2,1,|_| 100);
+            for layer in 1..t {
+                trial_write(context,offset+(2*layer)+1,1,|_| 0);
+                trial_write(context,offset+(2*layer)+2,1,|_| 1);
+            }
+        }
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let t = t as usize;
+        let sigs = trial_signature(&vec![(MemberMode::RValue,1),(MemberMode::RValue,t),(MemberMode::RValue,t)]);
+        let regs : Vec<Register> = (0..(t*6+3)).map(|x| Register(x)).collect();
+        Ok(Box::new(ExtendCommand(sigs,regs)))
+    }
 }
 
 pub struct ExtendCommandType();
@@ -332,6 +392,19 @@ impl CommandType for ExtendCommandType {
         let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
         let sig = RegisterSignature::deserialize(&value[0],false,false)?;
         Ok(Box::new(ExtendCommand(sig,regs)))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let left_data_time = TimeTrial::run(&ExtendDataTimeTrial(false),linker,config)?;
+        let right_data_time = TimeTrial::run(&ExtendDataTimeTrial(true),linker,config)?;
+        let left_vec_time = TimeTrial::run(&ExtendBaseTimeTrial(false),linker,config)?;
+        let right_vec_time = TimeTrial::run(&ExtendBaseTimeTrial(true),linker,config)?;
+        let height_time = TimeTrial::run(&ExtendHeightTimeTrial(),linker,config)?;
+        Ok(cbor_make_map(&vec!["tdl","tdr","tvl","tvr","th"],vec![
+            left_data_time.serialize(),right_data_time.serialize(),
+            left_vec_time.serialize(),right_vec_time.serialize(),
+            height_time.serialize()
+        ])?)
     }
 }
 

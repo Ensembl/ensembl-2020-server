@@ -15,13 +15,16 @@
  */
 
 use crate::interp::InterpNatural;
-use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier };
+use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
 use super::eq::library_eq_command;
 use super::assign::library_assign_commands;
+use crate::cli::Config;
+use crate::typeinf::MemberMode;
+use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
 
 pub fn std_id() -> CommandSetId {
     CommandSetId::new("std",(0,0),0xDD9C0B3CD9093233)
@@ -34,6 +37,28 @@ pub(super) fn std(name: &str) -> Identifier {
 pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
     let p = context.payload("std","stream")?;
     Ok(p.downcast_mut().ok_or_else(|| "No stream context".to_string())?)
+}
+
+struct LenTimeTrial();
+
+impl TimeTrialCommandType for LenTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = (t*100) as usize;
+        trial_write(context,1,1,|_| 0);
+        trial_write(context,2,1,|_| t);
+        trial_write(context,3,t,|x| x*10);
+        trial_write(context,4,t,|_| 10);
+        trial_write(context,5,t*10,|x| x);
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let sig = trial_signature(&vec![(MemberMode::RValue,0),(MemberMode::RValue,2)]);
+        let regs : Vec<Register> = (0..6).map(|x| Register(x)).collect();
+        Ok(Box::new(LenCommand(sig,regs)))
+    }
 }
 
 pub struct LenCommandType();
@@ -57,6 +82,11 @@ impl CommandType for LenCommandType {
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
         let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
         Ok(Box::new(LenCommand(RegisterSignature::deserialize(&value[1],false,false)?,regs)))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let timings = TimeTrial::run(&LenTimeTrial(),linker,config)?;
+        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
     }
 }
 

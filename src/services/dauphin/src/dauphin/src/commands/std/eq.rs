@@ -15,14 +15,18 @@
  */
 
 use crate::interp::InterpValue;
-use crate::model::{ Register, RegisterSignature };
+use crate::model::{ Register, RegisterSignature, cbor_make_map };
 use super::super::common::vectorsource::RegisterVectorSource;
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, trial_write, trial_signature, TimeTrialCommandType, TimeTrial };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
+use crate::typeinf::MemberMode;
 use crate::model::cbor_array;
 use crate::commands::common::sharedvec::SharedVec;
 use super::library::std;
+use crate::cli::Config;
+use crate::interp::CompilerLink;
+
 
 use std::fmt::Debug;
 use crate::commands::common::polymorphic::arbitrate_type;
@@ -93,6 +97,76 @@ pub fn compare(a: &SharedVec, b: &SharedVec) -> Result<Vec<bool>,String> {
     }
 }
 
+struct EqDataTimeTrial();
+
+impl TimeTrialCommandType for EqDataTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        trial_write(context,3,t*100,|x| x);
+        trial_write(context,4,t*100,|x| x);
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let sigs = trial_signature(&vec![(MemberMode::RValue,1),(MemberMode::RValue,0),(MemberMode::RValue,0)]);
+        let regs : Vec<Register> = (0..5).map(|x| Register(x)).collect();
+        Ok(Box::new(EqCommand(sigs,regs)))
+    }
+}
+
+struct EqWidthTimeTrial();
+
+impl TimeTrialCommandType for EqWidthTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        trial_write(context,3,t*100,|x| x);
+        trial_write(context,4,1,|_| 0);
+        trial_write(context,5,1,|_| t*100);
+        trial_write(context,6,t*100,|x| x);
+        trial_write(context,7,1,|_| 0);
+        trial_write(context,8,1,|_| t*100);
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let sigs = trial_signature(&vec![(MemberMode::RValue,1),(MemberMode::RValue,1),(MemberMode::RValue,1)]);
+        let regs : Vec<Register> = (0..9).map(|x| Register(x)).collect();
+        Ok(Box::new(EqCommand(sigs,regs)))
+    }
+}
+
+struct EqHeightTimeTrial();
+
+impl TimeTrialCommandType for EqHeightTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        for pos in 0..2 {
+            let offset = 3 + (t*2+1)*pos;
+            trial_write(context,offset,t*100,|x| x);
+            trial_write(context,offset+1,1,|_| 0);
+            trial_write(context,offset+2,1,|_| 100);
+            for layer in 1..t {
+                trial_write(context,offset+(2*layer)+1,1,|_| 0);
+                trial_write(context,offset+(2*layer)+2,1,|_| 1);
+            }
+        }
+        context.registers().commit();
+    }
+
+    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let t = t as usize;
+        let sigs = trial_signature(&vec![(MemberMode::RValue,1),(MemberMode::RValue,t),(MemberMode::RValue,t)]);
+        let regs : Vec<Register> = (0..(t*4+5)).map(|x| Register(x)).collect();
+        Ok(Box::new(EqCommand(sigs,regs)))
+    }
+}
+
 pub struct EqCommandType();
 
 impl CommandType for EqCommandType {
@@ -115,6 +189,13 @@ impl CommandType for EqCommandType {
         let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
         let sig = RegisterSignature::deserialize(&value[0],false,true)?;
         Ok(Box::new(EqCommand(sig,regs)))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let eq_data = TimeTrial::run(&EqDataTimeTrial(),linker,config)?;
+        let eq_width = TimeTrial::run(&EqWidthTimeTrial(),linker,config)?;
+        let eq_height = TimeTrial::run(&EqHeightTimeTrial(),linker,config)?;
+        Ok(cbor_make_map(&vec!["td","tw","th"],vec![eq_data.serialize(),eq_width.serialize(),eq_height.serialize()])?)
     }
 }
 

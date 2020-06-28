@@ -17,7 +17,9 @@
 use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
 use crate::interp::{ CompilerLink, InterpContext };
-use crate::interp::{ Command };
+use crate::interp::{ Command, InterpValue };
+use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters };
+use crate::typeinf::MemberMode;
 use serde_cbor::Value as CborValue;
 
 pub fn regress(input: &[(f64,f64)]) -> Result<(f64,f64),String> {
@@ -115,3 +117,20 @@ pub trait TimeTrialCommandType {
 
     fn timetrial_make_command(&self, instance: i64, linker: &CompilerLink, config: &Config) -> Result<Box<dyn Command>,String>;
 }
+
+
+pub fn trial_write<F>(context: &mut InterpContext, i: usize, t: usize, cb: F) where F: Fn(usize) -> usize {
+    let a : Vec<usize> = (0..t).map(|x| cb(x as usize)).collect();
+    context.registers().write(&Register(i),InterpValue::Indexes(a));
+}
+
+pub fn trial_signature(layout: &[(MemberMode,usize)]) -> RegisterSignature {
+    let mut sigs = RegisterSignature::new();
+    for (mode,depth) in layout {
+        let mut cr = ComplexRegisters::new_empty(*mode);
+        cr.add(ComplexPath::new_empty(),VectorRegisters::new(*depth),*depth);
+        sigs.add(cr);
+    }
+    sigs
+}
+
