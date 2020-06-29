@@ -736,5 +736,6 @@ pub fn make_core() -> Result<CommandSet,String> {
     set.push("at",15,AtCommandType())?;
     set.push("refilter",16,ReFilterCommandType())?;
     set.push("pause",18,PauseCommandType())?;
+    set.load_dynamic_data(include_bytes!("core-0.0.ddd"))?;
     Ok(set)
 }

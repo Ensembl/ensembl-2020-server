@@ -17,6 +17,7 @@
 use std::fmt::Debug;
 use std::collections::HashMap;
 use serde_cbor::Value as CborValue;
+use crate::model::{ cbor_array, cbor_string };
 
 #[derive(Clone,Debug)]
 pub struct IdentifierUse(pub Identifier,pub bool);
@@ -31,6 +32,11 @@ impl Identifier {
 
     pub fn serialize(&self) -> CborValue {
         CborValue::Array(vec![CborValue::Text(self.0.clone()),CborValue::Text(self.1.clone())])
+    }
+
+    pub fn deserialize(value: &CborValue) -> Result<Identifier,String> {
+        let data = cbor_array(value,2,false)?;
+        Ok(Identifier::new(&cbor_string(&data[0])?,&cbor_string(&data[1])?))
     }
 
     pub fn module(&self) -> &str { &self.0 }

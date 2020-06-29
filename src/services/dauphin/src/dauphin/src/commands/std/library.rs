@@ -427,5 +427,6 @@ pub fn make_library() -> Result<CommandSet,String> {
     set.add_header("std",include_str!("header.dp"));
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;
+    set.load_dynamic_data(include_bytes!("std-0.0.ddd"))?;
     Ok(set)
 }

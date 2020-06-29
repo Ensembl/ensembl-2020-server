@@ -20,6 +20,7 @@ use std::rc::Rc;
 use super::CommandSetId;
 use super::command::{ CommandType, CommandTrigger };
 use crate::interp::{ PayloadFactory, CompilerLink };
+use crate::model::cbor_map_iter;
 use serde_cbor::Value as CborValue;
 use crc::crc64::checksum_iso;
 
@@ -71,6 +72,19 @@ impl CommandSet {
             out.insert(trigger.serialize(),command.generate_dynamic_data(linker,config)?);
         }
         Ok(CborValue::Map(out))
+    }
+
+    pub fn load_dynamic_data(&self, data: &[u8]) -> Result<(),String> {
+        let data : CborValue = serde_cbor::from_slice(&data).map_err(|x| format!("{} while deserialising {:?}",x,self.csi))?;
+        for (trigger,data) in cbor_map_iter(&data)? {
+            let trigger = CommandTrigger::deserialize(trigger)?;
+            if let Some(id) = self.mapping.get(&trigger) {
+                if let Some(command) = self.commands.get(id) {
+                    command.use_dynamic_data(data)?;
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn add_payload<P>(&mut self, name: &str, payload: P) where P: PayloadFactory + 'static {

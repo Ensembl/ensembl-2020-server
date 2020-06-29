@@ -16,7 +16,7 @@
 
 use std::fmt;
 
-use crate::model::{ DefStore, Register, RegisterSignature, Identifier };
+use crate::model::{ DefStore, Register, RegisterSignature, Identifier, cbor_int };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
 use serde_cbor::Value as CborValue;
 
@@ -87,6 +87,32 @@ impl InstructionSuperType {
             InstructionSuperType::BytesConst => 17,
             InstructionSuperType::Call => 18,
             InstructionSuperType::LineNumber => 19
+        })
+    }
+
+    pub fn deserialize(value: &CborValue) -> Result<InstructionSuperType,String> {
+        Ok(match cbor_int(value,Some(19))? {
+            0 => InstructionSuperType::Pause,
+            1 => InstructionSuperType::Nil,
+            2 => InstructionSuperType::Copy,
+            3 => InstructionSuperType::Append,
+            4 => InstructionSuperType::Filter,
+            5 => InstructionSuperType::Run,
+            6 => InstructionSuperType::At,
+            7 => InstructionSuperType::NumEq,
+            8 => InstructionSuperType::ReFilter,
+            9 => InstructionSuperType::Length,
+            10 => InstructionSuperType::Add,
+            11 => InstructionSuperType::SeqFilter,
+            12 => InstructionSuperType::SeqAt,
+            13 => InstructionSuperType::Const,
+            14 => InstructionSuperType::NumberConst,
+            15 => InstructionSuperType::BooleanConst,
+            16 => InstructionSuperType::StringConst,
+            17 => InstructionSuperType::BytesConst,
+            18 => InstructionSuperType::Call,
+            19 => InstructionSuperType::LineNumber,
+            _ => Err(format!("impossiblr in IntstructionSuperType deserialize"))?
         })
     }
 }
