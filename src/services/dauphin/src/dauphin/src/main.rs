@@ -35,8 +35,11 @@ extern crate owning_ref;
 extern crate serde_cbor;
 extern crate crc;
 extern crate ini;
+extern crate clap;
 
 /* This to remove RLS unused warns */
+
+use crate::cli::{ config_from_options, run };
 
 use crate::lexer::Lexer;
 use crate::resolver::common_resolver;
@@ -47,6 +50,10 @@ use crate::interp::{ CompilerLink, xxx_test_config, make_librarysuite_builder };
 use crate::interp::{ LibrarySuiteBuilder, interpreter, InterpreterLink, StreamFactory };
 
 fn main() {
+    let options_config = config_from_options();
+    run(&options_config);
+
+    /*
     let config = xxx_test_config();
     let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
     let resolver = common_resolver(&config,&linker).expect("setting up path resolver");
@@ -67,4 +74,5 @@ fn main() {
     let mut interp = interpreter(&interpret_linker,&config,"main").expect("interpreter");
     while interp.more().expect("interpreting") {}
     interp.finish();
+    */
 }

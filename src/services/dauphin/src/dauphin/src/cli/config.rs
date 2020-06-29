@@ -33,7 +33,9 @@ pub struct Config {
     opt_seq: Option<String>,
     file_search_path: Vec<String>,
     libs: Vec<String>,
-    root_dir: Option<String>
+    root_dir: Option<String>,
+    action: Option<String>,
+    unit_test: Option<bool>
 }
 
 macro_rules! push {
@@ -128,7 +130,9 @@ impl Config {
             opt_seq: None,
             file_search_path: vec![],
             libs: vec![],
-            root_dir: None
+            root_dir: None,
+            action: None,
+            unit_test: None
         }
     }
 
@@ -141,8 +145,10 @@ impl Config {
     flag!(self,verbose,set_verbose,get_verbose,isset_verbose,u8,0);
     flag!(self,optimise,set_opt_level,get_opt_level,isset_opt_level,u8,0);
     flag!(self,debug_run,set_debug_run,get_debug_run,isset_debug_run,bool,false);
+    flag!(self,unit_test,set_unit_test,get_unit_test,isset_unit_test,bool,false);
     flag_str!(self,opt_seq,set_opt_seq,get_opt_seq,isset_opt_seq,"*");
     flag_str!(self,root_dir,set_root_dir,get_root_dir,isset_root_dir,".");
+    flag_str!(self,action,set_action,get_action,isset_action,"compile");
     push_str!(self,file_search_path,add_file_search_path,get_file_search_path);
     push_str!(self,libs,add_lib,get_libs);
 }

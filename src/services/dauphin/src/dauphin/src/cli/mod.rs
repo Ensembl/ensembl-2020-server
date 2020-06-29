@@ -14,6 +14,10 @@
  *  limitations under the License.
  */
 
+mod action;
 mod config;
+mod options;
 
+pub use self::action::run;
 pub use self::config::Config;
+pub use self::options::config_from_options;

@@ -25,10 +25,10 @@ use crate::model::Register;
 use crate::interp::context::InterpContext;
 use crate::interp::{ LibrarySuiteBuilder, make_librarysuite_builder, interpreter, InterpretInstance };
 use crate::interp::{ InterpValue, StreamContents, StreamFactory };
-use super::compilelink::CompilerLink;
-use super::interplink::InterpreterLink;
 use crate::test::cbor::hexdump;
 use serde_cbor::Value as CborValue;
+use super::compilelink::CompilerLink;
+use super::interplink::InterpreterLink;
 
 pub fn stream_strings(stream: &[StreamContents]) -> Vec<String> {
     let mut out = vec![];
@@ -99,6 +99,7 @@ pub fn xxx_test_config() -> Config {
     let mut cfg = Config::new();
     cfg.set_root_dir(&find_testdata().to_string_lossy());
     cfg.set_generate_debug(true);
+    cfg.set_unit_test(true);
     cfg.set_verbose(3);
     cfg.set_opt_level(2);
     cfg.set_debug_run(true);

@@ -5,6 +5,7 @@ authors = ["Dan Sheppard <dan@ebi.ac.uk>"]
 edition = "2018"
 
 [dependencies]
+clap = "*"
 hex = "0.3.2"
 lazy_static = "1.3.0"
 owning_ref="*"

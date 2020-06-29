@@ -53,6 +53,9 @@ impl CommandCompileSuite {
     pub fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<HashMap<CommandSetId,CborValue>,String> {
         let mut out = HashMap::new();
         for (set,_) in self.sets.iter() {
+            if config.get_verbose() > 0 {
+                print!("generating dynamic data for {}/{}.{}\n",set.id().name(),set.id().version().0,set.id().version().1);
+            }
             out.insert(set.id().clone(),set.generate_dynamic_data(linker,config)?);
         }
         Ok(out)

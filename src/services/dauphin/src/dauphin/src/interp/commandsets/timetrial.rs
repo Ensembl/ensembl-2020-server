@@ -66,16 +66,15 @@ fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Com
     Ok(start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f64()*1000.)
 }
 
-fn generate_one_timing(command_type: &dyn TimeTrialCommandType, linker: &CompilerLink, config: &Config, param: i64) -> Result<f64,String> {
+fn generate_one_timing(command_type: &dyn TimeTrialCommandType, linker: &CompilerLink, config: &Config, param: i64, block: i64) -> Result<f64,String> {
     let mut data = vec![];
-    let BLOCK = 10;  /* 1000! */
     for i in 0..5 {
         let command = command_type.timetrial_make_command(param,linker,config)?;
-        let run = run_time_trial(command_type,&command,linker,config,param,i*BLOCK,false)?;
-        let dry = run_time_trial(command_type,&command,linker,config,param,i*BLOCK,true)?;
-        data.push(((i*BLOCK) as f64,run-dry));
+        let run = run_time_trial(command_type,&command,linker,config,param,i*block,false)?;
+        let dry = run_time_trial(command_type,&command,linker,config,param,i*block,true)?;
+        data.push(((i*block) as f64,run-dry));
         if config.get_verbose() > 2 {
-            print!("loops={} time={:.2}ms\n",i*BLOCK,run-dry);
+            print!("loops={} time={:.2}ms\n",i*block,run-dry);
         }
     }
     Ok(regress(&data)?.0)
@@ -86,13 +85,14 @@ pub struct TimeTrial(pub f64,pub f64);
 
 impl TimeTrial {
     pub fn run(command: &dyn TimeTrialCommandType, linker: &CompilerLink, config: &Config) -> Result<TimeTrial,String> {
+        let block = if config.get_unit_test() { 10 } else { 100 };
         let trial = command.timetrial_make_trials();
         let mut data = vec![];
         for axis_val in (trial.0)..(trial.1) {
             if config.get_verbose() > 2 {
                 print!("param {:?}\n",axis_val);
             }
-            let r = generate_one_timing(command,linker,config,axis_val)?;
+            let r = generate_one_timing(command,linker,config,axis_val,block)?;
             if config.get_verbose() > 2 {
                 print!("takes {:.3}ms with param={:?}\n",r,axis_val);
             }
