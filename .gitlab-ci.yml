@@ -41,6 +41,20 @@ variables:
   - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
   - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
 
+# Template to deploy review apps to WP k8s cluster
+.deploy-wp-review:
+  stage: deploy
+  image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
+
+  script:
+  - git clone https://gitlab.ebi.ac.uk/ensembl-web/ensembl-k8s-manifests.git
+  - git -C ensembl-k8s-manifests/ checkout wp-k8s-review
+  - sed -i "s#<DOCKER_IMAGE>#${CONTAINER_IMAGE}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<DEPLOYMENT_ENV>#${CI_COMMIT_REF_SLUG}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<NFS_SERVER>#${NFS_SERVER}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - kubectl apply -f ensembl-k8s-manifests/ensembl_server_deployment.yaml
+
 # Template to deploy to EHK k8s cluster
 .deploy-ehk:
   stage: deploy
@@ -64,13 +78,15 @@ Docker:IMG:
   - master
 
 # Build docker image for feature_branch dev environment
-Docker:feature:
+Docker:review:
   extends: .build
   variables:
     CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_REF_SLUG}
 
-  only:
-  - /^feature\/.*$/
+  except:
+  - dev
+  - master
+  - /^nodeploy\/.*$/
 
 # Deploy staging to EHK-HH cluster
 Staging:EHK-HH:
@@ -174,3 +190,17 @@ Feature:EHK-HH:
     KUBE_CONTEXT: ens-dev-ctx
   only:
   - /^feature\/.*$/
+
+# Deploy feature to EHK-HH cluster
+Review:WP-HX:
+  extends: .deploy-wp-review
+  variables:
+    CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_REF_SLUG}
+    NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
+    NFS_PATH: /ifs/public-r/ro/enswbsites
+  environment:
+    name : wp-hx-dev
+  except:
+  - dev
+  - master
+  - /^nodeploy\/.*$/
