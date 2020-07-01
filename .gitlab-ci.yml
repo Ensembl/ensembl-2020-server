@@ -55,21 +55,6 @@ variables:
   - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
   - kubectl apply -f ensembl-k8s-manifests/ensembl_server_deployment.yaml
 
-# Template to deploy to EHK k8s cluster
-.deploy-ehk:
-  stage: deploy
-  image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
-  before_script:
-    - mkdir -p /etc/deploy
-    - export KUBECONFIG=/etc/deploy/config
-    - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
-  script:
-    - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-    - sed -i "s#<DOCKER_IMAGE>#${CONTAINER_IMAGE}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-    - sed -i "s#<DEPLOYMNET_ENV>#${DEPLOY_TAG}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-    - kubectl config use-context ${KUBE_CONTEXT}
-    - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-
 # Build docker image for live/internal/stage environment
 Docker:IMG:
   extends: .build
@@ -87,15 +72,6 @@ Docker:review:
   - dev
   - master
   - /^nodeploy\/.*$/
-
-# Deploy staging to EHK-HH cluster
-Staging:EHK-HH:
-  extends: .deploy-ehk
-  variables:
-    DEPLOY_TAG: staging
-    KUBE_CONTEXT: ens-stage-ctx
-  only:
-  - dev
 
 # Deploy staging to WP-HX cluster
 Staging:WP-HX:
@@ -141,24 +117,6 @@ Live:WP-HH:
   only:
   - master
 
-# Deploy Live to EHK-HH cluster
-Live:EHK-HH:
-  extends: .deploy-ehk
-  variables:
-    DEPLOY_TAG: prod
-    KUBE_CONTEXT: ens-prod-ctx
-  only:
-  - master
-
-# Deploy internal to EHK-HH cluster
-Internal:EHK-HH:
-  extends: .deploy-ehk
-  variables:
-    DEPLOY_TAG: internal
-    KUBE_CONTEXT: ens-dev-ctx
-  only:
-  - master
-
 # Deploy internal to WP-HX cluster
 Internal:WP-HX:
   extends: .deploy-wp
@@ -192,17 +150,7 @@ Dev:WP-HX:
   only:
   - dev
 
-# Deploy feature to EHK-HH cluster
-Feature:EHK-HH:
-  extends: .deploy-ehk
-  variables:
-    CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_REF_SLUG}
-    DEPLOY_TAG: ${CI_COMMIT_REF_SLUG}
-    KUBE_CONTEXT: ens-dev-ctx
-  only:
-  - /^feature\/.*$/
-
-# Deploy feature to EHK-HH cluster
+# Deploy Review app to WP-HX cluster
 Review:WP-HX:
   extends: .deploy-wp-review
   variables:
