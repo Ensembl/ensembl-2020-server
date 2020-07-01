@@ -34,12 +34,12 @@ variables:
   image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
 
   script:
-  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-  - git -C ensembl-client-caas-deploy/ checkout migration/wp-hx
-  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - sed -i "s#<NFS_SERVER>#${NFS_SERVER}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - git clone https://gitlab.ebi.ac.uk/ensembl-web/ensembl-k8s-manifests.git
+  - git -C ensembl-k8s-manifests/ checkout wp-k8s
+  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<NFS_SERVER>#${NFS_SERVER}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - kubectl apply -f ensembl-k8s-manifests/ensembl_server_deployment.yaml
 
 # Template to deploy review apps to WP k8s cluster
 .deploy-wp-review:
