@@ -18,7 +18,7 @@ use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
 use crate::interp::{ CompilerLink, InterpContext };
 use crate::interp::{ Command, InterpValue };
-use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters };
+use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters, cbor_array, cbor_float };
 use crate::typeinf::MemberMode;
 use serde_cbor::Value as CborValue;
 
@@ -80,7 +80,7 @@ fn generate_one_timing(command_type: &dyn TimeTrialCommandType, linker: &Compile
     Ok(regress(&data)?.0)
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct TimeTrial(pub f64,pub f64);
 
 impl TimeTrial {
@@ -105,8 +105,15 @@ impl TimeTrial {
         Ok(TimeTrial(m,c))
     }
 
+    pub fn evaluate(&self, x: f64) -> f64 { self.0*x+self.1 }
+
     pub fn serialize(&self) -> CborValue {
         CborValue::Array(vec![CborValue::Float(self.0),CborValue::Float(self.1)])
+    }
+
+    pub fn deserialize(value: &CborValue) -> Result<TimeTrial,String> {
+        let data = cbor_array(value,2,false)?;
+        Ok(TimeTrial(cbor_float(&data[0])?,cbor_float(&data[1])?))
     }
 }
 

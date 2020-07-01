@@ -22,8 +22,8 @@ use crate::typeinf::{ ExpressionType, MemberType, TypeModel, Typing };
 
 pub struct GenContext<'a> {
     defstore: &'a DefStore,
-    input_instrs: Vec<Instruction>,
-    output_instrs: Vec<Instruction>,
+    input_instrs: Vec<(Instruction,f64)>,
+    output_instrs: Vec<(Instruction,f64)>,
     regalloc: RegisterAllocator,
     types: TypeModel,
     typing: Typing
@@ -31,7 +31,7 @@ pub struct GenContext<'a> {
 
 impl<'a> fmt::Debug for GenContext<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let instr_str : Vec<String> = self.input_instrs.iter().map(|v| format!("{:?}",v)).collect();
+        let instr_str : Vec<String> = self.input_instrs.iter().map(|v| format!("{:?}",v.0)).collect();
         write!(f,"{}\n",instr_str.join(""))?;
         Ok(())
     }
@@ -52,12 +52,16 @@ impl<'a> GenContext<'a> {
     pub fn get_defstore(&self) -> &DefStore { self.defstore }
 
     pub fn get_instructions(&self) -> Vec<Instruction> {
+        self.input_instrs.iter().map(|x| x.0.clone()).collect()
+    }
+
+    pub fn get_timed_instructions(&self) -> Vec<(Instruction,f64)> {
         self.input_instrs.to_vec()
     }
 
     pub fn add_untyped(&mut self, instr: Instruction) -> Result<(),String> {
         self.typing.add(&instr.get_constraint(&self.defstore)?).map_err(|x| format!("{} while adding {:?}",x,instr))?;
-        self.output_instrs.push(instr);
+        self.output_instrs.push((instr,0.));
         Ok(())
     }
 
@@ -79,7 +83,11 @@ impl<'a> GenContext<'a> {
     }
 
     pub fn add(&mut self, instr: Instruction) {
-        self.output_instrs.push(instr);
+        self.output_instrs.push((instr,0.));
+    }
+
+    pub fn add_timed(&mut self, instr: Instruction, time: f64) {
+        self.output_instrs.push((instr,time));
     }
 
     pub fn allocate_register(&mut self, type_: Option<&MemberType>) -> Register {

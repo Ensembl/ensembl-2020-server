@@ -104,7 +104,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn make_value(&mut self, reg: &Register, value: &InterpValue) -> Result<(),String> {
         if let Some(src_reg) = self.reverse.find_register(value) {
-            self.gen_context.add(Instruction::new(InstructionType::Copy,vec![*reg,src_reg]));
+            self.add(Instruction::new(InstructionType::Copy,vec![*reg,src_reg]));
         } else {
             self.make_constant(reg)?;
         }
@@ -122,7 +122,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
             }
             self.suppressed.remove(reg);
         }
-        self.gen_context.add(instr.clone());
+        self.add(instr.clone());
         self.context().registers().commit();
         for (i,reg) in instr.regs.iter().enumerate() {
             if out.contains(&i) {
@@ -157,15 +157,22 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn long_constant<F,T>(&mut self, reg: &Register, values: &Vec<T>, mut cb: F) -> Result<(),String> where F: FnMut(Register,&T) -> Instruction {
         if values.len() == 1 {
-            self.gen_context.add(cb(*reg,&values[0]));
+            self.add(cb(*reg,&values[0]));
         } else {
-            self.gen_context.add(Instruction::new(InstructionType::Nil,vec![*reg]));
+            self.add(Instruction::new(InstructionType::Nil,vec![*reg]));
             for v in values {
                 let inter = self.gen_context.allocate_register(None);
-                self.gen_context.add(cb(inter,v));
-                self.gen_context.add(Instruction::new(InstructionType::Append,vec![*reg,inter]));
+                self.add(cb(inter,v));
+                self.add(Instruction::new(InstructionType::Append,vec![*reg,inter]));
             }
         }
+        Ok(())
+    }
+
+    fn add(&mut self, instr: Instruction) -> Result<(),String> {
+        let command = self.compiler_link.compile_instruction(&instr,true)?.2;
+        let time = command.execution_time();
+        self.gen_context.add_timed(instr,time);
         Ok(())
     }
 
@@ -174,14 +181,14 @@ impl<'a,'b> PreImageContext<'a,'b> {
         let value = self.context().registers().get(reg).borrow().get_shared()?;
         match value.as_ref() {
             InterpValue::Empty => {
-                self.gen_context.add(Instruction::new(InstructionType::Nil,vec![*reg]));
+                self.add(Instruction::new(InstructionType::Nil,vec![*reg]));
             },
             InterpValue::Indexes(indexes) => {
-                self.gen_context.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
+                self.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
             },
             InterpValue::Numbers(numbers) => {
                 if let Some(indexes) = numbers_to_indexes(numbers).ok() {
-                    self.gen_context.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
+                    self.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
                 } else {
                     self.long_constant(reg,numbers,|r,n| {
                         Instruction::new(InstructionType::NumberConst(*n),vec![r])
@@ -232,14 +239,14 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     pub fn preimage(&mut self) -> Result<(),String> {
         for instr in &self.gen_context.get_instructions() {
-            self.preimage_instr(instr).map_err(|msg| {
+            let time = self.preimage_instr(instr).map_err(|msg| {
                 let line = self.context().get_line_number();
                 if line.1 != 0 {
                     format!("{} at {}:{}",msg,line.0,line.1)
                 } else {
                     msg.to_string()
                 }
-            })?
+            })?;
         }
         self.gen_context.phase_finished();
         Ok(())

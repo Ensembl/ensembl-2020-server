@@ -74,12 +74,12 @@ impl CommandSet {
         Ok(CborValue::Map(out))
     }
 
-    pub fn load_dynamic_data(&self, data: &[u8]) -> Result<(),String> {
+    pub fn load_dynamic_data(&mut self, data: &[u8]) -> Result<(),String> {
         let data : CborValue = serde_cbor::from_slice(&data).map_err(|x| format!("{} while deserialising {:?}",x,self.csi))?;
         for (trigger,data) in cbor_map_iter(&data)? {
             let trigger = CommandTrigger::deserialize(trigger)?;
             if let Some(id) = self.mapping.get(&trigger) {
-                if let Some(command) = self.commands.get(id) {
+                if let Some(command) = self.commands.get_mut(id) {
                     command.use_dynamic_data(data)?;
                 }
             }
@@ -146,9 +146,9 @@ mod test {
     fn test_command_smoke() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
         let mut cs = CommandSet::new(&csi,false);
-        cs.push("test1",0,ConstCommandType()).expect("a");
-        cs.push("test3",2,NumberConstCommandType()).expect("c");
-        cs.push("test2",1,BooleanConstCommandType()).expect("b");
+        cs.push("test1",0,ConstCommandType::new()).expect("a");
+        cs.push("test3",2,NumberConstCommandType::new()).expect("c");
+        cs.push("test2",1,BooleanConstCommandType::new()).expect("b");
         cs.check_trace().expect("d");
         assert_eq!(&csi,cs.id());
     }
@@ -157,9 +157,9 @@ mod test {
     fn test_command_get() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
         let mut cs = CommandSet::new(&csi,false);
-        cs.push("test1",0,ConstCommandType()).expect("a");
-        cs.push("test2",1,BooleanConstCommandType()).expect("b");
-        cs.push("test3",2,NumberConstCommandType()).expect("c");
+        cs.push("test1",0,ConstCommandType::new()).expect("a");
+        cs.push("test2",1,BooleanConstCommandType::new()).expect("b");
+        cs.push("test3",2,NumberConstCommandType::new()).expect("c");
         assert_eq!(CommandTrigger::Instruction(InstructionSuperType::Const),cs.get(0).expect("d").get_schema().trigger);
         assert_eq!(CommandTrigger::Instruction(InstructionSuperType::NumberConst),cs.get(2).expect("e").get_schema().trigger);
         assert!(cs.get(3).is_err());
@@ -167,10 +167,10 @@ mod test {
 
     fn trace_type(cs: &mut CommandSet, name: &str, opcode: u32) {
         match opcode {
-            0 => cs.push(name,opcode,NumberConstCommandType()).expect("a"),
-            1 => cs.push(name,opcode,BooleanConstCommandType()).expect("b"),
-            2 => cs.push(name,opcode,ConstCommandType()).expect("c"),
-            _ => cs.push(name,opcode,StringConstCommandType()).expect("d")
+            0 => cs.push(name,opcode,NumberConstCommandType::new()).expect("a"),
+            1 => cs.push(name,opcode,BooleanConstCommandType::new()).expect("b"),
+            2 => cs.push(name,opcode,ConstCommandType::new()).expect("c"),
+            _ => cs.push(name,opcode,StringConstCommandType::new()).expect("d")
         }
     }
 
@@ -195,24 +195,24 @@ mod test {
     fn duplicate_opcode_test() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
         let mut cs = CommandSet::new(&csi,false);
-        cs.push("test1",0,ConstCommandType()).expect("a");
-        cs.push("test2",0,ConstCommandType()).expect_err("b");
+        cs.push("test1",0,ConstCommandType::new()).expect("a");
+        cs.push("test2",0,ConstCommandType::new()).expect_err("b");
     }
 
     #[test]
     fn duplicate_name_test() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
         let mut cs = CommandSet::new(&csi,false);
-        cs.push("test1",0,ConstCommandType()).expect("a");
-        cs.push("test1",1,ConstCommandType()).expect_err("b");
+        cs.push("test1",0,ConstCommandType::new()).expect("a");
+        cs.push("test1",1,ConstCommandType::new()).expect_err("b");
     }
 
     #[test]
     fn test_mappings() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
         let mut cs = CommandSet::new(&csi,false);
-        cs.push("test1",0,ConstCommandType()).expect("a");
-        cs.push("test2",1,NumberConstCommandType()).expect("c");
+        cs.push("test1",0,ConstCommandType::new()).expect("a");
+        cs.push("test2",1,NumberConstCommandType::new()).expect("c");
         let mappings = cs.get_mappings();
         assert_eq!(2,mappings.len());
         assert_eq!(Some(&0),mappings.get(&CommandTrigger::Instruction(InstructionSuperType::Const)));

@@ -131,12 +131,12 @@ mod test {
         //
         let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
         let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType()).expect("a");
+        cs1.push("test1",5,ConstCommandType::new()).expect("a");
         cb.add(cs1).expect("f");
         //
         let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
         let mut cs2 = CommandSet::new(&csi2,false);
-        cs2.push("test2",5,NumberConstCommandType()).expect("a");
+        cs2.push("test2",5,NumberConstCommandType::new()).expect("a");
         cb.add(cs2).expect("f");
         //
         let ccs = cb.make_compile_suite().expect("f");
@@ -150,12 +150,12 @@ mod test {
         //
         let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
         let mut cs2 = CommandSet::new(&csi2,false);
-        cs2.push("test2",5,NumberConstCommandType()).expect("a");
+        cs2.push("test2",5,NumberConstCommandType::new()).expect("a");
         cb.add(cs2).expect("f");
         //
         let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
         let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType()).expect("a");
+        cs1.push("test1",5,ConstCommandType::new()).expect("a");
         cb.add(cs1).expect("f");
         //
         let cis = cb.make_interpret_suite(&ccs.serialize()).expect("g");
@@ -208,7 +208,7 @@ mod test {
 
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
         let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType()).expect("a");
+        cs1.push("test1",5,ConstCommandType::new()).expect("a");
         cb.add(cs1).expect("a");
 
         let ccs = cb.make_compile_suite().expect("b");
@@ -216,11 +216,11 @@ mod test {
         let mut cb = LibrarySuiteBuilder::new();
         let csi2 = CommandSetId::new("test",(2,1),0x284E7C72C8628854);
         let mut cs2 = CommandSet::new(&csi2,false);
-        cs2.push("test2",5,NumberConstCommandType()).expect("a");
+        cs2.push("test2",5,NumberConstCommandType::new()).expect("a");
         cb.add(cs2).expect("c");
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
         let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType()).expect("a");
+        cs1.push("test1",5,ConstCommandType::new()).expect("a");
         cb.add(cs1).expect("c");
 
         let cis = cb.make_interpret_suite(&ccs.serialize()).expect("c");
@@ -234,7 +234,7 @@ mod test {
 
         let csi1 = CommandSetId::new("test",(1,1),0x2A9E7C72C8628854);
         let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType()).expect("a");
+        cs1.push("test1",5,ConstCommandType::new()).expect("a");
         cb.add(cs1).expect("a");
 
         let ccs = cb.make_compile_suite().expect("b");
@@ -252,7 +252,7 @@ mod test {
 
         let mut cb = LibrarySuiteBuilder::new();
         let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType()).expect("a");
+        cs1.push("test1",5,ConstCommandType::new()).expect("a");
         cb.add(cs1).expect("a");
 
         assert!(cb.make_interpret_suite(&ccs.serialize()).is_ok());

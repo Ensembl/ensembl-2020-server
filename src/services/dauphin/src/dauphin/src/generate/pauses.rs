@@ -16,18 +16,25 @@
 
 use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
+use super::compilerun::compile_run;
 use crate::resolver::Resolver;
 use crate::model::Register;
 use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
 pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut GenContext) -> Result<(),String> {
+    /* force compilerun to ensure timed instructions */ // XXX only if absent
+    compile_run(compiler_link,resolver,context)?;
     let mut timer = 0.;
-    for instr in &context.get_instructions() {
+    for (instr,time) in &context.get_timed_instructions() {
         match instr.itype {
             InstructionType::Pause => {},
             _ => {
                 let command = compiler_link.compile_instruction(instr,true)?.2;
+                let name = format!("{:?}",instr).replace("\n","");
+                if *time < 1. {
+                    print!("execution time for {:?} is {:.3}ms\n",name,time);
+                }
                 timer += command.execution_time();
                 while timer > 1. {
                     context.add(Instruction::new(InstructionType::Pause,vec![]));

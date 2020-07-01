@@ -53,7 +53,7 @@ mod test {
     fn member_smoke() {
         let csi = CommandSetId::new("test",(1,2),0x1E139093D228F8FF);
         let mut cs = CommandSet::new(&csi,false);
-        cs.push("test1",5,ConstCommandType()).expect("a");
+        cs.push("test1",5,ConstCommandType::new()).expect("a");
         let cs = Rc::new(cs);
         let mut m = CommandSuiteMember::new(5,cs.clone(),10);
         assert_eq!(CommandTrigger::Instruction(InstructionSuperType::Const),m.get_object().expect("b").get_schema().trigger);

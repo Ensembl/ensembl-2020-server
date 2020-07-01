@@ -100,7 +100,7 @@ mod test {
         //
         let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
         let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType()).expect("a");
+        cs1.push("test1",5,ConstCommandType::new()).expect("a");
         let cs1 = Rc::new(cs1);
         ccs.add_set(cs1.clone(),10);
         let m = CommandSuiteMember::new(5,cs1.clone(),10);
@@ -108,7 +108,7 @@ mod test {
         //
         let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
         let mut cs2 = CommandSet::new(&csi2,false);
-        cs2.push("test2",5,NumberConstCommandType()).expect("a");
+        cs2.push("test2",5,NumberConstCommandType::new()).expect("a");
         let cs2 = Rc::new(cs2);
         ccs.add_set(cs2.clone(),20);
         let m = CommandSuiteMember::new(5,cs2.clone(),20);

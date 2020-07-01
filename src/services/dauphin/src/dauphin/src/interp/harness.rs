@@ -63,7 +63,7 @@ pub fn mini_interp_run(interpret_linker: &InterpreterLink, config: &Config, name
     let mut interp = interpreter(interpret_linker,config,name)?;
     let start_time = SystemTime::now();
     let out = interpret(interpret_linker,config,name)?;
-    print!("execution time {}ms\n",start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f32()*1000.);
+    print!("command time {}ms\n",start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f32()*1000.);
     Ok(out)
 }
 

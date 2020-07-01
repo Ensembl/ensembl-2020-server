@@ -76,6 +76,16 @@ pub fn cbor_int(cbor: &CborValue, max: Option<i128>) -> Result<i128,String>  {
     Err(format!("bad cbor: expected int, unexpected {:?}",cbor))
 }
 
+pub fn cbor_float(cbor: &CborValue) -> Result<f64,String>  {
+    match cbor {
+        CborValue::Float(x) => {
+            return Ok(*x);
+        },
+        _ => {}
+    }
+    Err(format!("bad cbor: expected float, unexpected {:?}",cbor))
+}
+
 pub fn cbor_bool(cbor: &CborValue) -> Result<bool,String> {
     match cbor {
         CborValue::Bool(x) => Ok(*x),

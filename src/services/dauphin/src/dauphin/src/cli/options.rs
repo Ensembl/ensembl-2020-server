@@ -78,7 +78,7 @@ pub fn config_from_options() -> Config {
         ConfigOption::new("root-dir","root-dir",Some("B"),Some("DIRECTORY"),false,|config,v| { config.set_root_dir(v) }),
         ConfigOption::new("file-search-path","file-search-path",Some("I"),Some("DIRECTORY"),true,|config,v| { config.add_file_search_path(v) }),
         ConfigOption::new("lib","lib",Some("L"),Some("LIBRARY"),true,|config,v| { config.add_lib(v) }),
-        ConfigOption::new("action","action",None,Some("action"),false,|config,value| { config.set_action(value) })
+        ConfigOption::new("action","action",None,Some("ACTION"),false,|config,value| { config.set_action(value) })
     ];
     let actions = make_actions();
     for (action,_) in actions.iter() {

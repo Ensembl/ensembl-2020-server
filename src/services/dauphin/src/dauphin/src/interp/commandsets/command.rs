@@ -72,7 +72,7 @@ pub trait CommandType {
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String>;
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String>;
     fn generate_dynamic_data(&self, _linker: &CompilerLink, _config: &Config) -> Result<CborValue,String> { Ok(CborValue::Null) }
-    fn use_dynamic_data(&self, _value: &CborValue) -> Result<(),String> { Ok(()) }
+    fn use_dynamic_data(&mut self, _value: &CborValue) -> Result<(),String> { Ok(()) }
 }
 
 pub trait Command {
@@ -88,5 +88,5 @@ pub trait Command {
             PreImageOutcome::Skip
         })
     }
-    fn execution_time(&self) -> f64 { 0.1 }
+    fn execution_time(&self) -> f64 { 1. }
 }
