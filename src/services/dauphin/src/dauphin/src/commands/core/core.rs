@@ -17,7 +17,7 @@
 use std::rc::Rc;
 use crate::interp::InterpValue;
 use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext, PreImageOutcome };
-use crate::model::{ Register, cbor_make_map };
+use crate::model::{ Register, cbor_make_map, cbor_map };
 use serde_cbor::Value as CborValue;
 use crate::commands::common::polymorphic::arbitrate_type;
 use super::consts::const_commands;
@@ -32,11 +32,15 @@ impl TimeTrialCommandType for NilTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,1) }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NilCommand(Register(0))))
+        Ok(Box::new(NilCommand(Register(0),1.)))
     }
 }
 
-pub struct NilCommandType();
+pub struct NilCommandType(f64);
+
+impl NilCommandType {
+    fn new() -> NilCommandType { NilCommandType(1.) }
+}
 
 impl CommandType for NilCommandType {
     fn get_schema(&self) -> CommandSchema {
@@ -46,20 +50,26 @@ impl CommandType for NilCommandType {
         }
     }
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NilCommand(it.regs[0])))
+        Ok(Box::new(NilCommand(it.regs[0],self.0)))
     }
 
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NilCommand(Register::deserialize(value[0])?)))
+        Ok(Box::new(NilCommand(Register::deserialize(value[0])?,self.0)))
     }
 
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&NilTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
     }
+
+    fn use_dynamic_data(&mut self, value: &CborValue) -> Result<(),String> {
+        let t = cbor_map(value,&vec!["t"])?;
+        self.0 = TimeTrial::deserialize(&t[0])?.evaluate(1.);
+        Ok(())
+    }
 }
 
-pub struct NilCommand(pub(crate) Register);
+pub struct NilCommand(Register,f64);
 
 impl Command for NilCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -77,6 +87,8 @@ impl Command for NilCommand {
         context.set_reg_valid(&self.0,true);
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
+
+    fn execution_time(&self) -> f64 { self.1 }
 }
 
 struct CopyTimeTrial();
@@ -92,13 +104,13 @@ impl TimeTrialCommandType for CopyTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(CopyCommand(Register(0),Register(1))))
+        Ok(Box::new(CopyCommand(Register(0),Register(1),None)))
     }
 }
 
 type_instr2!(CopyCommandType,CopyCommand,InstructionSuperType::Copy,CopyTimeTrial);
 
-pub struct CopyCommand(pub(crate) Register,pub(crate) Register);
+pub struct CopyCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for CopyCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -118,6 +130,8 @@ impl Command for CopyCommand {
         context.set_reg_valid(&self.0,true);
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
+
+    fn execution_time(&self) -> f64 { self.2.as_ref().map(|x| x.evaluate(0.)).unwrap_or(1.) } // VVV
 }
 
 struct AppendTimeTrial();
@@ -134,13 +148,13 @@ impl TimeTrialCommandType for AppendTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(AppendCommand(Register(0),Register(1))))
+        Ok(Box::new(AppendCommand(Register(0),Register(1),None)))
     }
 }
 
 type_instr2!(AppendCommandType,AppendCommand,InstructionSuperType::Append,AppendTimeTrial);
 
-pub struct AppendCommand(pub(crate) Register,pub(crate) Register);
+pub struct AppendCommand(Register,Register,Option<TimeTrial>);
 
 fn append_typed<T>(dst: &mut Vec<T>, src: &Vec<T>) where T: Clone {
     dst.append(&mut src.clone());
@@ -193,13 +207,13 @@ impl TimeTrialCommandType for LengthTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(LengthCommand(Register(0),Register(1))))
+        Ok(Box::new(LengthCommand(Register(0),Register(1),None)))
     }
 }
 
 type_instr2!(LengthCommandType,LengthCommand,InstructionSuperType::Length,LengthTimeTrial);
 
-pub struct LengthCommand(pub(crate) Register,pub(crate) Register);
+pub struct LengthCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for LengthCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -241,13 +255,13 @@ impl TimeTrialCommandType for AddTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(AddCommand(Register(0),Register(1))))
+        Ok(Box::new(AddCommand(Register(0),Register(1),None)))
     }
 }
 
 type_instr2!(AddCommandType,AddCommand,InstructionSuperType::Add,AddTimeTrial);
 
-pub struct AddCommand(pub(crate) Register,pub(crate) Register);
+pub struct AddCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for AddCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -291,13 +305,13 @@ impl TimeTrialCommandType for ReFilterTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(ReFilterCommand(Register(0),Register(1),Register(2))))
+        Ok(Box::new(ReFilterCommand(Register(0),Register(1),Register(2),None)))
     }
 }
 
 type_instr3!(ReFilterCommandType,ReFilterCommand,InstructionSuperType::ReFilter,ReFilterTimeTrial);
 
-pub struct ReFilterCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register);
+pub struct ReFilterCommand(Register,Register,Register,Option<TimeTrial>);
 
 impl Command for ReFilterCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -435,13 +449,13 @@ impl TimeTrialCommandType for FilterTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(FilterCommand(Register(0),Register(1),Register(2))))
+        Ok(Box::new(FilterCommand(Register(0),Register(1),Register(2),None)))
     }
 }
 
 type_instr3!(FilterCommandType,FilterCommand,InstructionSuperType::Filter,FilterTimeTrial);
 
-pub struct FilterCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register);
+pub struct FilterCommand(Register,Register,Register,Option<TimeTrial>);
 
 impl Command for FilterCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -482,13 +496,13 @@ impl TimeTrialCommandType for RunTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(RunCommand(Register(0),Register(1),Register(2))))
+        Ok(Box::new(RunCommand(Register(0),Register(1),Register(2),None)))
     }
 }
 
 type_instr3!(RunCommandType,RunCommand,InstructionSuperType::Run,RunTimeTrial);
 
-pub struct RunCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register);
+pub struct RunCommand(Register,Register,Register,Option<TimeTrial>);
 
 impl Command for RunCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -534,13 +548,13 @@ impl TimeTrialCommandType for AtTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(AtCommand(Register(0),Register(1))))
+        Ok(Box::new(AtCommand(Register(0),Register(1),None)))
     }
 }
 
 type_instr2!(AtCommandType,AtCommand,InstructionSuperType::At,AtTimeTrial);
 
-pub struct AtCommand(pub(crate) Register, pub(crate) Register);
+pub struct AtCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for AtCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -606,13 +620,13 @@ impl TimeTrialCommandType for SeqFilterTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(SeqFilterCommand(Register(0),Register(1),Register(2),Register(3))))
+        Ok(Box::new(SeqFilterCommand(Register(0),Register(1),Register(2),Register(3),None)))
     }
 }
 
 type_instr4!(SeqFilterCommandType,SeqFilterCommand,InstructionSuperType::SeqFilter,SeqFilterTimeTrial);
 
-pub struct SeqFilterCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register, pub(crate) Register);
+pub struct SeqFilterCommand(Register,Register,Register,Register,Option<TimeTrial>);
 
 impl Command for SeqFilterCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -652,13 +666,13 @@ impl TimeTrialCommandType for SeqAtTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(SeqAtCommand(Register(0),Register(1))))
+        Ok(Box::new(SeqAtCommand(Register(0),Register(1),None)))
     }
 }
 
 type_instr2!(SeqAtCommandType,SeqAtCommand,InstructionSuperType::SeqAt,SeqAtTimeTrial);
 
-pub struct SeqAtCommand(pub(crate) Register,pub(crate) Register);
+pub struct SeqAtCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for SeqAtCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -723,18 +737,18 @@ pub fn make_core() -> Result<CommandSet,String> {
     let set_id = CommandSetId::new("core",(0,0),0xD8DA0F075C671A8A);
     let mut set = CommandSet::new(&set_id,false);
     const_commands(&mut set)?;
-    set.push("nil",5,NilCommandType())?;
-    set.push("copy",6,CopyCommandType())?;
-    set.push("append",7,AppendCommandType())?;
-    set.push("length",8,LengthCommandType())?;
-    set.push("add",9,AddCommandType())?;
+    set.push("nil",5,NilCommandType::new())?;
+    set.push("copy",6,CopyCommandType::new())?;
+    set.push("append",7,AppendCommandType::new())?;
+    set.push("length",8,LengthCommandType::new())?;
+    set.push("add",9,AddCommandType::new())?;
     set.push("numeq",10,NumEqCommandType())?;
-    set.push("filter",11,FilterCommandType())?;
-    set.push("run",12,RunCommandType())?;
-    set.push("seqfilter",13,SeqFilterCommandType())?;
-    set.push("seqat",14,SeqAtCommandType())?;
-    set.push("at",15,AtCommandType())?;
-    set.push("refilter",16,ReFilterCommandType())?;
+    set.push("filter",11,FilterCommandType::new())?;
+    set.push("run",12,RunCommandType::new())?;
+    set.push("seqfilter",13,SeqFilterCommandType::new())?;
+    set.push("seqat",14,SeqAtCommandType::new())?;
+    set.push("at",15,AtCommandType::new())?;
+    set.push("refilter",16,ReFilterCommandType::new())?;
     set.push("pause",18,PauseCommandType())?;
     set.load_dynamic_data(include_bytes!("core-0.0.ddd"))?;
     Ok(set)
