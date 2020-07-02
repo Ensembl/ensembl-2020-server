@@ -22,7 +22,7 @@ use serde_cbor::Value as CborValue;
 use crate::commands::common::polymorphic::arbitrate_type;
 use super::consts::const_commands;
 use crate::generate::{ Instruction, InstructionSuperType, PreImageContext };
-use crate::interp::{ CommandSchema, CommandType, CommandTrigger, TimeTrialCommandType, TimeTrial };
+use crate::interp::{ CommandSchema, CommandType, CommandTrigger, TimeTrialCommandType, TimeTrial, PreImagePrepare };
 use crate::cli::Config;
 use crate::interp::CompilerLink;
 
@@ -81,10 +81,11 @@ impl Command for NilCommand {
         Ok(vec![self.0.serialize()])
     }
 
-    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(PreImagePrepare::Replace)
+    }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
@@ -122,12 +123,17 @@ impl Command for CopyCommand {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) {
+            PreImagePrepare::Replace
+        } else if let Some(size) = context.get_reg_size(&self.1) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),size)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
@@ -184,12 +190,17 @@ impl Command for AppendCommand {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.0) && context.get_reg_valid(&self.1))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) {
+            PreImagePrepare::Replace
+        } else if let (Some(a),Some(b)) = (context.get_reg_size(&self.0),context.get_reg_size(&self.1)) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),a+b)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -227,12 +238,15 @@ impl Command for LengthCommand {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) {
+            PreImagePrepare::Replace
+        } else {
+            PreImagePrepare::Keep(vec![(self.0.clone(),1)])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -280,12 +294,17 @@ impl Command for AddCommand {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.0) && context.get_reg_valid(&self.1))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.0) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -330,12 +349,17 @@ impl Command for ReFilterCommand {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.2) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -405,12 +429,17 @@ impl Command for NumEqCommand {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.1) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -471,12 +500,17 @@ impl Command for FilterCommand {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.1) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -525,12 +559,20 @@ impl Command for RunCommand {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.2) {
+            if context.is_reg_valid(&self.1) {
+                PreImagePrepare::Replace
+            } else {
+                let lens = context.context().registers().get_indexes(&self.2)?;
+                PreImagePrepare::Keep(vec![(self.0.clone(),lens.iter().sum())])
+            }
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -572,12 +614,17 @@ impl Command for AtCommand {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.1) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -643,12 +690,23 @@ impl Command for SeqFilterCommand {
         Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize(),self.3.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2) && context.get_reg_valid(&self.3))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.3) {
+            if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+                PreImagePrepare::Replace
+            } else if let Some(num) = context.get_reg_size(&self.2) {
+                let lens = context.context().registers().get_indexes(&self.3)?;
+                let total : usize = (0..num).map(|i| lens[i%lens.len()]).sum();
+                PreImagePrepare::Keep(vec![(self.0.clone(),total)])
+            } else {
+                PreImagePrepare::Keep(vec![])
+            }
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }
@@ -692,12 +750,15 @@ impl Command for SeqAtCommand {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) {
+            PreImagePrepare::Replace
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }

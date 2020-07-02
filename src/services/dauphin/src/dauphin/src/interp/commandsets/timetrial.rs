@@ -135,7 +135,7 @@ pub fn trial_signature(layout: &[(MemberMode,usize)]) -> RegisterSignature {
     let mut sigs = RegisterSignature::new();
     for (mode,depth) in layout {
         let mut cr = ComplexRegisters::new_empty(*mode);
-        cr.add(ComplexPath::new_empty(),VectorRegisters::new(*depth),*depth);
+        cr.add(ComplexPath::new_empty(),VectorRegisters::new(*depth),&vec![*depth]);
         sigs.add(cr);
     }
     sigs

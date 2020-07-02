@@ -17,17 +17,15 @@
 use crate::interp::InterpValue;
 use crate::model::{ Register, RegisterSignature, cbor_make_map };
 use super::super::common::vectorsource::RegisterVectorSource;
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, trial_write, trial_signature, TimeTrialCommandType, TimeTrial };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, trial_write, trial_signature, TimeTrialCommandType, TimeTrial };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::typeinf::MemberMode;
 use crate::model::cbor_array;
-use crate::commands::common::sharedvec::SharedVec;
+use crate::commands::common::sharedvec::{ SharedVec };
 use super::library::std;
 use crate::cli::Config;
 use crate::interp::CompilerLink;
-
-
 use std::fmt::Debug;
 use crate::commands::common::polymorphic::arbitrate_type;
 
@@ -200,7 +198,37 @@ impl CommandType for EqCommandType {
 }
 
 // TODO preimage
-pub struct EqCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
+pub struct EqCommand(RegisterSignature,Vec<Register>);
+
+impl EqCommand {
+    fn compare_sizes(&self, context: &mut PreImageContext) -> Result<Vec<(Register,usize)>,String> {
+        let mut out = vec![];
+        let cr_a = &self.0[1];
+        for (_,vr_a) in cr_a.iter() {
+            if vr_a.depth() > 0 {
+                if let Some(x) = context.get_reg_size(&self.1[vr_a.offset_pos(vr_a.depth()-1)?]) {
+                    out.push((self.1[0].clone(),x));
+                }
+            } else {
+                if let Some(x) = context.get_reg_size(&self.1[vr_a.data_pos()]) {
+                    out.push((self.1[0].clone(),x));
+                }
+            }
+        }
+        Ok(out)
+    }
+    
+    fn can_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+        for pos in 1..3 {
+            for idx in self.0[pos].all_registers() {
+                if !context.is_reg_valid(&self.1[idx]) {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    }
+}
 
 impl Command for EqCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -232,19 +260,15 @@ impl Command for EqCommand {
         Ok(vec![self.0.serialize(false,true)?,regs])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
-        for pos in 1..3 {
-            for idx in self.0[pos].all_registers() {
-                if !context.get_reg_valid(&self.1[idx]) {
-                    return Ok(false);
-                }
-            }
-        }
-        Ok(true)
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(if self.can_preimage(context)? {
+            PreImagePrepare::Replace
+        } else {
+            PreImagePrepare::Keep(self.compare_sizes(context)?)
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.1[0],true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.1[0]]))
     }
 }
@@ -266,7 +290,7 @@ mod test {
     fn eq_smoke() {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
-        config.set_verbose(2);
+        config.set_verbose(3);
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);

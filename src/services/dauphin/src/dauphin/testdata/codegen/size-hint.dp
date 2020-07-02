@@ -1,0 +1,12 @@
+import "lib:std";
+use "std";
+
+x := "hello world!";
+print(x);
+print(get_size_hint(x));
+
+y := [1,2,3];
+print(get_size_hint(y));
+print(get_size_hint(y[]));
+print(get_size_hint(y[@<2]));
+print(get_size_hint(y[$>1]));

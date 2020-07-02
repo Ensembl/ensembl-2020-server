@@ -80,6 +80,7 @@ pub struct PreImageContext<'a,'b> {
     resolver: &'a Resolver,
     reverse: ReverseRegisters,
     suppressed: HashSet<Register>,
+    reg_sizes: HashMap<Register,usize>,
     compiler_link: CompilerLink,
     valid_registers: HashSet<Register>,
     context: InterpContext,
@@ -92,6 +93,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
             resolver,
             reverse: ReverseRegisters::new(),
             suppressed: HashSet::new(),
+            reg_sizes: HashMap::new(),
             compiler_link: compiler_link.clone(),
             valid_registers: HashSet::new(),
             context: compiler_link.new_context(),
@@ -104,9 +106,20 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn make_value(&mut self, reg: &Register, value: &InterpValue) -> Result<(),String> {
         if let Some(src_reg) = self.reverse.find_register(value) {
-            self.add(Instruction::new(InstructionType::Copy,vec![*reg,src_reg]));
+            self.add(Instruction::new(InstructionType::Copy,vec![*reg,src_reg]))?;
         } else {
             self.make_constant(reg)?;
+        }
+        Ok(())
+    }
+
+    fn commit(&mut self) -> Result<(),String> {
+        let regs = self.context().registers().commit();
+        for reg in &regs {
+            if self.is_reg_valid(reg) {
+                let len = self.context().registers().get(reg).borrow().get_shared()?.len();
+                self.set_reg_size(reg,Some(len));
+            }
         }
         Ok(())
     }
@@ -122,8 +135,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
             }
             self.suppressed.remove(reg);
         }
-        self.add(instr.clone());
-        self.context().registers().commit();
+        self.add(instr.clone())?;
+        self.commit()?;
         for (i,reg) in instr.regs.iter().enumerate() {
             if out.contains(&i) {
                 if self.valid_registers.contains(reg) {
@@ -134,36 +147,51 @@ impl<'a,'b> PreImageContext<'a,'b> {
         Ok(())
     }
 
-    pub fn set_reg_valid(&mut self, reg: &Register, valid: bool) {
-        if valid {
-            self.valid_registers.insert(*reg);
+    fn set_reg_valid(&mut self, reg: &Register) -> Result<(),String> {
+        self.valid_registers.insert(*reg);
+        Ok(())
+    }
+
+    pub fn set_reg_invalid(&mut self, reg: &Register) {
+        self.valid_registers.remove(reg);
+    }
+
+    pub fn set_reg_size(&mut self, reg: &Register, size: Option<usize>) {
+        if let Some(size) = size {
+            self.reg_sizes.insert(reg.clone(),size);
         } else {
-            self.valid_registers.remove(reg);
+            self.reg_sizes.remove(reg);
         }
     }
 
-    pub fn get_reg_valid(&mut self, reg: &Register) -> bool {
+    pub fn get_reg_size(&self, reg: &Register) -> Option<usize> { self.reg_sizes.get(reg).map(|x| *x) }
+
+    pub fn is_reg_valid(&mut self, reg: &Register) -> bool {
         self.valid_registers.contains(reg)
     }
 
-    fn unable_instr(&mut self, instr: &Instruction) -> Result<(),String> {
+    fn unable_instr(&mut self, instr: &Instruction, sizes: &[(Register,usize)]) -> Result<(),String> {
         self.add_instruction(instr)?;
         let changing = instr.itype.out_registers();
         for idx in &changing {
-            self.set_reg_valid(&instr.regs[*idx],false);
+            self.set_reg_invalid(&instr.regs[*idx]);
+            self.set_reg_size(&instr.regs[*idx],None);
+        }
+        for (reg,size) in sizes {
+            self.set_reg_size(reg,Some(*size));
         }
         Ok(())
     }
 
     fn long_constant<F,T>(&mut self, reg: &Register, values: &Vec<T>, mut cb: F) -> Result<(),String> where F: FnMut(Register,&T) -> Instruction {
         if values.len() == 1 {
-            self.add(cb(*reg,&values[0]));
+            self.add(cb(*reg,&values[0]))?;
         } else {
-            self.add(Instruction::new(InstructionType::Nil,vec![*reg]));
+            self.add(Instruction::new(InstructionType::Nil,vec![*reg]))?;
             for v in values {
                 let inter = self.gen_context.allocate_register(None);
-                self.add(cb(inter,v));
-                self.add(Instruction::new(InstructionType::Append,vec![*reg,inter]));
+                self.add(cb(inter,v))?;
+                self.add(Instruction::new(InstructionType::Append,vec![*reg,inter]))?;
             }
         }
         Ok(())
@@ -181,14 +209,14 @@ impl<'a,'b> PreImageContext<'a,'b> {
         let value = self.context().registers().get(reg).borrow().get_shared()?;
         match value.as_ref() {
             InterpValue::Empty => {
-                self.add(Instruction::new(InstructionType::Nil,vec![*reg]));
+                self.add(Instruction::new(InstructionType::Nil,vec![*reg]))?;
             },
             InterpValue::Indexes(indexes) => {
-                self.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
+                self.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]))?;
             },
             InterpValue::Numbers(numbers) => {
                 if let Some(indexes) = numbers_to_indexes(numbers).ok() {
-                    self.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]));
+                    self.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]))?;
                 } else {
                     self.long_constant(reg,numbers,|r,n| {
                         Instruction::new(InstructionType::NumberConst(*n),vec![r])
@@ -217,8 +245,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
     fn preimage_instr(&mut self, instr: &Instruction) -> Result<(),String> {
         let command = self.compiler_link.compile_instruction(instr,true)?.2;
         match command.preimage(self)? {
-            PreImageOutcome::Skip => {
-                self.unable_instr(&instr)?;
+            PreImageOutcome::Skip(sizes) => {
+                self.unable_instr(&instr,&sizes)?;
             },
             PreImageOutcome::Replace(instrs) => {
                 for instr in instrs {
@@ -226,14 +254,17 @@ impl<'a,'b> PreImageContext<'a,'b> {
                 }                    
             },
             PreImageOutcome::Constant(regs) => {
-                self.context().registers().commit();
+                for reg in &regs {
+                    self.set_reg_valid(reg)?;
+                }
+                self.commit()?;
                 for reg in &regs {
                     self.suppressed.insert(*reg);
                     self.reverse.remove_register(reg);
                 }
             }
         }
-        self.context().registers().commit();
+        self.commit()?;
         Ok(())
     }
 
@@ -272,6 +303,7 @@ mod test {
     use super::super::codegen::generate_code;
     use super::super::linearize::linearize;
     use super::super::dealias::remove_aliases;
+    use crate::generate::generate;
 
     #[test]
     fn runnums_smoke() {
@@ -326,4 +358,17 @@ mod test {
         print!("{}\n",lines);
     }
 
+    #[test]
+    fn size_hint() {
+        let config = xxx_test_config();
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
+        let mut lexer = Lexer::new(&resolver);
+        lexer.import("search:codegen/size-hint").expect("cannot load file");
+        let p = Parser::new(&mut lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
+        assert_eq!(vec!["hello world!", "1", "1", "3", "2", "2"],strings);
+    }
 }

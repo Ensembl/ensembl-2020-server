@@ -15,8 +15,8 @@
  */
 
 use crate::interp::InterpNatural;
-use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream };
+use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, ComplexRegisters };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
@@ -27,7 +27,7 @@ use crate::typeinf::MemberMode;
 use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
 
 pub fn std_id() -> CommandSetId {
-    CommandSetId::new("std",(0,0),0xDD9C0B3CD9093233)
+    CommandSetId::new("std",(0,0),0x43642F36EF881EFC)
 }
 
 pub(super) fn std(name: &str) -> Identifier {
@@ -108,17 +108,22 @@ impl Command for LenCommand {
         Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false,false)?])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
         if let Some((_,ass)) = &self.0[1].iter().next() {
             let reg = ass.length_pos(ass.depth()-1)?;
-            Ok(context.get_reg_valid(&self.1[reg]))
+            Ok(if context.is_reg_valid(&self.1[reg]) {
+                PreImagePrepare::Replace
+            } else if let Some(a) = context.get_reg_size(&self.1[reg]) {
+                PreImagePrepare::Keep(vec![(self.1[0].clone(),a)])
+            } else {
+                PreImagePrepare::Keep(vec![])
+            })
         } else {
             Err("len on non-list".to_string())
         }
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.1[0],true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.1[0]]))
     }
 }
@@ -153,6 +158,7 @@ impl Command for PrintRegsCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         for r in &self.0 {
             let v = StreamContents::Data(context.registers().get(r).borrow().get_shared()?.copy());
+            print!("ADDING {:?}\n",v);
             std_stream(context)?.add(v);
         }
         Ok(())
@@ -323,8 +329,14 @@ impl Command for AssertCommand {
         Ok(vec![self.0.serialize(),self.1.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
-        Ok(context.get_reg_valid(&self.0) && context.get_reg_valid(&self.1))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.0) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
@@ -368,12 +380,69 @@ impl Command for AlienateCommand {
     
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         for reg in self.0.iter() {
-            context.set_reg_valid(reg,false);
+            context.set_reg_invalid(reg);
         }
-        Ok(PreImageOutcome::Skip)
+        Ok(PreImageOutcome::Skip(vec![]))
     }
 }
 
+fn hint_reg(sig: &ComplexRegisters, regs: &[Register]) -> Result<Vec<Register>,String> {
+    let mut out = vec![];
+    for (_,vr) in sig.iter() {
+        if vr.depth() > 0 {
+            out.push(regs[vr.offset_pos(vr.depth()-1)?]);
+        } else {
+            out.push(regs[vr.data_pos()]);
+        }
+    }
+    Ok(out)
+}
+
+pub struct GetSizeHintCommandType();
+
+impl CommandType for GetSizeHintCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 0,
+            trigger: CommandTrigger::Command(std("get_size_hint"))
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,sig,_) = &it.itype {
+            Ok(Box::new(GetSizeHintCommand(it.regs[0].clone(),hint_reg(&sig[1],&it.regs)?)))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Err(format!("cannot deseriailize size hints"))
+    }
+}
+
+pub struct GetSizeHintCommand(Register,Vec<Register>);
+
+impl Command for GetSizeHintCommand {
+    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
+        Err(format!("cannot execute size hints"))
+    }
+
+    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+        Err(format!("cannot seriailize size hints"))
+    }
+    
+    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        let mut out = vec![];
+        for reg in self.1.iter() {
+            out.push(context.get_reg_size(reg).unwrap_or(0));
+        }
+        context.context().registers().write(&self.0,InterpValue::Indexes(out));
+        Ok(PreImageOutcome::Constant(vec![self.0.clone()]))
+    }
+}
+
+// TODO ARRAY-proof!
 pub struct PrintCommandType();
 
 impl CommandType for PrintCommandType {
@@ -403,7 +472,7 @@ pub struct PrintCommand(Register);
 impl Command for PrintCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
-        let a = &registers.get_strings(&self.0)?;
+        let a = &registers.coerce_strings(&self.0)?;
         for s in a.iter() {
             std_stream(context)?.add(StreamContents::String(s.to_string()));
         }
@@ -424,6 +493,7 @@ pub fn make_library() -> Result<CommandSet,String> {
     set.push("assert",4,AssertCommandType())?;
     set.push("alienate",13,AlienateCommandType())?;
     set.push("print",14,PrintCommandType())?;
+    set.push("get_size_hint",15,GetSizeHintCommandType())?;
     set.add_header("std",include_str!("header.dp"));
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;

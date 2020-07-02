@@ -47,8 +47,13 @@ impl CommandTrigger {
     }
 }
 
+pub enum PreImagePrepare {
+    Keep(Vec<(Register,usize)>),
+    Replace
+}
+
 pub enum PreImageOutcome {
-    Skip,
+    Skip(Vec<(Register,usize)>),
     Constant(Vec<Register>),
     Replace(Vec<Instruction>)
 }
@@ -78,14 +83,17 @@ pub trait CommandType {
 pub trait Command {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
     fn serialize(&self) -> Result<Vec<CborValue>,String>;
-    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(false) }
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> { Ok(PreImagePrepare::Keep(vec![])) }
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> { Err(format!("preimage_post must be overridden if simple_preimage returns true")) }
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> { 
-        Ok(if self.simple_preimage(context)? {
-            self.execute(context.context())?;
-            self.preimage_post(context)?
-        } else {
-            PreImageOutcome::Skip
+    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(match self.simple_preimage(context)? {
+            PreImagePrepare::Replace => {
+                self.execute(context.context())?;
+                self.preimage_post(context)?    
+            },
+            PreImagePrepare::Keep(sizes) => {
+                PreImageOutcome::Skip(sizes)
+            }
         })
     }
     fn execution_time(&self) -> f64 { 1. }

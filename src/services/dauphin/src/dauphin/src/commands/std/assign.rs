@@ -15,14 +15,14 @@
  */
 
 use crate::model::{ Register, RegisterSignature, cbor_make_map };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
 use crate::typeinf::MemberMode;
 use super::super::common::vectorcopy::{ vector_update_offsets, vector_update_lengths, vector_update_poly, vector_push, vector_register_copy, vector_append, append_data };
 use super::super::common::vectorsource::RegisterVectorSource;
-use super::super::common::sharedvec::SharedVec;
+use super::super::common::sharedvec::{ SharedVec };
 use super::super::common::writevec::WriteVec;
 use super::library::std;
 use crate::cli::Config;
@@ -40,7 +40,7 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
 fn preimage_possible(context: &mut PreImageContext, regs: &Vec<Register>) -> Result<bool,String> {
     let n = regs.len()/2;
     for i in 0..n {
-        if !context.get_reg_valid(&regs[i+n]) {
+        if !context.is_reg_valid(&regs[i+n]) {
             return Ok(false);
         }
     }
@@ -54,6 +54,17 @@ fn preimage_instrs(regs: &Vec<Register>) -> Result<Vec<Instruction>,String> {
         instrs.push(Instruction::new(InstructionType::Copy,vec![regs[i],regs[i+n]]));
     }
     Ok(instrs)
+}
+
+fn preimage_sizes(context: &PreImageContext, regs: &Vec<Register>) -> Result<Vec<(Register,usize)>,String> {
+    let mut out = vec![];
+    let n = regs.len()/2;
+    for i in 0..n {
+        if let Some(a) = context.get_reg_size(&regs[i+n]) {
+            out.push((regs[i],a));
+        }
+    }
+    Ok(out)
 }
 
 fn copy_deep<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
@@ -232,7 +243,21 @@ impl CommandType for AssignCommandType {
     }
 }
 
-pub struct AssignCommand(pub(crate) bool, pub(crate) RegisterSignature, pub(crate) Vec<Register>);
+pub struct AssignCommand(bool,RegisterSignature,Vec<Register>);
+
+impl AssignCommand {
+    fn can_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+        if !context.is_reg_valid(&self.2[0]) {
+            return Ok(false);
+        }
+        for idx in self.1[2].all_registers() {
+            if !context.is_reg_valid(&self.2[idx]) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+}
 
 impl Command for AssignCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -244,18 +269,6 @@ impl Command for AssignCommand {
         let regs = CborValue::Array(self.2.iter().map(|x| x.serialize()).collect());
         Ok(vec![CborValue::Bool(self.0),self.1.serialize(false,false)?,regs])
     }
-
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
-        if !context.get_reg_valid(&self.2[0]) {
-            return Ok(false);
-        }
-        for idx in self.1[2].all_registers() {
-            if !context.get_reg_valid(&self.2[idx]) {
-                return Ok(false);
-            }
-        }
-        Ok(true)
-    }
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(self.1[1].all_registers().iter().map(|x| self.2[*x]).collect()))
@@ -265,11 +278,11 @@ impl Command for AssignCommand {
         if !self.0 && preimage_possible(context,&self.2)? {
             Ok(PreImageOutcome::Replace(preimage_instrs(&self.2)?))
         } else {
-            Ok(if self.simple_preimage(context)? {
+            Ok(if self.can_preimage(context)? {
                 self.execute(context.context())?;
                 self.preimage_post(context)?
             } else {
-                PreImageOutcome::Skip
+                PreImageOutcome::Skip(preimage_sizes(context,&self.2)?)
             })
         }
     }
@@ -277,10 +290,10 @@ impl Command for AssignCommand {
 
 fn extend(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
     let vrs = RegisterVectorSource::new(&regs);
-    let bb = sig[2].iter().map(|vr| SharedVec::new(context,&vrs,vr.1)).collect::<Result<Vec<_>,_>>()?; /* ~100us */
+    let bb = sig[2].iter().map(|vr| SharedVec::new(context,&vrs,vr.1)).collect::<Result<Vec<_>,_>>()?;
     let mut zz = vec![];
     for (vr_z,vr_a) in sig[0].iter().zip(sig[1].iter()) {
-        vector_register_copy(context,&vrs,vr_z.1,vr_a.1)?; /* ~200us */
+        vector_register_copy(context,&vrs,vr_z.1,vr_a.1)?;
     }
     for vr_z in sig[0].iter() {
         zz.push(WriteVec::new(context,&vrs,vr_z.1)?);
@@ -298,6 +311,27 @@ fn extend(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Regis
         z.write(context)?;
     }
     Ok(())
+}
+
+fn extend_sizes(context: &mut PreImageContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<Vec<(Register,usize)>,String> {
+    let mut out = vec![];
+    for (((_,a),(_,b)),(_,z)) in sig[1].iter().zip(sig[2].iter()).zip(sig[0].iter()) {
+        let depth = z.depth();
+        if depth > 0 {
+            for level in 0..depth {
+                if let (Some(x),Some(y)) = (context.get_reg_size(&regs[a.offset_pos(level)?]),context.get_reg_size(&regs[b.offset_pos(level)?])) {
+                    out.push((regs[z.offset_pos(level)?],x+y));
+                }
+                if let (Some(x),Some(y)) = (context.get_reg_size(&regs[a.length_pos(level)?]),context.get_reg_size(&regs[b.length_pos(level)?])) {
+                    out.push((regs[z.length_pos(level)?],x+y));
+                }
+            }
+        }
+        if let (Some(x),Some(y)) = (context.get_reg_size(&regs[a.data_pos()]),context.get_reg_size(&regs[b.data_pos()])) {
+            out.push((regs[z.data_pos()],x+y));
+        }
+    }
+    Ok(out)
 }
 
 struct ExtendDataTimeTrial(bool); /* true = right, false = left */
@@ -410,6 +444,19 @@ impl CommandType for ExtendCommandType {
 
 pub struct ExtendCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
+impl ExtendCommand {
+    fn can_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
+        for pos in 1..3 {
+            for idx in self.0[pos].all_registers() {
+                if !context.is_reg_valid(&self.1[idx]) {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    }
+}
+
 impl Command for ExtendCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         extend(context,&self.0,&self.1)?;
@@ -421,15 +468,12 @@ impl Command for ExtendCommand {
         Ok(vec![self.0.serialize(false,false)?,regs])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
-        for pos in 1..3 {
-            for idx in self.0[pos].all_registers() {
-                if !context.get_reg_valid(&self.1[idx]) {
-                    return Ok(false);
-                }
-            }
-        }
-        Ok(true)
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(if self.can_preimage(context)? {
+            PreImagePrepare::Replace
+        } else {
+            PreImagePrepare::Keep(extend_sizes(context,&self.0,&self.1)?)
+        })
     }
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {

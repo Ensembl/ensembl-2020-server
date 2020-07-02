@@ -16,6 +16,7 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::mem::replace;
 use std::rc::Rc;
 use crate::model::Register;
 use super::supercow::{ SuperCow, SuperCowCommit };
@@ -89,10 +90,12 @@ impl RegisterFile {
         self.add_commit(register,cow);
     }
 
-    pub fn commit(&mut self) {
-        for register in self.commit_order.drain(..) {
+    pub fn commit(&mut self) -> Vec<Register> {
+        let regs = replace(&mut self.commit_order,vec![]);
+        for register in &regs {
             self.commit_value[&register].borrow_mut().commit();
         }
+        regs
     }
 
     pub fn copy(&mut self, dst: &Register, src: &Register) -> Result<(),String> {

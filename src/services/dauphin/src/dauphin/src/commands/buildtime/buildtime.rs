@@ -16,11 +16,13 @@
 
 use crate::interp::{ CommandSet, CommandSetId };
 use super::ini::LoadIniCommandType;
+use super::dump::DumpSigCommandType;
 
 pub fn make_buildtime() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("buildtime",(0,0),0xB6546C18A5641C3E);
+    let set_id = CommandSetId::new("buildtime",(0,0),0x989CFBBEFF3E1DD7);
     let mut set = CommandSet::new(&set_id,true);
     set.push("load_ini",1,LoadIniCommandType())?;
+    set.push("dump_sig",2,DumpSigCommandType())?;
     set.add_header("buildtime",include_str!("header.dp"));
     Ok(set)
 }

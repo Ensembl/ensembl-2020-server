@@ -39,6 +39,7 @@ mod std {
 mod buildtime {
     pub(super) mod buildtime;
     pub(super) mod ini;
+    pub(super) mod dump;
 }
 
 // XXX unexport

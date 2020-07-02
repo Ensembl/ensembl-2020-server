@@ -16,7 +16,7 @@
 
 use crate::interp::{ InterpValue, PreImageOutcome, TimeTrial };
 use crate::model::{ Register, cbor_make_map };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, TimeTrialCommandType };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, TimeTrialCommandType, PreImagePrepare };
 use crate::generate::{ Instruction, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::library::std;
@@ -137,12 +137,17 @@ impl Command for InterpBinBoolCommand {
         Ok(vec![self.1.serialize(),self.2.serialize(),self.3.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.2) && context.get_reg_valid(&self.3))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.2) && context.is_reg_valid(&self.3) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.2) {
+            PreImagePrepare::Keep(vec![(self.1.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.1,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.1]))
     }
 }
@@ -214,12 +219,17 @@ impl Command for InterpBinNumCommand {
         Ok(vec![self.1.serialize(),self.2.serialize(),self.3.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.2) && context.get_reg_valid(&self.3))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.2) && context.is_reg_valid(&self.3) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.2) {
+            PreImagePrepare::Keep(vec![(self.1.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.1,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.1]))
     }
 }
@@ -308,12 +318,17 @@ impl Command for InterpNumModCommand {
         Ok(vec![self.1.serialize(),self.2.serialize()])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
-        Ok(context.get_reg_valid(&self.1) && context.get_reg_valid(&self.2))
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+            PreImagePrepare::Replace
+        } else if let Some(a) = context.get_reg_size(&self.1) {
+            PreImagePrepare::Keep(vec![(self.1.clone(),a)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
     }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.1,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.1]))
     }
 }

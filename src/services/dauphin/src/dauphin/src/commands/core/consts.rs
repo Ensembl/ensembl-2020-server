@@ -16,7 +16,7 @@
 
 use std::convert::TryInto;
 use crate::interp::InterpValue;
-use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet, PreImageOutcome, TimeTrialCommandType, TimeTrial };
+use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial };
 use crate::model::Register;
 use crate::model::{ cbor_int, cbor_string, cbor_make_map, cbor_map };
 use crate::generate::{ Instruction, InstructionType, InstructionSuperType, PreImageContext };
@@ -91,10 +91,11 @@ impl Command for NumberConstCommand {
         Ok(vec![self.0.serialize(),CborValue::Float(self.1)])
     }
 
-    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(PreImagePrepare::Replace)
+    }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
@@ -161,10 +162,11 @@ impl Command for ConstCommand {
         Ok(vec![self.0.serialize(),CborValue::Array(v)])
     }
 
-    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(PreImagePrepare::Replace)
+    }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
@@ -226,10 +228,11 @@ impl Command for BooleanConstCommand {
         Ok(vec![self.0.serialize(),CborValue::Bool(self.1)])
     }
 
-    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(PreImagePrepare::Replace)
+    }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
@@ -293,10 +296,11 @@ impl Command for StringConstCommand {
         Ok(vec![self.0.serialize(),CborValue::Text(self.1.to_string())])
     }
 
-    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(PreImagePrepare::Replace)
+    }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
@@ -360,10 +364,11 @@ impl Command for BytesConstCommand {
         Ok(vec![self.0.serialize(),CborValue::Bytes(self.1.to_vec())])
     }
     
-    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<bool,String> { Ok(true) }
+    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        Ok(PreImagePrepare::Replace)
+    }
     
-    fn preimage_post(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.set_reg_valid(&self.0,true);
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
@@ -376,11 +381,15 @@ impl TimeTrialCommandType for LineNumberTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,1) }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(LineNumberCommand("x".to_string(),42)))
+        Ok(Box::new(LineNumberCommand("x".to_string(),42,1.)))
     }
 }
 
-pub struct LineNumberCommandType();
+pub struct LineNumberCommandType(f64);
+
+impl LineNumberCommandType {
+    fn new() -> LineNumberCommandType { LineNumberCommandType(1.) }
+}
 
 impl CommandType for LineNumberCommandType {
     fn get_schema(&self) -> CommandSchema {
@@ -396,20 +405,26 @@ impl CommandType for LineNumberCommandType {
         } else {
             return Err(format!("malformatted cbor"));
         };
-        Ok(Box::new(LineNumberCommand(file.to_string(),(*line).try_into().unwrap_or(0))))
+        Ok(Box::new(LineNumberCommand(file.to_string(),(*line).try_into().unwrap_or(0),self.0)))
     }
 
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(LineNumberCommand(cbor_string(&value[0])?,cbor_int(&value[1],None)? as u32)))
+        Ok(Box::new(LineNumberCommand(cbor_string(&value[0])?,cbor_int(&value[1],None)? as u32,self.0)))
     }
 
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&LineNumberTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
     }
+
+    fn use_dynamic_data(&mut self, value: &CborValue) -> Result<(),String> {
+        let t = cbor_map(value,&vec!["t"])?;
+        self.0 = TimeTrial::deserialize(&t[0])?.evaluate(1.);
+        Ok(())
+    }
 }
 
-pub struct LineNumberCommand(String,u32);
+pub struct LineNumberCommand(String,u32,f64);
 
 impl Command for LineNumberCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -421,14 +436,16 @@ impl Command for LineNumberCommand {
         Ok(vec![CborValue::Text(self.0.to_string()),CborValue::Integer(self.1 as i128)])
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> { 
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
         context.context().set_line_number(&self.0,self.1);
-        Ok(false)
+        Ok(PreImagePrepare::Keep(vec![]))
     }
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Err(format!("preimage impossible on line-number command"))
     }
+
+    fn execution_time(&self) -> f64 { self.2 }
 }
 
 pub(super) fn const_commands(set: &mut CommandSet) -> Result<(),String> {
@@ -437,6 +454,6 @@ pub(super) fn const_commands(set: &mut CommandSet) -> Result<(),String> {
     set.push("boolean",2,BooleanConstCommandType::new())?;
     set.push("string",3,StringConstCommandType::new())?;
     set.push("bytes",4,BytesConstCommandType::new())?;
-    set.push("linenumber",17,LineNumberCommandType())?;
+    set.push("linenumber",17,LineNumberCommandType::new())?;
     Ok(())
 }

@@ -18,7 +18,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use crate::interp::InterpContext;
 use crate::interp::{ InterpValue, InterpValueIndexes };
-use crate::model::VectorRegisters;
+use crate::model::{ VectorRegisters, Register };
 use super::vectorsource::VectorSource;
 
 #[derive(Debug)]

@@ -30,7 +30,7 @@ pub struct ComplexRegisters {
     mode: MemberMode,
     order: Vec<ComplexPath>,
     vectors: HashMap<ComplexPath,VectorRegisters>,
-    vec_depth: HashMap<ComplexPath,usize>
+    vec_break: HashMap<ComplexPath,Vec<usize>>,
 }
 
 impl fmt::Display for ComplexRegisters {
@@ -50,7 +50,7 @@ impl ComplexRegisters {
             start: 0,
             order: Vec::new(),
             vectors: HashMap::new(),
-            vec_depth: HashMap::new()
+            vec_break: HashMap::new()
         }
     }
 
@@ -67,12 +67,12 @@ impl ComplexRegisters {
     }
 
     pub fn get_vec_depth(&self, path: &ComplexPath) -> Result<usize,String> {
-        Ok(self.vec_depth.get(path).ok_or_else(|| format!("no depth present"))?.clone())
+        Ok(self.vec_break.get(path).ok_or_else(|| format!("no depth present"))?.iter().sum())
     }
 
     pub fn new(defstore: &DefStore, mode: MemberMode, type_: &MemberType) -> Result<ComplexRegisters,String> {
         let mut out = ComplexRegisters::new_empty(mode);
-        out.vec_from_type(defstore,type_,&ComplexPath::new_empty(),&ContainerType::new_empty())?;
+        out.vec_from_type(defstore,type_,&ComplexPath::new_empty(),&ContainerType::new_empty(),&vec![])?;
         Ok(out)
     }
 
@@ -89,17 +89,17 @@ impl ComplexRegisters {
         }
         for i in 0..len {
             let vs = VectorRegisters::deserialize(&data[i*mult+1])?;
-            let depth = if depth {
-                cbor_int(&data[i*mult+2],None)? as usize
+            let breaks = if depth {
+                cbor_array(&data[i*mult+2],0,true)?.iter().map(|x| cbor_int(x,None).map(|y| y as usize)).collect::<Result<Vec<usize>,_>>()?
             } else {
-                0
+                vec![]
             };
             let path = if named {
                 ComplexPath::deserialize(&data[i*mult+named_off])?
             } else {
                 ComplexPath::new_anon()
             };
-            out.add(path,vs,depth);
+            out.add(path,vs,&breaks);
         }
         Ok(out)
     }
@@ -109,7 +109,8 @@ impl ComplexRegisters {
         for complex in &self.order {
             regs.push(self.vectors.get(complex).as_ref().unwrap().serialize()?);
             if depth {
-                regs.push(CborValue::Integer(**self.vec_depth.get(complex).as_ref().unwrap() as i128));
+                let breaks = self.vec_break.get(complex).ok_or_else(|| format!("bad complexsig"))?;
+                regs.push(CborValue::Array(breaks.iter().map(|x| CborValue::Integer(*x as i128)).collect()));
             }
             if named {
                 regs.push(complex.serialize()?);
@@ -127,12 +128,12 @@ impl ComplexRegisters {
 
     pub fn get_mode(&self) -> MemberMode { self.mode }
 
-    pub fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters, vec_depth: usize) {
+    pub fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters, breaks: &[usize]) {
         vr.add_start(self.start);
         self.start += vr.register_count();
         self.order.push(complex.clone());
         self.vectors.insert(complex.clone(),vr);
-        self.vec_depth.insert(complex,vec_depth);
+        self.vec_break.insert(complex,breaks.to_vec());
     }
 
     pub fn iter<'a>(&'a self) -> ComplexRegistersIterator<'a> {
@@ -146,39 +147,41 @@ impl ComplexRegisters {
         self.iter().map(|x| x.1.register_count()).sum()
     }
 
-    pub(super) fn vec_from_type(&mut self, defstore: &DefStore, type_: &MemberType, path: &ComplexPath, container: &ContainerType) -> Result<(),String> {
+    fn vec_from_type(&mut self, defstore: &DefStore, type_: &MemberType, path: &ComplexPath, container: &ContainerType, breaks: &[usize]) -> Result<(),String> {
+        let mut breaks = breaks.to_vec();
+        breaks.push(type_.get_container().depth());
         let container = container.merge(&type_.get_container());
         match type_.get_base() {
             BaseType::StructType(name) => {
                 let struct_ = defstore.get_struct_id(&name)?;
-                self.from_struct(defstore,struct_,path,&container)
+                self.from_struct(defstore,struct_,path,&container,&breaks)
             },
             BaseType::EnumType(name) => {
                 let enum_ = defstore.get_enum_id(&name)?;
-                self.from_enum(defstore,enum_,path,&container)
+                self.from_enum(defstore,enum_,path,&container,&breaks)
             },
             _ => {
-                self.add(path.clone(),VectorRegisters::new(container.depth()),container.depth());
+                self.add(path.clone(),VectorRegisters::new(container.depth()),/*container.depth(),*/&breaks);
                 Ok(())
             }
         }
     }
 
-    fn from_struct(&mut self, defstore: &DefStore, se: &StructDef, cpath: &ComplexPath, container: &ContainerType) -> Result<(),String> {
+    fn from_struct(&mut self, defstore: &DefStore, se: &StructDef, cpath: &ComplexPath, container: &ContainerType, breaks: &[usize]) -> Result<(),String> {
         for name in se.get_names() {
             let new_cpath = cpath.add(name);
             let type_ = se.get_member_type(name).unwrap();
-            self.vec_from_type(defstore,&type_,&new_cpath,container)?;
+            self.vec_from_type(defstore,&type_,&new_cpath,container,breaks)?;
         }
         Ok(())
     }
 
-    fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &ComplexPath, container: &ContainerType) -> Result<(),String> {
-        self.add(cpath.clone(),VectorRegisters::new(container.depth()),container.depth());
+    fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &ComplexPath, container: &ContainerType, breaks: &[usize]) -> Result<(),String> {
+        self.add(cpath.clone(),VectorRegisters::new(container.depth()),/*container.depth(),*/breaks);
         for name in se.get_names() {
             let new_cpath = cpath.add(name);
             let type_ = se.get_branch_type(name).unwrap();
-            self.vec_from_type(defstore,&type_,&new_cpath,container)?;
+            self.vec_from_type(defstore,&type_,&new_cpath,container,breaks)?;
         }
         Ok(())
     }

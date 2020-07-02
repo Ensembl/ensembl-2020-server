@@ -17,11 +17,13 @@
 use std::any::Any;
 use crate::interp::{ InterpValue, PayloadFactory };
 
+#[derive(Debug)]
 pub enum StreamContents {
     String(String),
     Data(InterpValue),
 }
 
+#[derive(Debug)]
 pub struct Stream {
     contents: Vec<StreamContents>
 }
