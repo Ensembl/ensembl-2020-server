@@ -308,8 +308,8 @@ impl<'a> CodeGen<'a> {
                     modes.push(MemberMode::RValue);
                     regs.push(self.build_rvalue(&stmt.1[i],None,None)?);
                 },
-                SignatureMemberConstraint::LValue(_) => {
-                    let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.1[i],true,true)?;
+                SignatureMemberConstraint::LValue(_,stomp) => {
+                    let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.1[i],*stomp,true)?;
                     if let Some(fvalue_reg) = fvalue_reg {
                         modes.push(MemberMode::FValue);
                         regs.push(fvalue_reg);
@@ -353,13 +353,14 @@ mod test {
     use super::*;
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
-    use crate::interp::{ xxx_test_config, CompilerLink, make_librarysuite_builder };
+    use crate::interp::{ xxx_test_config, CompilerLink, make_librarysuite_builder, mini_interp };
     use crate::parser::Parser;
     use crate::test::files::load_testdata;
+    use crate::generate::generate;
 
     fn run_pass(filename: &str) -> Result<(),Vec<String>> {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import(&format!("search:codegen/{}",filename)).expect("cannot load file");
@@ -373,7 +374,7 @@ mod test {
     #[test]
     fn codegen_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
         lexer.import("search:codegen/generate-smoke2").expect("cannot load file");
@@ -390,5 +391,21 @@ mod test {
     fn codegen_lvalue_checks() {
         run_pass("typepass-reassignok").expect("A");
         run_pass("typepass-reassignbad").expect_err("B");
+    }
+
+    #[test]
+    fn lvalue_regression() {
+        let mut config = xxx_test_config();
+        config.set_generate_debug(false);
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
+        let mut lexer = Lexer::new(&resolver);
+        lexer.import("search:codegen/lvalue").expect("cannot load file");
+        let p = Parser::new(&mut lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
+        print!("{:?}\n",strings);
+        assert_eq!(vec!["1","2","33"],strings);
     }
 }

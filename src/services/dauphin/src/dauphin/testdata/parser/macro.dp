@@ -1,6 +1,6 @@
-proc assign(out _A, _A);
+proc assign(stomp mask _A, _A);
 inline ":=" assign left 14;
-proc incr(out _A, _A);
+proc incr(mask _A, _A);
 inline "+=" incr left 14;
 
 func plus(number,number) becomes number;

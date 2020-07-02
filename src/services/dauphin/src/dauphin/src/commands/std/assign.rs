@@ -37,16 +37,6 @@ fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Resul
     Ok(())
 }
 
-fn preimage_possible(context: &mut PreImageContext, regs: &Vec<Register>) -> Result<bool,String> {
-    let n = regs.len()/2;
-    for i in 0..n {
-        if !context.is_reg_valid(&regs[i+n]) {
-            return Ok(false);
-        }
-    }
-    Ok(true)
-}
-
 fn preimage_instrs(regs: &Vec<Register>) -> Result<Vec<Instruction>,String> {
     let mut instrs = vec![];
     let n = regs.len()/2;
@@ -265,9 +255,9 @@ impl Command for AssignCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         let regs = CborValue::Array(self.2.iter().map(|x| x.serialize()).collect());
-        Ok(vec![CborValue::Bool(self.0),self.1.serialize(false,false)?,regs])
+        Ok(Some(vec![CborValue::Bool(self.0),self.1.serialize(false,false)?,regs]))
     }
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
@@ -277,11 +267,7 @@ impl Command for AssignCommand {
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> { 
         Ok(if !self.0 {
             /* unfiltered */
-            if preimage_possible(context,&self.2)? {
-                PreImageOutcome::Replace(preimage_instrs(&self.2)?)
-            } else {
-                PreImageOutcome::Skip(preimage_sizes(context,&self.2,0)?)
-            }
+            PreImageOutcome::Replace(preimage_instrs(&self.2)?)
         } else {
             /* filtered */
             if self.can_preimage(context)? {
@@ -469,9 +455,9 @@ impl Command for ExtendCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         let regs = CborValue::Array(self.1.iter().map(|x| x.serialize()).collect());
-        Ok(vec![self.0.serialize(false,false)?,regs])
+        Ok(Some(vec![self.0.serialize(false,false)?,regs]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {

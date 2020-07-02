@@ -17,11 +17,12 @@
 use crate::interp::{ InterpValue, PreImageOutcome, TimeTrial };
 use crate::model::{ Register, cbor_make_map };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, TimeTrialCommandType, PreImagePrepare };
-use crate::generate::{ Instruction, PreImageContext };
+use crate::generate::{ Instruction, PreImageContext, InstructionType };
 use serde_cbor::Value as CborValue;
 use super::library::std;
 use crate::cli::Config;
 use crate::interp::CompilerLink;
+use crate::typeinf::MemberMode;
 
 #[derive(Copy,Clone)]
 pub enum InterpBinNumOp {
@@ -133,8 +134,8 @@ impl Command for InterpBinBoolCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.1.serialize(),self.2.serialize(),self.3.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.1.serialize(),self.2.serialize(),self.3.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -215,8 +216,8 @@ impl Command for InterpBinNumCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.1.serialize(),self.2.serialize(),self.3.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.1.serialize(),self.2.serialize(),self.3.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -234,7 +235,7 @@ impl Command for InterpBinNumCommand {
     }
 }
 
-struct NumModTimeTrial(InterpNumModOp);
+struct NumModTimeTrial(InterpNumModOp,bool);
 
 impl TimeTrialCommandType for NumModTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
@@ -245,11 +246,13 @@ impl TimeTrialCommandType for NumModTimeTrial {
         context.registers().write(&Register(0),InterpValue::Indexes(a));
         let b : Vec<usize> = (1..t).map(|x| (x as usize * 40503 )%t).collect();
         context.registers().write(&Register(1),InterpValue::Indexes(b));
+        let f : Vec<usize> = (1..t).map(|x| x-1 as usize).collect();
+        context.registers().write(&Register(2),InterpValue::Indexes(f));
         context.registers().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(InterpNumModCommand(self.0,Register(0),Register(1))))
+        Ok(Box::new(InterpNumModCommand(self.0,Register(0),Register(1),if self.1 { Some(Register(2)) } else { None })))
     }
 }
 
@@ -258,25 +261,40 @@ pub struct InterpNumModCommandType(InterpNumModOp);
 impl CommandType for InterpNumModCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
-            values: 2,
+            values: 3,
             trigger: CommandTrigger::Command(std(self.0.name()))
         }
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(InterpNumModCommand(self.0,it.regs[0],it.regs[1])))
+        if let InstructionType::Call(_,_,sig,_) = &it.itype {
+            if sig[0].get_mode() == MemberMode::FValue {
+                Ok(Box::new(InterpNumModCommand(self.0,it.regs[1].clone(),it.regs[2].clone(),Some(it.regs[0].clone()))))
+            } else {
+                Ok(Box::new(InterpNumModCommand(self.0,it.regs[0].clone(),it.regs[1].clone(),None)))
+            }
+        } else {
+            Err("unexpected instruction".to_string())
+        }
     }
     
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let filter = if *value[2] == CborValue::Null { 
+            None
+        } else {
+            Some(Register::deserialize(value[2])?)
+        };
         Ok(Box::new(InterpNumModCommand(
             self.0,
             Register::deserialize(&value[0])?,
-            Register::deserialize(&value[1])?)))
+            Register::deserialize(&value[1])?,
+            filter)))
     }
 
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
-        let timings = TimeTrial::run(&NumModTimeTrial(self.0),linker,config)?;
-        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
+        let unfiltered = TimeTrial::run(&NumModTimeTrial(self.0,false),linker,config)?;
+        let filtered = TimeTrial::run(&NumModTimeTrial(self.0,true),linker,config)?;
+        Ok(cbor_make_map(&vec!["tu","tf"],vec![unfiltered.serialize(),filtered.serialize()])?)
     }
 }
 
@@ -299,10 +317,10 @@ impl InterpNumModOp {
     }
 }
 
-pub struct InterpNumModCommand(pub(crate) InterpNumModOp, pub(crate) Register,pub(crate) Register);
+pub struct InterpNumModCommand(InterpNumModOp,Register,Register,Option<Register>);
 
-impl Command for InterpNumModCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+impl InterpNumModCommand {
+    fn execute_unfiltered(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers();
         let b = &registers.get_numbers(&self.2)?;
         let mut a = registers.take_numbers(&self.1)?;
@@ -314,12 +332,40 @@ impl Command for InterpNumModCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.1.serialize(),self.2.serialize()])
+    fn execute_filtered(&self, context: &mut InterpContext) -> Result<(),String> {
+        let filter : &[usize] = &context.registers().get_indexes(self.3.as_ref().unwrap())?;
+        let registers = context.registers();
+        let b = &registers.get_numbers(&self.2)?;
+        let mut a = registers.take_numbers(&self.1)?;
+        let b_len = b.len();
+        for (i,pos) in filter.iter().enumerate() {
+            self.0.evaluate(&mut a[*pos],b[i%b_len]);
+        }
+        registers.write(&self.1,InterpValue::Numbers(a));
+        Ok(())
+    }
+}
+
+impl Command for InterpNumModCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        if self.3.is_some() {
+            self.execute_filtered(context)
+        } else {
+            self.execute_unfiltered(context)
+        }
+    }
+
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        if let Some(filter) = self.3 {
+            Ok(Some(vec![self.1.serialize(),self.2.serialize(),filter.serialize()]))
+        } else {
+            Ok(Some(vec![self.1.serialize(),self.2.serialize(),CborValue::Null]))
+        }
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && 
+                self.3.map(|r| context.is_reg_valid(&r)).unwrap_or(true) {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.1) {
             PreImagePrepare::Keep(vec![(self.1.clone(),a)])

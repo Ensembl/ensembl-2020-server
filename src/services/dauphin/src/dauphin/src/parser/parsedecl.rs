@@ -132,7 +132,7 @@ pub(in super) fn parse_proc(lexer: &mut Lexer, defstore: &DefStore) -> Result<Ve
     let mut members = Vec::new();
     get_other(lexer,"(")?;
     loop {
-        if lexer.peek(None,1)[0] == Token::Other(')') { break; }
+        if lexer.peek(None,1)[0] == Token::Other(')') { lexer.get(); break; }
         let member = parse_signature(lexer,defstore)?;
         members.push(member);
         match lexer.get() {
@@ -146,16 +146,17 @@ pub(in super) fn parse_proc(lexer: &mut Lexer, defstore: &DefStore) -> Result<Ve
 
 pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<SignatureMemberConstraint,ParseError> {
     let mut out = false;
+    let mut stomp = false;
     loop {
         match &lexer.peek(None,1)[0] {
             Token::Identifier(name) => {
                 match &name[..] {
-                    // XXX to go
-                    "lvalue" => {
+                    "mask" => {
+                        out = true;
                         lexer.get();
                     },
-                    "out" => {
-                        out = true;
+                    "stomp" => {
+                        stomp = true;
                         lexer.get();
                     },
                     _ => break
@@ -166,7 +167,7 @@ pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Signatu
     }
     let argtype = parse_typesig(lexer,defstore)?;
     let member = if out {
-        SignatureMemberConstraint::LValue(argtype)
+        SignatureMemberConstraint::LValue(argtype,stomp)
     } else {
         SignatureMemberConstraint::RValue(argtype)
     };

@@ -65,7 +65,7 @@ impl Command for GetSizeHintCommand {
         Err(format!("cannot execute size hints"))
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Err(format!("cannot seriailize size hints"))
     }
     
@@ -110,8 +110,8 @@ impl Command for SetSizeHintCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(None)
     }
     
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
@@ -122,4 +122,45 @@ impl Command for SetSizeHintCommand {
         }
         Ok(PreImageOutcome::Skip(out))
     }
+}
+
+pub struct ForcePauseCommandType();
+
+impl CommandType for ForcePauseCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 0,
+            trigger: CommandTrigger::Command(Identifier::new("buildtime","force_pause"))
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,_,_) = &it.itype {
+            Ok(Box::new(ForcePauseCommand()))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(ForcePauseCommand()))
+    }
+}
+
+pub struct ForcePauseCommand();
+
+impl Command for ForcePauseCommand {
+    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
+        Ok(())
+    }
+
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(None)
+    }
+    
+    fn preimage(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(PreImageOutcome::Skip(vec![]))
+    }
+
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { 1000000000. }
 }

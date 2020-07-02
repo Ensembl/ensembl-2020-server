@@ -2,7 +2,7 @@ enum etest { X: string, Y: boolean };
 enum etest2 { Z: etest, W: boolean };
 struct stest { A: vec(number), B: etest };
 struct zstest2 { M: stest };
-proc assign(out _A, _A);
+proc assign(stomp mask _A, _A);
 func gt(number,number) becomes boolean;
 func lt(number,number) becomes boolean;
 func eq(number,number) becomes boolean;

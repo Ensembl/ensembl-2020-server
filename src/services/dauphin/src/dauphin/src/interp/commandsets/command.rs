@@ -82,7 +82,7 @@ pub trait CommandType {
 
 pub trait Command {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
-    fn serialize(&self) -> Result<Vec<CborValue>,String>;
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String>;
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> { Ok(PreImagePrepare::Keep(vec![])) }
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> { Err(format!("preimage_post must be overridden if simple_preimage returns true")) }
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
@@ -96,5 +96,5 @@ pub trait Command {
             }
         })
     }
-    fn execution_time(&self) -> f64 { 1. }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { 1. }
 }

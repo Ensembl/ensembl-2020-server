@@ -1,4 +1,4 @@
-proc assign(out _A, _A);
+proc assign(stomp mask _A, _A);
 func eq(number,number) becomes boolean;
 inline ":=" assign left 14;
 inline "==" eq left 10;

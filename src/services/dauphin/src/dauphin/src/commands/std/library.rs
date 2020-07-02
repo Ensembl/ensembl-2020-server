@@ -104,8 +104,8 @@ impl Command for LenCommand {
         }
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false,false)?])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false,false)?]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
@@ -164,8 +164,8 @@ impl Command for PrintRegsCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![CborValue::Array(self.0.iter().map(|x| x.serialize()).collect())])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![CborValue::Array(self.0.iter().map(|x| x.serialize()).collect())]))
     }
 }
 
@@ -282,8 +282,8 @@ impl Command for PrintVecCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(true,true)?])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(true,true)?]))
     }
 }
 
@@ -325,8 +325,8 @@ impl Command for AssertCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
@@ -374,8 +374,8 @@ impl Command for AlienateCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(None)
     }
     
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
@@ -424,8 +424,8 @@ impl Command for PrintCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-       Ok(vec![self.0.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+       Ok(Some(vec![self.0.serialize()]))
     }    
 }
 

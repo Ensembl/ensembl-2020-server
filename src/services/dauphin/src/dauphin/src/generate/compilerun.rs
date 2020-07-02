@@ -201,7 +201,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn add(&mut self, instr: Instruction) -> Result<(),String> {
         let command = self.compiler_link.compile_instruction(&instr,true)?.2;
-        let time = command.execution_time();
+        let time = command.execution_time(&self);
         self.gen_context.add_timed(instr,time);
         Ok(())
     }

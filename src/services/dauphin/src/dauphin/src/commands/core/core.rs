@@ -77,8 +77,8 @@ impl Command for NilCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize()]))
     }
 
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
@@ -89,7 +89,7 @@ impl Command for NilCommand {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
-    fn execution_time(&self) -> f64 { self.1 }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { self.1 }
 }
 
 struct CopyTimeTrial();
@@ -119,8 +119,8 @@ impl Command for CopyCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -137,7 +137,13 @@ impl Command for CopyCommand {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
-    fn execution_time(&self) -> f64 { self.2.as_ref().map(|x| x.evaluate(0.)).unwrap_or(1.) } // VVV
+    fn execution_time(&self, context: &PreImageContext) -> f64 { 
+        if let Some(size) = context.get_reg_size(&self.1) {
+            self.2.as_ref().map(|x| x.evaluate(size as f64/100.)).unwrap_or(1.)
+        } else {
+            1.
+        }        
+    }
 }
 
 struct AppendTimeTrial();
@@ -186,8 +192,8 @@ impl Command for AppendCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -234,8 +240,8 @@ impl Command for LengthCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -290,8 +296,8 @@ impl Command for AddCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -345,8 +351,8 @@ impl Command for ReFilterCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -425,8 +431,8 @@ impl Command for NumEqCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -496,8 +502,8 @@ impl Command for FilterCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -518,7 +524,7 @@ impl Command for FilterCommand {
 struct RunTimeTrial();
 
 impl TimeTrialCommandType for RunTimeTrial {
-    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
 
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t*100;
@@ -546,6 +552,9 @@ impl Command for RunCommand {
         let mut dst = vec![];
         let startlen = start.len();
         let lenlen = len.len();
+        if lenlen == 0 {
+            Err(format!("zero length run in register {:?}\n",self.2))?
+        }
         for i in 0..startlen {
             for j in 0..len[i%lenlen] {
                 dst.push(start[i]+j);
@@ -555,8 +564,8 @@ impl Command for RunCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -610,8 +619,8 @@ impl Command for AtCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -686,8 +695,8 @@ impl Command for SeqFilterCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize(),self.3.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize(),self.3.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -748,8 +757,8 @@ impl Command for SeqAtCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -793,8 +802,8 @@ impl Command for PauseCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![]))
     }
 }
 

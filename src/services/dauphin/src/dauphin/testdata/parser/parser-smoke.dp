@@ -1,4 +1,4 @@
-proc assign(out _A, _A);
+proc assign(stomp mask _A, _A);
 func plus(number,number) becomes number;
 func multiply(number,number) becomes number;
 func minus(number,number) becomes number;

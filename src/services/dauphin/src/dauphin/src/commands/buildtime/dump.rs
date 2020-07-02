@@ -55,8 +55,8 @@ impl Command for DumpSigCommand {
         Err(format!("buildtime::dump_sig can only be executed at compile time"))
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Err(format!("buildtime::dump_sig can only be executed at compile time"))
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(None)
     }
 
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {

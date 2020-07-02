@@ -1,6 +1,6 @@
 module "std";
 
-proc assign(out _A, _A);
+proc assign(stomp mask _A, _A);
 inline ":=" assign left 14;
 
 func eq(_A,_A) becomes boolean;
@@ -15,7 +15,7 @@ inline "<" lt left 6;
 func plus(number,number) becomes number;
 inline "+" plus left 4;
 
-proc incr(lvalue number, number);
+proc incr(mask number, number);
 inline "(+=)" incr left 14;
 
 func len(vec(_)) becomes number;
@@ -28,7 +28,7 @@ proc print_regs(_A);
 func extend(_A,_A) becomes _A;
 inline "(+)" extend left 14;
 
-proc alienate(lvalue _A);
+proc alienate(mask _A);
 
 proc print(_);
 

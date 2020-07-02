@@ -17,15 +17,16 @@
 use crate::interp::{ CommandSet, CommandSetId };
 use super::ini::LoadIniCommandType;
 use super::dump::DumpSigCommandType;
-use super::hints::{ GetSizeHintCommandType, SetSizeHintCommandType };
+use super::hints::{ GetSizeHintCommandType, SetSizeHintCommandType, ForcePauseCommandType };
 
 pub fn make_buildtime() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("buildtime",(0,0),0xC34B34CD74F5E323);
-    let mut set = CommandSet::new(&set_id,false);
+    let set_id = CommandSetId::new("buildtime",(0,0),0xD8DFD5B5B5450265);
+    let mut set = CommandSet::new(&set_id,true);
     set.push("load_ini",1,LoadIniCommandType())?;
     set.push("dump_sig",2,DumpSigCommandType())?;
     set.push("get_size_hint",3,GetSizeHintCommandType())?;
     set.push("set_size_hint",4,SetSizeHintCommandType())?;
+    set.push("force_pause",5,ForcePauseCommandType())?;
     set.add_header("buildtime",include_str!("header.dp"));
     Ok(set)
 }

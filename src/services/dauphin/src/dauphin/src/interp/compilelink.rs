@@ -62,19 +62,17 @@ impl CompilerLink {
         } else {
             self.cs.get_by_trigger(&CommandTrigger::Instruction(instr.itype.supertype()?))?
         };
-        if compile_only && !compile_side {
-            return Err(format!("{} is a compile-side only command",name));
-        }
         Ok((opcode,ct.get_schema(),ct.from_instruction(instr)?))
     }
 
     fn serialize_command(&self, out: &mut Vec<CborValue>, opcode: u32, schema: &CommandSchema, command: &Box<dyn Command>) -> Result<(),String> {
-        let mut data = command.serialize()?;
-        if data.len() != schema.values {
-            return Err(format!("serialization of {} returned {} values, expected {}",schema.trigger,data.len(),schema.values));
+        if let Some(mut data) = command.serialize()? {
+            if data.len() != schema.values {
+                return Err(format!("serialization of {} returned {} values, expected {}",schema.trigger,data.len(),schema.values));
+            }
+            out.push(CborValue::Integer(opcode as i128));
+            out.append(&mut data);
         }
-        out.push(CborValue::Integer(opcode as i128));
-        out.append(&mut data);
         Ok(())
     }
 

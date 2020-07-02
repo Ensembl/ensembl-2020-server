@@ -68,7 +68,7 @@ impl Command for LoadIniCommand {
         Err(format!("buildtime::load_ini can only be executed at compile time"))
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Err(format!("buildtime::load_ini can only be executed at compile time"))
     }
 

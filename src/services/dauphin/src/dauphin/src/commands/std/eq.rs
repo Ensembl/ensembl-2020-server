@@ -255,9 +255,9 @@ impl Command for EqCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         let regs = CborValue::Array(self.1.iter().map(|x| x.serialize()).collect());
-        Ok(vec![self.0.serialize(false,true)?,regs])
+        Ok(Some(vec![self.0.serialize(false,true)?,regs]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {

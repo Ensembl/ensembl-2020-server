@@ -87,8 +87,8 @@ impl Command for NumberConstCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),CborValue::Float(self.1)])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),CborValue::Float(self.1)]))
     }
 
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
@@ -99,7 +99,7 @@ impl Command for NumberConstCommand {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
-    fn execution_time(&self) -> f64 { self.2 }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { self.2 }
 }
 
 struct ConstTimeTrial();
@@ -157,9 +157,9 @@ impl Command for ConstCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         let v = self.1.iter().map(|x| CborValue::Integer(*x as i128)).collect();
-        Ok(vec![self.0.serialize(),CborValue::Array(v)])
+        Ok(Some(vec![self.0.serialize(),CborValue::Array(v)]))
     }
 
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
@@ -170,7 +170,7 @@ impl Command for ConstCommand {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
-    fn execution_time(&self) -> f64 { self.2.as_ref().map(|x| x.evaluate(self.1.len() as f64/100.)).unwrap_or(1.) }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { self.2.as_ref().map(|x| x.evaluate(self.1.len() as f64/100.)).unwrap_or(1.) }
 }
 
 struct BooleanConstTimeTrial();
@@ -224,8 +224,8 @@ impl Command for BooleanConstCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),CborValue::Bool(self.1)])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),CborValue::Bool(self.1)]))
     }
 
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
@@ -236,7 +236,7 @@ impl Command for BooleanConstCommand {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
-    fn execution_time(&self) -> f64 { self.2 }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { self.2 }
 }
 
 struct StringTimeTrial();
@@ -292,8 +292,8 @@ impl Command for StringConstCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),CborValue::Text(self.1.to_string())])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),CborValue::Text(self.1.to_string())]))
     }
 
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
@@ -304,7 +304,7 @@ impl Command for StringConstCommand {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
-    fn execution_time(&self) -> f64 { self.2.as_ref().map(|x| x.evaluate(self.1.len() as f64/100.)).unwrap_or(1.) }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { self.2.as_ref().map(|x| x.evaluate(self.1.len() as f64/100.)).unwrap_or(1.) }
 }
 
 struct BytesTimeTrial();
@@ -360,8 +360,8 @@ impl Command for BytesConstCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),CborValue::Bytes(self.1.to_vec())])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),CborValue::Bytes(self.1.to_vec())]))
     }
     
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
@@ -372,7 +372,7 @@ impl Command for BytesConstCommand {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
-    fn execution_time(&self) -> f64 { self.2.as_ref().map(|x| x.evaluate(self.1.len() as f64/100.)).unwrap_or(1.) }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { self.2.as_ref().map(|x| x.evaluate(self.1.len() as f64/100.)).unwrap_or(1.) }
 }
 
 struct LineNumberTimeTrial();
@@ -432,8 +432,8 @@ impl Command for LineNumberCommand {
         Ok(())
     }
 
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![CborValue::Text(self.0.to_string()),CborValue::Integer(self.1 as i128)])
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![CborValue::Text(self.0.to_string()),CborValue::Integer(self.1 as i128)]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -445,7 +445,7 @@ impl Command for LineNumberCommand {
         Err(format!("preimage impossible on line-number command"))
     }
 
-    fn execution_time(&self) -> f64 { self.2 }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { self.2 }
 }
 
 pub(super) fn const_commands(set: &mut CommandSet) -> Result<(),String> {

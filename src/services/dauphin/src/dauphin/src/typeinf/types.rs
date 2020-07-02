@@ -277,14 +277,14 @@ impl InstructionConstraint {
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
 pub enum SignatureMemberConstraint {
-    LValue(ArgumentExpressionConstraint),
+    LValue(ArgumentExpressionConstraint,bool),
     RValue(ArgumentExpressionConstraint)
 }
 
 impl SignatureMemberConstraint {
     pub fn to_argumentconstraint(&self) -> ArgumentConstraint {
         match self {
-            SignatureMemberConstraint::LValue(v) => ArgumentConstraint::Reference(v.clone()),
+            SignatureMemberConstraint::LValue(v,_) => ArgumentConstraint::Reference(v.clone()),
             SignatureMemberConstraint::RValue(v) => ArgumentConstraint::NonReference(v.clone())
         }
     }

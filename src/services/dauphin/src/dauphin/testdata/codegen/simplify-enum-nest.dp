@@ -1,6 +1,6 @@
 struct stest { A: vec(boolean), B: vec(boolean) };
 enum etest { X: string, Y: vec(boolean) };
-proc assign(out _A, _A);
+proc assign(stomp mask _A, _A);
 func eq(number,number) becomes boolean;
 proc bool_check(boolean);
 proc stest_check(stest);

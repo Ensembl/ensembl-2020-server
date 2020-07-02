@@ -35,9 +35,11 @@ pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut G
                 if *time < 1. {
                     print!("execution time for {:?} is {:.3}ms\n",name,time);
                 }
-                timer += command.execution_time();
-                while timer > 1. {
+                timer += time;
+                if timer > 1. {
                     context.add(Instruction::new(InstructionType::Pause,vec![]));
+                }
+                while timer > 1. {
                     timer -= 1.;
                 }
                 context.add(instr.clone())
@@ -46,4 +48,55 @@ pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut G
     }
     context.phase_finished();
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use super::super::call::call;
+    use super::super::simplify::simplify;
+    use crate::lexer::Lexer;
+    use crate::resolver::common_resolver;
+    use crate::parser::{ Parser };
+    use crate::generate::prune::prune;
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use super::super::codegen::generate_code;
+    use super::super::linearize::linearize;
+    use super::super::dealias::remove_aliases;
+    use crate::generate::generate;
+
+    fn pause_check(filename: &str) -> bool {
+        let mut config = xxx_test_config();
+        config.set_generate_debug(false);
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
+        let mut lexer = Lexer::new(&resolver);
+        lexer.import(&format!("search:codegen/{}",filename)).expect("cannot load file");
+        let p = Parser::new(&mut lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        let mut seen_force_pause = false;
+        for instr in &instrs {
+            if seen_force_pause {
+                print!("AFTER {:?}",instr);
+                return if let InstructionType::Pause = &instr.itype {
+                    true
+                } else {
+                    false
+                };
+            }
+            if let InstructionType::Call(id,_,_,_) = &instr.itype {
+                if id.name() == "force_pause" {
+                    seen_force_pause = true;
+                }
+            }
+        }
+        false
+    }
+
+    #[test]
+    fn pause() {
+        assert!(pause_check("pause"));
+        assert!(!pause_check("no-pause"));
+    }
 }

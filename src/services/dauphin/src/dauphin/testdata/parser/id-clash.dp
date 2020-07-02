@@ -1,2 +1,2 @@
-proc assign(out _A, _A);
+proc assign(stomp mask _A, _A);
 func assign(_A,_A) becomes _;
