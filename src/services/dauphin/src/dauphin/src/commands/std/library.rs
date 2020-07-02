@@ -27,7 +27,7 @@ use crate::typeinf::MemberMode;
 use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
 
 pub fn std_id() -> CommandSetId {
-    CommandSetId::new("std",(0,0),0x43642F36EF881EFC)
+    CommandSetId::new("std",(0,0),0xDD9C0B3CD9093233)
 }
 
 pub(super) fn std(name: &str) -> Identifier {
@@ -381,64 +381,9 @@ impl Command for AlienateCommand {
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         for reg in self.0.iter() {
             context.set_reg_invalid(reg);
+            context.set_reg_size(reg,None);
         }
         Ok(PreImageOutcome::Skip(vec![]))
-    }
-}
-
-fn hint_reg(sig: &ComplexRegisters, regs: &[Register]) -> Result<Vec<Register>,String> {
-    let mut out = vec![];
-    for (_,vr) in sig.iter() {
-        if vr.depth() > 0 {
-            out.push(regs[vr.offset_pos(vr.depth()-1)?]);
-        } else {
-            out.push(regs[vr.data_pos()]);
-        }
-    }
-    Ok(out)
-}
-
-pub struct GetSizeHintCommandType();
-
-impl CommandType for GetSizeHintCommandType {
-    fn get_schema(&self) -> CommandSchema {
-        CommandSchema {
-            values: 0,
-            trigger: CommandTrigger::Command(std("get_size_hint"))
-        }
-    }
-
-    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,sig,_) = &it.itype {
-            Ok(Box::new(GetSizeHintCommand(it.regs[0].clone(),hint_reg(&sig[1],&it.regs)?)))
-        } else {
-            Err("unexpected instruction".to_string())
-        }
-    }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err(format!("cannot deseriailize size hints"))
-    }
-}
-
-pub struct GetSizeHintCommand(Register,Vec<Register>);
-
-impl Command for GetSizeHintCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Err(format!("cannot execute size hints"))
-    }
-
-    fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Err(format!("cannot seriailize size hints"))
-    }
-    
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        let mut out = vec![];
-        for reg in self.1.iter() {
-            out.push(context.get_reg_size(reg).unwrap_or(0));
-        }
-        context.context().registers().write(&self.0,InterpValue::Indexes(out));
-        Ok(PreImageOutcome::Constant(vec![self.0.clone()]))
     }
 }
 
@@ -493,7 +438,6 @@ pub fn make_library() -> Result<CommandSet,String> {
     set.push("assert",4,AssertCommandType())?;
     set.push("alienate",13,AlienateCommandType())?;
     set.push("print",14,PrintCommandType())?;
-    set.push("get_size_hint",15,GetSizeHintCommandType())?;
     set.add_header("std",include_str!("header.dp"));
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;

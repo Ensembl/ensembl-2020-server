@@ -171,6 +171,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn unable_instr(&mut self, instr: &Instruction, sizes: &[(Register,usize)]) -> Result<(),String> {
+        let name = format!("{:?}",instr).replace("\n","");
+        //print!("unable {:?} {:?}\n",name,sizes);
         self.add_instruction(instr)?;
         let changing = instr.itype.out_registers();
         for idx in &changing {
@@ -360,7 +362,8 @@ mod test {
 
     #[test]
     fn size_hint() {
-        let config = xxx_test_config();
+        let mut config = xxx_test_config();
+        config.set_generate_debug(false);
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
@@ -369,6 +372,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        assert_eq!(vec!["hello world!", "1", "1", "3", "2", "2"],strings);
+        assert_eq!(vec!["hello world!", "1", "1", "3", "2", "2", "1000000000", "1000000000", "1000000000", "1000000000", "1000000000", "10", "10", "10", "1", "11", "11", "11"],strings);
+        print!("{:?}\n",strings);
     }
 }

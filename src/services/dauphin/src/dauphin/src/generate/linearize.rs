@@ -180,7 +180,16 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
         InstructionType::At => {
             if let Some(lin_src) = subregs.get(&instr.regs[1]) {
                 let top_level = lin_src.index.len()-1;
-                context.add(Instruction::new(InstructionType::SeqAt,vec![instr.regs[0],lin_src.index[top_level].1]));
+                if top_level > 0 {
+                    let top_length_reg = lin_src.index[top_level].1;
+                    let next_level_reg = lin_src.index[top_level-1].1;
+                    context.add(Instruction::new(InstructionType::SeqAt,vec![instr.regs[0],top_length_reg,next_level_reg]));
+                } else {
+                    let top_level = lin_src.index.len()-1;
+                    let top_length_reg = lin_src.index[top_level].1;
+                    let next_level_reg = lin_src.data;
+                    context.add(Instruction::new(InstructionType::SeqAt,vec![instr.regs[0],top_length_reg,next_level_reg]));
+                }
             } else {
                 context.add(Instruction::new(InstructionType::At,vec![instr.regs[0],instr.regs[1]]));
             }

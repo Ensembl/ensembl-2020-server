@@ -701,6 +701,8 @@ impl Command for SeqFilterCommand {
             } else {
                 PreImagePrepare::Keep(vec![])
             }
+        } else if let Some(num) = context.get_reg_size(&self.1) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),num)])
         } else {
             PreImagePrepare::Keep(vec![])
         })
@@ -724,13 +726,13 @@ impl TimeTrialCommandType for SeqAtTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(SeqAtCommand(Register(0),Register(1),None)))
+        Ok(Box::new(SeqAtCommand(Register(0),Register(1),Register(2),None)))
     }
 }
 
-type_instr2!(SeqAtCommandType,SeqAtCommand,InstructionSuperType::SeqAt,SeqAtTimeTrial);
+type_instr3!(SeqAtCommandType,SeqAtCommand,InstructionSuperType::SeqAt,SeqAtTimeTrial);
 
-pub struct SeqAtCommand(Register,Register,Option<TimeTrial>);
+pub struct SeqAtCommand(Register,Register,Register,Option<TimeTrial>);
 
 impl Command for SeqAtCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -747,12 +749,14 @@ impl Command for SeqAtCommand {
     }
 
     fn serialize(&self) -> Result<Vec<CborValue>,String> {
-        Ok(vec![self.0.serialize(),self.1.serialize()])
+        Ok(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()])
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
         Ok(if context.is_reg_valid(&self.1) {
             PreImagePrepare::Replace
+        } else if let Some(x) = context.get_reg_size(&self.2) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),x)])
         } else {
             PreImagePrepare::Keep(vec![])
         })

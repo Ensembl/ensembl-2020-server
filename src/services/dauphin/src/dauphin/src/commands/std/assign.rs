@@ -56,12 +56,12 @@ fn preimage_instrs(regs: &Vec<Register>) -> Result<Vec<Instruction>,String> {
     Ok(instrs)
 }
 
-fn preimage_sizes(context: &PreImageContext, regs: &Vec<Register>) -> Result<Vec<(Register,usize)>,String> {
+fn preimage_sizes(context: &PreImageContext, regs: &Vec<Register>, offset: usize) -> Result<Vec<(Register,usize)>,String> {
     let mut out = vec![];
-    let n = regs.len()/2;
+    let n = (regs.len()-offset)/2;
     for i in 0..n {
-        if let Some(a) = context.get_reg_size(&regs[i+n]) {
-            out.push((regs[i],a));
+        if let Some(a) = context.get_reg_size(&regs[offset+i+n]) {
+            out.push((regs[offset+i],a));
         }
     }
     Ok(out)
@@ -275,16 +275,22 @@ impl Command for AssignCommand {
     }
 
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> { 
-        if !self.0 && preimage_possible(context,&self.2)? {
-            Ok(PreImageOutcome::Replace(preimage_instrs(&self.2)?))
+        Ok(if !self.0 {
+            /* unfiltered */
+            if preimage_possible(context,&self.2)? {
+                PreImageOutcome::Replace(preimage_instrs(&self.2)?)
+            } else {
+                PreImageOutcome::Skip(preimage_sizes(context,&self.2,0)?)
+            }
         } else {
-            Ok(if self.can_preimage(context)? {
+            /* filtered */
+            if self.can_preimage(context)? {
                 self.execute(context.context())?;
                 self.preimage_post(context)?
             } else {
-                PreImageOutcome::Skip(preimage_sizes(context,&self.2)?)
-            })
-        }
+                PreImageOutcome::Skip(preimage_sizes(context,&self.2,1)?)
+            }
+        })
     }
 }
 

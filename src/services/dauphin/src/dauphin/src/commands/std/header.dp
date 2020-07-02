@@ -21,8 +21,6 @@ inline "(+=)" incr left 14;
 func len(vec(_)) becomes number;
 proc print_vec(_);
 
-func get_size_hint(_) becomes number;
-
 proc assert(boolean,boolean);
 
 proc print_regs(_A);

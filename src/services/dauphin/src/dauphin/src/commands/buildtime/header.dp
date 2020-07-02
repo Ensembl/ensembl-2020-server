@@ -2,3 +2,5 @@ module "buildtime";
 
 func load_ini(string,string,string) becomes string;
 func dump_sig(_) becomes string;
+func get_size_hint(_) becomes number;
+proc set_size_hint(out _,number);
