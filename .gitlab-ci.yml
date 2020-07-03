@@ -34,27 +34,26 @@ variables:
   image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
 
   script:
-  - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-  - git -C ensembl-client-caas-deploy/ checkout migration/wp-hx
-  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - sed -i "s#<NFS_SERVER>#${NFS_SERVER}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-  - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - git clone https://gitlab.ebi.ac.uk/ensembl-web/ensembl-k8s-manifests.git
+  - git -C ensembl-k8s-manifests/ checkout wp-k8s
+  - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<NFS_SERVER>#${NFS_SERVER}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - kubectl apply -f ensembl-k8s-manifests/ensembl_server_deployment.yaml
 
-# Template to deploy to EHK k8s cluster
-.deploy-ehk:
+# Template to deploy review apps to WP k8s cluster
+.deploy-wp-review:
   stage: deploy
   image: dockerhub.ebi.ac.uk/kamal/deploy-tools:0.1
-  before_script:
-    - mkdir -p /etc/deploy
-    - export KUBECONFIG=/etc/deploy/config
-    - echo ${EMBASSY_KUBECONFIG_DEV} | base64 -d > ${KUBECONFIG}
+
   script:
-    - git clone https://gitlab.ebi.ac.uk/kamal/ensembl-client-caas-deploy.git
-    - sed -i "s#<DOCKER_IMAGE>#${CONTAINER_IMAGE}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-    - sed -i "s#<DEPLOYMNET_ENV>#${DEPLOY_TAG}#g" ensembl-client-caas-deploy/ensembl_server_deployment.yaml
-    - kubectl config use-context ${KUBE_CONTEXT}
-    - kubectl apply -f ensembl-client-caas-deploy/ensembl_server_deployment.yaml
+  - git clone https://gitlab.ebi.ac.uk/ensembl-web/ensembl-k8s-manifests.git
+  - git -C ensembl-k8s-manifests/ checkout wp-k8s-review
+  - sed -i "s#<DOCKER_IMAGE>#${CONTAINER_IMAGE}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<DEPLOYMENT_ENV>#${CI_COMMIT_REF_SLUG}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<NFS_SERVER>#${NFS_SERVER}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - sed -i "s#<NFS_PATH>#${NFS_PATH}#g" ensembl-k8s-manifests/ensembl_server_deployment.yaml
+  - kubectl apply -f ensembl-k8s-manifests/ensembl_server_deployment.yaml
 
 # Build docker image for live/internal/stage environment
 Docker:IMG:
@@ -64,22 +63,15 @@ Docker:IMG:
   - master
 
 # Build docker image for feature_branch dev environment
-Docker:feature:
+Docker:review:
   extends: .build
   variables:
     CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_REF_SLUG}
 
-  only:
-  - /^feature\/.*$/
-
-# Deploy staging to EHK-HH cluster
-Staging:EHK-HH:
-  extends: .deploy-ehk
-  variables:
-    DEPLOY_TAG: staging
-    KUBE_CONTEXT: ens-stage-ctx
-  only:
+  except:
   - dev
+  - master
+  - /^nodeploy\/.*$/
 
 # Deploy staging to WP-HX cluster
 Staging:WP-HX:
@@ -125,24 +117,6 @@ Live:WP-HH:
   only:
   - master
 
-# Deploy Live to EHK-HH cluster
-Live:EHK-HH:
-  extends: .deploy-ehk
-  variables:
-    DEPLOY_TAG: prod
-    KUBE_CONTEXT: ens-prod-ctx
-  only:
-  - master
-
-# Deploy internal to EHK-HH cluster
-Internal:EHK-HH:
-  extends: .deploy-ehk
-  variables:
-    DEPLOY_TAG: internal
-    KUBE_CONTEXT: ens-dev-ctx
-  only:
-  - master
-
 # Deploy internal to WP-HX cluster
 Internal:WP-HX:
   extends: .deploy-wp
@@ -165,12 +139,27 @@ Internal:WP-HH:
   only:
   - dev
 
-# Deploy feature to EHK-HH cluster
-Feature:EHK-HH:
-  extends: .deploy-ehk
+# Deploy dev to WP-HX cluster
+Dev:WP-HX:
+  extends: .deploy-wp
+  variables:
+    NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
+    NFS_PATH: /ifs/public-r/ro/enswbsites
+  environment:
+    name : wp-hx-dev
+  only:
+  - dev
+
+# Deploy Review app to WP-HX cluster
+Review:WP-HX:
+  extends: .deploy-wp-review
   variables:
     CONTAINER_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_REF_SLUG}
-    DEPLOY_TAG: ${CI_COMMIT_REF_SLUG}
-    KUBE_CONTEXT: ens-dev-ctx
-  only:
-  - /^feature\/.*$/
+    NFS_SERVER: hx-isi-srv-vlan157.ebi.ac.uk
+    NFS_PATH: /ifs/public-r/ro/enswbsites
+  environment:
+    name : wp-hx-dev
+  except:
+  - dev
+  - master
+  - /^nodeploy\/.*$/
