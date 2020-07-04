@@ -80,7 +80,9 @@ impl CommandSet {
             let trigger = CommandTrigger::deserialize(trigger)?;
             if let Some(id) = self.mapping.get(&trigger) {
                 if let Some(command) = self.commands.get_mut(id) {
-                    command.use_dynamic_data(data)?;
+                    command.use_dynamic_data(data).unwrap_or_else(|x| {
+                        eprint!("Cannot load dynamic data for {:?}\n",id);
+                    });
                 }
             }
         }

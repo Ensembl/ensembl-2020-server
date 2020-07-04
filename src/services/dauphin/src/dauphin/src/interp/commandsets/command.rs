@@ -88,7 +88,7 @@ pub trait Command {
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(match self.simple_preimage(context)? {
             PreImagePrepare::Replace => {
-                self.execute(context.context())?;
+                self.execute(context.context_mut())?;
                 self.preimage_post(context)?    
             },
             PreImagePrepare::Keep(sizes) => {

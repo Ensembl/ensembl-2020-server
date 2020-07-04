@@ -437,7 +437,7 @@ impl Command for LineNumberCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        context.context().set_line_number(&self.0,self.1);
+        context.context_mut().set_line_number(&self.0,self.1);
         Ok(PreImagePrepare::Keep(vec![]))
     }
     

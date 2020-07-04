@@ -29,8 +29,11 @@ mod core {
     pub(super) mod consts;
     pub(super) mod core;
 }
+
+ // XXX unexport
 mod std {
-    pub(super) mod assign; // XXX unexport
+    pub(super) mod assign;
+    pub(super) mod extend;
     pub(super) mod library;
     mod numops;
     mod eq;

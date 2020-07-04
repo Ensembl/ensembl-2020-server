@@ -1,6 +1,9 @@
 import "lib:std";
 use "std";
 
+import "lib:buildtime";
+use "buildtime";
+
 x := [[1,2][] (+) [3,4][]];
 assert(x==[1,2,3,4],true);
 
@@ -24,5 +27,15 @@ assert(x==[[[1,2],[3,4]],[[1,2],[3,4]]],true);
 
 y := [[6,6,6],[7]];
 
+alienate(x);
+alienate(y);
+set_size_hint(x,1);
+set_size_hint(x[],2);
+set_size_hint(x[][],3);
+set_size_hint(x[][][],4);
+set_size_hint(y,1);
+set_size_hint(y[],2);
+set_size_hint(y[][],3);
+force_pause();
 x := push(x,y);
 assert(x==[[[1,2],[3,4]],[[1,2],[3,4]],[[6,6,6],[7]]],true);

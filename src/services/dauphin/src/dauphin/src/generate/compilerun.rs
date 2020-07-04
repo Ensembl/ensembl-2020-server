@@ -101,7 +101,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
         })
     }
 
-    pub fn context(&mut self) -> &mut InterpContext { &mut self.context }
+    pub fn context(&self) -> &InterpContext { &self.context }
+    pub fn context_mut(&mut self) -> &mut InterpContext { &mut self.context }
     pub fn resolver(&self) -> &Resolver { &self.resolver }
 
     fn make_value(&mut self, reg: &Register, value: &InterpValue) -> Result<(),String> {
@@ -114,10 +115,10 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn commit(&mut self) -> Result<(),String> {
-        let regs = self.context().registers().commit();
+        let regs = self.context_mut().registers().commit();
         for reg in &regs {
             if self.is_reg_valid(reg) {
-                let len = self.context().registers().get(reg).borrow().get_shared()?.len();
+                let len = self.context_mut().registers().get(reg).borrow().get_shared()?.len();
                 self.set_reg_size(reg,Some(len));
             }
         }
@@ -129,7 +130,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
         let out_only = instr.itype.out_only_registers();
         for (i,reg) in instr.regs.iter().enumerate() {
             if !out_only.contains(&i) && self.suppressed.contains(reg) {
-                let value = self.context().registers().get(reg).borrow().get_shared()?;
+                let value = self.context_mut().registers().get(reg).borrow().get_shared()?;
                 self.make_value(&reg,&value)?;
                 self.reverse.update_register(reg,&value);
             }
@@ -139,9 +140,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
         self.commit()?;
         for (i,reg) in instr.regs.iter().enumerate() {
             if out.contains(&i) {
-                if self.valid_registers.contains(reg) {
-                    self.reverse.remove_register(reg);
-                }
+                self.reverse.remove_register(reg);
             }
         }
         Ok(())
@@ -171,7 +170,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn unable_instr(&mut self, instr: &Instruction, sizes: &[(Register,usize)]) -> Result<(),String> {
-        let name = format!("{:?}",instr).replace("\n","");
+        //let name = format!("{:?}",instr).replace("\n","");
         //print!("unable {:?} {:?}\n",name,sizes);
         self.add_instruction(instr)?;
         let changing = instr.itype.out_registers();
@@ -208,7 +207,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn make_constant(&mut self, reg: &Register) -> Result<(),String> {
         // XXX don't copy the big ones
-        let value = self.context().registers().get(reg).borrow().get_shared()?;
+        let value = self.context_mut().registers().get(reg).borrow().get_shared()?;
         match value.as_ref() {
             InterpValue::Empty => {
                 self.add(Instruction::new(InstructionType::Nil,vec![*reg]))?;

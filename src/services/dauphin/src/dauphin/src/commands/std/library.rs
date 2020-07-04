@@ -108,23 +108,22 @@ impl Command for LenCommand {
         Ok(Some(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false,false)?]))
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         if let Some((_,ass)) = &self.0[1].iter().next() {
             let reg = ass.length_pos(ass.depth()-1)?;
-            Ok(if context.is_reg_valid(&self.1[reg]) {
-                PreImagePrepare::Replace
-            } else if let Some(a) = context.get_reg_size(&self.1[reg]) {
-                PreImagePrepare::Keep(vec![(self.1[0].clone(),a)])
+            if context.is_reg_valid(&self.1[reg]) {
+                /* can execute now */
+                self.execute(context.context_mut())?;
+                return Ok(PreImageOutcome::Constant(vec![self.1[0]]));
             } else {
-                PreImagePrepare::Keep(vec![])
-            })
-        } else {
-            Err("len on non-list".to_string())
+                /* replace */
+                return Ok(PreImageOutcome::Replace(vec![
+                    Instruction::new(InstructionType::Copy,vec![self.1[0].clone(),self.1[reg].clone()])
+                ]))
+            }
         }
-    }
-    
-    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        Ok(PreImageOutcome::Constant(vec![self.1[0]]))
+        /* should never happen! */
+        Err(format!("cannot preimage length command"))
     }
 }
 

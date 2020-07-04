@@ -137,7 +137,7 @@ impl Command for CopyCommand {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 
-    fn execution_time(&self, context: &PreImageContext) -> f64 { 
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
         if let Some(size) = context.get_reg_size(&self.1) {
             self.2.as_ref().map(|x| x.evaluate(size as f64/100.)).unwrap_or(1.)
         } else {
@@ -209,6 +209,20 @@ impl Command for AppendCommand {
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        let size = match (context.get_reg_size(&self.0),context.get_reg_size(&self.1)) {
+            (Some(a),Some(b)) => Some(a+b),
+            (Some(a),None) => Some(2*a),
+            (None,Some(b)) => Some(2*b),
+            (None,None) => None
+        };
+        if let Some(size) = size {
+            self.2.as_ref().map(|x| x.evaluate(size as f64/200.)).unwrap_or(1.)
+        } else {
+            1.
+        }
+    }
 }
 
 struct LengthTimeTrial();
@@ -254,6 +268,14 @@ impl Command for LengthCommand {
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(len) = context.get_reg_size(&self.1) {
+            self.2.as_ref().map(|x| x.evaluate(len as f64/100.)).unwrap_or(1.)
+        } else {
+            1.
+        }
     }
 }
 
@@ -313,6 +335,20 @@ impl Command for AddCommand {
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        let size = match (context.get_reg_size(&self.0),context.get_reg_size(&self.1)) {
+            (Some(a),Some(b)) => Some(a+b),
+            (Some(a),None) => Some(2*a),
+            (None,Some(b)) => Some(2*b),
+            (None,None) => None
+        };
+        if let Some(size) = size {
+            self.2.as_ref().map(|x| x.evaluate(size as f64/200.)).unwrap_or(1.)
+        } else {
+            1.
+        }
+    }
 }
 
 struct ReFilterTimeTrial();
@@ -368,6 +404,14 @@ impl Command for ReFilterCommand {
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(size) = context.get_reg_size(&self.1) {
+            self.3.as_ref().map(|x| x.evaluate(size as f64/100.)).unwrap_or(1.)
+        } else {
+            1.
+        }
+    }
 }
 
 struct NumEqTimeTrial();
@@ -388,11 +432,15 @@ impl TimeTrialCommandType for NumEqTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NumEqCommand(Register(0),Register(1),Register(2))))
+        Ok(Box::new(NumEqCommand(Register(0),Register(1),Register(2),None)))
     }
 }
 
-pub struct NumEqCommandType();
+pub struct NumEqCommandType(Option<TimeTrial>);
+
+impl NumEqCommandType {
+    fn new() -> NumEqCommandType { NumEqCommandType(None) }
+}
 
 impl CommandType for NumEqCommandType {
     fn get_schema(&self) -> CommandSchema {
@@ -402,20 +450,26 @@ impl CommandType for NumEqCommandType {
         }
     }
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NumEqCommand(it.regs[0],it.regs[1],it.regs[2])))
+        Ok(Box::new(NumEqCommand(it.regs[0],it.regs[1],it.regs[2],self.0.clone())))
     }
 
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NumEqCommand(Register::deserialize(value[0])?,Register::deserialize(value[1])?,Register::deserialize(value[2])?)))
+        Ok(Box::new(NumEqCommand(Register::deserialize(value[0])?,Register::deserialize(value[1])?,Register::deserialize(value[2])?,self.0.clone())))
     }
 
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&NumEqTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
     }
+
+    fn use_dynamic_data(&mut self, value: &CborValue) -> Result<(),String> {
+        let t = cbor_map(value,&vec!["t"])?;
+        self.0 = Some(TimeTrial::deserialize(&t[0])?);
+        Ok(())
+    }
 }
 
-pub struct NumEqCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register);
+pub struct NumEqCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register,Option<TimeTrial>);
 
 impl Command for NumEqCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -448,6 +502,14 @@ impl Command for NumEqCommand {
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(size) = context.get_reg_size(&self.1) {
+            self.3.as_ref().map(|x| x.evaluate(size as f64/100.)).unwrap_or(1.)
+        } else {
+            1.
+        }
+    }    
 }
 
 fn filter_typed<T>(dst: &mut Vec<T>, src: &[T], filter: &[bool]) where T: Clone {
@@ -519,6 +581,14 @@ impl Command for FilterCommand {
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(size) = context.get_reg_size(&self.1) {
+            self.3.as_ref().map(|x| x.evaluate(size as f64/100.)).unwrap_or(1.)
+        } else {
+            1.
+        }
+    }
 }
 
 struct RunTimeTrial();
@@ -573,7 +643,7 @@ impl Command for RunCommand {
             if context.is_reg_valid(&self.1) {
                 PreImagePrepare::Replace
             } else {
-                let lens = context.context().registers().get_indexes(&self.2)?;
+                let lens = context.context_mut().registers().get_indexes(&self.2)?;
                 PreImagePrepare::Keep(vec![(self.0.clone(),lens.iter().sum())])
             }
         } else {
@@ -583,6 +653,20 @@ impl Command for RunCommand {
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        let size = match (context.get_reg_size(&self.1),context.get_reg_size(&self.2)) {
+            (Some(a),Some(b)) => Some(a+b),
+            (Some(a),None) => Some(2*a),
+            (None,Some(b)) => Some(2*b),
+            (None,None) => None
+        };
+        if let Some(size) = size {
+            self.3.as_ref().map(|x| x.evaluate(size as f64/200.)).unwrap_or(1.)
+        } else {
+            1.
+        }
     }
 }
 
@@ -635,6 +719,14 @@ impl Command for AtCommand {
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(size) = context.get_reg_size(&self.1) {
+            self.2.as_ref().map(|x| x.evaluate(size as f64/100.)).unwrap_or(1.)
+        } else {
+            1.
+        }
     }
 }
 
@@ -704,7 +796,7 @@ impl Command for SeqFilterCommand {
             if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
                 PreImagePrepare::Replace
             } else if let Some(num) = context.get_reg_size(&self.2) {
-                let lens = context.context().registers().get_indexes(&self.3)?;
+                let lens = context.context_mut().registers().get_indexes(&self.3)?;
                 let total : usize = (0..num).map(|i| lens[i%lens.len()]).sum();
                 PreImagePrepare::Keep(vec![(self.0.clone(),total)])
             } else {
@@ -719,6 +811,14 @@ impl Command for SeqFilterCommand {
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(size) = context.get_reg_size(&self.1) {
+            self.4.as_ref().map(|x| x.evaluate(size as f64/100.)).unwrap_or(1.)
+        } else {
+            1.
+        }
     }
 }
 
@@ -774,6 +874,14 @@ impl Command for SeqAtCommand {
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(size) = context.get_reg_size(&self.1) {
+            self.3.as_ref().map(|x| x.evaluate(size as f64/10.)).unwrap_or(1.)
+        } else {
+            1.
+        }
+    }
 }
 
 pub struct PauseCommandType();
@@ -816,7 +924,7 @@ pub fn make_core() -> Result<CommandSet,String> {
     set.push("append",7,AppendCommandType::new())?;
     set.push("length",8,LengthCommandType::new())?;
     set.push("add",9,AddCommandType::new())?;
-    set.push("numeq",10,NumEqCommandType())?;
+    set.push("numeq",10,NumEqCommandType::new())?;
     set.push("filter",11,FilterCommandType::new())?;
     set.push("run",12,RunCommandType::new())?;
     set.push("seqfilter",13,SeqFilterCommandType::new())?;
