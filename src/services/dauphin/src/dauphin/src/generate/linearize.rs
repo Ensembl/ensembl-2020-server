@@ -233,7 +233,13 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
         InstructionType::FilterSquare => {
             let lin_src = subregs.get(&instr.regs[1]).ok_or_else(|| format!("Missing info for register {:?} D",instr.regs[1]))?;
             let top_level = lin_src.index.len()-1;
-            context.add(Instruction::new(InstructionType::Run,vec![instr.regs[0],lin_src.index[top_level].0,lin_src.index[top_level].1]));
+            if top_level > 0 {
+                let next_level_reg = lin_src.index[top_level-1].1;
+                context.add(Instruction::new(InstructionType::Run,vec![instr.regs[0],lin_src.index[top_level].0,lin_src.index[top_level].1,next_level_reg]));
+            } else {
+                let next_level_reg = lin_src.data;
+                context.add(Instruction::new(InstructionType::Run,vec![instr.regs[0],lin_src.index[top_level].0,lin_src.index[top_level].1,next_level_reg]));
+            }
         },
 
         InstructionType::Square => {

@@ -65,15 +65,17 @@ impl CompilerLink {
         Ok((opcode,ct.get_schema(),ct.from_instruction(instr)?))
     }
 
-    fn serialize_command(&self, out: &mut Vec<CborValue>, opcode: u32, schema: &CommandSchema, command: &Box<dyn Command>) -> Result<(),String> {
+    fn serialize_command(&self, out: &mut Vec<CborValue>, opcode: u32, schema: &CommandSchema, command: &Box<dyn Command>) -> Result<bool,String> {
         if let Some(mut data) = command.serialize()? {
             if data.len() != schema.values {
                 return Err(format!("serialization of {} returned {} values, expected {}",schema.trigger,data.len(),schema.values));
             }
             out.push(CborValue::Integer(opcode as i128));
             out.append(&mut data);
+            Ok(true)
+        } else {
+            Ok(false)
         }
-        Ok(())
     }
 
     fn serialize_instruction(&self, instruction: &Instruction) -> CborValue {
@@ -93,13 +95,16 @@ impl CompilerLink {
     fn serialize_program(&self, instrs: &[Instruction], config: &Config) -> Result<CborValue,String> {
         let cmds = instrs.iter().map(|x| self.compile_instruction(x,false)).collect::<Result<Vec<_>,_>>()?;
         let mut cmds_s = vec![];
-        for (opcode,sch,cmd) in &cmds {
-            self.serialize_command(&mut cmds_s,*opcode,sch,cmd)?;
+        let mut symbols = vec![];
+        for (i,(opcode,sch,cmd)) in cmds.iter().enumerate() {
+            let gen = self.serialize_command(&mut cmds_s,*opcode,sch,cmd)?;
+            if gen && config.get_generate_debug() {
+                symbols.push(self.serialize_instruction(&instrs[i]));
+            }
         }
         let mut program = BTreeMap::new();
         program.insert(CborValue::Text("cmds".to_string()),CborValue::Array(cmds_s));
         if config.get_generate_debug() {
-            let symbols = instrs.iter().map(|x| self.serialize_instruction(x)).collect::<Vec<_>>();
             program.insert(CborValue::Text("symbols".to_string()),CborValue::Array(symbols));
         }
         Ok(CborValue::Map(program))

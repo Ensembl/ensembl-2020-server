@@ -156,6 +156,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     pub fn set_reg_size(&mut self, reg: &Register, size: Option<usize>) {
+        //print!("set_reg_size({:?},{:?})\n",reg,size);
         if let Some(size) = size {
             self.reg_sizes.insert(reg.clone(),size);
         } else {
@@ -244,6 +245,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn preimage_instr(&mut self, instr: &Instruction) -> Result<(),String> {
+        //print!("{:?}",instr);
         let command = self.compiler_link.compile_instruction(instr,true)?.2;
         match command.preimage(self)? {
             PreImageOutcome::Skip(sizes) => {

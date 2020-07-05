@@ -602,17 +602,35 @@ impl TimeTrialCommandType for RunTimeTrial {
         context.registers().write(&Register(1),InterpValue::Indexes(start));
         let len : Vec<usize> = (0..t).map(|x| (x%10) as usize).collect();
         context.registers().write(&Register(2),InterpValue::Indexes(len));
+        context.registers().write(&Register(3),InterpValue::Indexes(vec![]));
         context.registers().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(RunCommand(Register(0),Register(1),Register(2),None)))
+        Ok(Box::new(RunCommand(Register(0),Register(1),Register(2),Register(3),None)))
     }
 }
 
-type_instr3!(RunCommandType,RunCommand,InstructionSuperType::Run,RunTimeTrial);
+type_instr4!(RunCommandType,RunCommand,InstructionSuperType::Run,RunTimeTrial);
 
-pub struct RunCommand(Register,Register,Register,Option<TimeTrial>);
+pub struct RunCommand(Register,Register,Register,Register,Option<TimeTrial>);
+
+impl RunCommand {
+    fn size(&self, context: &PreImageContext) -> Option<usize> {
+        let mut size = match (context.get_reg_size(&self.1),context.get_reg_size(&self.2)) {
+            (Some(a),Some(b)) => Some(a+b),
+            (Some(a),None) => Some(2*a),
+            (None,Some(b)) => Some(2*b),
+            (None,None) => None
+        };
+        if size.is_none() {
+            if let Some(a) = context.get_reg_size(&self.3) {
+                size = Some(a);
+            }
+        }
+        size
+    }
+}
 
 impl Command for RunCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -635,7 +653,7 @@ impl Command for RunCommand {
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
-        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
+        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize(),self.3.serialize()]))
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
@@ -647,7 +665,11 @@ impl Command for RunCommand {
                 PreImagePrepare::Keep(vec![(self.0.clone(),lens.iter().sum())])
             }
         } else {
-            PreImagePrepare::Keep(vec![])
+            if let Some(size) = self.size(context) {
+                PreImagePrepare::Keep(vec![(self.0.clone(),size)])
+            } else {
+                PreImagePrepare::Keep(vec![])
+            }
         })
     }
     
@@ -656,14 +678,9 @@ impl Command for RunCommand {
     }
 
     fn execution_time(&self, context: &PreImageContext) -> f64 {
-        let size = match (context.get_reg_size(&self.1),context.get_reg_size(&self.2)) {
-            (Some(a),Some(b)) => Some(a+b),
-            (Some(a),None) => Some(2*a),
-            (None,Some(b)) => Some(2*b),
-            (None,None) => None
-        };
+        let size = self.size(context);
         if let Some(size) = size {
-            self.3.as_ref().map(|x| x.evaluate(size as f64/200.)).unwrap_or(1.)
+            self.4.as_ref().map(|x| x.evaluate(size as f64/200.)).unwrap_or(1.)
         } else {
             1.
         }

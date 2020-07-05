@@ -22,12 +22,13 @@ use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
 use super::eq::library_eq_command;
 use super::assign::library_assign_commands;
+use super::vector::library_vector_commands;
 use crate::cli::Config;
 use crate::typeinf::MemberMode;
 use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
 
 pub fn std_id() -> CommandSetId {
-    CommandSetId::new("std",(0,0),0xDD9C0B3CD9093233)
+    CommandSetId::new("std",(0,0),0x9CF48EAFD9E451E2)
 }
 
 pub(super) fn std(name: &str) -> Identifier {
@@ -440,6 +441,7 @@ pub fn make_library() -> Result<CommandSet,String> {
     set.add_header("std",include_str!("header.dp"));
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;
+    library_vector_commands(&mut set)?;
     set.load_dynamic_data(include_bytes!("std-0.0.ddd"))?;
     Ok(set)
 }

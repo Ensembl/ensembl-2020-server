@@ -22,15 +22,6 @@ use super::writevec::WriteVec;
 use super::vectorsource::RegisterVectorSource;
 use crate::model::VectorRegisters;
 
-/*
-pub fn vector_update<F,T>(dst: &mut Vec<T>, src: &[T], filter: &[usize], mut cb: F) where F: FnMut(&T) -> T {
-    let src_len = src.len();
-    for (i,filter_pos) in filter.iter().enumerate() {
-        dst[*filter_pos] = cb(&src[i%src_len]);
-    }
-}
-*/
-
 pub fn vector_update_lengths(dst: &mut Vec<usize>, src: &[usize], filter: &[usize]) {
     let mut src_it = src.iter().cycle();
     for filter_pos in filter.iter() {

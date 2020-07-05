@@ -1,0 +1,12 @@
+import "lib:std";
+use "std";
+
+import "lib:buildtime";
+use "buildtime";
+
+y := [1,2];
+alienate(y);
+set_size_hint(y,1);
+set_size_hint(y[],3);
+y[] := 0;
+print(y);

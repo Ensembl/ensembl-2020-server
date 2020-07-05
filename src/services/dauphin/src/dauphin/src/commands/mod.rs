@@ -34,6 +34,7 @@ mod core {
 mod std {
     pub(super) mod assign;
     pub(super) mod extend;
+    pub(super) mod vector;
     pub(super) mod library;
     mod numops;
     mod eq;

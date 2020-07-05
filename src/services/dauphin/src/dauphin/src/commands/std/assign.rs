@@ -14,12 +14,12 @@
  *  limitations under the License.
  */
 
-use crate::model::{ Register, RegisterSignature, cbor_make_map };
+use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier, ComplexRegisters };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
-use crate::typeinf::MemberMode;
+use crate::typeinf::{ MemberMode, MemberDataFlow };
 use super::super::common::vectorcopy::{ vector_update_offsets, vector_update_lengths, vector_update_poly, vector_push, vector_register_copy, vector_append, append_data };
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::{ SharedVec };
@@ -85,7 +85,7 @@ pub fn copy_vector<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usi
     Ok(())
 }
 
-/// XXX ban multi-Lvalue
+// XXX ban multi-Lvalue
 fn assign_filtered(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
     let filter_reg = context.registers().get_indexes(&regs[0])?;
     let vrs = RegisterVectorSource::new(&regs);
@@ -98,6 +98,13 @@ fn assign_filtered(context: &mut InterpContext, sig: &RegisterSignature, regs: &
         left.write(context)?;
     }
     Ok(())
+}
+
+fn all_shallow(sig: &RegisterSignature) -> Result<bool,String> {
+    for (_,left) in sig[1].iter() {
+        if left.depth() > 0 { return Ok(false); }
+    }
+    Ok(true)
 }
 
 fn assign(context: &mut InterpContext, filtered: bool, purposes: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
@@ -248,6 +255,21 @@ impl AssignCommand {
         }
         Ok(true)
     }
+
+    fn replace_shallow(&self) -> Result<Vec<Instruction>,String> {
+        let mut out = vec![];
+        for (left,right) in self.1[1].iter().zip(self.1[2].iter()) {
+            if left.1.depth() > 0 {
+                /* deep */
+            } else {
+                /* shallow */
+                let sigs = trial_signature(&vec![(MemberMode::LValue,1),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
+                let itype = InstructionType::Call(Identifier::new("std","_vector_copy_shallow"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In]);
+                out.push(Instruction::new(itype,vec![self.2[left.1.data_pos()],self.2[right.1.data_pos()],self.2[0]]));        
+            }
+        }
+        Ok(out)
+    }
 }
 
 impl Command for AssignCommand {
@@ -275,7 +297,11 @@ impl Command for AssignCommand {
                 self.execute(context.context_mut())?;
                 self.preimage_post(context)?
             } else {
-                PreImageOutcome::Skip(preimage_sizes(context,&self.2,1)?)
+                if all_shallow(&self.1)? {
+                    PreImageOutcome::Replace(self.replace_shallow()?)
+                } else {
+                    PreImageOutcome::Skip(preimage_sizes(context,&self.2,1)?)
+                }
             }
         })
     }
@@ -308,5 +334,22 @@ mod test {
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         // XXX todo test it!
+    }
+
+    #[test]
+    fn assign_shallow() {
+        let mut config = xxx_test_config();
+        config.set_debug_run(true);
+        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let resolver = common_resolver(&config,&linker).expect("a");
+        let mut lexer = Lexer::new(&resolver);
+        lexer.import("search:std/assignshallow").expect("cannot load file");
+        let p = Parser::new(&mut lexer);
+        let (stmts,defstore) = p.parse().expect("error");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
+        print!("{:?}\n",strings);
+        assert_eq!("0",strings[0]);
+        assert_eq!("0",strings[1]);
     }
 }
