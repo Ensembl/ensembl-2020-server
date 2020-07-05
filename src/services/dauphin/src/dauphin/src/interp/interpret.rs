@@ -44,7 +44,7 @@ impl<'a> StandardInterpretInstance<'a> {
         let context = self.context.as_mut().unwrap();
         while let Some(command) = self.commands.next() {
             command.execute(context)?;
-            context.registers().commit();
+            context.registers_mut().commit();
             if context.test_pause() {
                 return Ok(true);
             }
@@ -95,11 +95,11 @@ impl<'a> DebugInterpretInstance<'a> {
         self.index += 1;
         if let Some(command) = self.commands.next() {
             let (instr,regs) = &self.instrs[idx];
-            print!("{}",context.registers().dump_many(&regs)?);
+            print!("{}",context.registers_mut().dump_many(&regs)?);
             print!("{}",instr);
             command.execute(context)?;
-            context.registers().commit();
-            print!("{}",context.registers().dump_many(&regs)?);
+            context.registers_mut().commit();
+            print!("{}",context.registers_mut().dump_many(&regs)?);
             if context.test_pause() {
                 print!("PAUSE\n");
             }

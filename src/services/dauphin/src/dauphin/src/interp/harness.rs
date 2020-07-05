@@ -43,7 +43,7 @@ pub fn stream_strings(stream: &[StreamContents]) -> Vec<String> {
 
 fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>,String> {
     let mut out = HashMap::new();
-    for (r,iv) in ic.registers().export()?.iter() {
+    for (r,iv) in ic.registers_mut().export()?.iter() {
         let iv = Rc::new(iv.copy());
         let v = InterpValue::to_rc_indexes(&iv).map(|x| x.0.to_vec()).unwrap_or(vec![]);
         out.insert(*r,v);

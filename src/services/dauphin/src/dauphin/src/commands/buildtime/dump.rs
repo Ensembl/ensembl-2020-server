@@ -60,7 +60,7 @@ impl Command for DumpSigCommand {
     }
 
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        context.context_mut().registers().write(&self.0,InterpValue::Strings(vec![self.1.to_string()]));
+        context.context_mut().registers_mut().write(&self.0,InterpValue::Strings(vec![self.1.to_string()]));
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
 }

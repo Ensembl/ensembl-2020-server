@@ -142,7 +142,7 @@ mod test {
 
     #[test]
     fn registers_smoke() {
-        let alloc = RegisterAllocator::new();
+        let alloc = RegisterAllocator::new(0);
         let r0 = alloc.allocate();
         let r1 = alloc.allocate();
         let mut rf = RegisterFile::new();
@@ -164,7 +164,7 @@ mod test {
 
     #[test]
     fn registers_copy() {
-        let alloc = RegisterAllocator::new();
+        let alloc = RegisterAllocator::new(0);
         let r0 = alloc.allocate();
         let r1 = alloc.allocate();
         let mut rf = RegisterFile::new();
@@ -187,7 +187,7 @@ mod test {
 
     #[test]
     fn registers_coerce() {
-        let alloc = RegisterAllocator::new();
+        let alloc = RegisterAllocator::new(0);
         let r0 = alloc.allocate();
         let mut rf = RegisterFile::new();
         rf.write(&r0,InterpValue::Indexes(vec![0,1,2]));

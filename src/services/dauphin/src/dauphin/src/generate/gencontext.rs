@@ -43,7 +43,7 @@ impl<'a> GenContext<'a> {
             defstore,
             input_instrs: Vec::new(),
             output_instrs: Vec::new(),
-            regalloc: RegisterAllocator::new(),
+            regalloc: RegisterAllocator::new(0),
             types: TypeModel::new(),
             typing: Typing::new()
         }

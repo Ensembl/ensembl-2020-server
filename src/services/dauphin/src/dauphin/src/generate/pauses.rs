@@ -28,19 +28,20 @@ pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut G
     let mut timer = 0.;
     for (instr,time) in &context.get_timed_instructions() {
         match instr.itype {
-            InstructionType::Pause => {},
+            InstructionType::Pause(true) => {
+                context.add(instr.clone());
+                timer = 0.;
+            },
+            InstructionType::Pause(false) => {},
             _ => {
                 let command = compiler_link.compile_instruction(instr,true)?.2;
                 let name = format!("{:?}",instr).replace("\n","");
-                if *time < 1. {
-                    print!("execution time for {:?} is {:.3}ms\n",name,time);
-                }
+                print!("execution time for {:?} is {:.3}ms (before timer={:.3}ms)\n",name,time,timer);
                 timer += time;
-                if timer > 1. {
-                    context.add(Instruction::new(InstructionType::Pause,vec![]));
-                }
-                while timer > 1. {
-                    timer -= 1.;
+                if timer >= 1. {
+                    context.add(Instruction::new(InstructionType::Pause(false),vec![]));
+                    print!("added pause\n");
+                    timer = *time;
                 }
                 context.add(instr.clone())
             }
@@ -79,16 +80,14 @@ mod test {
         for instr in &instrs {
             if seen_force_pause {
                 print!("AFTER {:?}",instr);
-                return if let InstructionType::Pause = &instr.itype {
+                return if let InstructionType::Pause(_) = &instr.itype {
                     true
                 } else {
                     false
                 };
             }
-            if let InstructionType::Call(id,_,_,_) = &instr.itype {
-                if id.name() == "force_pause" {
-                    seen_force_pause = true;
-                }
+            if let InstructionType::Pause(true) = &instr.itype {
+                seen_force_pause = true;
             }
         }
         false

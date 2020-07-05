@@ -73,7 +73,7 @@ pub struct NilCommand(Register,f64);
 
 impl Command for NilCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Empty);
+        context.registers_mut().write(&self.0,InterpValue::Empty);
         Ok(())
     }
 
@@ -100,8 +100,8 @@ impl TimeTrialCommandType for CopyTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t*100;
         let num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
-        context.registers().commit();
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -115,7 +115,7 @@ pub struct CopyCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for CopyCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().copy(&self.0,&self.1)?;
+        context.registers_mut().copy(&self.0,&self.1)?;
         Ok(())
     }
 
@@ -154,9 +154,9 @@ impl TimeTrialCommandType for AppendTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t*100;
         let num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(0),InterpValue::Indexes(num.clone()));
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
-        context.registers().commit();
+        context.registers_mut().write(&Register(0),InterpValue::Indexes(num.clone()));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -184,7 +184,7 @@ fn append(dst: InterpValue, src: &Rc<InterpValue>) -> Result<InterpValue,String>
 
 impl Command for AppendCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let src = registers.get(&self.1).borrow().get_shared()?;
         let dstr = registers.get(&self.0);
         let dst = dstr.borrow_mut().get_exclusive()?;
@@ -233,8 +233,8 @@ impl TimeTrialCommandType for LengthTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t*100;
         let num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
-        context.registers().commit();
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -248,7 +248,7 @@ pub struct LengthCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for LengthCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let len = registers.get(&self.1).borrow().get_shared()?.len();
         registers.write(&self.0,InterpValue::Indexes(vec![len]));
         Ok(())
@@ -287,13 +287,13 @@ impl TimeTrialCommandType for AddTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = (t*100) as usize;
         let mut num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(0),InterpValue::Indexes(num.clone()));
+        context.registers_mut().write(&Register(0),InterpValue::Indexes(num.clone()));
         for i in 0..t {
             if i*3 >= num.len() { break; }
             num[i*3] += 1;
         }
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
-        context.registers().commit();
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -307,7 +307,7 @@ pub struct AddCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for AddCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let src = &registers.get_indexes(&self.1)?;
         let mut dst = registers.take_indexes(&self.0)?;
         let src_len = (&src).len();
@@ -359,10 +359,10 @@ impl TimeTrialCommandType for ReFilterTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = (t*100) as usize;
         let num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
         let filter : Vec<usize> = (0..t/2).map(|x| (x*2) as usize).collect();
-        context.registers().write(&Register(2),InterpValue::Indexes(filter));
-        context.registers().commit();
+        context.registers_mut().write(&Register(2),InterpValue::Indexes(filter));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -376,7 +376,7 @@ pub struct ReFilterCommand(Register,Register,Register,Option<TimeTrial>);
 
 impl Command for ReFilterCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let src : &[usize] = &registers.get_indexes(&self.1)?;
         let indexes : &[usize] = &registers.get_indexes(&self.2)?;
         let mut dst = vec![];
@@ -422,13 +422,13 @@ impl TimeTrialCommandType for NumEqTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = (t*100) as usize;
         let mut num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(num.clone()));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num.clone()));
         for i in 0..t {
             if i*3 >= num.len() { break; }
             num[i*3] += 1;
         }
-        context.registers().write(&Register(2),InterpValue::Indexes(num));
-        context.registers().commit();
+        context.registers_mut().write(&Register(2),InterpValue::Indexes(num));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -473,7 +473,7 @@ pub struct NumEqCommand(pub(crate) Register,pub(crate) Register, pub(crate) Regi
 
 impl Command for NumEqCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let src1 = &registers.get_indexes(&self.1)?;
         let src2 = &registers.get_indexes(&self.2)?;
         let mut dst = vec![];
@@ -539,10 +539,10 @@ impl TimeTrialCommandType for FilterTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = (t*100) as usize;
         let num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
         let filter : Vec<bool> = (0..t).map(|x| ((x%4)<2) as bool).collect();
-        context.registers().write(&Register(2),InterpValue::Boolean(filter));
-        context.registers().commit();
+        context.registers_mut().write(&Register(2),InterpValue::Boolean(filter));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -556,7 +556,7 @@ pub struct FilterCommand(Register,Register,Register,Option<TimeTrial>);
 
 impl Command for FilterCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let filter_val = registers.get_boolean(&self.2)?;
         let src = registers.get(&self.1);
         let src = src.borrow().get_shared()?;
@@ -599,11 +599,11 @@ impl TimeTrialCommandType for RunTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t*100;
         let start : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(start));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(start));
         let len : Vec<usize> = (0..t).map(|x| (x%10) as usize).collect();
-        context.registers().write(&Register(2),InterpValue::Indexes(len));
-        context.registers().write(&Register(3),InterpValue::Indexes(vec![]));
-        context.registers().commit();
+        context.registers_mut().write(&Register(2),InterpValue::Indexes(len));
+        context.registers_mut().write(&Register(3),InterpValue::Indexes(vec![]));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -634,7 +634,7 @@ impl RunCommand {
 
 impl Command for RunCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let start = &registers.get_indexes(&self.1)?;
         let len = &registers.get_indexes(&self.2)?;
         let mut dst = vec![];
@@ -661,7 +661,7 @@ impl Command for RunCommand {
             if context.is_reg_valid(&self.1) {
                 PreImagePrepare::Replace
             } else {
-                let lens = context.context_mut().registers().get_indexes(&self.2)?;
+                let lens = context.context_mut().registers_mut().get_indexes(&self.2)?;
                 PreImagePrepare::Keep(vec![(self.0.clone(),lens.iter().sum())])
             }
         } else {
@@ -695,8 +695,8 @@ impl TimeTrialCommandType for AtTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t*100;
         let num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
-        context.registers().commit();
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -710,7 +710,7 @@ pub struct AtCommand(Register,Register,Option<TimeTrial>);
 
 impl Command for AtCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let src = &registers.get_indexes(&self.1)?;
         let mut dst = vec![];
         for i in 0..src.len() {
@@ -776,12 +776,12 @@ impl TimeTrialCommandType for SeqFilterTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = (t*100) as usize;
         let num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
         let filter : Vec<usize> = (0..t/4).map(|x| (x*4) as usize).collect();
-        context.registers().write(&Register(2),InterpValue::Indexes(filter));
+        context.registers_mut().write(&Register(2),InterpValue::Indexes(filter));
         let len : Vec<usize> = (0..t/4).map(|x| (x%2) as usize).collect();
-        context.registers().write(&Register(3),InterpValue::Indexes(len));
-        context.registers().commit();
+        context.registers_mut().write(&Register(3),InterpValue::Indexes(len));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -795,7 +795,7 @@ pub struct SeqFilterCommand(Register,Register,Register,Register,Option<TimeTrial
 
 impl Command for SeqFilterCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let src = registers.get(&self.1);
         let start = registers.get_indexes(&self.2)?;
         let len = registers.get_indexes(&self.3)?;
@@ -813,7 +813,7 @@ impl Command for SeqFilterCommand {
             if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
                 PreImagePrepare::Replace
             } else if let Some(num) = context.get_reg_size(&self.2) {
-                let lens = context.context_mut().registers().get_indexes(&self.3)?;
+                let lens = context.context_mut().registers_mut().get_indexes(&self.3)?;
                 let total : usize = (0..num).map(|i| lens[i%lens.len()]).sum();
                 PreImagePrepare::Keep(vec![(self.0.clone(),total)])
             } else {
@@ -847,8 +847,8 @@ impl TimeTrialCommandType for SeqAtTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t*10;
         let num : Vec<usize> = (0..t).map(|x| (x%10) as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(num));
-        context.registers().commit();
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(num));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -862,7 +862,7 @@ pub struct SeqAtCommand(Register,Register,Register,Option<TimeTrial>);
 
 impl Command for SeqAtCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let src = &registers.get_indexes(&self.1)?;
         let mut dst = vec![];
         for i in 0..src.len() {

@@ -104,7 +104,7 @@ impl TimeTrialCommandType for EqDataTimeTrial {
         let t = t as usize;
         trial_write(context,3,t*100,|x| x);
         trial_write(context,4,t*100,|x| x);
-        context.registers().commit();
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -127,7 +127,7 @@ impl TimeTrialCommandType for EqWidthTimeTrial {
         trial_write(context,6,t*100,|x| x);
         trial_write(context,7,1,|_| 0);
         trial_write(context,8,1,|_| t*100);
-        context.registers().commit();
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -154,7 +154,7 @@ impl TimeTrialCommandType for EqHeightTimeTrial {
                 trial_write(context,offset+(2*layer)+2,1,|_| 1);
             }
         }
-        context.registers().commit();
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -251,7 +251,7 @@ impl Command for EqCommand {
                 out = Some(more);
             }
         }
-        context.registers().write(&self.1[0],InterpValue::Boolean(out.unwrap_or_else(|| vec![])));
+        context.registers_mut().write(&self.1[0],InterpValue::Boolean(out.unwrap_or_else(|| vec![])));
         Ok(())
     }
 

@@ -40,29 +40,29 @@ impl<'c> RegisterVectorSource<'c> {
 
 impl<'c> VectorSource for RegisterVectorSource<'c> {
     fn len(&self, context: &mut InterpContext, index: usize) -> Result<usize,String> {
-        context.registers().len(&self.regs[index])
+        context.registers_mut().len(&self.regs[index])
     }
 
     fn get_shared(&self, context: &mut InterpContext, index: usize) -> Result<Rc<InterpValue>,String> {
-        let r = context.registers().get(&self.regs[index]);
+        let r = context.registers_mut().get(&self.regs[index]);
         let r = r.borrow();
         r.get_shared()
     }
 
     fn get_exclusive(&self, context: &mut InterpContext, index: usize) -> Result<InterpValue,String> {
-        let r = context.registers().get(&self.regs[index]);
+        let r = context.registers_mut().get(&self.regs[index]);
         let mut r = r.borrow_mut();
         r.get_exclusive()
     }
 
     fn set(&self, context: &mut InterpContext, index: usize, value: InterpValue) {
-        context.registers().write(&self.regs[index],value);
+        context.registers_mut().write(&self.regs[index],value);
     }
 }
 
 impl<'c> RegisterVectorSource<'c> {
     pub fn copy(&self, context: &mut InterpContext, dst: usize, src: usize) -> Result<(),String> {
-        context.registers().copy(&self.regs[dst],&self.regs[src])?;
+        context.registers_mut().copy(&self.regs[dst],&self.regs[src])?;
         Ok(())
     }
 }

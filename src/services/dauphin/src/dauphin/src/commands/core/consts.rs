@@ -83,7 +83,7 @@ pub struct NumberConstCommand(Register,f64,f64);
 
 impl Command for NumberConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Numbers(vec![self.1]));
+        context.registers_mut().write(&self.0,InterpValue::Numbers(vec![self.1]));
         Ok(())
     }
 
@@ -153,7 +153,7 @@ pub struct ConstCommand(Register,Vec<usize>,Option<TimeTrial>);
 
 impl Command for ConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Indexes(self.1.to_vec()));
+        context.registers_mut().write(&self.0,InterpValue::Indexes(self.1.to_vec()));
         Ok(())
     }
 
@@ -220,7 +220,7 @@ pub struct BooleanConstCommand(Register,bool,f64);
 
 impl Command for BooleanConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Boolean(vec![self.1]));
+        context.registers_mut().write(&self.0,InterpValue::Boolean(vec![self.1]));
         Ok(())
     }
 
@@ -288,7 +288,7 @@ pub struct StringConstCommand(Register,String,Option<TimeTrial>);
 
 impl Command for StringConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Strings(vec![self.1.to_string()]));
+        context.registers_mut().write(&self.0,InterpValue::Strings(vec![self.1.to_string()]));
         Ok(())
     }
 
@@ -356,7 +356,7 @@ pub struct BytesConstCommand(Register,Vec<u8>,Option<TimeTrial>);
 
 impl Command for BytesConstCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        context.registers().write(&self.0,InterpValue::Bytes(vec![self.1.to_vec()]));
+        context.registers_mut().write(&self.0,InterpValue::Bytes(vec![self.1.to_vec()]));
         Ok(())
     }
 

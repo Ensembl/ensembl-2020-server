@@ -28,7 +28,7 @@ use crate::typeinf::MemberMode;
 use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
 
 pub fn std_id() -> CommandSetId {
-    CommandSetId::new("std",(0,0),0x9CF48EAFD9E451E2)
+    CommandSetId::new("std",(0,0),0xE0135A5B6A15F8C7)
 }
 
 pub(super) fn std(name: &str) -> Identifier {
@@ -52,7 +52,7 @@ impl TimeTrialCommandType for LenTimeTrial {
         trial_write(context,3,t,|x| x*10);
         trial_write(context,4,t,|_| 10);
         trial_write(context,5,t*10,|x| x);
-        context.registers().commit();
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -95,7 +95,7 @@ pub struct LenCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
 impl Command for LenCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         if let Some((_,ass)) = &self.0[1].iter().next() {
             let reg = ass.length_pos(ass.depth()-1)?;
             registers.copy(&self.1[0],&self.1[reg])?;
@@ -157,7 +157,7 @@ pub struct PrintRegsCommand(pub(crate) Vec<Register>);
 impl Command for PrintRegsCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         for r in &self.0 {
-            let v = StreamContents::Data(context.registers().get(r).borrow().get_shared()?.copy());
+            let v = StreamContents::Data(context.registers_mut().get(r).borrow().get_shared()?.copy());
             print!("ADDING {:?}\n",v);
             std_stream(context)?.add(v);
         }
@@ -186,7 +186,7 @@ fn print_bytes<T>(data: &[Vec<T>], start: usize, len: usize) -> String where T: 
 }
 
 fn print_register(context: &mut InterpContext, reg: &Register, restrict: Option<(usize,usize)>) -> Result<String,String> {
-    let value = context.registers().get(reg);
+    let value = context.registers_mut().get(reg);
     let value = value.borrow().get_shared()?;
     let (start,len) = restrict.unwrap_or_else(|| { (0,value.len()) });
     Ok(match value.get_natural() {
@@ -210,8 +210,8 @@ fn print_level(context: &mut InterpContext, assignment: &VectorRegisters, regs: 
         /* find registers for level */
         let offset_reg = assignment.offset_pos(level)?;
         let len_reg = assignment.length_pos(level)?;
-        let starts = &context.registers().get_indexes(&regs[offset_reg])?;
-        let lens = &context.registers().get_indexes(&regs[len_reg])?;
+        let starts = &context.registers_mut().get_indexes(&regs[offset_reg])?;
+        let lens = &context.registers_mut().get_indexes(&regs[len_reg])?;
         let lens_len = lens.len();
         let (a,b) = restrict.unwrap_or((0,lens_len));
         let mut members = Vec::new();
@@ -314,7 +314,7 @@ pub struct AssertCommand(pub(crate) Register, pub(crate) Register);
 
 impl Command for AssertCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let a = &registers.get_boolean(&self.0)?;
         let b = &registers.get_boolean(&self.1)?;
         for i in 0..a.len() {
@@ -416,7 +416,7 @@ pub struct PrintCommand(Register);
 
 impl Command for PrintCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let a = &registers.coerce_strings(&self.0)?;
         for s in a.iter() {
             std_stream(context)?.add(StreamContents::String(s.to_string()));

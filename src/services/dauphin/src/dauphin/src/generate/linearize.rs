@@ -154,7 +154,7 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
         InstructionType::Length |
         InstructionType::Add |
         InstructionType::SeqFilter |
-        InstructionType::Pause |
+        InstructionType::Pause(_) |
         InstructionType::SeqAt =>
             panic!("Impossible instruction {:?}",instr),
 
@@ -396,128 +396,6 @@ mod test {
         print!("{:?}",values);
     }
 
-    #[test]
-    fn linearize_filter_smoke() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
-        lexer.import("search:codegen/linearize-smoke-filter").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        let instrs = context.get_instructions().clone();
-        print!("{:?}\n",context);
-        let subregs = linearize_real(&mut context).expect("linearize");
-        print!("{:?}\n",context);
-        remove_aliases(&mut context);
-        let (values,_) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
-        let (lins,norms) = find_assigns(&instrs,&subregs);
-        print!("{:?}",values);
-        assert_eq!(vec![1,2],values[&lins[0].data]);
-        assert_eq!(vec![0],values[&lins[0].index[0].0]);
-        assert_eq!(vec![2],values[&lins[0].index[0].1]);
-        assert_eq!(vec![2],values[&norms[0]]);
-        assert_eq!(vec![1,2,3,4,5],values[&lins[1].data]);
-        assert_eq!(vec![2],values[&lins[1].index[0].0]);
-        assert_eq!(vec![3],values[&lins[1].index[0].1]);
-        assert_eq!(vec![3,4,5],values[&norms[1]]);
-        assert_eq!(vec![1,2,3,4,5],values[&norms[2]]);
-        assert_eq!(Vec::<usize>::new(),values[&norms[3]]);
-    }
-
-    #[test]
-    fn linearize_reffilter_smoke() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
-        lexer.import("search:codegen/linearize-smoke-reffilter").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        print!("{:?}\n",context);
-        linearize(&mut context).expect("linearize");
-        print!("{:?}\n",context);
-        remove_aliases(&mut context);
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
-        print!("{:?}\n",values);
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        let cmp = vec![
-            "1",
-            "2,3",
-            "[4,5]",
-            "[6,6]",
-            "[7,8]",
-            "[7,9]",
-            "2,4",
-            "[[[111,112,113],[121,122,123],[131,132,133]],[[211,212,213],[221,222,223],[231,232,233]],[[311,312,313],[321,322,323],[331,332,333]]]",
-            "[[[111,112,113],[121,122,123],[131,132,133]],[[211,212,213],[221,222,223],[231,232,233]],[[411,412,413],[421,422,423],[431,432,433]]]",
-            "[[[111,112,113],[444],[131,132,133]],[[211,212,213],[444],[231,232,233]],[[411,412,413],[444],[431,432,433]]]",
-            "[[[111,112,113],[444],[131,132,433]],[[211,212,213],[444],[231,232,233]],[[411,412,413],[444],[431,432,433]]]",
-            "[[[111,112,113],[444],[131,132,433]],[[200,212,213],[444],[231,232,233]],[[411,412,413],[444],[431,432,433]]]",
-            "[[[1,2],[3,4]],[[5,6],[7,8]]]",
-            "[[[0,0,0],[9,9,9],[0,0,0]],[[0,0,0],[9,9,9],[0,0,0]]]",
-            "[[[1,2,3],[4,5],[6],[]],[[7]]]",
-            "[3]",
-            "[2]",
-            "[[],[1,2],[3],[4]]"
-        ];
-        for (i,string) in strings.iter().enumerate() {
-            assert_eq!(cmp[i],string);
-        }
-    }
-
-    #[test]
-    fn linearize_structenum_smoke() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
-        lexer.import("search:codegen/linearize-smoke-structenum").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        print!("{:?}\n",context);
-        linearize(&mut context).expect("linearize");
-        print!("{:?}\n",context);
-        remove_aliases(&mut context);
-        let (_values,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
-        assert_eq!("{ *: 2; A.A: -; A.B: 0; A.B.X: 0; A.B.Y: -; B: 0; B.X: 0; B.Y: -; C: true; D: - }",strings[0]);
-    }
-
-    #[test]
-    fn linearize_refsquare() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
-        lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        print!("{:?}\n",context);
-        linearize(&mut context).expect("linearize");
-        print!("{:?}\n",context);
-        remove_aliases(&mut context);
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
-        print!("{:?}\n",values);
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        assert_eq!(vec!["[[0],[2],[0],[4]]","[[0],[2],[9,9,9],[9,9,9]]","[0,0,0]","[[0],[2],[8,9,9],[9,9,9]]"],strings);
-    }
-
     fn linearize_stable_pass() -> Vec<Instruction> {
         let config = xxx_test_config();
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
@@ -539,49 +417,5 @@ mod test {
         let a = linearize_stable_pass();
         let b = linearize_stable_pass();
         assert_eq!(a,b);
-    }
-
-   #[test]
-    fn linearize_push_smoke() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
-        lexer.import("search:codegen/linearize-smoke-push").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        let instrs = context.get_instructions().clone();
-        print!("{:?}\n",instrs);
-        let subregs = linearize_real(&mut context).expect("linearize");
-        let (lins,_) = find_assigns(&instrs,&subregs);
-        remove_aliases(&mut context);
-        let (values,_) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
-        assert_eq!(Vec::<usize>::new(),values[&lins[0].data]);
-        assert_eq!(vec![0],values[&lins[0].index[0].0]);
-        assert_eq!(vec![0],values[&lins[0].index[0].1]);
-        assert_eq!(vec![3],values[&lins[1].data]);
-        assert_eq!(vec![0],values[&lins[1].index[0].0]);
-        assert_eq!(vec![1],values[&lins[1].index[0].1]);
-        assert_eq!(vec![0],values[&lins[1].index[1].0]);
-        assert_eq!(vec![1],values[&lins[1].index[1].1]);
-        assert_eq!(vec![1],values[&lins[2].data]);
-        assert_eq!(vec![0],values[&lins[2].index[0].0]);
-        assert_eq!(vec![1],values[&lins[2].index[0].1]);
-        assert_eq!(vec![1,2,3,4,5,6],values[&lins[3].data]);
-        assert_eq!(vec![0,2,3,6],values[&lins[3].index[0].0]);
-        assert_eq!(vec![2,1,3,0],values[&lins[3].index[0].1]);
-        assert_eq!(vec![0,2],values[&lins[3].index[1].0]);
-        assert_eq!(vec![2,2],values[&lins[3].index[1].1]);
-        assert_eq!(vec![0],values[&lins[3].index[2].0]);
-        assert_eq!(vec![2],values[&lins[3].index[2].1]);
-        assert_eq!(Vec::<usize>::new(),values[&lins[4].data]);
-        assert_eq!(vec![0],values[&lins[4].index[0].0]);
-        assert_eq!(vec![0],values[&lins[4].index[0].1]);
-        assert_eq!(vec![0],values[&lins[4].index[1].0]);
-        assert_eq!(vec![1],values[&lins[4].index[1].1]);
-        print!("{:?}",values);
     }
 }

@@ -15,12 +15,15 @@
  */
 
 use std::rc::Rc;
-use crate::interp::{ InterpValue, InterpContext };
+use crate::interp::{ InterpValue, InterpContext, trial_signature };
+use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use crate::commands::common::polymorphic::arbitrate_type;
 use super::sharedvec::SharedVec;
 use super::writevec::WriteVec;
+use crate::commands::std::vector::VectorAppend;
+use crate::typeinf::{ MemberMode, MemberDataFlow };
 use super::vectorsource::RegisterVectorSource;
-use crate::model::VectorRegisters;
+use crate::model::{ Register, VectorRegisters, Identifier };
 
 pub fn vector_update_lengths(dst: &mut Vec<usize>, src: &[usize], filter: &[usize]) {
     let mut src_it = src.iter().cycle();
@@ -36,11 +39,6 @@ pub fn vector_update_offsets(dst: &mut Vec<usize>, src: &[usize], filter: &[usiz
         dst[*filter_pos] = *src_it.next().unwrap() + offset;
         offset += offsets.1;
     }
-}
-
-pub fn vector_append<F,T>(dst: &mut Vec<T>, src: &[T], mut cb: F) where F: FnMut(&T) -> T {
-    let mut new_values = src.iter().map(|x| cb(x)).collect();
-    dst.append(&mut new_values);
 }
 
 pub fn vector_append_lengths(dst: &mut Vec<usize>, src: &[usize]) {
@@ -89,11 +87,9 @@ pub fn append_data(dst: InterpValue, src: &Rc<InterpValue>, copies: usize) -> Re
     }
 }
 
-pub fn vector_push<'e>(left: &mut WriteVec<'e>, right: &SharedVec, copies: usize) -> Result<(usize,usize),String> {
+pub fn vector_push<'e>(left: &mut WriteVec<'e>, right: &SharedVec, copies: usize) -> Result<(),String> {
     let depth = left.depth();
     /* data for top-level */
-    let start = if depth > 1 { left.get_offset(depth-2)?.len() } else { left.get_data().len() };
-    let stride = if depth > 1 { right.get_offset(depth-2)?.len() } else { right.get_data().len() };
     /* intermediate levels */
     for level in (0..(depth-1)).rev() {
         let start = if level > 0 { left.get_offset(level-1)?.len() } else { left.get_data().len() };
@@ -108,7 +104,36 @@ pub fn vector_push<'e>(left: &mut WriteVec<'e>, right: &SharedVec, copies: usize
     let rightdata = right.get_data();
     leftdata = append_data(leftdata,&rightdata,copies)?.0;
     left.replace_data(leftdata)?;
-    Ok((start,stride))
+    Ok(())
+}
+
+pub fn vector_push_instrs(context: &mut PreImageContext, dst: &VectorRegisters, src: &VectorRegisters, copies: &Register, regs: &[Register]) -> Result<Vec<Instruction>,String> {
+    let mut out = vec![];
+    let depth = dst.depth();
+    /* intermediate levels */
+    let zero = context.new_register();
+    out.push(Instruction::new(InstructionType::Const(vec![0]),vec![zero]));
+    for level in (0..(depth-1)).rev() {
+        let start = context.new_register();
+        let off = if level > 0 { dst.offset_pos(level-1)? } else { dst.data_pos() };
+        out.push(Instruction::new(InstructionType::Length,vec![start,regs[off]]));
+        let stride = context.new_register();
+        let off = if level > 0 { src.offset_pos(level-1)? } else { src.data_pos() };
+        out.push(Instruction::new(InstructionType::Length,vec![stride,regs[off]]));
+        let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
+        let itype = InstructionType::Call(Identifier::new("std","_vector_append_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
+        out.push(Instruction::new(itype,vec![regs[dst.offset_pos(level)?].clone(),regs[src.offset_pos(level)?].clone(),
+                                             start.clone(),stride.clone(),copies.clone()]));
+        let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
+        let itype = InstructionType::Call(Identifier::new("std","_vector_append_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
+        out.push(Instruction::new(itype,vec![regs[dst.length_pos(level)?].clone(),regs[src.length_pos(level)?].clone(),
+                                            zero.clone(),zero.clone(),copies.clone()]));
+    }
+    /* bottom-level */
+    let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
+    let itype = InstructionType::Call(Identifier::new("std","_vector_append"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In]);
+    out.push(Instruction::new(itype,vec![regs[dst.data_pos()].clone(),regs[src.data_pos()].clone(),copies.clone()]));
+    Ok(out)
 }
 
 pub fn vector_register_copy<'e>(context: &mut InterpContext, rvs: &RegisterVectorSource<'e>, dst: &VectorRegisters, src: &VectorRegisters) -> Result<(),String> {
@@ -118,4 +143,14 @@ pub fn vector_register_copy<'e>(context: &mut InterpContext, rvs: &RegisterVecto
     }
     rvs.copy(context,dst.data_pos(),src.data_pos())?;
     Ok(())
+}
+
+pub fn vector_register_copy_instrs(dst: &VectorRegisters, src: &VectorRegisters, regs: &[Register]) -> Result<Vec<Instruction>,String> {
+    let mut out = vec![];
+    for level in 0..dst.depth() {
+        out.push(Instruction::new(InstructionType::Copy,vec![regs[dst.offset_pos(level)?].clone(),regs[src.offset_pos(level)?].clone()]));
+        out.push(Instruction::new(InstructionType::Copy,vec![regs[dst.length_pos(level)?].clone(),regs[src.length_pos(level)?].clone()]));
+    }
+    out.push(Instruction::new(InstructionType::Copy,vec![regs[dst.data_pos()].clone(),regs[src.data_pos()].clone()]));
+    Ok(out)
 }

@@ -134,7 +134,7 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
         InstructionType::Length |
         InstructionType::Add |
         InstructionType::SeqFilter |
-        InstructionType::Pause |
+        InstructionType::Pause(_) |
         InstructionType::SeqAt =>
             panic!("Impossible instruction! {:?}",instr),
 

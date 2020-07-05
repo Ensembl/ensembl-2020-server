@@ -1,0 +1,16 @@
+import "lib:std";
+use "std";
+
+import "lib:buildtime";
+use "buildtime";
+
+x := [1,2][];
+y := [3,4][];
+alienate(x);
+alienate(y);
+set_size_hint(x,2);
+set_size_hint(y,2);
+
+z := [x (+) y];
+assert(z==[1,2,3,4],true);
+print(z);

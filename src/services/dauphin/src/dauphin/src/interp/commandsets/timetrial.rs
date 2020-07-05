@@ -53,14 +53,14 @@ fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Com
     if dry {
         for _ in 0..loops {
             command_type.local_prepare(&mut context,t);
-            context.registers().commit();
+            context.registers_mut().commit();
         }
     } else {
         for _ in 0..loops {
             command_type.local_prepare(&mut context,t);
-            context.registers().commit();
+            context.registers_mut().commit();
             command.execute(&mut context)?;
-            context.registers().commit();
+            context.registers_mut().commit();
         }
     }
     Ok(start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f64()*1000.)
@@ -128,7 +128,7 @@ pub trait TimeTrialCommandType {
 
 pub fn trial_write<F>(context: &mut InterpContext, i: usize, t: usize, cb: F) where F: Fn(usize) -> usize {
     let a : Vec<usize> = (0..t).map(|x| cb(x as usize)).collect();
-    context.registers().write(&Register(i),InterpValue::Indexes(a));
+    context.registers_mut().write(&Register(i),InterpValue::Indexes(a));
 }
 
 pub fn trial_signature(layout: &[(MemberMode,usize)]) -> RegisterSignature {

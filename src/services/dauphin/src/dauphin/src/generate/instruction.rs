@@ -119,7 +119,7 @@ impl InstructionSuperType {
 
 #[derive(Clone,PartialEq,Debug)]
 pub enum InstructionType {
-    Pause,
+    Pause(bool),
     Nil,
     Alias,
     Copy,
@@ -161,7 +161,7 @@ impl InstructionType {
     pub fn supertype(&self) -> Result<InstructionSuperType,String> {
         Ok(match self {
             InstructionType::Nil => InstructionSuperType::Nil,
-            InstructionType::Pause => InstructionSuperType::Pause,
+            InstructionType::Pause(_) => InstructionSuperType::Pause,
             InstructionType::Copy => InstructionSuperType::Copy,
             InstructionType::Append => InstructionSuperType::Append,
             InstructionType::Filter => InstructionSuperType::Filter,
@@ -186,7 +186,7 @@ impl InstructionType {
 
     pub fn get_name(&self) -> Vec<String> {
         let call = match self {
-            InstructionType::Pause => "pause",
+            InstructionType::Pause(_) => "pause",
             InstructionType::Nil => "nil",
             InstructionType::Alias => "alias",
             InstructionType::Copy => "copy",
@@ -225,6 +225,7 @@ impl InstructionType {
         }.to_string();
         let mut out = vec![call.clone()];
         if let Some(prefixes) = match self {
+            InstructionType::Pause(true) => Some(vec!["force".to_string()]),
             InstructionType::CtorStruct(name) => Some(vec![name.to_string()]),
             InstructionType::CtorEnum(name,branch) => Some(vec![name.to_string(),branch.to_string()]),
             InstructionType::SValue(name,field) => Some(vec![name.to_string(),field.to_string()]),
@@ -269,7 +270,7 @@ impl InstructionType {
         match self {
             InstructionType::Call(_,impure,_,_) => *impure,
             InstructionType::LineNumber(_,_) => true,
-            InstructionType::Pause => true,
+            InstructionType::Pause(_) => true,
             _ => false
         }
     }
@@ -277,7 +278,7 @@ impl InstructionType {
     pub fn out_only_registers(&self) -> Vec<usize> {
         match self {
             InstructionType::LineNumber(_,_) => vec![],
-            InstructionType::Pause => vec![],
+            InstructionType::Pause(_) => vec![],
 
             InstructionType::Call(_,_,sigs,dataflow) => {
                 let mut out = Vec::new();
@@ -305,7 +306,7 @@ impl InstructionType {
     pub fn out_registers(&self) -> Vec<usize> {
         match self {
             InstructionType::LineNumber(_,_) => vec![],
-            InstructionType::Pause => vec![],
+            InstructionType::Pause(_) => vec![],
 
             InstructionType::Call(_,_,sigs,dataflow) => {
                 let mut out = Vec::new();
@@ -446,7 +447,7 @@ impl InstructionType {
             InstructionType::ReFilter => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
 
             InstructionType::LineNumber(_,_) |
-            InstructionType::Pause |
+            InstructionType::Pause(_) |
             InstructionType::NumEq |
             InstructionType::Length |
             InstructionType::Add |

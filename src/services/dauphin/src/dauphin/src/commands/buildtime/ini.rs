@@ -75,7 +75,7 @@ impl Command for LoadIniCommand {
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && context.is_reg_valid(&self.3) {
             let (filenames,sections,keys) = {
-                let regs = context.context_mut().registers();
+                let regs = context.context_mut().registers_mut();
                 (
                     &regs.get_strings(&self.1)?,
                     &regs.get_strings(&self.2)?,
@@ -83,7 +83,7 @@ impl Command for LoadIniCommand {
                 )
             };
             let out = load_inis(context.resolver(),filenames,sections,keys)?;
-            context.context_mut().registers().write(&self.0,InterpValue::Strings(out));
+            context.context_mut().registers_mut().write(&self.0,InterpValue::Strings(out));
             Ok(PreImageOutcome::Constant(vec![self.0]))
         } else {
             Err(format!("buildtime::load_ini needs all arguments to be known at build time 1st/2nd/3rd-arg-known={}/{}/{}",

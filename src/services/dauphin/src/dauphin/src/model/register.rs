@@ -56,9 +56,9 @@ struct RegisterAllocatorImpl {
 }
 
 impl RegisterAllocatorImpl {
-    fn new() -> RegisterAllocatorImpl {
+    fn new(start: usize) -> RegisterAllocatorImpl {
         RegisterAllocatorImpl {
-            index: 0
+            index: start
         }
     }
 
@@ -72,8 +72,8 @@ impl RegisterAllocatorImpl {
 pub struct RegisterAllocator(Rc<RefCell<RegisterAllocatorImpl>>);
 
 impl RegisterAllocator {
-    pub fn new() -> RegisterAllocator {
-        RegisterAllocator(Rc::new(RefCell::new(RegisterAllocatorImpl::new())))
+    pub fn new(start: usize) -> RegisterAllocator {
+        RegisterAllocator(Rc::new(RefCell::new(RegisterAllocatorImpl::new(start))))
     }
 
     pub fn allocate(&self) -> Register {

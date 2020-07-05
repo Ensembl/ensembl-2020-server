@@ -79,10 +79,10 @@ impl TimeTrialCommandType for BinBoolTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = (t*100) as usize;
         let a : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(a));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(a));
         let b : Vec<usize> = (0..t).map(|x| (x as usize * 40503 )%t).collect();
-        context.registers().write(&Register(2),InterpValue::Indexes(b));
-        context.registers().commit();
+        context.registers_mut().write(&Register(2),InterpValue::Indexes(b));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -105,7 +105,7 @@ impl CommandType for InterpBinBoolCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(InterpBinBoolCommand(self.0,it.regs[0],it.regs[1],it.regs[2],None)))
+        Ok(Box::new(InterpBinBoolCommand(self.0,it.regs[0],it.regs[1],it.regs[2],self.1.clone())))
     }
     
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
@@ -133,7 +133,7 @@ pub struct InterpBinBoolCommand(InterpBinBoolOp,Register,Register,Register,Optio
 
 impl Command for InterpBinBoolCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let a = registers.get_numbers(&self.2)?;
         let b = &registers.get_numbers(&self.3)?;
         let mut c = vec![];
@@ -180,10 +180,10 @@ impl TimeTrialCommandType for BinNumTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = (t*100) as usize;
         let a : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(a));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(a));
         let b : Vec<usize> = (0..t).map(|x| (x as usize * 40503 )%t).collect();
-        context.registers().write(&Register(2),InterpValue::Indexes(b));
-        context.registers().commit();
+        context.registers_mut().write(&Register(2),InterpValue::Indexes(b));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -234,7 +234,7 @@ pub struct InterpBinNumCommand(InterpBinNumOp,Register,Register,Register,Option<
 
 impl Command for InterpBinNumCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let a = registers.get_numbers(&self.2)?;
         let b = &registers.get_numbers(&self.3)?;
         let mut c = vec![];
@@ -281,12 +281,12 @@ impl TimeTrialCommandType for NumModTimeTrial {
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = (t*100) as usize;
         let a : Vec<usize> = (1..t).map(|x| x as usize).collect();
-        context.registers().write(&Register(0),InterpValue::Indexes(a));
+        context.registers_mut().write(&Register(0),InterpValue::Indexes(a));
         let b : Vec<usize> = (1..t).map(|x| (x as usize * 40503 )%t).collect();
-        context.registers().write(&Register(1),InterpValue::Indexes(b));
+        context.registers_mut().write(&Register(1),InterpValue::Indexes(b));
         let f : Vec<usize> = (1..t).map(|x| x-1 as usize).collect();
-        context.registers().write(&Register(2),InterpValue::Indexes(f));
-        context.registers().commit();
+        context.registers_mut().write(&Register(2),InterpValue::Indexes(f));
+        context.registers_mut().commit();
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
@@ -370,7 +370,7 @@ pub struct InterpNumModCommand(InterpNumModOp,Register,Register,Option<Register>
 
 impl InterpNumModCommand {
     fn execute_unfiltered(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let b = &registers.get_numbers(&self.2)?;
         let mut a = registers.take_numbers(&self.1)?;
         let b_len = b.len();
@@ -382,8 +382,8 @@ impl InterpNumModCommand {
     }
 
     fn execute_filtered(&self, context: &mut InterpContext) -> Result<(),String> {
-        let filter : &[usize] = &context.registers().get_indexes(self.3.as_ref().unwrap())?;
-        let registers = context.registers();
+        let filter : &[usize] = &context.registers_mut().get_indexes(self.3.as_ref().unwrap())?;
+        let registers = context.registers_mut();
         let b = &registers.get_numbers(&self.2)?;
         let mut a = registers.take_numbers(&self.1)?;
         let b_len = b.len();

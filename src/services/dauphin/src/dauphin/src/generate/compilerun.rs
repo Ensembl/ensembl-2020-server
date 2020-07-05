@@ -17,7 +17,7 @@
 use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
 use crate::resolver::Resolver;
-use crate::model::Register;
+use crate::model::{ Register, RegisterAllocator };
 use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
@@ -84,11 +84,18 @@ pub struct PreImageContext<'a,'b> {
     compiler_link: CompilerLink,
     valid_registers: HashSet<Register>,
     context: InterpContext,
-    gen_context: &'a mut GenContext<'b>
+    gen_context: &'a mut GenContext<'b>,
+    regalloc: RegisterAllocator
 }
 
 impl<'a,'b> PreImageContext<'a,'b> {
     pub fn new(compiler_link: &CompilerLink, resolver: &'a Resolver, gen_context: &'a mut GenContext<'b>) -> Result<PreImageContext<'a,'b>,String> {
+        let mut max_reg = 0;
+        for instr in gen_context.get_instructions() {
+            for reg in &instr.regs {
+                if reg.0 > max_reg { max_reg = reg.0; }
+            }
+        }
         Ok(PreImageContext {
             resolver,
             reverse: ReverseRegisters::new(),
@@ -97,13 +104,16 @@ impl<'a,'b> PreImageContext<'a,'b> {
             compiler_link: compiler_link.clone(),
             valid_registers: HashSet::new(),
             context: compiler_link.new_context(),
-            gen_context
+            gen_context,
+            regalloc: RegisterAllocator::new(max_reg+1)
         })
     }
 
     pub fn context(&self) -> &InterpContext { &self.context }
     pub fn context_mut(&mut self) -> &mut InterpContext { &mut self.context }
     pub fn resolver(&self) -> &Resolver { &self.resolver }
+
+    pub fn new_register(&self) -> Register { self.regalloc.allocate() }
 
     fn make_value(&mut self, reg: &Register, value: &InterpValue) -> Result<(),String> {
         if let Some(src_reg) = self.reverse.find_register(value) {
@@ -115,10 +125,10 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn commit(&mut self) -> Result<(),String> {
-        let regs = self.context_mut().registers().commit();
+        let regs = self.context_mut().registers_mut().commit();
         for reg in &regs {
             if self.is_reg_valid(reg) {
-                let len = self.context_mut().registers().get(reg).borrow().get_shared()?.len();
+                let len = self.context_mut().registers_mut().get(reg).borrow().get_shared()?.len();
                 self.set_reg_size(reg,Some(len));
             }
         }
@@ -130,7 +140,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
         let out_only = instr.itype.out_only_registers();
         for (i,reg) in instr.regs.iter().enumerate() {
             if !out_only.contains(&i) && self.suppressed.contains(reg) {
-                let value = self.context_mut().registers().get(reg).borrow().get_shared()?;
+                let value = self.context_mut().registers_mut().get(reg).borrow().get_shared()?;
                 self.make_value(&reg,&value)?;
                 self.reverse.update_register(reg,&value);
             }
@@ -166,7 +176,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     pub fn get_reg_size(&self, reg: &Register) -> Option<usize> { self.reg_sizes.get(reg).map(|x| *x) }
 
-    pub fn is_reg_valid(&mut self, reg: &Register) -> bool {
+    pub fn is_reg_valid(&self, reg: &Register) -> bool {
         self.valid_registers.contains(reg)
     }
 
@@ -208,7 +218,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn make_constant(&mut self, reg: &Register) -> Result<(),String> {
         // XXX don't copy the big ones
-        let value = self.context_mut().registers().get(reg).borrow().get_shared()?;
+        let value = self.context_mut().registers_mut().get(reg).borrow().get_shared()?;
         match value.as_ref() {
             InterpValue::Empty => {
                 self.add(Instruction::new(InstructionType::Nil,vec![*reg]))?;

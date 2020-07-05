@@ -48,7 +48,8 @@ impl InterpContext {
         self.pause = false;
         out
     }
-    pub fn registers(&mut self) -> &mut RegisterFile { &mut self.registers }
+    pub fn registers(&self) -> &RegisterFile { &self.registers }
+    pub fn registers_mut(&mut self) -> &mut RegisterFile { &mut self.registers }
     pub fn payload(&mut self, set: &str, name: &str) -> Result<&mut Box<dyn Any>,String> {
         self.payloads.get_mut(&(set.to_string(),name.to_string())).ok_or_else(|| format!("missing payload {}",name))
     }

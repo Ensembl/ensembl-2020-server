@@ -14,13 +14,13 @@
  *  limitations under the License.
  */
 
-use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier, ComplexRegisters };
+use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier, ComplexRegisters, VectorRegisters };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
 use crate::typeinf::{ MemberMode, MemberDataFlow };
-use super::super::common::vectorcopy::{ vector_update_offsets, vector_update_lengths, vector_update_poly, vector_push, vector_register_copy, vector_append, append_data };
+use super::super::common::vectorcopy::{ vector_update_offsets, vector_update_lengths, vector_update_poly, vector_push, vector_push_instrs, vector_register_copy, append_data };
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::{ SharedVec };
 use super::super::common::writevec::WriteVec;
@@ -28,15 +28,6 @@ use super::extend::ExtendCommandType;
 use super::library::std;
 use crate::cli::Config;
 use crate::interp::CompilerLink;
-
-fn assign_unfiltered(context: &mut InterpContext, regs: &Vec<Register>) -> Result<(),String> {
-    let registers = context.registers();
-    let n = regs.len()/2;
-    for i in 0..n {
-        registers.copy(&regs[i],&regs[i+n])?;
-    }
-    Ok(())
-}
 
 fn preimage_instrs(regs: &Vec<Register>) -> Result<Vec<Instruction>,String> {
     let mut instrs = vec![];
@@ -47,165 +38,27 @@ fn preimage_instrs(regs: &Vec<Register>) -> Result<Vec<Instruction>,String> {
     Ok(instrs)
 }
 
-fn preimage_sizes(context: &PreImageContext, regs: &Vec<Register>, offset: usize) -> Result<Vec<(Register,usize)>,String> {
+fn copy_deep_instrs<'d>(context: &mut PreImageContext, left: &VectorRegisters, right: &VectorRegisters, filter: &Register, regs: &[Register]) -> Result<Vec<Instruction>,String> {
     let mut out = vec![];
-    let n = (regs.len()-offset)/2;
-    for i in 0..n {
-        if let Some(a) = context.get_reg_size(&regs[offset+i+n]) {
-            out.push((regs[offset+i],a));
-        }
-    }
+    let depth = left.depth();
+    let start = context.new_register();
+    let reg_off = if depth > 1 { left.offset_pos(depth-2)? } else { left.data_pos() };
+    out.push(Instruction::new(InstructionType::Length,vec![start,regs[reg_off]]));
+    let stride = context.new_register();
+    let reg_off = if depth > 1 { right.offset_pos(depth-2)? } else { right.data_pos() };
+    out.push(Instruction::new(InstructionType::Length,vec![stride,regs[reg_off]]));
+    let filter_len = context.new_register();
+    out.push(Instruction::new(InstructionType::Copy,vec![filter_len,filter.clone()]));
+    out.append(&mut vector_push_instrs(context,left,right,&filter_len,regs)?);
+    let zero = context.new_register();
+    out.push(Instruction::new(InstructionType::Const(vec![0]),vec![zero]));
+    let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
+    let itype = InstructionType::Call(Identifier::new("std","_vector_update_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
+    out.push(Instruction::new(itype,vec![regs[left.offset_pos(depth-1)?].clone(),regs[right.offset_pos(depth-1)?.clone()],filter.clone(),start,stride]));
+    let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
+    let itype = InstructionType::Call(Identifier::new("std","_vector_update_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
+    out.push(Instruction::new(itype,vec![regs[left.length_pos(depth-1)?].clone(),regs[right.length_pos(depth-1)?.clone()],filter.clone(),zero,zero]));
     Ok(out)
-}
-
-fn copy_deep<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
-    if filter.len() > 0 {
-        let offsets = vector_push(left,right,filter.len())?;
-        let depth = left.depth();
-        vector_update_offsets(left.get_offset_mut(depth-1)?,right.get_offset(depth-1)?,filter,offsets);
-        vector_update_lengths(left.get_length_mut(depth-1)?,right.get_length(depth-1)?,filter);
-    }
-    Ok(())
-}
-
-fn copy_shallow<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
-    let rightval = right.get_data();
-    let mut leftval = left.take_data()?;
-    leftval = vector_update_poly(leftval,rightval,filter)?;
-    left.replace_data(leftval)?;
-    Ok(())
-}
-
-pub fn copy_vector<'d>(left: &mut WriteVec<'d>, right: &SharedVec, filter: &[usize]) -> Result<(),String> {
-    if left.depth() > 0 {
-        copy_deep(left,right,filter)?;
-    } else {
-        copy_shallow(left,right,filter)?;
-    }
-    Ok(())
-}
-
-// XXX ban multi-Lvalue
-fn assign_filtered(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
-    let filter_reg = context.registers().get_indexes(&regs[0])?;
-    let vrs = RegisterVectorSource::new(&regs);
-    /* build rhs then lhs (to avoid cow panics) */
-    let rights = sig[2].iter().map(|vr| SharedVec::new(context,&vrs,vr.1)).collect::<Result<Vec<_>,_>>()?;
-    let mut lefts = sig[1].iter().map(|vr| WriteVec::new(context,&vrs,vr.1)).collect::<Result<Vec<_>,_>>()?;
-    /* copy */
-    for (left,right) in lefts.iter_mut().zip(rights.iter()) {
-        copy_vector(left,right,&filter_reg)?;
-        left.write(context)?;
-    }
-    Ok(())
-}
-
-fn all_shallow(sig: &RegisterSignature) -> Result<bool,String> {
-    for (_,left) in sig[1].iter() {
-        if left.depth() > 0 { return Ok(false); }
-    }
-    Ok(true)
-}
-
-fn assign(context: &mut InterpContext, filtered: bool, purposes: &RegisterSignature, regs: &Vec<Register>) -> Result<(),String> {
-    if filtered {
-        assign_filtered(context,purposes,regs)?;
-    } else {
-        assign_unfiltered(context,regs)?;
-    }
-    Ok(())
-}
-
-struct UnfilteredAssignTimeTrial();
-
-impl TimeTrialCommandType for UnfilteredAssignTimeTrial {
-    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
-
-    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
-        let t = t as usize;
-        for i in 0..10 {
-            trial_write(context,i,t*100,|x| x);
-        }    
-        context.registers().commit();
-    }
-
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sigs = trial_signature(&vec![(MemberMode::LValue,2),(MemberMode::RValue,2)]);
-        let regs : Vec<Register> = (0..10).map(|x| Register(x)).collect();
-        Ok(Box::new(AssignCommand(false,sigs,regs)))
-    }
-}
-
-struct FilteredNumberAssignTimeTrial();
-
-impl TimeTrialCommandType for FilteredNumberAssignTimeTrial {
-    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
-
-    fn local_prepare(&self, context: &mut InterpContext, t: i64) {
-        let t = t as usize;
-        trial_write(context,0,t*10,|x| x);    /* 10t writes */
-        trial_write(context,1,t*100,|x| x);   /* 100t data */
-        trial_write(context,2,t*10,|x| x*10); /* 10t arrays (offset 10x) */
-        trial_write(context,3,t*10,|_| 10);   /* 10t arrays (len 10) */
-        trial_write(context,4,t*10,|x| x);   /* 10tm data */
-        trial_write(context,5,t*10,|x| x); /* 10t arrays (offset xm) */
-        trial_write(context,6,t*10,|_| 1);   /* 10t arrays (len m) */
-        context.registers().commit();
-    }
-
-    fn global_prepare(&self, _context: &mut InterpContext, _t: i64) {}
-
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sigs = trial_signature(&vec![(MemberMode::FValue,0),(MemberMode::LValue,1),(MemberMode::RValue,1)]);
-        let regs : Vec<Register> = (0..7).map(|x| Register(x)).collect();
-        Ok(Box::new(AssignCommand(true,sigs,regs)))
-    }
-}
-
-struct FilteredDepthAssignTimeTrial();
-
-impl TimeTrialCommandType for FilteredDepthAssignTimeTrial {
-    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
-
-    fn local_prepare(&self, context: &mut InterpContext, t: i64) {
-        let t = t as usize;
-        trial_write(context,0,10,|x| x);    /* 10t writes */
-        trial_write(context,1,100,|x| x);   /* 100t data */
-        trial_write(context,2,10,|x| x*10); /* 10t arrays (offset 10x) */
-        trial_write(context,3,10,|_| 10);   /* 10t arrays (len 10) */
-        trial_write(context,4,t*1000,|x| x);   /* 10tm data */
-        trial_write(context,5,10,|x| t*100*x); /* 10t arrays (offset xm) */
-        trial_write(context,6,10,|_| t*100);   /* 10t arrays (len m) */
-        context.registers().commit();
-    }
-
-    fn global_prepare(&self, _context: &mut InterpContext, _t: i64) {}
-
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sigs = trial_signature(&vec![(MemberMode::FValue,0),(MemberMode::LValue,1),(MemberMode::RValue,1)]);
-        let regs : Vec<Register> = (0..7).map(|x| Register(x)).collect();
-        Ok(Box::new(AssignCommand(true,sigs,regs)))
-    }
-}
-
-struct ShallowAssignTimeTrial();
-
-impl TimeTrialCommandType for ShallowAssignTimeTrial {
-    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
-
-    fn local_prepare(&self, context: &mut InterpContext, t: i64) {
-        let t = t as usize;
-        trial_write(context,0,t*100,|x| x);    /* 100t writes */
-        trial_write(context,1,t*1000,|x| x);   /* 1000t data */
-        trial_write(context,2,t*100,|x| x);   /* 100t reads */
-        context.registers().commit();
-    }
-
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sigs = trial_signature(&vec![(MemberMode::FValue,0),(MemberMode::LValue,0),(MemberMode::RValue,0)]);
-        let regs : Vec<Register> = (0..3).map(|x| Register(x)).collect();
-        Ok(Box::new(AssignCommand(true,sigs,regs)))
-    }
 }
 
 pub struct AssignCommandType();
@@ -226,41 +79,20 @@ impl CommandType for AssignCommandType {
         }
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[2],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let sig = RegisterSignature::deserialize(&value[1],false,false)?;
-        Ok(Box::new(AssignCommand(cbor_bool(&value[0])?,sig,regs)))
-    }
-
-    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
-        let unfiltered = TimeTrial::run(&UnfilteredAssignTimeTrial(),linker,config)?;
-        let shallow = TimeTrial::run(&ShallowAssignTimeTrial(),linker,config)?;
-        let filtered_number = TimeTrial::run(&FilteredNumberAssignTimeTrial(),linker,config)?;
-        let filtered_depth = TimeTrial::run(&FilteredDepthAssignTimeTrial(),linker,config)?;
-        Ok(cbor_make_map(&vec!["tu","tfn","ts","tfd"],vec![unfiltered.serialize(),filtered_number.serialize(),shallow.serialize(),filtered_depth.serialize()])?)
+    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Err(format!("compile-side command"))
     }
 }
 
 pub struct AssignCommand(bool,RegisterSignature,Vec<Register>);
 
 impl AssignCommand {
-    fn can_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
-        if !context.is_reg_valid(&self.2[0]) {
-            return Ok(false);
-        }
-        for idx in self.1[2].all_registers() {
-            if !context.is_reg_valid(&self.2[idx]) {
-                return Ok(false);
-            }
-        }
-        Ok(true)
-    }
-
-    fn replace_shallow(&self) -> Result<Vec<Instruction>,String> {
+    fn replace_shallow(&self, context: &mut PreImageContext) -> Result<Vec<Instruction>,String> {
         let mut out = vec![];
         for (left,right) in self.1[1].iter().zip(self.1[2].iter()) {
             if left.1.depth() > 0 {
                 /* deep */
+                out.append(&mut copy_deep_instrs(context,left.1,right.1, &self.2[0],&self.2)?);
             } else {
                 /* shallow */
                 let sigs = trial_signature(&vec![(MemberMode::LValue,1),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
@@ -273,14 +105,12 @@ impl AssignCommand {
 }
 
 impl Command for AssignCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        assign(context,self.0,&self.1,&self.2)?;
-        Ok(())
+    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
+        return Err("assign is compile-time only".to_string());
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
-        let regs = CborValue::Array(self.2.iter().map(|x| x.serialize()).collect());
-        Ok(Some(vec![CborValue::Bool(self.0),self.1.serialize(false,false)?,regs]))
+        Err(format!("compile-side command"))
     }
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
@@ -293,24 +123,15 @@ impl Command for AssignCommand {
             PreImageOutcome::Replace(preimage_instrs(&self.2)?)
         } else {
             /* filtered */
-            if self.can_preimage(context)? {
-                self.execute(context.context_mut())?;
-                self.preimage_post(context)?
-            } else {
-                if all_shallow(&self.1)? {
-                    PreImageOutcome::Replace(self.replace_shallow()?)
-                } else {
-                    PreImageOutcome::Skip(preimage_sizes(context,&self.2,1)?)
-                }
-            }
+            PreImageOutcome::Replace(self.replace_shallow(context)?)
         })
     }
 }
 
 // TODO filtered-assign rewrite
 pub(super) fn library_assign_commands(set: &mut CommandSet) -> Result<(),String> {
-    set.push("assign",9,AssignCommandType())?;
-    set.push("extend",10,ExtendCommandType::new())?;
+    set.push("assign",1000001,AssignCommandType())?;
+    set.push("extend",1000000,ExtendCommandType::new())?;
     Ok(())
 }
 

@@ -59,6 +59,7 @@ mod test {
     use super::super::codegen::generate_code;
     use super::super::call::call;
     use super::super::linearize::linearize;
+    use crate::generate::generate;
     use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
 
     #[test]
@@ -71,20 +72,13 @@ mod test {
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        print!("{:?}\n",context);
-        linearize(&mut context).expect("linearize");
-        print!("BEFORE {:?}\n",context);
-        remove_aliases(&mut context);
-        print!("AFTER {:?}\n",context);
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
+        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+        let (values,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         print!("{:?}\n",values);
         for s in &strings {
             print!("{}\n",s);
         }
-        for instr in context.get_instructions() {
+        for instr in &instrs {
             if let InstructionType::Alias = instr.itype {
                 assert!(false);
             }
