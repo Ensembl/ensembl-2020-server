@@ -21,65 +21,8 @@ use crate::model::{ Register, RegisterAllocator, DFloat };
 use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
-#[derive(Clone,Hash,PartialEq,Eq,Debug)] // XXX DEBUG!
-enum StealableValue {
-    Empty,
-    Indexes(Vec<usize>),
-    Boolean(Vec<bool>),
-}
-
-impl StealableValue {
-    fn new(iv: &InterpValue) -> Option<StealableValue> {
-        match iv {
-            InterpValue::Empty => Some(StealableValue::Empty),
-            InterpValue::Indexes(x) => Some(StealableValue::Indexes(x.clone())),
-            InterpValue::Boolean(b) => Some(StealableValue::Boolean(b.clone())),
-            _ => None
-        }
-    }
-}
-
-struct ReverseRegisters {
-    forward: HashMap<Register,StealableValue>,
-    reversed: HashMap<StealableValue,Register>,
-}
-
-impl ReverseRegisters {
-    fn new() -> ReverseRegisters {
-        ReverseRegisters {
-            forward: HashMap::new(),
-            reversed: HashMap::new()
-        }
-    }
-
-    fn remove_register(&mut self, reg: &Register) {
-        if let Some(sv) = self.forward.get(reg) {
-            self.reversed.remove(&sv);
-            self.forward.remove(reg);
-        }
-    }
-
-    fn update_register(&mut self, reg: &Register, value: &InterpValue) {
-        self.remove_register(reg);
-        if let Some(sv) = StealableValue::new(&value) {
-            self.reversed.insert(sv.clone(),*reg);
-            self.forward.insert(*reg,sv);
-        }
-    }
-
-    fn find_register(&self, value: &InterpValue) -> Option<Register> {
-        if let Some(sv) = StealableValue::new(value) {
-            self.reversed.get(&sv).cloned()
-        } else {
-            None
-        }
-    }
-}
-
 pub struct PreImageContext<'a,'b> {
     resolver: &'a Resolver,
-    reverse: ReverseRegisters,
-    suppressed: HashSet<Register>,
     reg_sizes: HashMap<Register,usize>,
     compiler_link: CompilerLink,
     valid_registers: HashSet<Register>,
@@ -98,8 +41,6 @@ impl<'a,'b> PreImageContext<'a,'b> {
         }
         Ok(PreImageContext {
             resolver,
-            reverse: ReverseRegisters::new(),
-            suppressed: HashSet::new(),
             reg_sizes: HashMap::new(),
             compiler_link: compiler_link.clone(),
             valid_registers: HashSet::new(),
@@ -115,15 +56,6 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     pub fn new_register(&self) -> Register { self.regalloc.allocate() }
 
-    fn make_value(&mut self, reg: &Register, value: &InterpValue) -> Result<(),String> {
-        if let Some(src_reg) = self.reverse.find_register(value) {
-            self.add(Instruction::new(InstructionType::Copy,vec![*reg,src_reg]))?;
-        } else {
-            self.make_constant(reg)?;
-        }
-        Ok(())
-    }
-
     fn commit(&mut self) -> Result<(),String> {
         let regs = self.context_mut().registers_mut().commit();
         for reg in &regs {
@@ -136,24 +68,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     pub fn add_instruction(&mut self, instr: &Instruction) -> Result<(),String> {
-        let out = instr.itype.out_registers();
-        let out_only = instr.itype.out_only_registers();
-        for (i,reg) in instr.regs.iter().enumerate() {
-            if !out_only.contains(&i) && self.suppressed.contains(reg) {
-                let value = self.context_mut().registers_mut().get(reg).borrow().get_shared()?;
-                self.make_value(&reg,&value)?;
-                self.reverse.update_register(reg,&value);
-            }
-            self.suppressed.remove(reg);
-        }
         self.add(instr.clone())?;
-        self.commit()?;
-        for (i,reg) in instr.regs.iter().enumerate() {
-            if out.contains(&i) {
-                self.reverse.remove_register(reg);
-            }
-        }
-        Ok(())
+        self.commit()
     }
 
     fn set_reg_valid(&mut self, reg: &Register) -> Result<(),String> {
@@ -272,8 +188,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
                 }
                 self.commit()?;
                 for reg in &regs {
-                    self.suppressed.insert(*reg);
-                    self.reverse.remove_register(reg);
+                    self.make_constant(reg)?;
                 }
             }
         }
