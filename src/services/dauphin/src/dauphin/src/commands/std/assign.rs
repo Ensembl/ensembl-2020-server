@@ -20,7 +20,7 @@ use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
 use crate::typeinf::{ MemberMode, MemberDataFlow };
-use super::super::common::vectorcopy::{ vector_update_offsets, vector_update_lengths, vector_update_poly, vector_push, vector_push_instrs, vector_register_copy, append_data };
+use super::super::common::vectorcopy::{ vector_update_poly, vector_push_instrs, append_data, vector_update_offsets, vector_update_lengths, vector_copy };
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::{ SharedVec };
 use super::super::common::writevec::WriteVec;
@@ -52,12 +52,8 @@ fn copy_deep_instrs<'d>(context: &mut PreImageContext, left: &VectorRegisters, r
     out.append(&mut vector_push_instrs(context,left,right,&filter_len,regs)?);
     let zero = context.new_register();
     out.push(Instruction::new(InstructionType::Const(vec![0]),vec![zero]));
-    let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-    let itype = InstructionType::Call(Identifier::new("std","_vector_update_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
-    out.push(Instruction::new(itype,vec![regs[left.offset_pos(depth-1)?].clone(),regs[right.offset_pos(depth-1)?.clone()],filter.clone(),start,stride]));
-    let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-    let itype = InstructionType::Call(Identifier::new("std","_vector_update_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
-    out.push(Instruction::new(itype,vec![regs[left.length_pos(depth-1)?].clone(),regs[right.length_pos(depth-1)?.clone()],filter.clone(),zero,zero]));
+    out.push(vector_update_offsets(left,right,&start,&stride,filter,regs,depth-1)?);
+    out.push(vector_update_lengths(left,right,&zero,filter,regs,depth-1)?);
     Ok(out)
 }
 
@@ -95,9 +91,7 @@ impl AssignCommand {
                 out.append(&mut copy_deep_instrs(context,left.1,right.1, &self.2[0],&self.2)?);
             } else {
                 /* shallow */
-                let sigs = trial_signature(&vec![(MemberMode::LValue,1),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-                let itype = InstructionType::Call(Identifier::new("std","_vector_copy_shallow"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In]);
-                out.push(Instruction::new(itype,vec![self.2[left.1.data_pos()],self.2[right.1.data_pos()],self.2[0]]));        
+                out.push(vector_copy(left.1,right.1,&self.2[0],&self.2)?);
             }
         }
         Ok(out)

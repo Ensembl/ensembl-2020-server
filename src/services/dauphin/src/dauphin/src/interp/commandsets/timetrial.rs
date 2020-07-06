@@ -140,4 +140,3 @@ pub fn trial_signature(layout: &[(MemberMode,usize)]) -> RegisterSignature {
     }
     sigs
 }
-

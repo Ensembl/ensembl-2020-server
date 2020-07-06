@@ -18,39 +18,40 @@ use std::rc::Rc;
 use crate::interp::{ InterpValue, InterpContext, trial_signature };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use crate::commands::common::polymorphic::arbitrate_type;
-use super::sharedvec::SharedVec;
-use super::writevec::WriteVec;
-use crate::commands::std::vector::VectorAppend;
 use crate::typeinf::{ MemberMode, MemberDataFlow };
-use super::vectorsource::RegisterVectorSource;
-use crate::model::{ Register, VectorRegisters, Identifier };
+use crate::model::{ Register, VectorRegisters, Identifier, ComplexPath, ComplexRegisters, RegisterSignature };
+use regex::Regex;
 
-pub fn vector_update_lengths(dst: &mut Vec<usize>, src: &[usize], filter: &[usize]) {
-    let mut src_it = src.iter().cycle();
-    for filter_pos in filter.iter() {
-        dst[*filter_pos] = *src_it.next().unwrap();
+pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<InstructionType,()> {
+    let mut sigs = RegisterSignature::new();
+    let mut flows = vec![];
+    for cap in Regex::new(r"([RFL])(\d+)(i?o?)").unwrap().captures_iter(spec) {
+        let mode = match cap.get(1).ok_or(())?.as_str() {
+            "R" => MemberMode::RValue,
+            "L" => MemberMode::LValue,
+            "F" => MemberMode::FValue,
+            _ => Err(())?
+        };
+        let depth : usize = cap.get(2).ok_or(())?.as_str().parse::<usize>().map_err(|_| ())?;
+        let mut cr = ComplexRegisters::new_empty(mode);
+        cr.add(ComplexPath::new_empty(),VectorRegisters::new(depth),&vec![depth]);
+        sigs.add(cr);
+        let flow_s = cap.get(3).ok_or(())?.as_str();
+        flows.push(if flow_s.contains("o") {
+            if flow_s.contains("i") {
+                MemberDataFlow::InOut
+            } else {
+                MemberDataFlow::Out
+            }
+        } else {
+            MemberDataFlow::In
+        });
     }
+    Ok(InstructionType::Call(Identifier::new(lib,name),impure,sigs,flows))
 }
 
-pub fn vector_update_offsets(dst: &mut Vec<usize>, src: &[usize], filter: &[usize], offsets: (usize,usize)) {
-    let mut src_it = src.iter().cycle();
-    let mut offset = offsets.0;
-    for filter_pos in filter.iter() {
-        dst[*filter_pos] = *src_it.next().unwrap() + offset;
-        offset += offsets.1;
-    }
-}
-
-pub fn vector_append_lengths(dst: &mut Vec<usize>, src: &[usize]) {
-    dst.append(&mut src.to_vec());
-}
-
-pub fn vector_append_offsets(dst: &mut Vec<usize>, src: &[usize], delta: usize) {
-    let mut src = src.to_vec();
-    for v in &mut src {
-        *v += delta;
-    }
-    dst.append(&mut src);
+pub fn call_flat(lib: &str, name: &str, pure_: bool, spec: &str) -> Result<InstructionType,String> {
+    do_call_flat(lib,name,pure_,spec).map_err(|_| format!("could not call_flat"))
 }
 
 fn update_poly<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: &[usize]) where T: Clone {
@@ -87,24 +88,40 @@ pub fn append_data(dst: InterpValue, src: &Rc<InterpValue>, copies: usize) -> Re
     }
 }
 
-pub fn vector_push<'e>(left: &mut WriteVec<'e>, right: &SharedVec, copies: usize) -> Result<(),String> {
-    let depth = left.depth();
-    /* data for top-level */
-    /* intermediate levels */
-    for level in (0..(depth-1)).rev() {
-        let start = if level > 0 { left.get_offset(level-1)?.len() } else { left.get_data().len() };
-        let stride = if level > 0 { right.get_offset(level-1)?.len() } else { right.get_data().len() };
-        for i in 0..copies {
-            vector_append_offsets(left.get_offset_mut(level)?,right.get_offset(level)?,start+i*stride);
-            vector_append_lengths(left.get_length_mut(level)?,right.get_length(level)?);
-        }
-    }
-    /* bottom-level */
-    let mut leftdata = left.take_data()?;
-    let rightdata = right.get_data();
-    leftdata = append_data(leftdata,&rightdata,copies)?.0;
-    left.replace_data(leftdata)?;
-    Ok(())
+pub fn vector_append_offsets(dst: &VectorRegisters, src: &VectorRegisters, 
+                             start: &Register, stride: &Register, copies: &Register, regs: &[Register], level: usize) -> Result<Instruction,String> {
+    let itype = call_flat("std","_vector_append_indexes",false,"L0ioR0R0R0R0")?;
+    Ok(Instruction::new(itype,vec![regs[dst.offset_pos(level)?].clone(),regs[src.offset_pos(level)?].clone(),
+                                         start.clone(),stride.clone(),copies.clone()]))
+}
+
+pub fn vector_append_lengths(dst: &VectorRegisters, src: &VectorRegisters, 
+                            zero: &Register, copies: &Register, regs: &[Register], level: usize) -> Result<Instruction,String> {
+    let itype = call_flat("std","_vector_append_indexes",false,"L0ioR0R0R0R0")?;
+    Ok(Instruction::new(itype,vec![regs[dst.length_pos(level)?].clone(),regs[src.length_pos(level)?].clone(),
+                                        zero.clone(),zero.clone(),copies.clone()]))
+
+}
+pub fn vector_update_offsets(dst: &VectorRegisters, src: &VectorRegisters, 
+                            start: &Register, stride: &Register, filter: &Register, regs: &[Register], level: usize) -> Result<Instruction,String> {
+    let itype = call_flat("std","_vector_update_indexes",false,"L0ioR0R0R0R0")?;
+    Ok(Instruction::new(itype,vec![regs[dst.offset_pos(level)?].clone(),regs[src.offset_pos(level)?.clone()],filter.clone(),start.clone(),stride.clone()]))
+}
+
+pub fn vector_update_lengths(dst: &VectorRegisters, src: &VectorRegisters, 
+                            zero: &Register, filter: &Register, regs: &[Register], level: usize) -> Result<Instruction,String> {
+    let itype = call_flat("std","_vector_update_indexes",false,"L0ioR0R0R0R0")?;
+    Ok(Instruction::new(itype,vec![regs[dst.length_pos(level)?].clone(),regs[src.length_pos(level)?.clone()],filter.clone(),zero.clone(),zero.clone()]))
+}
+
+pub fn vector_append(dst: &VectorRegisters, src: &VectorRegisters, copies: &Register, regs: &[Register]) -> Result<Instruction,String> {
+    let itype = call_flat("std","_vector_append",false,"L0ioR0R0")?;
+    Ok(Instruction::new(itype,vec![regs[dst.data_pos()].clone(),regs[src.data_pos()].clone(),copies.clone()]))
+}
+
+pub fn vector_copy(dst: &VectorRegisters, src: &VectorRegisters, filter: &Register, regs: &[Register]) -> Result<Instruction,String> {
+    let itype = call_flat("std","_vector_copy_shallow",false,"L1ioR0R0")?;
+    Ok(Instruction::new(itype,vec![regs[dst.data_pos()],regs[src.data_pos()],filter.clone()]))
 }
 
 pub fn vector_push_instrs(context: &mut PreImageContext, dst: &VectorRegisters, src: &VectorRegisters, copies: &Register, regs: &[Register]) -> Result<Vec<Instruction>,String> {
@@ -120,29 +137,12 @@ pub fn vector_push_instrs(context: &mut PreImageContext, dst: &VectorRegisters, 
         let stride = context.new_register();
         let off = if level > 0 { src.offset_pos(level-1)? } else { src.data_pos() };
         out.push(Instruction::new(InstructionType::Length,vec![stride,regs[off]]));
-        let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-        let itype = InstructionType::Call(Identifier::new("std","_vector_append_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
-        out.push(Instruction::new(itype,vec![regs[dst.offset_pos(level)?].clone(),regs[src.offset_pos(level)?].clone(),
-                                             start.clone(),stride.clone(),copies.clone()]));
-        let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-        let itype = InstructionType::Call(Identifier::new("std","_vector_append_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
-        out.push(Instruction::new(itype,vec![regs[dst.length_pos(level)?].clone(),regs[src.length_pos(level)?].clone(),
-                                            zero.clone(),zero.clone(),copies.clone()]));
+        out.push(vector_append_offsets(dst,src,&start,&stride,copies,regs,level)?);
+        out.push(vector_append_lengths(dst,src,&zero,copies,regs,level)?);
     }
     /* bottom-level */
-    let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-    let itype = InstructionType::Call(Identifier::new("std","_vector_append"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In]);
-    out.push(Instruction::new(itype,vec![regs[dst.data_pos()].clone(),regs[src.data_pos()].clone(),copies.clone()]));
+    out.push(vector_append(dst,src,copies,&regs)?);
     Ok(out)
-}
-
-pub fn vector_register_copy<'e>(context: &mut InterpContext, rvs: &RegisterVectorSource<'e>, dst: &VectorRegisters, src: &VectorRegisters) -> Result<(),String> {
-    for level in 0..dst.depth() {
-        rvs.copy(context,dst.offset_pos(level)?,src.offset_pos(level)?)?;
-        rvs.copy(context,dst.length_pos(level)?,src.length_pos(level)?)?;
-    }
-    rvs.copy(context,dst.data_pos(),src.data_pos())?;
-    Ok(())
 }
 
 pub fn vector_register_copy_instrs(dst: &VectorRegisters, src: &VectorRegisters, regs: &[Register]) -> Result<Vec<Instruction>,String> {

@@ -20,7 +20,7 @@ use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool, cbor_map };
 use crate::typeinf::MemberMode;
-use super::super::common::vectorcopy::{ vector_update_offsets, vector_update_lengths, vector_update_poly, vector_push, vector_register_copy, append_data };
+use super::super::common::vectorcopy::{ vector_update_poly, append_data };
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::{ SharedVec };
 use super::super::common::writevec::WriteVec;

@@ -20,7 +20,7 @@ use crate::generate::{ Instruction, InstructionType, PreImageContext, Instructio
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool, cbor_map };
 use crate::typeinf::{ MemberMode, MemberDataFlow };
-use super::super::common::vectorcopy::{ vector_push_instrs, vector_update_offsets, vector_update_lengths, vector_update_poly, vector_push, vector_register_copy, vector_append_offsets, vector_append_lengths, append_data, vector_register_copy_instrs };
+use super::super::common::vectorcopy::{ vector_push_instrs, vector_update_poly, vector_append, vector_append_offsets, append_data, vector_register_copy_instrs, vector_append_lengths };
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::{ SharedVec };
 use super::super::common::writevec::WriteVec;
@@ -51,16 +51,10 @@ fn extend(context: &mut PreImageContext, sig: &RegisterSignature, regs: &Vec<Reg
             /* push all but top layer */
             out.append(&mut vector_push_instrs(context,z.1,b.1,&start,regs)?);
             /* push top layer */
-            let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-            let itype = InstructionType::Call(Identifier::new("std","_vector_append_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
-            out.push(Instruction::new(itype,vec![regs[z.1.offset_pos(depth-1)?].clone(),regs[b.1.offset_pos(depth-1)?.clone()],start,zero,one]));
-            let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-            let itype = InstructionType::Call(Identifier::new("std","_vector_append_indexes"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]);
-            out.push(Instruction::new(itype,vec![regs[z.1.length_pos(depth-1)?].clone(),regs[b.1.length_pos(depth-1)?.clone()],zero,zero,one]));
+            out.push(vector_append_offsets(z.1,b.1,&start,&zero,&one,regs,depth-1)?);
+            out.push(vector_append_lengths(z.1,b.1,&zero,&one,&regs,depth-1)?);
         } else {
-            let sigs = trial_signature(&vec![(MemberMode::LValue,0),(MemberMode::RValue,0),(MemberMode::RValue,0)]); // XXX trial -> simple
-            let itype = InstructionType::Call(Identifier::new("std","_vector_append"),false,sigs,vec![MemberDataFlow::InOut,MemberDataFlow::In,MemberDataFlow::In]);
-            out.push(Instruction::new(itype,vec![regs[z.1.data_pos()].clone(),regs[b.1.data_pos()].clone(),one]));
+            out.push(vector_append(z.1,b.1,&one,&regs)?);
         }
     }
     Ok(out)
