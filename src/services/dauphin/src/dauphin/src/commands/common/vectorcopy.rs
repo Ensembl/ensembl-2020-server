@@ -18,23 +18,29 @@ use std::rc::Rc;
 use crate::interp::{ InterpValue, InterpContext, trial_signature };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use crate::commands::common::polymorphic::arbitrate_type;
-use crate::typeinf::{ MemberMode, MemberDataFlow };
+use crate::typeinf::{ MemberMode, MemberDataFlow, BaseType };
 use crate::model::{ Register, VectorRegisters, Identifier, ComplexPath, ComplexRegisters, RegisterSignature };
 use regex::Regex;
 
 pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<InstructionType,()> {
     let mut sigs = RegisterSignature::new();
     let mut flows = vec![];
-    for cap in Regex::new(r"([RFL])(\d+)(i?o?)").unwrap().captures_iter(spec) {
+    for cap in Regex::new(r"([RFL])(\d+)(i?o?)([bys]?)").unwrap().captures_iter(spec) {
         let mode = match cap.get(1).ok_or(())?.as_str() {
             "R" => MemberMode::RValue,
             "L" => MemberMode::LValue,
             "F" => MemberMode::FValue,
             _ => Err(())?
         };
+        let base = match cap.get(3).ok_or(())?.as_str() {
+            "b" => BaseType::BooleanType,
+            "y" => BaseType::BytesType,
+            "s" => BaseType::StringType,
+            _ => BaseType::NumberType
+        };
         let depth : usize = cap.get(2).ok_or(())?.as_str().parse::<usize>().map_err(|_| ())?;
         let mut cr = ComplexRegisters::new_empty(mode);
-        cr.add(ComplexPath::new_empty(),VectorRegisters::new(depth),&vec![depth]);
+        cr.add(ComplexPath::new_empty(),VectorRegisters::new(depth,base),&vec![depth]);
         sigs.add(cr);
         let flow_s = cap.get(3).ok_or(())?.as_str();
         flows.push(if flow_s.contains("o") {

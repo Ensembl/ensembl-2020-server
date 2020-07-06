@@ -14,13 +14,14 @@
  *  limitations under the License.
  */
 
+use std::rc::Rc;
 use crate::interp::InterpValue;
-use crate::model::{ Register, RegisterSignature, cbor_make_map };
+use crate::model::{ Register, RegisterSignature, cbor_make_map, VectorRegisters, Identifier, ComplexRegisters, ComplexPath, cbor_map };
 use super::super::common::vectorsource::RegisterVectorSource;
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, trial_write, trial_signature, TimeTrialCommandType, TimeTrial };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
-use crate::typeinf::MemberMode;
+use crate::typeinf::{ MemberMode, MemberDataFlow, BaseType };
 use crate::model::cbor_array;
 use crate::commands::common::sharedvec::{ SharedVec };
 use super::library::std;
@@ -84,84 +85,360 @@ pub fn compare(a: &SharedVec, b: &SharedVec) -> Result<Vec<bool>,String> {
     let b_data = b.get_data();
     if let Some(natural) = arbitrate_type(&a_data,&b_data,true) {
         Ok(polymorphic!([&a_data,&b_data],natural,(|d,s| {
-            if a.depth() != 0 {
-                compare_indexed(a,b,d,s)
-            } else {
-                Ok(compare_data(d,s))
-            }
+            compare_indexed(a,b,d,s)
         })).transpose()?.ok_or_else(|| format!("unexpected empty in eq"))?)
     } else {
         Ok(vec![])
     }
 }
 
-struct EqDataTimeTrial();
+struct EqCompareTimeTrial();
 
-impl TimeTrialCommandType for EqDataTimeTrial {
-    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
-
-    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
-        let t = t as usize;
-        trial_write(context,3,t*100,|x| x);
-        trial_write(context,4,t*100,|x| x);
-        context.registers_mut().commit();
-    }
-
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sigs = trial_signature(&vec![(MemberMode::RValue,1),(MemberMode::RValue,0),(MemberMode::RValue,0)]);
-        let regs : Vec<Register> = (0..5).map(|x| Register(x)).collect();
-        Ok(Box::new(EqCommand(sigs,regs)))
-    }
-}
-
-struct EqWidthTimeTrial();
-
-impl TimeTrialCommandType for EqWidthTimeTrial {
-    fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
-
-    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
-        let t = t as usize;
-        trial_write(context,3,t*100,|x| x);
-        trial_write(context,4,1,|_| 0);
-        trial_write(context,5,1,|_| t*100);
-        trial_write(context,6,t*100,|x| x);
-        trial_write(context,7,1,|_| 0);
-        trial_write(context,8,1,|_| t*100);
-        context.registers_mut().commit();
-    }
-
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sigs = trial_signature(&vec![(MemberMode::RValue,1),(MemberMode::RValue,1),(MemberMode::RValue,1)]);
-        let regs : Vec<Register> = (0..9).map(|x| Register(x)).collect();
-        Ok(Box::new(EqCommand(sigs,regs)))
-    }
-}
-
-struct EqHeightTimeTrial();
-
-impl TimeTrialCommandType for EqHeightTimeTrial {
+impl TimeTrialCommandType for EqCompareTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
 
     fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t as usize;
-        for pos in 0..2 {
-            let offset = 3 + (t*2+1)*pos;
-            trial_write(context,offset,t*100,|x| x);
-            trial_write(context,offset+1,1,|_| 0);
-            trial_write(context,offset+2,1,|_| 100);
-            for layer in 1..t {
-                trial_write(context,offset+(2*layer)+1,1,|_| 0);
-                trial_write(context,offset+(2*layer)+2,1,|_| 1);
-            }
+        /* 3-deep vec (x2) */
+        for i in 0..2 {
+            trial_write(context,i*7+1,t*100,|x| x);
+            trial_write(context,i*7+2,t*100,|x| x);
+            trial_write(context,i*7+3,t*100,|_| 1);
+            trial_write(context,i*7+4,t*100,|x| x);
+            trial_write(context,i*7+5,t*100,|_| 1);
+            trial_write(context,i*7+6,t*100,|x| x);
+            trial_write(context,i*7+7,t*100,|_| 1);
         }
         context.registers_mut().commit();
     }
 
-    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        let regs = (0..15).map(|i| Register(i)).collect();
+        let mut vr1 = VectorRegisters::new(3,BaseType::NumberType);
+        vr1.add_start(1);
+        let mut vr2 = VectorRegisters::new(3,BaseType::NumberType);
+        vr2.add_start(8);
+        Ok(Box::new(EqCompareCommand(vr1,vr2,regs,None)))
+    }
+}
+
+pub struct EqCompareCommandType(Option<TimeTrial>);
+
+impl EqCompareCommandType {
+    fn new() -> EqCompareCommandType { EqCompareCommandType(None) }
+}
+
+impl CommandType for EqCompareCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 3,
+            trigger: CommandTrigger::Command(std("_eq_compare"))
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,sig,_) = &it.itype {
+            let a = sig[1].iter().next().ok_or_else(|| format!("bad conversion"))?;
+            let b = sig[2].iter().next().ok_or_else(|| format!("bad conversion"))?;
+            Ok(Box::new(EqCompareCommand(a.1.clone(),b.1.clone(),it.regs.to_vec(),self.0.clone())))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }
+    
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[2],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
+        let a = VectorRegisters::deserialize(&value[0])?;
+        let b = VectorRegisters::deserialize(&value[1])?;
+        Ok(Box::new(EqCompareCommand(a,b,regs,self.0.clone())))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let timings = TimeTrial::run(&EqCompareTimeTrial(),linker,config)?;
+        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
+    }
+
+    fn use_dynamic_data(&mut self, value: &CborValue) -> Result<(),String> {
+        let t = cbor_map(value,&vec!["t"])?;
+        self.0 = Some(TimeTrial::deserialize(&t[0])?);
+        Ok(())
+    }
+}
+
+pub struct EqCompareCommand(VectorRegisters,VectorRegisters,Vec<Register>,Option<TimeTrial>);
+
+impl EqCompareCommand {
+    fn enough_valid(&self, context: &PreImageContext) -> Result<bool,String> {
+        for i in 1..self.2.len() {
+            if !context.is_reg_valid(&self.2[i]) { return Ok(false); }
+        }
+        Ok(true)
+    }
+
+    fn any_size(&self, context: &PreImageContext) -> Option<usize> {
+        for i in 1..self.2.len() {
+            if let Some(size) = context.get_reg_size(&self.2[i]) {
+                return Some(size);
+            }
+        }
+        None
+    }
+}
+
+impl Command for EqCompareCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let vs = RegisterVectorSource::new(&self.2);
+        let a = SharedVec::new(context,&vs,&self.0)?;
+        let b = SharedVec::new(context,&vs,&self.1)?;
+        let result = compare(&a,&b)?;
+        context.registers_mut().write(&self.2[0],InterpValue::Boolean(result));
+        Ok(())
+    }
+
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        let regs = CborValue::Array(self.2.iter().map(|x| x.serialize()).collect());
+        Ok(Some(vec![self.0.serialize(true)?,self.1.serialize(true)?,regs]))
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if self.enough_valid(context)? {
+            PreImagePrepare::Replace
+        } else if let Some(size) = self.any_size(context) {
+            PreImagePrepare::Keep(vec![(self.2[0].clone(),size)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
+    }
+
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(PreImageOutcome::Constant(vec![self.2[0].clone()]))
+    }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if self.0.depth() > 3 { return 1.; }
+        if let Some(size) = context.get_reg_size(&self.2[1]) { /* [1] ie data of first vector */
+            self.3.as_ref().map(|x| x.evaluate(size as f64/200.)).unwrap_or(1.)
+        } else {
+            1.
+        }
+    }
+}
+
+struct EqShallowTimeTrial();
+
+impl TimeTrialCommandType for EqShallowTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
         let t = t as usize;
-        let sigs = trial_signature(&vec![(MemberMode::RValue,1),(MemberMode::RValue,t),(MemberMode::RValue,t)]);
-        let regs : Vec<Register> = (0..(t*4+5)).map(|x| Register(x)).collect();
-        Ok(Box::new(EqCommand(sigs,regs)))
+        trial_write(context,1,t*100,|x| x);
+        trial_write(context,2,t*100,|x| x);
+        context.registers_mut().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(EqShallowCommand(Register(0),Register(1),Register(2),None)))
+    }
+}
+
+pub struct EqShallowCommandType(Option<TimeTrial>);
+
+impl EqShallowCommandType {
+    fn new () -> EqShallowCommandType { EqShallowCommandType(None) }
+}
+
+impl CommandType for EqShallowCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 3,
+            trigger: CommandTrigger::Command(std("_eq_shallow"))
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(EqShallowCommand(it.regs[0].clone(),it.regs[1].clone(),it.regs[2].clone(),self.0.clone())))
+    }
+    
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(EqShallowCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?,self.0.clone())))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let timings = TimeTrial::run(&EqShallowTimeTrial(),linker,config)?;
+        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
+    }
+
+    fn use_dynamic_data(&mut self, value: &CborValue) -> Result<(),String> {
+        let t = cbor_map(value,&vec!["t"])?;
+        self.0 = Some(TimeTrial::deserialize(&t[0])?);
+        Ok(())
+    }
+}
+
+pub struct EqShallowCommand(Register,Register,Register,Option<TimeTrial>);
+
+impl EqShallowCommand {
+    fn compare(&self, a: &Rc<InterpValue>, b: &Rc<InterpValue>) -> Result<Vec<bool>,String> {
+        if let Some(natural) = arbitrate_type(a,b,true) {
+            let out = polymorphic!([a,b],natural,(|d,s| {
+                compare_data(d,s)
+            })).unwrap_or_else(|| vec![]);
+            Ok(out)
+        } else {
+            Ok(vec![])
+        }
+    }
+}
+
+impl Command for EqShallowCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let a_data = context.registers().get(&self.1);
+        let b_data = context.registers().get(&self.2);
+        let a_data = a_data.borrow().get_shared()?;
+        let b_data = b_data.borrow().get_shared()?;
+        let result = self.compare(&a_data,&b_data)?;
+        context.registers_mut().write(&self.0,InterpValue::Boolean(result));
+        Ok(())
+    }
+
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+            PreImagePrepare::Replace
+        } else if let Some(size) = context.get_reg_size(&self.1) {
+            PreImagePrepare::Keep(vec![(self.0.clone(),size)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
+    }
+
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(PreImageOutcome::Constant(vec![self.0]))
+    }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(size) = context.get_reg_size(&self.1) {
+            self.3.as_ref().map(|x| x.evaluate(size as f64/200.)).unwrap_or(1.)
+        } else {
+            1.
+        }
+    }
+}
+
+struct EqAllTimeTrial();
+
+impl TimeTrialCommandType for EqAllTimeTrial {
+    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
+
+    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
+        let t = t as usize;
+        trial_write(context,1,t*100,|_| 1);
+        trial_write(context,2,t*100,|_| 0);
+        context.registers_mut().commit();
+    }
+
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(AllCommand(vec![Register(0),Register(1),Register(2)],None)))
+    }
+}
+
+pub struct AllCommandType(Option<TimeTrial>);
+
+impl AllCommandType {
+    fn new() -> AllCommandType { AllCommandType(None) }
+}
+
+impl CommandType for AllCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 1,
+            trigger: CommandTrigger::Command(std("_eq_all"))
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        Ok(Box::new(AllCommand(it.regs.to_vec(),self.0.clone())))
+    }
+    
+    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
+        Ok(Box::new(AllCommand(regs,self.0.clone())))
+    }
+
+    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
+        let timings = TimeTrial::run(&EqAllTimeTrial(),linker,config)?;
+        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
+    }
+
+    fn use_dynamic_data(&mut self, value: &CborValue) -> Result<(),String> {
+        let t = cbor_map(value,&vec!["t"])?;
+        self.0 = Some(TimeTrial::deserialize(&t[0])?);
+        Ok(())
+    }   
+}
+
+pub struct AllCommand(Vec<Register>,Option<TimeTrial>);
+
+impl AllCommand {
+    fn enough_valid(&self, context: &PreImageContext) -> Result<bool,String> {
+        for i in 1..self.0.len() {
+            if !context.is_reg_valid(&self.0[i]) { return Ok(false); }
+        }
+        Ok(true)
+    }
+
+    fn any_size(&self, context: &PreImageContext) -> Option<usize> {
+        for i in 1..self.0.len() {
+            if let Some(size) = context.get_reg_size(&self.0[i]) {
+                return Some(size);
+            }
+        }
+        None
+    }
+}
+
+impl Command for AllCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let mut out = context.registers().get_boolean(&self.0[1])?.to_vec();
+        for reg in &self.0[2..] {
+            let more = context.registers().get_boolean(reg)?;
+            let mut more = more.iter().cycle();
+            for v in out.iter_mut() {
+                *v &= more.next().unwrap();
+            }
+        }
+        context.registers_mut().write(&self.0[0],InterpValue::Boolean(out));
+        Ok(())
+    }
+
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        let regs = CborValue::Array(self.0.iter().map(|x| x.serialize()).collect());
+        Ok(Some(vec![regs]))
+    }
+
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
+        Ok(if self.enough_valid(context)? {
+            PreImagePrepare::Replace
+        } else if let Some(size) = self.any_size(context) {
+            PreImagePrepare::Keep(vec![(self.0[0].clone(),size)])
+        } else {
+            PreImagePrepare::Keep(vec![])
+        })
+    }
+
+    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(PreImageOutcome::Constant(vec![self.0[0].clone()]))
+    }
+
+    fn execution_time(&self, context: &PreImageContext) -> f64 {
+        if let Some(size) = context.get_reg_size(&self.0[1]) {
+            self.1.as_ref().map(|x| x.evaluate(size as f64/200.)).unwrap_or(1.)
+        } else {
+            1.
+        }
     }
 }
 
@@ -183,17 +460,8 @@ impl CommandType for EqCommandType {
         }
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[1],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let sig = RegisterSignature::deserialize(&value[0],false,true)?;
-        Ok(Box::new(EqCommand(sig,regs)))
-    }
-
-    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
-        let eq_data = TimeTrial::run(&EqDataTimeTrial(),linker,config)?;
-        let eq_width = TimeTrial::run(&EqWidthTimeTrial(),linker,config)?;
-        let eq_height = TimeTrial::run(&EqHeightTimeTrial(),linker,config)?;
-        Ok(cbor_make_map(&vec!["td","tw","th"],vec![eq_data.serialize(),eq_width.serialize(),eq_height.serialize()])?)
+    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
+        Err(format!("compile-side command"))
     }
 }
 
@@ -201,80 +469,71 @@ impl CommandType for EqCommandType {
 pub struct EqCommand(RegisterSignature,Vec<Register>);
 
 impl EqCommand {
-    fn compare_sizes(&self, context: &mut PreImageContext) -> Result<Vec<(Register,usize)>,String> {
+    fn build_instrs(&self, context: &mut PreImageContext) -> Result<Vec<Instruction>,String> {
         let mut out = vec![];
-        let cr_a = &self.0[1];
-        for (_,vr_a) in cr_a.iter() {
-            if vr_a.depth() > 0 {
-                if let Some(x) = context.get_reg_size(&self.1[vr_a.offset_pos(vr_a.depth()-1)?]) {
-                    out.push((self.1[0].clone(),x));
-                }
+        let mut parts = vec![self.1[0].clone()];
+        let short = self.0[1].iter().count() == 1;
+        for ((_,vr_a),(_,vr_b)) in self.0[1].iter().zip(self.0[2].iter()) {
+            let target = if short {
+                self.1[0]
             } else {
-                if let Some(x) = context.get_reg_size(&self.1[vr_a.data_pos()]) {
-                    out.push((self.1[0].clone(),x));
-                }
+                let part = context.new_register();
+                parts.push(part.clone());
+                part
+            };
+            let mut sigs = RegisterSignature::new();
+            let mut cr = ComplexRegisters::new_empty(MemberMode::LValue);
+            cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
+            sigs.add(cr);
+            let mut cr = ComplexRegisters::new_empty(MemberMode::RValue);
+            cr.add(ComplexPath::new_empty(),VectorRegisters::new(vr_a.depth(),vr_a.get_base().clone()),&vec![vr_a.depth()]);
+            sigs.add(cr);
+            let mut cr = ComplexRegisters::new_empty(MemberMode::RValue);
+            cr.add(ComplexPath::new_empty(),VectorRegisters::new(vr_b.depth(),vr_b.get_base().clone()),&vec![vr_b.depth()]);
+            sigs.add(cr);
+            let mut regs = vec![target];
+            regs.extend(vr_a.all_registers().iter().map(|x| self.1[*x].clone()));
+            regs.extend(vr_b.all_registers().iter().map(|x| self.1[*x].clone()));
+            let name = if vr_a.depth() == 0 { "_eq_shallow" } else { "_eq_compare" };
+            out.push(Instruction::new(InstructionType::Call(Identifier::new("std",name),false,sigs,
+                        vec![MemberDataFlow::Out,MemberDataFlow::In,MemberDataFlow::In]),regs));
+        }
+        if !short {
+            let mut sigs = RegisterSignature::new();
+            let mut cr = ComplexRegisters::new_empty(MemberMode::LValue);
+            cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
+            for _ in 0..parts.len() {
+                let mut cr = ComplexRegisters::new_empty(MemberMode::RValue);
+                cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
             }
+            sigs.add(cr);
+            let mut flows = vec![MemberDataFlow::Out];
+            flows.extend(parts.iter().map(|_| MemberDataFlow::In));
+            out.push(Instruction::new(InstructionType::Call(Identifier::new("std","_eq_all"),false,sigs,flows),parts));
         }
         Ok(out)
-    }
-    
-    fn can_preimage(&self, context: &mut PreImageContext) -> Result<bool,String> {
-        for pos in 1..3 {
-            for idx in self.0[pos].all_registers() {
-                if !context.is_reg_valid(&self.1[idx]) {
-                    return Ok(false);
-                }
-            }
-        }
-        Ok(true)
     }
 }
 
 impl Command for EqCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let vs = RegisterVectorSource::new(&self.1);
-        let cr_a = &self.0[1];
-        let cr_b = &self.0[2];
-        let mut out : Option<Vec<bool>> = None;
-        for (vr_a,vr_b) in cr_a.iter().zip(cr_b.iter()) {
-            let a = SharedVec::new(context,&vs,vr_a.1)?;
-            let b = SharedVec::new(context,&vs,vr_b.1)?;
-            let more = compare(&a,&b)?;
-            if let Some(ref mut out) = out {
-                let out_len = out.len();
-                for (i,value) in more.iter().enumerate() {
-                    if !value {
-                        out[i%out_len] = false;
-                    }
-                }
-            } else {
-                out = Some(more);
-            }
-        }
-        context.registers_mut().write(&self.1[0],InterpValue::Boolean(out.unwrap_or_else(|| vec![])));
-        Ok(())
+    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
+        return Err("assign is compile-time only".to_string());
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
-        let regs = CborValue::Array(self.1.iter().map(|x| x.serialize()).collect());
-        Ok(Some(vec![self.0.serialize(false,true)?,regs]))
+        Err(format!("compile-side command"))
     }
 
-    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
-        Ok(if self.can_preimage(context)? {
-            PreImagePrepare::Replace
-        } else {
-            PreImagePrepare::Keep(self.compare_sizes(context)?)
-        })
-    }
-    
-    fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        Ok(PreImageOutcome::Constant(vec![self.1[0]]))
+    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+        Ok(PreImageOutcome::Replace(self.build_instrs(context)?))
     }
 }
 
 pub(super) fn library_eq_command(set: &mut CommandSet) -> Result<(),String> {
-    set.push("eq",0,EqCommandType())?;
+    set.push("eq",1000003,EqCommandType())?;
+    set.push("_eq_shallow",0,EqShallowCommandType::new())?;
+    set.push("_eq_compare",19,EqCompareCommandType::new())?;
+    set.push("_eq_all",20,AllCommandType::new())?;
     Ok(())
 }
 

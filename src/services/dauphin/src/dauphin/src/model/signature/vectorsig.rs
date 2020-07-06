@@ -17,39 +17,48 @@
 use std::fmt;
 use std::collections::HashSet;
 use serde_cbor::Value as CborValue;
-use crate::model::cbor_int;
+use crate::model::{ cbor_int, cbor_array };
+use crate::typeinf::BaseType;
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct VectorRegisters {
     start: usize,
-    depth: usize
+    depth: usize,
+    base: BaseType
 }
 
 impl VectorRegisters {
-    pub fn new(depth: usize) -> VectorRegisters {
+    pub fn new(depth: usize, base: BaseType) -> VectorRegisters {
         VectorRegisters {
             depth,
-            start: 0
+            start: 0,
+            base
         }
     }
 
-    pub fn all_registers(&self) -> HashSet<usize> {
-        let mut regs = HashSet::new();
+    pub fn get_base(&self) -> &BaseType { &self.base }
+
+    pub fn all_registers(&self) -> Vec<usize> {
+        let mut regs = vec![];
         for i in 0..self.register_count() {
-            regs.insert(self.start+i);
+            regs.push(self.start+i);
         }
         regs
     }
     
     pub fn deserialize(cbor: &CborValue) -> Result<VectorRegisters,String> {
-        Ok(VectorRegisters::new(cbor_int(&cbor,None)? as usize))
+        let v = cbor_array(cbor,3,false)?;
+        let mut out = VectorRegisters::new(cbor_int(&v[0],None)? as usize,BaseType::deserialize(&v[2])?);
+        out.add_start(cbor_int(&v[1],None)? as usize);
+        Ok(out)
     }
 
-    pub fn serialize(&self) -> Result<CborValue,String> {
-        Ok(CborValue::Integer(self.depth as i128))
+    pub fn serialize(&self, with_start: bool) -> Result<CborValue,String> {
+        let start = if with_start { self.start } else { 0 };
+        Ok(CborValue::Array(vec![CborValue::Integer(self.depth as i128),CborValue::Integer(start as i128),self.base.serialize()?]))
     }
 
-    pub(super) fn add_start(&mut self, start: usize) {
+    pub fn add_start(&mut self, start: usize) {
         self.start += start;
     }
 

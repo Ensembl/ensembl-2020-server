@@ -3,6 +3,12 @@ use "std";
 
 struct A { x: vec(number), y: vec(number) };
 
+a := [1,2,3];
+b := [4,5,6];
+alienate(b);
+alienate(b[]);
+assert(a[]==b[],false);
+
 assert(3==3,true);
 assert(3==4,false);
 assert([1]==[1],true);

@@ -30,7 +30,7 @@ pub struct ComplexRegisters {
     mode: MemberMode,
     order: Vec<ComplexPath>,
     vectors: HashMap<ComplexPath,VectorRegisters>,
-    vec_break: HashMap<ComplexPath,Vec<usize>>,
+    vec_break: HashMap<ComplexPath,Vec<usize>>
 }
 
 impl fmt::Display for ComplexRegisters {
@@ -107,7 +107,7 @@ impl ComplexRegisters {
     pub fn serialize(&self, named: bool, depth: bool) -> Result<CborValue,String> {
         let mut regs = vec![self.mode.serialize()];
         for complex in &self.order {
-            regs.push(self.vectors.get(complex).as_ref().unwrap().serialize()?);
+            regs.push(self.vectors.get(complex).as_ref().unwrap().serialize(false)?);
             if depth {
                 let breaks = self.vec_break.get(complex).ok_or_else(|| format!("bad complexsig"))?;
                 regs.push(CborValue::Array(breaks.iter().map(|x| CborValue::Integer(*x as i128)).collect()));
@@ -160,8 +160,8 @@ impl ComplexRegisters {
                 let enum_ = defstore.get_enum_id(&name)?;
                 self.from_enum(defstore,enum_,path,&container,&breaks)
             },
-            _ => {
-                self.add(path.clone(),VectorRegisters::new(container.depth()),/*container.depth(),*/&breaks);
+            base => {
+                self.add(path.clone(),VectorRegisters::new(container.depth(),base),&breaks);
                 Ok(())
             }
         }
@@ -177,7 +177,7 @@ impl ComplexRegisters {
     }
 
     fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &ComplexPath, container: &ContainerType, breaks: &[usize]) -> Result<(),String> {
-        self.add(cpath.clone(),VectorRegisters::new(container.depth()),/*container.depth(),*/breaks);
+        self.add(cpath.clone(),VectorRegisters::new(container.depth(),BaseType::NumberType),breaks);
         for name in se.get_names() {
             let new_cpath = cpath.add(name);
             let type_ = se.get_branch_type(name).unwrap();

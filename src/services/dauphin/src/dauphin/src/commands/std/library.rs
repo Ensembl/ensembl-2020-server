@@ -24,11 +24,11 @@ use super::eq::library_eq_command;
 use super::assign::library_assign_commands;
 use super::vector::library_vector_commands;
 use crate::cli::Config;
-use crate::typeinf::MemberMode;
+use crate::typeinf::{ MemberMode, BaseType };
 use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
 
 pub fn std_id() -> CommandSetId {
-    CommandSetId::new("std",(0,0),0xE0135A5B6A15F8C7)
+    CommandSetId::new("std",(0,0),0xCFD36D79651C5638)
 }
 
 pub(super) fn std(name: &str) -> Identifier {
@@ -56,7 +56,7 @@ impl TimeTrialCommandType for LenTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sig = trial_signature(&vec![(MemberMode::RValue,0),(MemberMode::RValue,2)]);
+        let sig = trial_signature(&vec![(MemberMode::RValue,0,BaseType::NumberType),(MemberMode::RValue,2,BaseType::NumberType)]);
         let regs : Vec<Register> = (0..6).map(|x| Register(x)).collect();
         Ok(Box::new(LenCommand(sig,regs)))
     }

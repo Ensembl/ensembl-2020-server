@@ -19,7 +19,7 @@ use crate::cli::Config;
 use crate::interp::{ CompilerLink, InterpContext };
 use crate::interp::{ Command, InterpValue };
 use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters, cbor_array, cbor_float };
-use crate::typeinf::MemberMode;
+use crate::typeinf::{ MemberMode, BaseType };
 use serde_cbor::Value as CborValue;
 
 pub fn regress(input: &[(f64,f64)]) -> Result<(f64,f64),String> {
@@ -131,11 +131,11 @@ pub fn trial_write<F>(context: &mut InterpContext, i: usize, t: usize, cb: F) wh
     context.registers_mut().write(&Register(i),InterpValue::Indexes(a));
 }
 
-pub fn trial_signature(layout: &[(MemberMode,usize)]) -> RegisterSignature {
+pub fn trial_signature(layout: &[(MemberMode,usize,BaseType)]) -> RegisterSignature {
     let mut sigs = RegisterSignature::new();
-    for (mode,depth) in layout {
+    for (mode,depth,base) in layout {
         let mut cr = ComplexRegisters::new_empty(*mode);
-        cr.add(ComplexPath::new_empty(),VectorRegisters::new(*depth),&vec![*depth]);
+        cr.add(ComplexPath::new_empty(),VectorRegisters::new(*depth,base.clone()),&vec![*depth]);
         sigs.add(cr);
     }
     sigs
