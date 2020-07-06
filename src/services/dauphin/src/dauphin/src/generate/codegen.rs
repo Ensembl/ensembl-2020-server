@@ -22,7 +22,7 @@ use crate::parser::{ Expression, Statement };
 use crate::model::Register;
 use crate::model::DefStore;
 use crate::typeinf::{ BaseType, ExpressionType, SignatureMemberConstraint, MemberMode };
-use crate::model::{ Identifier };
+use crate::model::{ Identifier, DFloat };
 
 macro_rules! addf {
     ($this:expr,$opcode:tt,$($regs:expr),*) => {
@@ -204,7 +204,7 @@ impl<'a> CodeGen<'a> {
                 }
                 self.rvalue_regnames[id]
             },
-            Expression::Number(n) =>        addf!(self,NumberConst(*n)),
+            Expression::Number(n) =>        addf!(self,NumberConst(DFloat::new_str(n).map_err(|_| format!("Bad number '{:?}'",n))?)),
             Expression::LiteralString(s) => addf!(self,StringConst(s.to_string())),
             Expression::LiteralBool(b) =>   addf!(self,BooleanConst(*b)),
             Expression::LiteralBytes(b) =>  addf!(self,BytesConst(b.to_vec())),

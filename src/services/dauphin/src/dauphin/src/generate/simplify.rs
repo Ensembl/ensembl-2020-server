@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use crate::generate::{ Instruction, InstructionType };
-use crate::model::{ DefStore, Register, StructDef, EnumDef, Identifier };
+use crate::model::{ DefStore, Register, StructDef, EnumDef, Identifier, DFloat };
 use crate::typeinf::{ BaseType, ContainerType, MemberType };
 use super::gencontext::GenContext;
 
@@ -100,7 +100,7 @@ fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type
         MemberType::Base(b) => match b {
             BaseType::BooleanType => context.add(Instruction::new(InstructionType::BooleanConst(false),vec![*reg])),
             BaseType::StringType => context.add(Instruction::new(InstructionType::StringConst(String::new()),vec![*reg])),
-            BaseType::NumberType => context.add(Instruction::new(InstructionType::NumberConst(0.),vec![*reg])),
+            BaseType::NumberType => context.add(Instruction::new(InstructionType::NumberConst(DFloat::new_usize(0)),vec![*reg])),
             BaseType::BytesType => context.add(Instruction::new(InstructionType::BytesConst(vec![]),vec![*reg])),
             BaseType::Invalid => return Err("cannot build nil".to_string()),
             BaseType::StructType(name) => {
@@ -247,7 +247,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &I
                 let dests = mapping.get(&instr.regs[0]).ok_or_else(|| "missing register".to_string())?;
                 for i in 1..dests.len() {
                     if i-1 == pos {
-                        context.add(Instruction::new(InstructionType::NumberConst((i-1) as f64),vec![dests[0]]));
+                        context.add(Instruction::new(InstructionType::NumberConst(DFloat::new_usize(i-1)),vec![dests[0]]));
                         instr!(context,Copy,dests[i],instr.regs[1]);
                     } else {
                         let type_ = context.xxx_types().get(&dests[i]).ok_or_else(|| "missing register".to_string())?.clone();
@@ -263,7 +263,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &I
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
             let posreg = allocate!(context,NumberType);
-            context.add(Instruction::new(InstructionType::NumberConst(pos as f64),vec![posreg]));
+            context.add(Instruction::new(InstructionType::NumberConst(DFloat::new_usize(pos)),vec![posreg]));
             let seq = instr_f!(context,NumberType,At,srcs[0]);
             let filter = instr_f!(context,BooleanType,NumEq,srcs[0],posreg);
             instr!(context,Filter,instr.regs[0],seq,filter);
@@ -273,7 +273,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &I
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
             let posreg = allocate!(context,NumberType);
-            context.add(Instruction::new(InstructionType::NumberConst(pos as f64),vec![posreg]));
+            context.add(Instruction::new(InstructionType::NumberConst(DFloat::new_usize(pos)),vec![posreg]));
             let filter = instr_f!(context,BooleanType,NumEq,srcs[0],posreg);
             instr!(context,Filter,instr.regs[0],srcs[pos+1],filter);
         },
@@ -288,7 +288,7 @@ fn extend_enum_instr(defstore: &DefStore, context: &mut GenContext, obj_name: &I
             let pos = decl.get_names().iter().position(|v| v==field).ok_or_else(|| "missing register".to_string())?;
             let srcs = mapping.get(&instr.regs[1]).ok_or_else(|| "missing register".to_string())?;
             let posreg = allocate!(context,NumberType);
-            context.add(Instruction::new(InstructionType::NumberConst(pos as f64),vec![posreg]));
+            context.add(Instruction::new(InstructionType::NumberConst(DFloat::new_usize(pos)),vec![posreg]));
             instr!(context,NumEq,instr.regs[0],srcs[0],posreg);
         },
 

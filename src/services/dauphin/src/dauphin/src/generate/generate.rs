@@ -23,6 +23,7 @@ use crate::interp::CompilerLink;
 use crate::resolver::Resolver;
 use crate::parser::Statement;
 use super::dealias::remove_aliases;
+use super::reuseregs::reuse_regs;
 use super::compilerun::compile_run;
 use super::codegen::generate_code;
 use super::assignregs::assign_regs;
@@ -80,6 +81,7 @@ impl GenerateMenu {
         opt_steps.insert("c".to_string(),GenerateStep::new("compile-run", |cl,_,res,gc| { compile_run(cl,res,gc) }));
         opt_steps.insert("p".to_string(),GenerateStep::new("prune", |_,_,_,gc| { prune(gc); Ok(()) }));
         opt_steps.insert("d".to_string(),GenerateStep::new("reuse-dead", |_,_,_,gc| { reuse_dead(gc); Ok(()) }));
+        opt_steps.insert("u".to_string(),GenerateStep::new("reuse-regs", |_,_,_,gc| { reuse_regs(gc) }));
         opt_steps.insert("a".to_string(),GenerateStep::new("assign-regs", |_,_,_,gc| { assign_regs(gc); Ok(()) }));
         post_steps.push(GenerateStep::new("pauses",|cl,_,res,gc| { pauses(cl,res,gc) }));
         GenerateMenu { gen_steps, opt_steps, post_steps }
@@ -111,7 +113,7 @@ fn calculate_opt_seq(config: &Config) -> Result<&str,String> {
         Ok(match config.get_opt_level() {
             0 => "",
             1 => "p",
-            2|3|4|5|6 => "pcpda",
+            2|3|4|5|6 => "pcpdaudpa",
             level => Err(format!("Bad optimisation level {}",level))?
         })
     }

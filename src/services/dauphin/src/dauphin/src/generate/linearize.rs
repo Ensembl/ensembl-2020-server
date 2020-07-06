@@ -17,7 +17,7 @@
 // TODO Copy for registers
 use std::collections::BTreeMap;
 
-use crate::model::{ Register };
+use crate::model::{ Register, DFloat };
 use crate::typeinf::{ BaseType, MemberType };
 use super::gencontext::GenContext;
 use super::instruction::{ Instruction, InstructionType };
@@ -290,7 +290,7 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
                 src_len
             };
             let zero_reg = tmp_number_reg(context);
-            context.add(Instruction::new(InstructionType::NumberConst(0.),vec![zero_reg]));
+            context.add(Instruction::new(InstructionType::NumberConst(DFloat::new_usize(0)),vec![zero_reg]));
             context.add(Instruction::new(InstructionType::Nil,vec![lin_dst.index[top_level].0]));
             context.add(Instruction::new(InstructionType::Nil,vec![lin_dst.index[top_level].1]));
             context.add(Instruction::new(InstructionType::Append,vec![lin_dst.index[top_level].0,zero_reg]));

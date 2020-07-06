@@ -139,7 +139,7 @@ fn parse_atom(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Ex
         })
     } else {
         Ok(match lexer.get_oper(true) {
-            Token::Number(num,_) => Expression::Number(num),
+            Token::Number(num) => Expression::Number(num),
             Token::LiteralString(s) => Expression::LiteralString(s),
             Token::LiteralBytes(b) => Expression::LiteralBytes(b),
             Token::Other('(') => {

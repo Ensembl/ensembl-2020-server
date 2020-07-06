@@ -16,7 +16,7 @@
 
 use std::fmt;
 
-use crate::model::{ DefStore, Register, RegisterSignature, Identifier, cbor_int };
+use crate::model::{ DefStore, Register, RegisterSignature, Identifier, cbor_int, DFloat };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
 use serde_cbor::Value as CborValue;
 
@@ -112,12 +112,12 @@ impl InstructionSuperType {
             17 => InstructionSuperType::BytesConst,
             18 => InstructionSuperType::Call,
             19 => InstructionSuperType::LineNumber,
-            _ => Err(format!("impossiblr in IntstructionSuperType deserialize"))?
+            _ => Err(format!("impossible in IntstructionSuperType deserialize"))?
         })
     }
 }
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Clone,Debug,PartialEq,Eq,Hash)]
 pub enum InstructionType {
     Pause(bool),
     Nil,
@@ -139,7 +139,7 @@ pub enum InstructionType {
     SeqFilter,
     SeqAt,
     Const(Vec<usize>),
-    NumberConst(f64),
+    NumberConst(DFloat),
     BooleanConst(bool),
     StringConst(String),
     BytesConst(Vec<u8>),
@@ -253,7 +253,7 @@ impl InstructionType {
         };
         
         if let Some(suffix) = match self {
-            InstructionType::NumberConst(n) => Some(n.to_string()),
+            InstructionType::NumberConst(n) => Some(n.as_f64().to_string()),
             InstructionType::BooleanConst(b) => Some(b.to_string()),
             InstructionType::StringConst(s) => Some(format!("\"{}\"",s.to_string())),
             InstructionType::BytesConst(b) => Some(format!("\'{}\'",hex::encode(b))),

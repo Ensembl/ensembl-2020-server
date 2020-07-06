@@ -21,7 +21,7 @@ use crate::model::cbor_array;
 use super::complexsig::ComplexRegisters;
 use serde_cbor::Value as CborValue;
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone,Debug,PartialEq,Eq,Hash)]
 pub struct RegisterSignature {
     index: usize,
     args: Vec<ComplexRegisters>

@@ -60,8 +60,13 @@ fn parse_inline(lexer: &mut Lexer) -> Result<Vec<ParserStatement>,ParseError> {
         "suffix" => Ok(InlineMode::Suffix),
         _ => Err(ParseError::new("Bad oper mode, expected left, right, prefix, or suffix",lexer))
     }?;
-    let prio = get_number(lexer)?;
-    Ok(vec![ParserStatement::Inline(symbol,pattern,mode,prio)])
+    let num = get_number(lexer)?;
+    if let Some(prio) = num.parse::<f64>().ok() {
+        Ok(vec![ParserStatement::Inline(symbol,pattern,mode,prio)])
+    } else {
+        Err(ParseError::new(&format!("bad priority '{}'",num),lexer))
+    }
+    
 }
 
 fn apply_macro(s: &StmtMacro, exprs: &[Expression], lexer: &mut Lexer)-> Result<Vec<ParserStatement>,ParseError> {

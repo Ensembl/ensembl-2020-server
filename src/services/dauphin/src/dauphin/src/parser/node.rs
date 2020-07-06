@@ -24,7 +24,7 @@ use crate::typeinf::{ MemberType, SignatureConstraint };
 #[derive(PartialEq,Clone)]
 pub enum Expression {
     Identifier(String),
-    Number(f64),
+    Number(String),
     LiteralString(String),
     LiteralBytes(Vec<u8>),
     LiteralBool(bool),

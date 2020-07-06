@@ -17,7 +17,7 @@
 use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
 use crate::resolver::Resolver;
-use crate::model::{ Register, RegisterAllocator };
+use crate::model::{ Register, RegisterAllocator, DFloat };
 use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
@@ -231,7 +231,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
                     self.add(Instruction::new(InstructionType::Const(indexes.to_vec()),vec![*reg]))?;
                 } else {
                     self.long_constant(reg,numbers,|r,n| {
-                        Instruction::new(InstructionType::NumberConst(*n),vec![r])
+                        Instruction::new(InstructionType::NumberConst(DFloat::new(*n)),vec![r])
                     })?;
                 }
             },

@@ -60,7 +60,7 @@ impl CommandType for NumberConstCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NumberConstCommand(it.regs[0],force_branch!(it.itype,InstructionType,NumberConst),self.0)))
+        Ok(Box::new(NumberConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,NumberConst).as_f64(),self.0)))
     }
 
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {

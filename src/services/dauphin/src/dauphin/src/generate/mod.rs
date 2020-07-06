@@ -27,6 +27,7 @@ mod prune;
 mod reusedead;
 mod compilerun;
 mod simplify;
+mod reuseregs;
 
 pub use self::gencontext::GenContext;
 pub use self::generate::generate;

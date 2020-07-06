@@ -15,6 +15,7 @@
  */
 
 use std::collections::{ HashMap, HashSet };
+use std::hash::{ Hash, Hasher };
 use std::fmt;
 use super::super::definitionstore::DefStore;
 use super::super::structenum::{ EnumDef, StructDef };
@@ -24,13 +25,39 @@ use crate::model::{ cbor_array, cbor_int };
 use crate::typeinf::{ BaseType, ContainerType, MemberType, MemberMode };
 use serde_cbor::Value as CborValue;
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone,Debug,Eq)]
 pub struct ComplexRegisters {
     start: usize,
     mode: MemberMode,
     order: Vec<ComplexPath>,
     vectors: HashMap<ComplexPath,VectorRegisters>,
     vec_break: HashMap<ComplexPath,Vec<usize>>
+}
+
+impl PartialEq for ComplexRegisters {
+    fn eq(&self, other: &Self) -> bool {
+        if self.start != other.start || self.mode != other.mode || self.order != other.order {
+            return false;
+        }
+        for path in self.order.iter() {
+            if self.vectors.get(path) != other.vectors.get(path) || self.vec_break.get(path) != other.vec_break.get(path) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl Hash for ComplexRegisters {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.start.hash(hasher);
+        self.mode.hash(hasher);
+        self.order.hash(hasher);
+        for path in self.order.iter() {
+            self.vectors.get(path).hash(hasher);
+            self.vec_break.get(path).hash(hasher);
+        }
+    }
 }
 
 impl fmt::Display for ComplexRegisters {

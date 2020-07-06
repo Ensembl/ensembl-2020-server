@@ -176,7 +176,7 @@ impl MemberType {
     }
 }
 
-#[derive(Debug,Clone,Copy,PartialEq)]
+#[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub enum MemberMode {
     RValue,
     LValue,
@@ -202,7 +202,7 @@ impl MemberMode {
     }
 }
 
-#[derive(Debug,Clone,Copy,PartialEq)]
+#[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub enum MemberDataFlow { In, Out, InOut }
 
 // XXX remove data-flow from sig

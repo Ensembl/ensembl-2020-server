@@ -83,13 +83,7 @@ impl LexerGetting {
 
     fn get_number(&mut self, stream: &mut dyn CharSource) {
         let out = self.advance_char(|c,_| c.is_ascii_digit() || c == '.',false,stream);
-        if let Some(num) = out.parse::<f64>().ok() {
-            self.set_token(Token::Number(num,out));
-        } else if let Some(num) = out.parse::<i64>().ok() {
-            self.set_token(Token::Number(num as f64,out));
-        } else {
-            self.set_error(&format!("Bad number \"{}\"",out));
-        }
+        self.set_token(Token::Number(out));
     }
 
     fn consume_comment(&mut self, stream: &mut dyn CharSource) {
