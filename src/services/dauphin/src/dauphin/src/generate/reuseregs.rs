@@ -104,117 +104,8 @@ impl RegisterValues {
     }
 }
 
-
-pub fn reuse_regs_once(context: &mut GenContext) -> Result<bool,String> {
-    let mut any = false;
-    any |= replace_with_copies(context)?;
-    any |= use_earliest_reg(context)?;
-    Ok(any)
-}
-
-struct RegEquiv {
-    next_set: usize,
-    reg_set: HashMap<Register,usize>,
-    set_regs: HashMap<usize,Vec<Register>>
-}
-
-impl RegEquiv {
-    fn new() -> RegEquiv {
-        RegEquiv {
-            next_set: 0,
-            reg_set: HashMap::new(),
-            set_regs: HashMap::new()
-        }
-    }
-
-    fn unknown(&mut self, reg: &Register) {
-        //print!("{:?} is now unknown\n",reg);
-        if let Some(set) = self.reg_set.remove(reg) {
-            let mut remove = false;
-            if let Some(regs) = self.set_regs.get_mut(&set) {
-                if let Some(pos) = regs.iter().position(|x| *x == *reg) {
-                    regs.remove(pos);
-                }
-                if regs.len() == 0 {
-                    remove = true;
-                }
-            }
-            if remove {
-                self.set_regs.remove(&set);
-            }
-        }
-    }
-
-    fn equiv(&mut self, moving: &Register, to_match: &Register) {
-        self.unknown(moving);
-        //print!("{:?} is now equivalent to {:?}\n",moving,to_match);
-        let set = match self.reg_set.get(to_match) {
-            Some(id) => *id,
-            None => {
-                let new_id = self.next_set;
-                self.next_set += 1;
-                self.set_regs.insert(new_id,vec![to_match.clone()]);
-                self.reg_set.insert(to_match.clone(),new_id);
-                new_id
-            }
-        };
-        if let Some(regs) = self.set_regs.get_mut(&set) {
-            //print!("A {:?} is now equivalent to {:?} setc={:?} {:?}\n",moving,to_match,set,regs);
-            regs.push(*moving);
-            self.reg_set.insert(moving.clone(),set);
-        }
-    }
-
-    fn map(&self, reg: &Register) -> Register {
-        if let Some(set) = self.reg_set.get(reg) {
-            if let Some(regs) = self.set_regs.get(set) {
-                if let Some(first) = regs.first() {
-                    return first.clone();
-                }
-            }
-        }
-        reg.clone()
-    }
-}
-
-pub fn use_earliest_reg(context: &mut GenContext) -> Result<bool,String> {
-    let mut equivs = RegEquiv::new();
-    let instrs = context.get_instructions();
-    /* Flag copies where source is last mention of a variable with appropriate rewrite */
-    for instr in instrs.iter() {
-        let mut instr = instr.clone();
-        //print!("INSTR {:?}",instr);
-        match instr.itype {
-            InstructionType::Copy => {
-                equivs.equiv(&instr.regs[0],&instr.regs[1]);
-            },
-            _ => {
-                let out = instr.itype.out_registers();
-                let mut new_regs = vec![];
-                for (i,reg) in instr.regs.iter().enumerate() {
-                    if out.contains(&i) {
-                        new_regs.push(reg.clone());
-                    } else {
-                        print!("{:?} maps to {:?}\n",reg,equivs.map(reg));
-                        new_regs.push(equivs.map(reg).clone());
-                    }
-                }
-                for (i,reg) in instr.regs.iter().enumerate() {
-                    if out.contains(&i) {
-                        equivs.unknown(&instr.regs[i]);
-                    }
-                }
-                instr.regs = new_regs;
-            }
-        }
-        context.add(instr.clone());
-    }
-    context.phase_finished();
-    Ok(false)
-}
-
 /* Relabel instead of copying from sources which are never reused. Recurse this until no change */
-pub fn replace_with_copies(context: &mut GenContext) -> Result<bool,String> {
+pub fn reuse_regs(context: &mut GenContext) -> Result<(),String> {
     let mut saved = ValueStore::new();
     let mut map = RegisterValues::new();
     let instrs = context.get_instructions();
@@ -318,11 +209,6 @@ pub fn replace_with_copies(context: &mut GenContext) -> Result<bool,String> {
         
     }
     context.phase_finished();
-    Ok(false)
-}
-
-pub fn reuse_regs(context: &mut GenContext) -> Result<(),String> {
-    while reuse_regs_once(context)? {}
     Ok(())
 }
 
@@ -332,11 +218,13 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
+    use crate::generate::InstructionType;
     use crate::interp::{ mini_interp, xxx_test_config, CompilerLink, make_librarysuite_builder };
 
     #[test]
     fn reuse_regs_smoke() {
-        let config = xxx_test_config();
+        let mut config = xxx_test_config();
+        config.set_opt_seq("pcpdauedpa");
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);
@@ -349,5 +237,12 @@ mod test {
         for s in &strings {
             print!("{}\n",s);
         }
+        let mut lt = 0;
+        for instr in instrs {
+            if let InstructionType::Call(id,_,_,_) = &instr.itype {
+                if id.name() == "lt" { lt += 1; }
+            }
+        }
+        assert_eq!(1,lt);
     }
 }

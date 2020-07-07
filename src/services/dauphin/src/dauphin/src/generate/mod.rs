@@ -28,6 +28,7 @@ mod reusedead;
 mod compilerun;
 mod simplify;
 mod reuseregs;
+mod useearliest;
 
 pub use self::gencontext::GenContext;
 pub use self::generate::generate;

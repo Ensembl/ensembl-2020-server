@@ -37,7 +37,9 @@ pub fn prune(context: &mut GenContext) {
         if call_justified {
             let (regs,itype) = (instr.regs,instr.itype);
             for (i,reg) in regs.iter().enumerate() {
-                if !itype.out_only_registers().contains(&i) {
+                if itype.out_only_registers().contains(&i) {
+                    justified_regs.remove(reg);
+                } else {
                     justified_regs.insert(*reg);
                 }
             }
