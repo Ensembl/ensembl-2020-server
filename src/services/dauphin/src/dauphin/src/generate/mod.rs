@@ -23,6 +23,7 @@ mod generate;
 mod instruction;
 mod linearize;
 mod pauses;
+mod peephole;
 mod prune;
 mod compilerun;
 mod simplify;

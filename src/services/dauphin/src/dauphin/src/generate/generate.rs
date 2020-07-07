@@ -28,6 +28,7 @@ use super::useearliest::use_earliest_regs;
 use super::compilerun::compile_run;
 use super::codegen::generate_code;
 use super::assignregs::assign_regs;
+use super::peephole::{ peephole_nil_append, peephole_linenum_remove };
 use super::prune::prune;
 use super::call::call;
 use super::linearize::linearize;
@@ -83,6 +84,7 @@ impl GenerateMenu {
         opt_steps.insert("u".to_string(),GenerateStep::new("reuse-regs", |_,_,_,gc| { reuse_regs(gc) }));
         opt_steps.insert("e".to_string(),GenerateStep::new("use-earliest", |_,_,_,gc| { use_earliest_regs(gc) }));
         opt_steps.insert("a".to_string(),GenerateStep::new("assign-regs", |_,_,_,gc| { assign_regs(gc); Ok(()) }));
+        opt_steps.insert("m".to_string(),GenerateStep::new("peephole", |_,_,_,gc| { peephole_nil_append(gc)?; peephole_linenum_remove(gc) }));
         post_steps.push(GenerateStep::new("pauses",|cl,_,res,gc| { pauses(cl,res,gc) }));
         GenerateMenu { gen_steps, opt_steps, post_steps }
     }
@@ -113,7 +115,7 @@ fn calculate_opt_seq(config: &Config) -> Result<&str,String> {
         Ok(match config.get_opt_level() {
             0 => "",
             1 => "p",
-            2|3|4|5|6 => "pcpauepa",
+            2|3|4|5|6 => "pcpmuepa",
             level => Err(format!("Bad optimisation level {}",level))?
         })
     }
