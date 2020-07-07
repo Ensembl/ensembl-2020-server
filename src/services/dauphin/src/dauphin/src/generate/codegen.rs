@@ -300,7 +300,7 @@ impl<'a> CodeGen<'a> {
         let mut modes = Vec::new();
         let procdecl = self.defstore.get_proc_id(&stmt.0)?;
         if self.include_line_numbers {
-            self.context.add_untyped(Instruction::new(InstructionType::LineNumber(stmt.2.to_string(),stmt.3),vec![]))?;    
+            self.context.add_untyped(Instruction::new(InstructionType::LineNumber(stmt.2.clone()),vec![]))?;    
         }
         for (i,member) in procdecl.get_signature().each_member().enumerate() {
             match member {
@@ -330,7 +330,7 @@ impl<'a> CodeGen<'a> {
         for stmt in stmts {
             let r = self.build_stmt(stmt);
             if let Err(r) = r {
-                errors.push(format!("{} at {} {}",r,stmt.2,stmt.3));
+                errors.push(format!("{} at {}",r,stmt.2));
             }
         }
         if errors.len() > 0 {

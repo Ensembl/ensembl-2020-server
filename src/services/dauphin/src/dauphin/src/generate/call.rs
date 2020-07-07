@@ -30,7 +30,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                     flows.push(match modes[i] {
                         MemberMode::LValue => MemberDataFlow::InOut, // TODO maybe Out: let command decide
                         _ => MemberDataFlow::In
-                    });                    
+                    });
                     rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_)?);
                 }
                 context.add(Instruction::new(InstructionType::Call(identifier.clone(),true,rs,flows),instr.regs.to_vec()));

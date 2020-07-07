@@ -140,7 +140,7 @@ mod test {
         lexer.import("data: import \"data: $;\";").ok();
         let p = Parser::new(&mut lexer);
         let err = p.parse().err().unwrap();
-        assert_eq!("$ encountered outside filter at line 1 column 2 in data: $;".to_string(),err[0].message());
+        assert_eq!("$ encountered outside filter at data: $;:1:2".to_string(),err[0].message());
     }
 
     #[test]
@@ -151,7 +151,7 @@ mod test {
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:import-search").expect("cannot load file");
         let p = Parser::new(&mut lexer);
-        let txt = "Reserved keyword 'reserved' found at line 1 column 1 in file:../import-smoke4.dp";
+        let txt = "Reserved keyword 'reserved' found at file:../import-smoke4.dp:1:1";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 
@@ -163,7 +163,7 @@ mod test {
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/import-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
-        let txt = "Reserved keyword 'reserved' found at line 1 column 1 in file:../import-smoke4.dp";
+        let txt = "Reserved keyword 'reserved' found at file:../import-smoke4.dp:1:1";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 
@@ -190,7 +190,7 @@ mod test {
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/parser-nonest").expect("cannot load file");
         let p = Parser::new(&mut lexer);
-        let txt = "$ encountered outside filter at line 5 column 1 in search:parser/parser-nonest";
+        let txt = "$ encountered outside filter at search:parser/parser-nonest:5:1";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 
@@ -202,7 +202,7 @@ mod test {
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/id-clash").expect("cannot load file");
         let p = Parser::new(&mut lexer);
-        let txt = "duplicate identifier: id_clash::assign at line 2 column 29 in search:parser/id-clash";
+        let txt = "duplicate identifier: id_clash::assign at search:parser/id-clash:2:29";
         assert_eq!(txt,p.parse().err().unwrap()[0].message());
     }
 

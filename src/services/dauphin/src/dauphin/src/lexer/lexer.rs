@@ -15,7 +15,9 @@
  */
 
 use std::collections::HashSet;
-use super::filelexer::FileLexer;
+use std::fmt;
+use std::rc::Rc;
+use super::filelexer::{ FileLexer, FileContentsHandle };
 use crate::resolver::Resolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
@@ -26,6 +28,34 @@ pub struct Lexer<'a> {
     resolver: &'a Resolver,
     files: Vec<FileLexer>,
     inlines: InlineTokens
+}
+
+#[derive(Debug,Clone,PartialEq,Eq,Hash)]
+pub struct LexerPosition {
+    handle: Option<Rc<FileContentsHandle>>,
+    filename: String,
+    line: u32,
+    col: u32
+}
+
+impl LexerPosition {
+    pub fn new(filename: &str, line: u32, col: u32, handle: Option<&Rc<FileContentsHandle>>) -> LexerPosition {
+        LexerPosition {
+            handle: handle.cloned(),
+            filename: filename.to_string(), line, col
+        }
+    }
+
+    pub fn filename(&self) -> &str { &self.filename }
+    pub fn line(&self) -> u32 { self.line }
+    pub fn col(&self) -> u32 { self.col }
+    pub fn contents(&self) -> Option<String> { self.handle.as_ref().map(|x| x.get()) }
+}
+
+impl fmt::Display for LexerPosition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{}:{}:{}",self.filename,self.line,self.col)
+    }
 }
 
 impl<'a> Lexer<'a> {
@@ -76,11 +106,11 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn position(&self) -> (&str,u32,u32) {
+    pub fn position(&self) -> LexerPosition {
         if let Some(last) = self.files.last() {
             last.position()
         } else {
-            ("EOF",0,0)
+            LexerPosition::new("EOF",0,0,None)
         }
     }
 
@@ -145,15 +175,14 @@ mod test {
         loop {
             let lx = &mut lexer;
             let tok = lx.get().clone();
-            let (name,line,col) = lx.position();
-            let name = name.to_string();
+            let pos = lx.position();
             if let Token::EndOfLex = tok { break; }
             if let Token::Identifier(ref s) = tok {
                 if s == "import" {
                     lx.import("search:lexer/smoke2b").expect("import failed");
                 }
             }
-            out.push_str(&format!("{:?} {} {},{}\n",tok,name,line,col));
+            out.push_str(&format!("{:?} {}\n",tok,pos));
         }
         let outdata = load_testdata(&["lexer","smoke2.out"]).ok().unwrap();
         assert_eq!(out,outdata,"EXPECTED:\n{}\nACTUAL:\n{}\n",outdata,out);

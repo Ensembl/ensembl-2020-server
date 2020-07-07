@@ -14,14 +14,19 @@
  *  limitations under the License.
  */
 
-mod charsource;
-mod filelexer;
-mod lexer;
-mod token;
-mod inlinecheck;
-mod inlinetokens;
-mod getting;
+use regex::Regex;
 
-pub use self::token::Token;
-pub use self::lexer::{ Lexer, LexerPosition };
-pub use self::charsource::{ CharSource, StringCharSource };
+pub fn fix_filename(s: &str) -> String {
+    let invalid = Regex::new("/").expect("bad regex in fix_filename");
+    invalid.replace_all(s,"-").to_string()
+}
+
+pub fn fix_incoming_filename(name: &str) -> String {
+    let re = Regex::new(r"[^A-Za-z0-9]+").unwrap();
+    let name = re.replace_all(&name,"_");
+    let re = Regex::new(r".*/").unwrap();
+    let name = re.replace_all(&name,"");
+    let re = Regex::new(r"\.dp").unwrap();
+    let name = re.replace_all(&name,"");
+    name.to_string()
+}

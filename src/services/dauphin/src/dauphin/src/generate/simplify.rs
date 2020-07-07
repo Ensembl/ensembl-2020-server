@@ -153,7 +153,7 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |
         InstructionType::BytesConst(_) |
-        InstructionType::LineNumber(_,_) =>
+        InstructionType::LineNumber(_) =>
             context.add(instr.clone()),
 
         InstructionType::Nil |

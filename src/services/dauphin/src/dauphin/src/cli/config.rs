@@ -146,6 +146,13 @@ impl Config {
         self.subconfig = Some(Box::new(sub));
     }
 
+    pub fn verify(&self) -> Result<(),String> {
+        if self.get_profile() && !self.get_generate_debug() {
+            return Err(format!("cannot generate profile (-p) without debug info (-g)"));
+        }
+        Ok(())
+    }
+
     flag!(self,generate_debug,set_generate_debug,get_generate_debug,isset_generate_debug,bool,false);
     flag!(self,nostd,set_nostd,get_nostd,isset_nostd,bool,false);
     flag!(self,verbose,set_verbose,get_verbose,isset_verbose,u8,0);

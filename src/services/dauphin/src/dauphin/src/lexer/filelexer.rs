@@ -15,13 +15,29 @@
  */
 
 use std::collections::HashSet;
+use std::rc::Rc;
 use super::charsource::{ CharSource, LocatedCharSource };
 use super::inlinetokens::InlineTokens;
 use super::getting::LexerGetting;
 use super::token::Token;
+use super::lexer::LexerPosition;
 use crate::resolver::Resolver;
 
+#[derive(Debug,PartialEq,Eq,Hash,Clone)]
+pub struct FileContentsHandle {
+    contents: String
+}
+
+impl FileContentsHandle {
+    fn new(contents: &str) -> FileContentsHandle {
+        FileContentsHandle { contents: contents.to_string() }
+    }
+
+    pub(crate) fn get(&self) -> String { self.contents.to_string() }
+}
+
 pub struct FileLexer {
+    handle: Rc<FileContentsHandle>,
     resolver: Resolver,
     stream: LocatedCharSource,
     shorts: HashSet<String>,
@@ -32,8 +48,10 @@ pub struct FileLexer {
 
 impl FileLexer {
     pub fn new(resolver: Resolver, stream: Box<dyn CharSource>) -> FileLexer {
+        let handle = FileContentsHandle::new(&stream.to_string());
         let module = stream.module().to_string();
         let mut out = FileLexer {
+            handle: Rc::new(handle),
             stream: LocatedCharSource::new(stream),
             shorts: HashSet::new(),
             module, resolver,
@@ -51,8 +69,8 @@ impl FileLexer {
     pub fn add_short(&mut self, name: &str) { self.shorts.insert(name.to_string()); }
     pub fn get_shorts(&self) -> &HashSet<String> { &self.shorts }
 
-    pub fn position(&self) -> (&str,u32,u32) { 
-        (self.stream.name(),self.line,self.col)
+    pub fn position(&self) -> LexerPosition { 
+        LexerPosition::new(self.stream.name(),self.line,self.col,Some(&self.handle))
     }
 
     pub fn get(&mut self, ops: &InlineTokens, mode: Option<bool>) -> Token {
@@ -95,13 +113,13 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::interp::{ xxx_test_config, CompilerLink, make_librarysuite_builder };
 
-    fn add_token(out: &mut String, token: &(Token,String,u32,u32)) {
-        out.push_str(&format!("{:?} {} {},{}\n",token.0,token.1,token.2,token.3));
+    fn add_token(out: &mut String, token: &(Token,LexerPosition)) {
+        out.push_str(&format!("{:?} {}\n",token.0,token.1));
     }
 
-    fn try_lex(path_in: &str) -> Vec<(Token,String,u32,u32)> {
+    fn try_lex(path_in: &str) -> Vec<(Token,LexerPosition)> {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let mut path = String::from_str("search:").ok().unwrap();
         path.push_str(path_in);
         let resolver = Rc::new(common_resolver(&config,&linker).expect("a"));
@@ -119,13 +137,13 @@ mod test {
             let lx = &mut lexer;
             let tok = lx.get(&ops,Some(false));
             if let Token::EndOfFile = tok { break; }
-            let (name,line,col) = lx.position();
-            out.push((tok.clone(),name.to_string(),line,col));
+            let pos = lx.position();
+            out.push((tok.clone(),pos));
         }
         out
     }
 
-    fn compare_result(result: &Vec<(Token,String,u32,u32)>, path: &[&str]) {
+    fn compare_result(result: &Vec<(Token,LexerPosition)>, path: &[&str]) {
         let outdata = load_testdata(path).ok().unwrap();
         let mut res_str = String::new();
         for r in result {

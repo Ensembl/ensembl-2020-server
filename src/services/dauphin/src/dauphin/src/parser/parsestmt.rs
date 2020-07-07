@@ -78,12 +78,12 @@ fn parse_funcstmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserSta
     let pattern = parse_full_identifier(lexer,None)?;
     get_other(lexer,"(")?;
     let exprs = parse_exprlist(lexer,defstore,')',false)?;
-    let (file,line,_) = lexer.position();
+    let pos = lexer.position();
     let identifier = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
     match defstore.get_stmt_id(&identifier.0) {
         Ok(s) => apply_macro(s,&exprs,lexer),
         Err(_) => {
-            Ok(vec![ParserStatement::Regular(Statement(identifier.0,exprs,file.to_string(),line))])
+            Ok(vec![ParserStatement::Regular(Statement(identifier.0,exprs,pos))])
         }
     }    
 } 
@@ -96,8 +96,8 @@ fn parse_inlinestmt(lexer: &mut Lexer, defstore: &DefStore)-> Result<Vec<ParserS
     if !defstore.stmt_like(&inline.identifier().0,lexer)? {
         Err(ParseError::new("Got inline expr, expected inline stmt",lexer))?;
     }
-    let (file,line,_) = lexer.position();
-    Ok(vec![ParserStatement::Regular(Statement(inline.identifier().0.clone(),vec![left,right],file.to_string(),line))])
+    let pos = lexer.position();
+    Ok(vec![ParserStatement::Regular(Statement(inline.identifier().0.clone(),vec![left,right],pos))])
 }
 
 pub(in super) fn parse_statement(lexer: &mut Lexer, defstore: &DefStore, in_defn: bool) -> Result<Vec<ParserStatement>,ParseError> {

@@ -126,7 +126,7 @@ pub fn reuse_regs(context: &mut GenContext) -> Result<(),String> {
                     Err("reference to missing value")?
                 }
             },
-            InstructionType::LineNumber(_,_) | InstructionType::Pause(_) => {
+            InstructionType::LineNumber(_) | InstructionType::Pause(_) => {
                 context.add(instr.clone());
             },
             _ => {

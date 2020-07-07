@@ -137,7 +137,7 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
         InstructionType::BooleanConst(_) |
         InstructionType::StringConst(_) |
         InstructionType::BytesConst(_) |
-        InstructionType::LineNumber(_,_) =>
+        InstructionType::LineNumber(_) =>
             context.add(instr.clone()),
 
         InstructionType::Proc(_,_) |

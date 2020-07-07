@@ -15,18 +15,108 @@
  */
 
 use std::collections::{ HashMap, HashSet };
+use std::fs::write;
+use regex::Regex;
+use crate::cli::Config;
 use super::gencontext::GenContext;
 use super::compilerun::compile_run;
 use crate::resolver::Resolver;
-use crate::model::Register;
+use crate::lexer::LexerPosition;
+use crate::model::{ DefStore, Register, fix_incoming_filename };
 use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 
-pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut GenContext) -> Result<(),String> {
+fn format_line(line: &str, time: Option<f64>) -> String {
+    let time = if let Some(time) = time {
+        if time >= 1. {
+            format!("+++")
+        } else {
+            format!("{:03}",(time*1000.).round())
+        }
+    } else {
+        "   ".to_string()
+    };
+    format!("{} {}",time,line)
+}
+
+struct FileExecutionProfile {
+    filename: String,
+    lines: Vec<(String,Option<f64>)>
+}
+
+impl FileExecutionProfile {
+    fn new(pos: &LexerPosition) -> FileExecutionProfile {
+        let lines = pos.contents().map(|x| x.split("\n").map(|z| (z.to_string(),None)).collect()).unwrap_or(vec![]);
+        FileExecutionProfile {
+            filename: pos.filename().to_string(),
+            lines
+        }
+    }
+
+    fn filename(&self) -> &str { &self.filename }
+
+    fn add(&mut self, line: u32, time: f64) {
+        let line = line as usize;
+        if line < self.lines.len() {
+            self.lines[line-1].1 = Some(time);
+        }
+    }
+
+    fn profile(&self) -> String {
+        let mut out = vec![];
+        for (line,time) in &self.lines {
+            out.push(format_line(line,*time));
+        }
+        out.join("\n")
+    }
+}
+
+#[derive(Debug)]
+struct ExecutionProfiler {
+    line: Option<LexerPosition>,
+    time: HashMap<LexerPosition,f64>
+}
+
+impl ExecutionProfiler {
+    fn new() -> ExecutionProfiler {
+        ExecutionProfiler {
+            line: None,
+            time: HashMap::new()
+        }
+    }
+
+    fn line(&mut self, pos: &LexerPosition) {
+        self.line = Some(pos.clone());
+    }
+
+    fn add(&mut self, time: f64) {
+        if let Some(line) = &self.line {
+            *self.time.entry(line.clone()).or_insert(0.) += time;
+        }
+    }
+
+    fn get_profiles(&self) -> Vec<FileExecutionProfile> {
+        let mut out = HashMap::new();
+        for (pos,time) in &self.time {
+            let filename = pos.filename();
+            let profile = out.entry(filename.to_string()).or_insert_with(|| FileExecutionProfile::new(pos));
+            profile.add(pos.line(),*time);
+        }
+        out.drain().map(|x| x.1).collect()
+    }
+}
+
+pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, defstore: &DefStore, context: &mut GenContext, config: &Config) -> Result<(),String> {
     /* force compilerun to ensure timed instructions */ // XXX only if absent
     compile_run(compiler_link,resolver,context)?;
+    let mut profiler = ExecutionProfiler::new();
+    let mut instr_profile = vec![];
     let mut timer = 0.;
     for (instr,time) in &context.get_timed_instructions() {
+        if let InstructionType::LineNumber(pos) = &instr.itype {
+            profiler.line(pos);
+        }
+        let mut line_time = None;
         match instr.itype {
             InstructionType::Pause(true) => {
                 context.add(instr.clone());
@@ -34,20 +124,29 @@ pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut G
             },
             InstructionType::Pause(false) => {},
             _ => {
-                let command = compiler_link.compile_instruction(instr,true)?.2;
-                let name = format!("{:?}",instr).replace("\n","");
-                print!("execution time for {:?} is {:.3}ms (before timer={:.3}ms)\n",name,time,timer);
                 timer += time;
+                line_time = Some(*time);
+                profiler.add(*time);
                 if timer >= 1. {
                     context.add(Instruction::new(InstructionType::Pause(false),vec![]));
-                    print!("added pause\n");
                     timer = *time;
                 }
                 context.add(instr.clone())
             }
         }
+        let name = format!("{:?}",instr).replace("\n","");
+        instr_profile.push(format_line(&name,line_time));
     }
     context.phase_finished();
+    if config.get_profile() {
+        for (i,profile) in profiler.get_profiles().iter().enumerate() {
+            let source_filename = fix_incoming_filename(profile.filename());
+            let filename = format!("{}-{}-{}-timing.profile",defstore.get_source(),source_filename,i);
+            write(filename.clone(),profile.profile()).map_err(|e| format!("Could not write {}: {}",filename,e))?;
+        }
+        let filename = format!("{}-timing-binary.profile",defstore.get_source());
+        write(filename.clone(),instr_profile.join("\n")).map_err(|e| format!("Could not write {}: {}",filename,e))?;
+    }
     Ok(())
 }
 

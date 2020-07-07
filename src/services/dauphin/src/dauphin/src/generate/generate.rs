@@ -36,14 +36,22 @@ use super::linearize::linearize;
 use super::simplify::simplify;
 use super::pauses::pauses;
 
+struct StepData<'a,'b> {
+    linker: &'a CompilerLink,
+    defstore: &'a DefStore,
+    resolver: &'a Resolver,
+    context: &'a mut GenContext<'b>,
+    config: &'a Config
+}
+
 struct GenerateStep {
     name: String,
-    step: Box<dyn Fn(&CompilerLink,&DefStore,&Resolver,&mut GenContext) -> Result<(),String>>
+    step: Box<dyn Fn(&mut StepData) -> Result<(),String>>
 }
 
 impl GenerateStep {
     fn new<F>(name: &str, step: F) -> GenerateStep
-            where F: Fn(&CompilerLink,&DefStore,&Resolver,&mut GenContext) -> Result<(),String> + 'static {
+            where F: Fn(&mut StepData) -> Result<(),String> + 'static {
         GenerateStep {
             name: name.to_string(),
             step: Box::new(step)
@@ -52,7 +60,11 @@ impl GenerateStep {
 
     fn run(&self, index: usize, config: &Config, compiler_link: &CompilerLink, defstore: &DefStore, resolver: &Resolver, context: &mut GenContext) -> Result<(),String> {
         let start_time = SystemTime::now();
-        (self.step)(compiler_link,defstore,resolver,context)?;
+        let mut data = StepData {
+            linker: compiler_link,
+            defstore, resolver, context, config
+        };
+        (self.step)(&mut data)?;
         let duration = start_time.elapsed().unwrap_or(Duration::new(0,0));
         if config.get_verbose() > 1 {
             print!("step {}: {}. {} lines {:.2}ms\n",index,self.name,context.get_instructions().len(),duration.as_secs_f32()*1000.);
@@ -83,18 +95,18 @@ impl GenerateMenu {
         let mut gen_steps = vec![];
         let mut opt_steps = HashMap::new();
         let mut post_steps = vec![];
-        gen_steps.push(GenerateStep::new("call", |_,_,_,gc| { call(gc) }));
-        gen_steps.push(GenerateStep::new("simplify", |_,ds,_,gc| { simplify(ds,gc) }));
-        gen_steps.push(GenerateStep::new("linearize", |_,_,_,gc| { linearize(gc) }));
-        gen_steps.push(GenerateStep::new("dealias", |_,_,_,gc| { remove_aliases(gc); Ok(()) }));
-        gen_steps.push(GenerateStep::new("compile-run", |cl,_,res,gc| { compile_run(cl,res,gc) }));
-        opt_steps.insert("c".to_string(),GenerateStep::new("compile-run", |cl,_,res,gc| { compile_run(cl,res,gc) }));
-        opt_steps.insert("p".to_string(),GenerateStep::new("prune", |_,_,_,gc| { prune(gc); Ok(()) }));
-        opt_steps.insert("u".to_string(),GenerateStep::new("reuse-regs", |_,_,_,gc| { reuse_regs(gc) }));
-        opt_steps.insert("e".to_string(),GenerateStep::new("use-earliest", |_,_,_,gc| { use_earliest_regs(gc) }));
-        opt_steps.insert("a".to_string(),GenerateStep::new("assign-regs", |_,_,_,gc| { assign_regs(gc); Ok(()) }));
-        opt_steps.insert("m".to_string(),GenerateStep::new("peephole", |_,_,_,gc| { peephole_nil_append(gc)?; peephole_linenum_remove(gc) }));
-        post_steps.push(GenerateStep::new("pauses",|cl,_,res,gc| { pauses(cl,res,gc) }));
+        gen_steps.push(GenerateStep::new("call", |step| { call(step.context) }));
+        gen_steps.push(GenerateStep::new("simplify", |step| { simplify(step.defstore,step.context) }));
+        gen_steps.push(GenerateStep::new("linearize", |step| { linearize(step.context) }));
+        gen_steps.push(GenerateStep::new("dealias", |step| { remove_aliases(step.context); Ok(()) }));
+        gen_steps.push(GenerateStep::new("compile-run", |step| { compile_run(step.linker,step.resolver,step.context) }));
+        opt_steps.insert("c".to_string(),GenerateStep::new("compile-run", |step| { compile_run(step.linker,step.resolver,step.context) }));
+        opt_steps.insert("p".to_string(),GenerateStep::new("prune", |step| { prune(step.context); Ok(()) }));
+        opt_steps.insert("u".to_string(),GenerateStep::new("reuse-regs", |step| { reuse_regs(step.context) }));
+        opt_steps.insert("e".to_string(),GenerateStep::new("use-earliest", |step| { use_earliest_regs(step.context) }));
+        opt_steps.insert("a".to_string(),GenerateStep::new("assign-regs", |step| { assign_regs(step.context); Ok(()) }));
+        opt_steps.insert("m".to_string(),GenerateStep::new("peephole", |step| { peephole_nil_append(step.context)?; peephole_linenum_remove(step.context) }));
+        post_steps.push(GenerateStep::new("pauses",|step| { pauses(step.linker,step.resolver,step.defstore,step.context,step.config) }));
         GenerateMenu { gen_steps, opt_steps, post_steps }
     }
 

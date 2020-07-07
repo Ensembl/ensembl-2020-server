@@ -400,12 +400,12 @@ impl CommandType for LineNumberCommandType {
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        let (file,line) = if let InstructionType::LineNumber(file,line) = &it.itype {
-            (file,line)
+        let pos = if let InstructionType::LineNumber(pos) = &it.itype {
+            pos
         } else {
             return Err(format!("malformatted cbor"));
         };
-        Ok(Box::new(LineNumberCommand(file.to_string(),(*line).try_into().unwrap_or(0),self.0)))
+        Ok(Box::new(LineNumberCommand(pos.filename().to_string(),pos.line().try_into().unwrap_or(0),self.0)))
     }
 
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {

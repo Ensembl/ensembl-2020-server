@@ -58,7 +58,7 @@ impl FileResolver {
         if let Some(last) = path.iter().last() {
             let name = last.to_str().ok_or_else(|| format!("filename is bad unicode"))?;
             let name = self.strip_extension(name);
-            let re = Regex::new(r"[^A-Za-z0-9]").unwrap();
+            let re = Regex::new(r"[^A-Za-z0-9]+").unwrap();
             let name = re.replace_all(&name,"_");
             let re = Regex::new(r"^.*?:").unwrap();
             let name = re.replace_all(&name,"");

@@ -81,7 +81,7 @@ pub fn config_from_options() -> Config {
         ConfigOption::new("action","action",None,Some("ACTION"),false,|config,value| { config.set_action(value) }),
         ConfigOption::new("source","source",Some("c"),Some("SOURCE-FILE"),true,|config,v| { config.add_source(v) }),
         ConfigOption::new("output","output",Some("o"),Some("BINARY-FILE"),false,|config,v| { config.set_output(v) }),
-        ConfigOption::new("profile","profile",Some("p"),Some("PROFILE-FILE"),false,|config,_| { config.set_profile(true) }),
+        ConfigOption::new("profile","profile",Some("p"),None,false,|config,_| { config.set_profile(true) }),
     ];
     let actions = make_actions();
     for (action,_) in actions.iter() {

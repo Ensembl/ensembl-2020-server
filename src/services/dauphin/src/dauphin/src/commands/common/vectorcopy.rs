@@ -35,7 +35,7 @@ pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<I
         let base = match cap.get(3).ok_or(())?.as_str() {
             "b" => BaseType::BooleanType,
             "y" => BaseType::BytesType,
-            "s" => BaseType::StringType,
+            "t" => BaseType::StringType,
             _ => BaseType::NumberType
         };
         let depth : usize = cap.get(2).ok_or(())?.as_str().parse::<usize>().map_err(|_| ())?;

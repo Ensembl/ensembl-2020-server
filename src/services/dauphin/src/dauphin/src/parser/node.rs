@@ -18,7 +18,7 @@ use std::fmt;
 use hex;
 
 use crate::model::{ InlineMode, IdentifierPattern, Identifier };
-use crate::lexer::Lexer;
+use crate::lexer::{ Lexer, LexerPosition };
 use crate::typeinf::{ MemberType, SignatureConstraint };
 
 #[derive(PartialEq,Clone)]
@@ -141,12 +141,12 @@ impl fmt::Debug for Expression {
 }
 
 #[derive(PartialEq,Clone)]
-pub struct Statement(pub Identifier,pub Vec<Expression>,pub String,pub u32);
+pub struct Statement(pub Identifier,pub Vec<Expression>,pub LexerPosition);
 
 impl Statement {
     pub fn alpha(&self, args: &[Identifier], exprs: &[Expression]) -> Result<Statement,String> {
         let out = self.1.iter().map(|x| x.alpha(args,exprs)).collect::<Result<_,String>>()?;
-        Ok(Statement(self.0.clone(),out,self.2.clone(),self.3.clone()))
+        Ok(Statement(self.0.clone(),out,self.2.clone()))
     }
 }
 
@@ -188,9 +188,9 @@ pub struct ParseError {
 
 impl ParseError {
     pub fn new(error: &str, lexer: &Lexer) -> ParseError {
-        let (file,line,col) = lexer.position();
+        let pos = lexer.position();
         ParseError {
-            error: format!("{} at line {} column {} in {}",error,line,col,file)
+            error: format!("{} at {}",error,pos)
         }
     }
 

@@ -15,7 +15,7 @@
  */
 
 pub trait CharSource {
-    fn to_string(&self) -> String; /* for alien formats */
+    fn to_string(&self) -> String;
     fn name(&self) -> &str;
     fn module(&self) -> &str;
     fn next(&mut self) -> Option<char>;

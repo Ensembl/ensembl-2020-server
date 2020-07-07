@@ -20,7 +20,7 @@ use std::fs::write;
 use std::process::exit;
 use regex::Regex;
 use crate::interp::{ make_librarysuite_builder, CompilerLink };
-use crate::model::cbor_serialize;
+use crate::model::{ cbor_serialize, fix_filename };
 use crate::lexer::Lexer;
 use crate::parser::{ Parser, ParseError };
 use crate::resolver::common_resolver;
@@ -53,11 +53,6 @@ fn write_cbor_file(filename: &str, contents: &CborValue) {
         to_writer(&mut buffer,&contents).map_err(|x| format!("{} while serialising",x))
     );
     write_binary_file(filename,&buffer);
-}
-
-fn fix_filename(s: &str) -> String {
-    let invalid = Regex::new("/").expect("bad regex in fix_filename");
-    invalid.replace_all(s,"-").to_string()
 }
 
 pub trait Action {
@@ -150,6 +145,7 @@ pub(super) fn make_actions() -> HashMap<String,Box<dyn Action>> {
 }
 
 pub fn run(config: &Config) {
+    bomb(|| format!("bad config"), config.verify());
     let actions = make_actions();
     let action_name = config.get_action();
     if let Some(action) = actions.get(action_name) {

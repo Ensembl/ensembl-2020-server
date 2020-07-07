@@ -52,7 +52,7 @@ pub fn peephole_linenum_remove(context: &mut GenContext) -> Result<(),String> {
     let mut out_instrs = vec![];
     for instr in rev_instrs.drain(..) {
         match instr.itype {
-            InstructionType::LineNumber(_,_) => {
+            InstructionType::LineNumber(_) => {
                 if !seen_line {
                     out_instrs.push(instr);
                 }

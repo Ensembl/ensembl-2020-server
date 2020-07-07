@@ -18,6 +18,7 @@ mod cborutil;
 mod definition;
 mod definitionstore;
 mod dfloat;
+mod fileutil;
 mod identifierstore;
 mod register;
 mod structenum;
@@ -30,6 +31,7 @@ mod signature {
 
 pub use self::definition::{ Inline, InlineMode, ExprMacro, StmtMacro, ProcDecl, FuncDecl };
 pub use self::definitionstore::DefStore;
+pub use self::fileutil::{ fix_filename, fix_incoming_filename };
 pub use self::identifierstore::{ IdentifierPattern, Identifier, IdentifierStore, IdentifierUse };
 pub use self::signature::complexpath::ComplexPath;
 pub use self::signature::signature::RegisterSignature;

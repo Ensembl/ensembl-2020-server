@@ -16,6 +16,7 @@
 
 use std::fmt;
 
+use crate::lexer::LexerPosition;
 use crate::model::{ DefStore, Register, RegisterSignature, Identifier, cbor_int, DFloat };
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
 use serde_cbor::Value as CborValue;
@@ -154,7 +155,7 @@ pub enum InstructionType {
     Proc(Identifier,Vec<MemberMode>),
     Operator(Identifier),
     Call(Identifier,bool,RegisterSignature,Vec<MemberDataFlow>),
-    LineNumber(String,u32)
+    LineNumber(LexerPosition)
 }
 
 impl InstructionType {
@@ -179,7 +180,7 @@ impl InstructionType {
             InstructionType::StringConst(_) => InstructionSuperType::StringConst,
             InstructionType::BytesConst(_) => InstructionSuperType::BytesConst,
             InstructionType::Call(_,_,_,_) => InstructionSuperType::Call,
-            InstructionType::LineNumber(_,_) => InstructionSuperType::LineNumber,
+            InstructionType::LineNumber(_) => InstructionSuperType::LineNumber,
             _ => Err(format!("instruction has no supertype"))?
         })
     }
@@ -221,7 +222,7 @@ impl InstructionType {
             InstructionType::Operator(_) => "oper",
             InstructionType::Call(_,_,_,_) => "call",
             InstructionType::Const(_) => "const",
-            InstructionType::LineNumber(_,_) => "line",
+            InstructionType::LineNumber(_) => "line",
         }.to_string();
         let mut out = vec![call.clone()];
         if let Some(prefixes) = match self {
@@ -258,7 +259,7 @@ impl InstructionType {
             InstructionType::StringConst(s) => Some(format!("\"{}\"",s.to_string())),
             InstructionType::BytesConst(b) => Some(format!("\'{}\'",hex::encode(b))),
             InstructionType::Const(c) => Some(c.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")),
-            InstructionType::LineNumber(file,line) => Some(format!("\"{}\" {}",file,line)),
+            InstructionType::LineNumber(pos) => Some(pos.to_string()),
             _ => None
         } {
             out.push(suffix);
@@ -269,7 +270,7 @@ impl InstructionType {
     pub fn self_justifying_call(&self) -> bool {
         match self {
             InstructionType::Call(_,impure,_,_) => *impure,
-            InstructionType::LineNumber(_,_) => true,
+            InstructionType::LineNumber(_) => true,
             InstructionType::Pause(_) => true,
             _ => false
         }
@@ -277,7 +278,7 @@ impl InstructionType {
 
     pub fn out_only_registers(&self) -> Vec<usize> {
         match self {
-            InstructionType::LineNumber(_,_) => vec![],
+            InstructionType::LineNumber(_) => vec![],
             InstructionType::Pause(_) => vec![],
 
             InstructionType::Call(_,_,sigs,dataflow) => {
@@ -305,7 +306,7 @@ impl InstructionType {
 
     pub fn out_registers(&self) -> Vec<usize> {
         match self {
-            InstructionType::LineNumber(_,_) => vec![],
+            InstructionType::LineNumber(_) => vec![],
             InstructionType::Pause(_) => vec![],
 
             InstructionType::Call(_,_,sigs,dataflow) => {
@@ -446,7 +447,7 @@ impl InstructionType {
             InstructionType::BytesConst(_) => Ok(vec![fixed(BaseType::BytesType)]),
             InstructionType::ReFilter => Ok(vec![fixed(BaseType::NumberType),fixed(BaseType::NumberType),fixed(BaseType::NumberType)]),
 
-            InstructionType::LineNumber(_,_) |
+            InstructionType::LineNumber(_) |
             InstructionType::Pause(_) |
             InstructionType::NumEq |
             InstructionType::Length |
