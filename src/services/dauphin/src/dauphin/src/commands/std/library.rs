@@ -56,7 +56,7 @@ impl TimeTrialCommandType for LenTimeTrial {
     }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sig = trial_signature(&vec![(MemberMode::RValue,0,BaseType::NumberType),(MemberMode::RValue,2,BaseType::NumberType)]);
+        let sig = trial_signature(&vec![(MemberMode::In,0,BaseType::NumberType),(MemberMode::In,2,BaseType::NumberType)]);
         let regs : Vec<Register> = (0..6).map(|x| Register(x)).collect();
         Ok(Box::new(LenCommand(sig,regs)))
     }

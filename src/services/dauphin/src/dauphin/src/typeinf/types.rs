@@ -178,26 +178,29 @@ impl MemberType {
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub enum MemberMode {
-    RValue,
-    LValue,
-    FValue
+    In,
+    InOut,
+    Filter,
+    Out
 }
 
 impl MemberMode {
     pub fn deserialize(cbor: &CborValue) -> Result<MemberMode,String> {
-        Ok(match cbor_int(cbor,Some(2))? {
-            0 => MemberMode::RValue,
-            1 => MemberMode::LValue,
-            2 => MemberMode::FValue,
+        Ok(match cbor_int(cbor,Some(3))? {
+            0 => MemberMode::In,
+            1 => MemberMode::InOut,
+            2 => MemberMode::Filter,
+            3 => MemberMode::Out,
             _ => panic!("cbor_int failed")
         })
     }
 
     pub fn serialize(&self) -> CborValue {
         match self {
-            MemberMode::RValue => CborValue::Integer(0),
-            MemberMode::LValue => CborValue::Integer(1),
-            MemberMode::FValue => CborValue::Integer(2)
+            MemberMode::In => CborValue::Integer(0),
+            MemberMode::InOut => CborValue::Integer(1),
+            MemberMode::Filter => CborValue::Integer(2),
+            MemberMode::Out => CborValue::Integer(3),
         }
     }
 }
@@ -238,9 +241,10 @@ impl fmt::Display for MemberDataFlow {
 impl fmt::Display for MemberMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f,"{}",match self {
-            MemberMode::RValue => "R",
-            MemberMode::LValue => "L",
-            MemberMode::FValue => "F"
+            MemberMode::In => "R",
+            MemberMode::InOut => "L",
+            MemberMode::Filter => "F",
+            MemberMode::Out => "Z"
         })
     }
 }

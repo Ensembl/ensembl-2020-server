@@ -125,7 +125,10 @@ pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, defstore: &DefS
             InstructionType::Pause(false) => {},
             _ => {
                 timer += time;
-                line_time = Some(*time);
+                match instr.itype {
+                    InstructionType::LineNumber(_) => {},
+                    _ => { line_time = Some(*time); }
+                }
                 profiler.add(*time);
                 if timer >= 1. {
                     context.add(Instruction::new(InstructionType::Pause(false),vec![]));
@@ -168,6 +171,7 @@ mod test {
     fn pause_check(filename: &str) -> bool {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
+        config.set_opt_seq("pcpmuedpdpa"); /* no r to avoid re-ordering */
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");

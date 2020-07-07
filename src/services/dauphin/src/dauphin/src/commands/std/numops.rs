@@ -310,7 +310,7 @@ impl CommandType for InterpNumModCommandType {
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
         if let InstructionType::Call(_,_,sig,_) = &it.itype {
-            if sig[0].get_mode() == MemberMode::FValue {
+            if sig[0].get_mode() == MemberMode::Filter {
                 Ok(Box::new(InterpNumModCommand(self.0,it.regs[1].clone(),it.regs[2].clone(),Some(it.regs[0].clone()),None)))
             } else {
                 Ok(Box::new(InterpNumModCommand(self.0,it.regs[0].clone(),it.regs[1].clone(),None,None)))

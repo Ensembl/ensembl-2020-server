@@ -92,7 +92,7 @@ impl CommandType for SetSizeHintCommandType {
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
         if let InstructionType::Call(_,_,sig,_) = &it.itype {
-            let offset = if sig[0].get_mode() == MemberMode::FValue { 1 } else { 0 };
+            let offset = if sig[0].get_mode() == MemberMode::Filter { 1 } else { 0 };
             Ok(Box::new(SetSizeHintCommand(hint_reg(&sig[offset],&it.regs,true)?,
                                             sig[offset].all_registers().iter().map(|x| it.regs[*x].clone()).collect(),
                                             it.regs[sig[offset+1].iter().next().unwrap().1.data_pos()])))

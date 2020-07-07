@@ -28,7 +28,8 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                 for (i,reg) in instr.regs.iter().enumerate() {
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
                     flows.push(match modes[i] {
-                        MemberMode::LValue => MemberDataFlow::InOut, // TODO maybe Out: let command decide
+                        MemberMode::InOut => MemberDataFlow::InOut,
+                        MemberMode::Out => MemberDataFlow::Out,
                         _ => MemberDataFlow::In
                     });
                     rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_)?);
@@ -42,7 +43,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                 for (i,reg) in instr.regs.iter().enumerate() {
                     flows.push(if i == 0 { MemberDataFlow::Out } else { MemberDataFlow::In });
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
-                    rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::RValue,&type_)?);
+                    rs.add(ComplexRegisters::new(&context.get_defstore(),MemberMode::In,&type_)?);
                 }
                 context.add(Instruction::new(InstructionType::Call(identifier.clone(),false,rs,flows),instr.regs.to_vec()));
             },

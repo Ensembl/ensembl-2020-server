@@ -71,4 +71,3 @@ pub fn peephole_linenum_remove(context: &mut GenContext) -> Result<(),String> {
     context.phase_finished();
     Ok(())
 }
-

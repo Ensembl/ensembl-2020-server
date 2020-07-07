@@ -305,16 +305,16 @@ impl<'a> CodeGen<'a> {
         for (i,member) in procdecl.get_signature().each_member().enumerate() {
             match member {
                 SignatureMemberConstraint::RValue(_) => {
-                    modes.push(MemberMode::RValue);
+                    modes.push(MemberMode::In);
                     regs.push(self.build_rvalue(&stmt.1[i],None,None)?);
                 },
                 SignatureMemberConstraint::LValue(_,stomp) => {
                     let (lvalue_reg,fvalue_reg,_) = self.build_lvalue(&stmt.1[i],*stomp,true)?;
                     if let Some(fvalue_reg) = fvalue_reg {
-                        modes.push(MemberMode::FValue);
+                        modes.push(MemberMode::Filter);
                         regs.push(fvalue_reg);
                     }
-                    modes.push(MemberMode::LValue);
+                    modes.push(if fvalue_reg.is_none() && *stomp { MemberMode::Out } else { MemberMode::InOut });
                     regs.push(lvalue_reg);
                 }
             }

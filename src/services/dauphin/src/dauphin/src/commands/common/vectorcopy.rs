@@ -27,9 +27,10 @@ pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<I
     let mut flows = vec![];
     for cap in Regex::new(r"([RFL])(\d+)(i?o?)([bys]?)").unwrap().captures_iter(spec) {
         let mode = match cap.get(1).ok_or(())?.as_str() {
-            "R" => MemberMode::RValue,
-            "L" => MemberMode::LValue,
-            "F" => MemberMode::FValue,
+            "R" => MemberMode::In,
+            "L" => MemberMode::InOut,
+            "F" => MemberMode::Filter,
+            "Z" => MemberMode::Out,
             _ => Err(())?
         };
         let base = match cap.get(3).ok_or(())?.as_str() {

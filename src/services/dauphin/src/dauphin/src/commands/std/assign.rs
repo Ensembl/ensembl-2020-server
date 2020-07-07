@@ -69,7 +69,7 @@ impl CommandType for AssignCommandType {
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
         if let InstructionType::Call(_,_,sig,_) = &it.itype {
-            Ok(Box::new(AssignCommand(sig[0].get_mode() != MemberMode::LValue,sig.clone(),it.regs.to_vec())))
+            Ok(Box::new(AssignCommand(sig[0].get_mode() == MemberMode::Filter,sig.clone(),it.regs.to_vec())))
         } else {
             Err("unexpected instruction".to_string())
         }

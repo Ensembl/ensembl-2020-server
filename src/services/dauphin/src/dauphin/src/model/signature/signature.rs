@@ -140,9 +140,9 @@ mod test {
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"boolean")).expect("a");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::In,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::In,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
         assert_eq!(load_cmp("offset-smoke.out"),format_pvec(&regs));
     }
 
@@ -155,7 +155,7 @@ mod test {
         lexer.import("search:codegen/offset-enums").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"offset_enums::stest")).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::In,&make_type(&defstore,"offset_enums::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
@@ -174,7 +174,7 @@ mod test {
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::RValue,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
+        let regs = ComplexRegisters::new(&defstore,MemberMode::In,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");
         let cr2 = ComplexRegisters::deserialize(&named,true,true).expect("cbor d");
@@ -183,7 +183,7 @@ mod test {
         cbor_cmp(&anon,"cbor-signature-unnamed.out");
         let cr2 = ComplexRegisters::deserialize(&anon,false,false).expect("cbor e");
         assert_ne!(cr2,regs);
-        assert_eq!(MemberMode::RValue,cr2.get_mode());
+        assert_eq!(MemberMode::In,cr2.get_mode());
         let vs_in = regs.iter().map(|x| x.1).cloned().collect::<Vec<_>>();
         let vs_out = cr2.iter().map(|x| x.1).cloned().collect::<Vec<_>>();
         assert_eq!(vs_in.len(),vs_out.len());

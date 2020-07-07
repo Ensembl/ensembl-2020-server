@@ -27,6 +27,8 @@ mod peephole;
 mod prune;
 mod compilerun;
 mod simplify;
+mod retreat;
+mod reusedead;
 mod reuseregs;
 mod useearliest;
 

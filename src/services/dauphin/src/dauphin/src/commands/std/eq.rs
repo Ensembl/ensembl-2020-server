@@ -465,7 +465,6 @@ impl CommandType for EqCommandType {
     }
 }
 
-// TODO preimage
 pub struct EqCommand(RegisterSignature,Vec<Register>);
 
 impl EqCommand {
@@ -482,13 +481,13 @@ impl EqCommand {
                 part
             };
             let mut sigs = RegisterSignature::new();
-            let mut cr = ComplexRegisters::new_empty(MemberMode::LValue);
+            let mut cr = ComplexRegisters::new_empty(MemberMode::Out);
             cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
             sigs.add(cr);
-            let mut cr = ComplexRegisters::new_empty(MemberMode::RValue);
+            let mut cr = ComplexRegisters::new_empty(MemberMode::In);
             cr.add(ComplexPath::new_empty(),VectorRegisters::new(vr_a.depth(),vr_a.get_base().clone()),&vec![vr_a.depth()]);
             sigs.add(cr);
-            let mut cr = ComplexRegisters::new_empty(MemberMode::RValue);
+            let mut cr = ComplexRegisters::new_empty(MemberMode::In);
             cr.add(ComplexPath::new_empty(),VectorRegisters::new(vr_b.depth(),vr_b.get_base().clone()),&vec![vr_b.depth()]);
             sigs.add(cr);
             let mut regs = vec![target];
@@ -500,10 +499,10 @@ impl EqCommand {
         }
         if !short {
             let mut sigs = RegisterSignature::new();
-            let mut cr = ComplexRegisters::new_empty(MemberMode::LValue);
+            let mut cr = ComplexRegisters::new_empty(MemberMode::Out);
             cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
             for _ in 0..parts.len() {
-                let mut cr = ComplexRegisters::new_empty(MemberMode::RValue);
+                let mut cr = ComplexRegisters::new_empty(MemberMode::In);
                 cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
             }
             sigs.add(cr);

@@ -408,11 +408,11 @@ impl InstructionType {
                 let members : Vec<_> = signature.each_member().collect();
                 for mode in modes {
                     let constraint = match mode {
-                        MemberMode::RValue | MemberMode::LValue => {
+                        MemberMode::In | MemberMode::InOut | MemberMode::Out => {
                             member_index += 1;
                             members[member_index-1].to_argumentconstraint()
                         },
-                        MemberMode::FValue => ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType))
+                        MemberMode::Filter => ArgumentConstraint::NonReference(ArgumentExpressionConstraint::Base(BaseType::NumberType))
                     };
                     arguments.push(constraint);
                 }

@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use std::fs::write;
 use std::time::{ SystemTime, Duration };
-use super::{ GenContext, Instruction };
+use super::{ GenContext, Instruction, InstructionType };
 use crate::cli::Config;
 use crate::model::DefStore;
 use crate::interp::CompilerLink;
@@ -25,11 +25,13 @@ use crate::resolver::Resolver;
 use crate::parser::Statement;
 use super::dealias::remove_aliases;
 use super::reuseregs::reuse_regs;
+use super::reusedead::reuse_dead;
 use super::useearliest::use_earliest_regs;
 use super::compilerun::compile_run;
 use super::codegen::generate_code;
 use super::assignregs::assign_regs;
 use super::peephole::{ peephole_nil_append, peephole_linenum_remove };
+use super::retreat::retreat;
 use super::prune::prune;
 use super::call::call;
 use super::linearize::linearize;
@@ -47,6 +49,15 @@ struct StepData<'a,'b> {
 struct GenerateStep {
     name: String,
     step: Box<dyn Fn(&mut StepData) -> Result<(),String>>
+}
+
+fn non_line_instructions(context: &GenContext) -> usize {
+    context.get_instructions().iter().filter(|instr| {
+        match instr.itype {
+            InstructionType::Pause(_) => false,
+            _ => true
+        }
+    }).count()
 }
 
 impl GenerateStep {
@@ -67,14 +78,14 @@ impl GenerateStep {
         (self.step)(&mut data)?;
         let duration = start_time.elapsed().unwrap_or(Duration::new(0,0));
         if config.get_verbose() > 1 {
-            print!("step {}: {}. {} lines {:.2}ms\n",index,self.name,context.get_instructions().len(),duration.as_secs_f32()*1000.);
+            print!("step {}: {}. {} lines {:.2}ms\n",index,self.name,non_line_instructions(context),duration.as_secs_f32()*1000.);
         }
         if config.get_verbose() > 2 {
             print!("{:?}\n",context);
         }
         if config.isset_profile() {
             let filename = format!("{}-{}-{}.profile",defstore.get_source(),self.name,index);
-            let text = format!("step {}: {}. {} lines {:.2}ms\n{:?}\n",index,self.name,context.get_instructions().len(),duration.as_secs_f32()*1000.,context);
+            let text = format!("step {}: {}. {} lines {:.2}ms\n{:?}\n",index,self.name,non_line_instructions(context),duration.as_secs_f32()*1000.,context);
             match write(filename,text) {
                 Ok(()) => {},
                 Err(e) => { eprint!("could not write profile file: {}",e) }
@@ -104,8 +115,10 @@ impl GenerateMenu {
         opt_steps.insert("p".to_string(),GenerateStep::new("prune", |step| { prune(step.context); Ok(()) }));
         opt_steps.insert("u".to_string(),GenerateStep::new("reuse-regs", |step| { reuse_regs(step.context) }));
         opt_steps.insert("e".to_string(),GenerateStep::new("use-earliest", |step| { use_earliest_regs(step.context) }));
+        opt_steps.insert("d".to_string(),GenerateStep::new("reuse-dead", |step| { reuse_dead(step.context); Ok(()) }));
         opt_steps.insert("a".to_string(),GenerateStep::new("assign-regs", |step| { assign_regs(step.context); Ok(()) }));
         opt_steps.insert("m".to_string(),GenerateStep::new("peephole", |step| { peephole_nil_append(step.context)?; peephole_linenum_remove(step.context) }));
+        opt_steps.insert("r".to_string(),GenerateStep::new("retreat", |step| { retreat(step.context) }));
         post_steps.push(GenerateStep::new("pauses",|step| { pauses(step.linker,step.resolver,step.defstore,step.context,step.config) }));
         GenerateMenu { gen_steps, opt_steps, post_steps }
     }
@@ -136,7 +149,7 @@ fn calculate_opt_seq(config: &Config) -> Result<&str,String> {
         Ok(match config.get_opt_level() {
             0 => "",
             1 => "p",
-            2|3|4|5|6 => "pcpmuepa",
+            2|3|4|5|6 => "pcpmuedprdpa",
             level => Err(format!("Bad optimisation level {}",level))?
         })
     }
