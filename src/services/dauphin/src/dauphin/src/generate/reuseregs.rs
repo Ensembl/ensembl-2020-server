@@ -223,8 +223,7 @@ mod test {
 
     #[test]
     fn reuse_regs_smoke() {
-        let mut config = xxx_test_config();
-        config.set_opt_seq("pcpdauedpa");
+        let config = xxx_test_config();
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver);

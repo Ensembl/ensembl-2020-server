@@ -96,7 +96,6 @@ mod test {
     use super::super::linearize::linearize;
     use super::super::dealias::remove_aliases;
     use super::super::compilerun::compile_run;
-    use super::super::reusedead::reuse_dead;
     use super::super::prune::prune;
 
     // XXX test pruning, eg fewer lines
@@ -117,7 +116,6 @@ mod test {
         compile_run(&linker,&resolver,&mut context).expect("m");
         prune(&mut context);
         compile_run(&linker,&resolver,&mut context).expect("n");
-        reuse_dead(&mut context);
         assign_regs(&mut context);
         print!("{:?}",context);
         let (_,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");

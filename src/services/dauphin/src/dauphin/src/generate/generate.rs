@@ -29,7 +29,6 @@ use super::compilerun::compile_run;
 use super::codegen::generate_code;
 use super::assignregs::assign_regs;
 use super::prune::prune;
-use super::reusedead::reuse_dead;
 use super::call::call;
 use super::linearize::linearize;
 use super::simplify::simplify;
@@ -81,7 +80,6 @@ impl GenerateMenu {
         gen_steps.push(GenerateStep::new("compile-run", |cl,_,res,gc| { compile_run(cl,res,gc) }));
         opt_steps.insert("c".to_string(),GenerateStep::new("compile-run", |cl,_,res,gc| { compile_run(cl,res,gc) }));
         opt_steps.insert("p".to_string(),GenerateStep::new("prune", |_,_,_,gc| { prune(gc); Ok(()) }));
-        opt_steps.insert("d".to_string(),GenerateStep::new("reuse-dead", |_,_,_,gc| { reuse_dead(gc); Ok(()) }));
         opt_steps.insert("u".to_string(),GenerateStep::new("reuse-regs", |_,_,_,gc| { reuse_regs(gc) }));
         opt_steps.insert("e".to_string(),GenerateStep::new("use-earliest", |_,_,_,gc| { use_earliest_regs(gc) }));
         opt_steps.insert("a".to_string(),GenerateStep::new("assign-regs", |_,_,_,gc| { assign_regs(gc); Ok(()) }));
@@ -115,7 +113,7 @@ fn calculate_opt_seq(config: &Config) -> Result<&str,String> {
         Ok(match config.get_opt_level() {
             0 => "",
             1 => "p",
-            2|3|4|5|6 => "pcpdauedpa",
+            2|3|4|5|6 => "pcpauepa",
             level => Err(format!("Bad optimisation level {}",level))?
         })
     }
