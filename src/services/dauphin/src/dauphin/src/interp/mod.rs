@@ -48,7 +48,7 @@ mod values {
 pub use self::compilelink::CompilerLink;
 pub use self::harness::{  xxx_test_config, find_testdata,stream_strings };
 #[cfg(test)]
-pub use self::harness::{ mini_interp,  mini_interp_run, interpret, comp_interpret, serialize };
+pub use self::harness::{ mini_interp,  mini_interp_run, interpret, comp_interpret };
 pub use self::values::value::{ to_index, InterpValue, InterpNatural, InterpValueNumbers, InterpValueIndexes, numbers_to_indexes };
 pub use self::values::supercow::SuperCow;
 pub use self::values::registers::RegisterFile;

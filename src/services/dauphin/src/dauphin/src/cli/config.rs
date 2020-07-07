@@ -35,7 +35,9 @@ pub struct Config {
     libs: Vec<String>,
     root_dir: Option<String>,
     action: Option<String>,
-    unit_test: Option<bool>
+    unit_test: Option<bool>,
+    source: Vec<String>,
+    output: Option<String>
 }
 
 macro_rules! push {
@@ -129,10 +131,12 @@ impl Config {
             optimise: None,
             opt_seq: None,
             file_search_path: vec![],
+            source: vec![],
             libs: vec![],
             root_dir: None,
             action: None,
-            unit_test: None
+            unit_test: None,
+            output: None
         }
     }
 
@@ -151,4 +155,6 @@ impl Config {
     flag_str!(self,action,set_action,get_action,isset_action,"compile");
     push_str!(self,file_search_path,add_file_search_path,get_file_search_path);
     push_str!(self,libs,add_lib,get_libs);
+    push_str!(self,source,add_source,get_sources);
+    flag_str!(self,output,set_output,get_output,isset_output,"out.dpb");
 }

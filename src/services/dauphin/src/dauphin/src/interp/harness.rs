@@ -21,7 +21,7 @@ use std::rc::Rc;
 use crate::cli::Config;
 use crate::commands::std_stream;
 use crate::generate::Instruction;
-use crate::model::Register;
+use crate::model::{ Register, cbor_serialize };
 use crate::interp::context::InterpContext;
 use crate::interp::{ LibrarySuiteBuilder, make_librarysuite_builder, interpreter, InterpretInstance };
 use crate::interp::{ InterpValue, StreamContents, StreamFactory };
@@ -49,13 +49,6 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
         out.insert(*r,v);
     }
     Ok(out)
-}
-
-pub fn serialize(program: &CborValue) -> Result<Vec<u8>,String> {
-    let mut buffer = Vec::new();
-    serde_cbor::to_writer(&mut buffer,&program).map_err(|x| format!("{} while serialising",x))?;
-    print!("{}\n",hexdump(&buffer));
-    Ok(buffer)
 }
 
 #[cfg(test)]
@@ -114,7 +107,8 @@ pub fn xxx_test_config() -> Config {
 pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {
     cl.add(name,instrs,config)?;
     let program = cl.serialize(config)?;
-    let buffer = serialize(&program)?;
+    let buffer = cbor_serialize(&program)?;
+    print!("{}\n",hexdump(&buffer));
     let suite = make_librarysuite_builder(config)?;
     let program = serde_cbor::from_slice(&buffer).map_err(|x| format!("{} while deserialising",x))?;
     let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;

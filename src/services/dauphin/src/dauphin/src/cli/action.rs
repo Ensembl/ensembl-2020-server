@@ -20,6 +20,11 @@ use std::fs::write;
 use std::process::exit;
 use regex::Regex;
 use crate::interp::{ make_librarysuite_builder, CompilerLink };
+use crate::model::cbor_serialize;
+use crate::lexer::Lexer;
+use crate::parser::{ Parser, ParseError };
+use crate::resolver::common_resolver;
+use crate::generate::generate;
 use super::Config;
 use serde_cbor::Value as CborValue;
 use serde_cbor::to_writer;
@@ -28,7 +33,7 @@ fn bomb<A,E,T>(action: T, x: Result<A,E>) -> A where T: Fn() -> String, E: Displ
     match x {
         Ok(v) => v,
         Err(e) => {
-            eprint!("{} Error {}",action(),e.to_string());
+            eprint!("{} Error {}\n",action(),e.to_string());
             exit(2);
         }
     }
@@ -84,9 +89,62 @@ impl Action for GenerateDynamicData {
     }
 }
 
+fn format_parse_errors(x: &[ParseError]) -> String {
+    x.iter().map(|x| x.message()).collect::<Vec<_>>().join("\n")
+}
+
+struct CompileAction();
+
+impl Action for CompileAction {
+    fn name(&self) -> String { "compile".to_string() }
+    fn execute(&self, config: &Config) {
+        let lib = bomb(|| format!("cannot make library suite"),
+            make_librarysuite_builder(&config)
+        );
+        let mut linker = bomb(|| format!("cannot make linker"),
+            CompilerLink::new(lib)
+        );
+        let resolver = bomb(|| format!("cannot create resolver"),
+            common_resolver(&config,&linker)
+        );
+        for source in config.get_sources() {
+            if config.get_verbose() > 0 {
+                print!("compiling {}\n",source);
+            }
+            let mut lexer = Lexer::new(&resolver);
+            bomb(|| format!("cannot load {}",source),
+                lexer.import(&format!("file:{}",source))
+            );
+            let p = Parser::new(&mut lexer);
+            let (stmts,defstore) = bomb(|| format!("cannot compile {}\n",source),
+                p.parse().map_err(|x| format_parse_errors(&x))
+            );
+            let instrs = bomb(|| format!("cannot generate binary for {}",source),
+                generate(&linker,&stmts,&defstore,&resolver,&config)
+            );
+            let name = if let Some(name) = Regex::new(r".*/(.*?)\.dp").unwrap().captures_iter(source).next() {
+                name.get(1).unwrap().as_str()
+            } else {
+                source
+            };
+            bomb(|| format!("cannot add instructions to binary for {}",source),
+                linker.add(&name,&instrs,config)
+            );
+        }
+        let program = bomb(|| format!("cannot serialize program to CBOR"),
+            linker.serialize(config)
+        );
+        let buffer = bomb(|| format!("cannot serialize CBOR to byes"),
+            cbor_serialize(&program)
+        );
+        write_binary_file(config.get_output(),&buffer);
+    }
+}
+
 pub(super) fn make_actions() -> HashMap<String,Box<dyn Action>> {
     let mut out : Vec<Box<dyn Action>> = vec![];
     out.push(Box::new(VersionAction()));
+    out.push(Box::new(CompileAction()));
     out.push(Box::new(GenerateDynamicData()));
     out.drain(..).map(|a| (a.name(),a)).collect()
 }

@@ -30,6 +30,12 @@ pub enum CborType {
     Bytes
 }
 
+pub fn cbor_serialize(program: &CborValue) -> Result<Vec<u8>,String> {
+    let mut buffer = Vec::new();
+    serde_cbor::to_writer(&mut buffer,&program).map_err(|x| format!("{} while serialising",x))?;
+    Ok(buffer)
+}
+
 pub fn cbor_make_map(keys: &[&str], mut values: Vec<CborValue>) -> Result<CborValue,String> {
     if keys.len() != values.len() {
         return Err("Bad cbor_make_map()".to_string());
