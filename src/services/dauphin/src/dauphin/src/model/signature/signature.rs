@@ -108,7 +108,7 @@ mod test {
         let config = xxx_test_config();
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import(&format!("data:{}",name)).expect("cannot load file");
         parse_type(&mut lexer,defstore).expect("bad type")
     }
@@ -135,7 +135,7 @@ mod test {
         let config = xxx_test_config();
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
@@ -151,7 +151,7 @@ mod test {
         let config = xxx_test_config();
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/offset-enums").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
@@ -169,7 +169,7 @@ mod test {
         let config = xxx_test_config();
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/offset-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");

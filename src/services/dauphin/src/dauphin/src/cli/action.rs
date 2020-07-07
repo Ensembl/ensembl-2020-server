@@ -108,10 +108,15 @@ impl Action for CompileAction {
             common_resolver(&config,&linker)
         );
         for source in config.get_sources() {
+            let name = if let Some(name) = Regex::new(r".*/(.*?)\.dp").unwrap().captures_iter(source).next() {
+                name.get(1).unwrap().as_str()
+            } else {
+                source
+            };
             if config.get_verbose() > 0 {
                 print!("compiling {}\n",source);
             }
-            let mut lexer = Lexer::new(&resolver);
+            let mut lexer = Lexer::new(&resolver,name);
             bomb(|| format!("cannot load {}",source),
                 lexer.import(&format!("file:{}",source))
             );
@@ -122,11 +127,6 @@ impl Action for CompileAction {
             let instrs = bomb(|| format!("cannot generate binary for {}",source),
                 generate(&linker,&stmts,&defstore,&resolver,&config)
             );
-            let name = if let Some(name) = Regex::new(r".*/(.*?)\.dp").unwrap().captures_iter(source).next() {
-                name.get(1).unwrap().as_str()
-            } else {
-                source
-            };
             bomb(|| format!("cannot add instructions to binary for {}",source),
                 linker.add(&name,&instrs,config)
             );

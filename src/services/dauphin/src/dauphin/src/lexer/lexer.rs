@@ -21,6 +21,7 @@ use super::inlinetokens::InlineTokens;
 use super::token::Token;
 
 pub struct Lexer<'a> {
+    source: String,
     empty_set: HashSet<String>,
     resolver: &'a Resolver,
     files: Vec<FileLexer>,
@@ -28,14 +29,17 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(resolver: &'a Resolver) -> Lexer<'a> {
+    pub fn new(resolver: &'a Resolver, source: &str) -> Lexer<'a> {
         Lexer {
+            source: source.to_string(),
             empty_set: HashSet::new(),
             resolver,
             inlines: InlineTokens::new(),
             files: Vec::new()
         }
     }
+
+    pub fn get_source(&self) -> &str { &self.source }
 
     pub fn get_module(&self) -> &str {
         self.files.last().map(|f| f.get_module()).unwrap_or("")
@@ -135,7 +139,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:lexer/smoke2").expect("import failed");
         let mut out = String::new();
         loop {
@@ -160,7 +164,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         assert!(lexer.import("file:missing").err().unwrap().contains("No such file or directory"));
     }
 }

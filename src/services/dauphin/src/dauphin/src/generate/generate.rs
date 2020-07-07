@@ -15,6 +15,7 @@
  */
 
 use std::collections::HashMap;
+use std::fs::write;
 use std::time::{ SystemTime, Duration };
 use super::{ GenContext, Instruction };
 use crate::cli::Config;
@@ -58,6 +59,14 @@ impl GenerateStep {
         }
         if config.get_verbose() > 2 {
             print!("{:?}\n",context);
+        }
+        if config.isset_profile() {
+            let filename = format!("{}-{}-{}.profile",defstore.get_source(),self.name,index);
+            let text = format!("step {}: {}. {} lines {:.2}ms\n{:?}\n",index,self.name,context.get_instructions().len(),duration.as_secs_f32()*1000.,context);
+            match write(filename,text) {
+                Ok(()) => {},
+                Err(e) => { eprint!("could not write profile file: {}",e) }
+            }
         }
         Ok(())
     }

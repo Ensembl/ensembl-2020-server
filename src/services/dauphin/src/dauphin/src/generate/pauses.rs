@@ -71,7 +71,7 @@ mod test {
         config.set_generate_debug(false);
         let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import(&format!("search:codegen/{}",filename)).expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");

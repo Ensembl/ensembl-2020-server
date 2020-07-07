@@ -30,9 +30,10 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(lexer: &'a mut Lexer<'a>) -> Parser<'a> {
+        let source = lexer.get_source().to_string();
         let p = Parser {
             lexer,
-            defstore: DefStore::new(),
+            defstore: DefStore::new(&source),
             stmts: Vec::new(),
             errors: Vec::new()
         };
@@ -123,7 +124,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("data: import \"x\";").ok();
         let mut p = Parser::new(&mut lexer);
 
@@ -135,7 +136,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("data: import \"data: $;\";").ok();
         let p = Parser::new(&mut lexer);
         let err = p.parse().err().unwrap();
@@ -147,7 +148,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("A");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:import-search").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let txt = "Reserved keyword 'reserved' found at line 1 column 1 in file:../import-smoke4.dp";
@@ -159,7 +160,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/import-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let txt = "Reserved keyword 'reserved' found at line 1 column 1 in file:../import-smoke4.dp";
@@ -171,7 +172,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/parser-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,_defstore) = p.parse().expect("error");
@@ -186,7 +187,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/parser-nonest").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let txt = "$ encountered outside filter at line 5 column 1 in search:parser/parser-nonest";
@@ -198,7 +199,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/id-clash").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let txt = "duplicate identifier: id_clash::assign at line 2 column 29 in search:parser/id-clash";
@@ -218,7 +219,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/struct-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
@@ -237,7 +238,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/enum-smoke").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
@@ -252,7 +253,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/short").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,_) = p.parse().expect("error");
@@ -266,7 +267,7 @@ mod test {
         let config = xxx_test_config();
         let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/macro").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,_defstore) = p.parse().expect("error");

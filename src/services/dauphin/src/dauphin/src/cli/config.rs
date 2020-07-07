@@ -37,7 +37,8 @@ pub struct Config {
     action: Option<String>,
     unit_test: Option<bool>,
     source: Vec<String>,
-    output: Option<String>
+    output: Option<String>,
+    profile: Option<bool>
 }
 
 macro_rules! push {
@@ -136,7 +137,8 @@ impl Config {
             root_dir: None,
             action: None,
             unit_test: None,
-            output: None
+            output: None,
+            profile: None
         }
     }
 
@@ -157,4 +159,5 @@ impl Config {
     push_str!(self,libs,add_lib,get_libs);
     push_str!(self,source,add_source,get_sources);
     flag_str!(self,output,set_output,get_output,isset_output,"out.dpb");
+    flag!(self,profile,set_profile,get_profile,isset_profile,bool,false);
 }

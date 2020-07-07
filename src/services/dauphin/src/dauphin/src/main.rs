@@ -57,7 +57,7 @@ fn main() {
     let config = xxx_test_config();
     let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
     let resolver = common_resolver(&config,&linker).expect("setting up path resolver");
-    let mut lexer = Lexer::new(&resolver);
+    let mut lexer = Lexer::new(&resolver,"");
     lexer.import("search:parser/parser-smoke.dp").expect("cannot load file");
     let p = Parser::new(&mut lexer);
     let (stmts,defstore) = p.parse().map_err(|e| e[0].message().to_string()).expect("error");

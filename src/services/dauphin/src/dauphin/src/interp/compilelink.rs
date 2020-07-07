@@ -136,7 +136,7 @@ mod test {
     use crate::interp::interplink::InterpreterLink;
 
     fn make_program(linker: &mut CompilerLink, resolver: &Resolver, config: &Config, name: &str, path: &str) -> Result<(),String> {
-        let mut lexer = Lexer::new(&resolver);
+        let mut lexer = Lexer::new(&resolver,"");
         lexer.import(path).expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");

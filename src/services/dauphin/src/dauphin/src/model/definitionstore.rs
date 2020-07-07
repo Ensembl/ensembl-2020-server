@@ -35,6 +35,7 @@ pub enum IdentifierValue {
 
 #[derive(Debug)]
 pub struct DefStore {
+    source: String,
     identifiers: IdentifierStore<IdentifierValue>,
     inlines_binary: HashMap<String,Inline>,
     inlines_unary: HashMap<String,Inline>,
@@ -67,14 +68,17 @@ macro_rules! accessor {
     };
 }
 impl DefStore {
-    pub fn new() -> DefStore {
+    pub fn new(source: &str) -> DefStore {
         DefStore {
+            source: source.to_string(),
             identifiers: IdentifierStore::new(),
             inlines_binary: HashMap::new(),
             inlines_unary: HashMap::new(),
             structenum_order: Vec::new()
         }
     }
+
+    pub fn get_source(&self) -> &str { &self.source }
 
     fn detect_clash(&mut self, identifier: &Identifier, lexer: &Lexer) -> Result<(),ParseError> {
         if self.identifiers.contains_key(identifier) {
