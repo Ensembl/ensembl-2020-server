@@ -52,6 +52,7 @@ impl CompilerLink {
         self.payloads.insert((set.to_string(),name.to_string()),Rc::new(Box::new(pf)));
     }
 
+    pub fn get_suite(&self) -> &Rc<CommandCompileSuite> { &self.cs }
     pub fn get_headers(&self) -> &HashMap<String,String> { &self.headers }
 
     pub fn compile_instruction(&self, instr: &Instruction, compile_side: bool) -> Result<(u32,CommandSchema,Box<dyn Command>),String> {

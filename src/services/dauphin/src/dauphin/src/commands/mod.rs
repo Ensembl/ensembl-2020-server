@@ -44,6 +44,7 @@ mod buildtime {
     pub(super) mod ini;
     pub(super) mod dump;
     pub(super) mod defines;
+    pub(super) mod versions;
     pub(super) mod hints;
 }
 

@@ -57,6 +57,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     pub fn context_mut(&mut self) -> &mut InterpContext { &mut self.context }
     pub fn resolver(&self) -> &Resolver { &self.resolver }
     pub fn config(&self) -> &Config { &self.config }
+    pub fn linker(&self) -> &CompilerLink { &self.compiler_link }
 
     pub fn new_register(&self) -> Register { self.regalloc.allocate() }
 

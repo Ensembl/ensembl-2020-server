@@ -52,6 +52,13 @@ impl ComplexPath {
         }
     }
 
+    pub fn get_name(&self) -> Option<&[String]> {
+        match &self.path {
+            ComplexPathName::Named(v) => Some(v),
+            ComplexPathName::Anon(_) => None
+        }
+    }
+
     fn anon_pathname() -> ComplexPathName {
         let mut next = NEXT_ANON.lock().unwrap();
         *next += 1;

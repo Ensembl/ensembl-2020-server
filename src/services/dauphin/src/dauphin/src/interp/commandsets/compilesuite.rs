@@ -43,6 +43,10 @@ impl CommandCompileSuite {
         self.sets.push((set,offset));
     }
 
+    pub fn get_set_ids(&self) -> Vec<CommandSetId> {
+        self.sets.iter().map(|x| x.0.id().clone()).collect()
+    }
+
     pub(super) fn add_member(&mut self, trigger: CommandTrigger, member: &CommandSuiteMember, compile_only: bool) {
         self.mapping.insert(trigger.clone(),member.clone());
         if compile_only {
