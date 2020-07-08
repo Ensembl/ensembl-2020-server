@@ -20,6 +20,7 @@ use crate::resolver::Resolver;
 use crate::model::{ Register, RegisterAllocator, DFloat };
 use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
+use crate::cli::Config;
 
 pub struct PreImageContext<'a,'b> {
     resolver: &'a Resolver,
@@ -28,11 +29,12 @@ pub struct PreImageContext<'a,'b> {
     valid_registers: HashSet<Register>,
     context: InterpContext,
     gen_context: &'a mut GenContext<'b>,
-    regalloc: RegisterAllocator
+    regalloc: RegisterAllocator,
+    config: Config
 }
 
 impl<'a,'b> PreImageContext<'a,'b> {
-    pub fn new(compiler_link: &CompilerLink, resolver: &'a Resolver, gen_context: &'a mut GenContext<'b>) -> Result<PreImageContext<'a,'b>,String> {
+    pub fn new(compiler_link: &CompilerLink, resolver: &'a Resolver, gen_context: &'a mut GenContext<'b>, config: &Config) -> Result<PreImageContext<'a,'b>,String> {
         let mut max_reg = 0;
         for instr in gen_context.get_instructions() {
             for reg in &instr.regs {
@@ -46,13 +48,15 @@ impl<'a,'b> PreImageContext<'a,'b> {
             valid_registers: HashSet::new(),
             context: compiler_link.new_context(),
             gen_context,
-            regalloc: RegisterAllocator::new(max_reg+1)
+            regalloc: RegisterAllocator::new(max_reg+1),
+            config: config.clone()
         })
     }
 
     pub fn context(&self) -> &InterpContext { &self.context }
     pub fn context_mut(&mut self) -> &mut InterpContext { &mut self.context }
     pub fn resolver(&self) -> &Resolver { &self.resolver }
+    pub fn config(&self) -> &Config { &self.config }
 
     pub fn new_register(&self) -> Register { self.regalloc.allocate() }
 
@@ -212,8 +216,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 }
 
-pub fn compile_run(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut GenContext) -> Result<(),String> {
-    let mut pic = PreImageContext::new(compiler_link,resolver,context)?;
+pub fn compile_run(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut GenContext, config: &Config) -> Result<(),String> {
+    let mut pic = PreImageContext::new(compiler_link,resolver,context,config)?;
     pic.preimage()?;
     Ok(())
 }
@@ -248,7 +252,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        compile_run(&linker,&resolver,&mut context).expect("x");
+        compile_run(&linker,&resolver,&mut context,&config).expect("x");
         prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);
@@ -278,7 +282,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        compile_run(&linker,&resolver,&mut context).expect("x");
+        compile_run(&linker,&resolver,&mut context,&config).expect("x");
         prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);

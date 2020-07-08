@@ -30,7 +30,6 @@ mod core {
     pub(super) mod core;
 }
 
- // XXX unexport
 mod std {
     pub(super) mod assign;
     pub(super) mod extend;
@@ -44,6 +43,7 @@ mod buildtime {
     pub(super) mod buildtime;
     pub(super) mod ini;
     pub(super) mod dump;
+    pub(super) mod defines;
     pub(super) mod hints;
 }
 

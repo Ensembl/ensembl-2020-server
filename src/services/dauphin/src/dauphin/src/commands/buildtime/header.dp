@@ -3,5 +3,7 @@ module "buildtime";
 func load_ini(string,string,string) becomes string;
 func dump_sig(_) becomes string;
 func get_size_hint(_) becomes number;
+func is_defined(_) becomes boolean;
+func get_define(_) becomes string;
 proc set_size_hint(mask _,number);
 proc force_pause();

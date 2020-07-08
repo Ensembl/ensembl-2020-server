@@ -82,6 +82,15 @@ pub fn config_from_options() -> Config {
         ConfigOption::new("source","source",Some("c"),Some("SOURCE-FILE"),true,|config,v| { config.add_source(v) }),
         ConfigOption::new("output","output",Some("o"),Some("BINARY-FILE"),false,|config,v| { config.set_output(v) }),
         ConfigOption::new("profile","profile",Some("p"),None,false,|config,_| { config.set_profile(true) }),
+        ConfigOption::new("define","define",Some("D"),Some("KEY=VALUE"),true,|config,v| { 
+            let (k,v) = if let Some(eq_pos) = v.chars().position(|x| x== '=') {
+                let (k,v) = v.split_at(eq_pos);
+                (k,&v[1..])
+            } else {
+                (v,"")
+            };
+            config.add_define((k.to_string(),v.to_string()));
+         }),
     ];
     let actions = make_actions();
     for (action,_) in actions.iter() {

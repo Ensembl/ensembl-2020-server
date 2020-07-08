@@ -38,7 +38,8 @@ pub struct Config {
     unit_test: Option<bool>,
     source: Vec<String>,
     output: Option<String>,
-    profile: Option<bool>
+    profile: Option<bool>,
+    define: Vec<(String,String)>
 }
 
 macro_rules! push {
@@ -138,7 +139,8 @@ impl Config {
             action: None,
             unit_test: None,
             output: None,
-            profile: None
+            profile: None,
+            define: vec![]
         }
     }
 
@@ -167,4 +169,5 @@ impl Config {
     push_str!(self,source,add_source,get_sources);
     flag_str!(self,output,set_output,get_output,isset_output,"out.dpb");
     flag!(self,profile,set_profile,get_profile,isset_profile,bool,false);
+    push!(self,define,add_define,get_defines,(String,String));
 }
