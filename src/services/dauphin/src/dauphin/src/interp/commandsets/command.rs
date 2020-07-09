@@ -72,6 +72,11 @@ pub struct CommandSchema {
     pub trigger: CommandTrigger
 }
 
+pub trait CommandDeserializer {
+    fn opcodes(&self) -> Result<Vec<u32>,String>;
+    fn deserialize(&self, opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String>;
+}
+
 pub trait CommandType {
     fn get_schema(&self) -> CommandSchema;
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String>;

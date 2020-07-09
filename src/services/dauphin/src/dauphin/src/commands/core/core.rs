@@ -16,7 +16,7 @@
 
 use std::rc::Rc;
 use crate::interp::InterpValue;
-use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext, PreImageOutcome, InterpCommand };
+use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext, PreImageOutcome, InterpCommand, CommandDeserializer };
 use crate::model::{ Register, cbor_make_map, cbor_map };
 use serde_cbor::Value as CborValue;
 use crate::commands::common::polymorphic::arbitrate_type;
@@ -33,6 +33,15 @@ impl TimeTrialCommandType for NilTimeTrial {
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(NilCommand(Register(0),1.)))
+    }
+}
+
+pub struct NilDeserializer();
+
+impl CommandDeserializer for NilDeserializer {
+    fn opcodes(&self) -> Result<Vec<u32>,String> { Ok(vec![5]) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NilInterpCommand(Register::deserialize(value[0])?)))
     }
 }
 
