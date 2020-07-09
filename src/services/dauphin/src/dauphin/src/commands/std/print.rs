@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+use std::rc::Rc;
 use crate::interp::InterpNatural;
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, ComplexRegisters };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, RegisterFile };
@@ -26,6 +27,8 @@ use super::vector::library_vector_commands;
 use crate::cli::Config;
 use crate::typeinf::{ MemberMode, BaseType };
 use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
+use super::super::common::vectorsource::{ RegisterVectorSource };
+use super::super::common::sharedvec::SharedVec;
 use crate::commands::{ to_xstructure, XStructure };
 
 // XXX dedup
@@ -59,11 +62,8 @@ impl CommandType for PrintCommandType {
     }
 }
 
-fn print_simple(file: &RegisterFile, vr: &VectorRegisters, regs: &[Register], path: &[usize], first: usize) -> Result<String,String> {
-    let (reg,offset) = vr_lookup_data(file,regs,vr,path,first)?;
-    let data = file.get(&reg);
-    let data = data.borrow();
-    let data = data.get_shared()?;
+fn print_simple(sv: &SharedVec, path: &[usize], first: usize) -> Result<String,String> {
+    let (data,offset) = vr_lookup_data(sv,path,first)?;
     Ok(match data.get_natural() {
         InterpNatural::Empty => "".to_string(),
         InterpNatural::Indexes => format!("{}",data.to_rc_indexes()?.0[offset]),
@@ -74,48 +74,30 @@ fn print_simple(file: &RegisterFile, vr: &VectorRegisters, regs: &[Register], pa
     })
 }
 
-fn any_vr(xs: &XStructure) -> &VectorRegisters {
-    match xs {
-        XStructure::Vector(inner) => any_vr(inner),
-        XStructure::Struct(_,kvs) => any_vr(kvs.iter().next().unwrap().1),
-        XStructure::Enum(_,_,kvs,_) => any_vr(kvs.iter().next().unwrap().1),
-        XStructure::Simple(vr) => vr
-    }
-}
-
-fn vr_lookup_data(file: &RegisterFile, regs: &[Register], vr: &VectorRegisters, path: &[usize], first: usize) -> Result<(Register,usize),String> {
+fn vr_lookup_data(sv: &SharedVec, path: &[usize], first: usize) -> Result<(Rc<InterpValue>,usize),String> {
     let mut position = first;
     for (i,index) in path.iter().enumerate() {
-        let offset_reg = &regs[vr.offset_pos(vr.depth()-1-i)?];
-        let offset_val = file.get_indexes(offset_reg)?;
+        let offset_val = sv.get_offset(sv.depth()-1-i)?;
         position = offset_val[position] + index;
     }
-    Ok((regs[vr.data_pos()].clone(),position))
+    Ok((sv.get_data().clone(),position))
 }
 
-fn vr_lookup_len(file: &RegisterFile, regs: &[Register], vr: &VectorRegisters, path: &[usize], first: usize) -> Result<usize,String> {
+fn vr_lookup_len(sv: &SharedVec, path: &[usize], first: usize) -> Result<usize,String> {
     let mut position = first;
     for (i,index) in path.iter().enumerate() {
-        let offset_reg = &regs[vr.offset_pos(vr.depth()-1-i)?];
-        let offset_val = file.get_indexes(offset_reg)?;
+        let offset_val = sv.get_offset(sv.depth()-1-i)?;
         position = offset_val[position] + index;
     }
-    let len_reg = &regs[vr.length_pos(vr.depth()-1-path.len())?];
-    let len_val = file.get_indexes(len_reg)?;
+    let len_val = sv.get_length(sv.depth()-1-path.len())?;
     Ok(len_val[position])
 }
 
-// TODO
-/*
-* multival print
-* sharedvec etc
-* types
-*/
-fn print(file: &RegisterFile, xs: &XStructure, regs: &[Register], path: &[usize], first: usize) -> Result<String,String> {
+fn print(file: &RegisterFile, xs: &XStructure<SharedVec>, regs: &[Register], path: &[usize], first: usize) -> Result<String,String> {
     Ok(match xs {
         XStructure::Vector(xs_inner) => {
-            let vr = any_vr(xs);
-            let len = vr_lookup_len(file,regs,vr,path,first)?;
+            let sv = xs.any();
+            let len = vr_lookup_len(&sv,path,first)?;
             let mut out = vec![];
             for i in 0..len {
                 let mut new_path = path.to_vec();
@@ -127,19 +109,19 @@ fn print(file: &RegisterFile, xs: &XStructure, regs: &[Register], path: &[usize]
         XStructure::Struct(id,kvs) => {
             let mut subs : Vec<String> = kvs.keys().cloned().collect();
             subs.sort();
-            let kvs : Vec<(String,XStructure)> = subs.drain(..).map(|k| (k.clone(),kvs.get(&k).unwrap().clone())).collect();
+            let kvs : Vec<(String,_)> = subs.drain(..).map(|k| (k.clone(),kvs.get(&k).unwrap().clone())).collect();
             let out = kvs.iter().map(|(name,xs_inner)| 
                 Ok(format!("{}: {}",name,print(file,xs_inner,regs,path,first)?))
             ).collect::<Result<Vec<_>,String>>()?;
             format!("{} {{ {} }}",id.to_string(),out.join(", "))
         },
         XStructure::Enum(id,order,kvs,disc) => {
-            let (disc_reg,offset) = vr_lookup_data(file,regs,disc,path,first)?;
-            let disc_val = file.get_indexes(&disc_reg)?[offset];
+            let (data,offset) = vr_lookup_data(&disc.borrow(),path,first)?;
+            let disc_val = data.to_rc_indexes()?.0[offset];
             let inner_xs = kvs.get(&order[disc_val]).ok_or_else(|| format!("bad enum"))?;
             format!("{}:{} {}",id,order[disc_val],print(file,inner_xs,regs,path,first)?)
         },
-        XStructure::Simple(vr) => print_simple(file,vr,regs,path,first)?,
+        XStructure::Simple(sv) => print_simple(&sv.borrow(),path,first)?,
     })
 }
 
@@ -148,13 +130,14 @@ pub struct PrintCommand(Vec<Register>,RegisterSignature);
 impl Command for PrintCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let xs = to_xstructure(&self.1[0])?;
-        let vr = any_vr(&xs);
-        let pos_reg = if vr.depth() > 0 { vr.offset_pos(vr.depth()-1)? } else { vr.data_pos() };
+        let vs = RegisterVectorSource::new(&self.0);
+        let xs2 = xs.derive(&mut (|vr: &VectorRegisters| SharedVec::new(context,&vs,vr)))?;
+        let sv = xs2.any();
+        let num = if sv.depth() > 0 { sv.get_offset(sv.depth()-1)?.len() } else { sv.get_data().len() };
         let registers = context.registers();
-        let num = registers.len(&self.0[pos_reg])?;
         let mut out = vec![];
         for i in 0..num {
-            out.push(print(&registers,&xs,&self.0,&vec![],i)?);
+            out.push(print(&registers,&xs2,&self.0,&vec![],i)?);
         }
         for s in &out {
             std_stream(context)?.add(StreamContents::String(s.to_string()));
