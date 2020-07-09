@@ -14,7 +14,8 @@
  *  limitations under the License.
  */
 
-use crate::interp::InterpNatural;
+use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
+use crate::interp::{ InterpNatural, InterpCommand };
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, ComplexRegisters };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
@@ -92,9 +93,9 @@ impl CommandType for LenCommandType {
     }
 }
 
-pub struct LenCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
+pub struct LenInterpCommand(RegisterSignature,Vec<Register>);
 
-impl Command for LenCommand {
+impl InterpCommand for LenInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         if let Some((_,ass)) = &self.0[1].iter().next() {
@@ -104,6 +105,14 @@ impl Command for LenCommand {
         } else {
             Err("len on non-list".to_string())
         }
+    }
+}
+
+pub struct LenCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
+
+impl Command for LenCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(LenInterpCommand(self.0.clone(),self.1.clone())))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -115,7 +124,7 @@ impl Command for LenCommand {
             let reg = ass.length_pos(ass.depth()-1)?;
             if context.is_reg_valid(&self.1[reg]) && !context.is_last() {
                 /* can execute now */
-                self.execute(context.context_mut())?;
+                self.to_interp_command()?.execute(context.context_mut())?;
                 return Ok(PreImageOutcome::Constant(vec![self.1[0]]));
             } else {
                 /* replace */
@@ -152,9 +161,9 @@ impl CommandType for AssertCommandType {
     }
 }
 
-pub struct AssertCommand(pub(crate) Register, pub(crate) Register);
+pub struct AssertInterpCommand(Register,Register);
 
-impl Command for AssertCommand {
+impl InterpCommand for AssertInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let a = &registers.get_boolean(&self.0)?;
@@ -165,6 +174,14 @@ impl Command for AssertCommand {
             }
         }
         Ok(())
+    }
+}
+
+pub struct AssertCommand(Register,Register);
+
+impl Command for AssertCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(AssertInterpCommand(self.0,self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -212,8 +229,8 @@ impl CommandType for AlienateCommandType {
 pub struct AlienateCommand(pub(crate) Vec<Register>);
 
 impl Command for AlienateCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Ok(())
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NoopInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

@@ -43,7 +43,7 @@ impl<'a> StandardInterpretInstance<'a> {
     fn more_internal(&mut self) -> Result<bool,String> {
         let context = self.context.as_mut().unwrap();
         while let Some(command) = self.commands.next() {
-            command.execute(context)?;
+            command.to_interp_command()?.execute(context)?;
             context.registers_mut().commit();
             if context.test_pause() {
                 return Ok(true);
@@ -97,7 +97,7 @@ impl<'a> DebugInterpretInstance<'a> {
             let (instr,regs) = &self.instrs[idx];
             print!("{}",context.registers_mut().dump_many(&regs)?);
             print!("{}",instr);
-            command.execute(context)?;
+            command.to_interp_command()?.execute(context)?;
             context.registers_mut().commit();
             print!("{}",context.registers_mut().dump_many(&regs)?);
             if context.test_pause() {

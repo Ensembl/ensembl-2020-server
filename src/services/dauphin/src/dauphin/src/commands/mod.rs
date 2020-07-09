@@ -18,6 +18,7 @@
 mod common {
     #[macro_use]
     pub(super) mod polymorphic;
+    pub(super) mod templates;
     pub(super) mod sharedvec;
     pub(super) mod vectorcopy;
     pub(super) mod vectorsource;
@@ -58,3 +59,4 @@ pub use self::core::core::make_core;
 pub use self::std::library::{ make_library, std_stream };
 pub use self::buildtime::buildtime::make_buildtime;
 pub use self::common::expandedsig::{ XStructure, to_xstructure };
+pub use self::common::templates::{ ErrorInterpCommand };

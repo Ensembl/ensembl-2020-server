@@ -14,9 +14,10 @@
  *  limitations under the License.
  */
 
+use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
 use std::collections::HashMap;
 use crate::model::{ Register, Identifier };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, InterpCommand };
 use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
 use crate::interp::InterpValue;
@@ -66,8 +67,8 @@ impl CommandType for VersionCommandType {
 pub struct VersionCommand(Register,Register,Register);
 
 impl Command for VersionCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Err(format!("buildtime::version can only be executed at compile time"))
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(ErrorInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

@@ -14,8 +14,9 @@
  *  limitations under the License.
  */
 
+use crate::commands::common::templates::ErrorInterpCommand;
 use crate::model::{ Register, Identifier };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, InterpCommand };
 use crate::generate::Instruction;
 use serde_cbor::Value as CborValue;
 use crate::interp::InterpValue;
@@ -64,8 +65,8 @@ fn load_inis(resolver: &Resolver, filenames: &[String], sections: &[String], key
 }
 
 impl Command for LoadIniCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Err(format!("buildtime::load_ini can only be executed at compile time"))
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(ErrorInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

@@ -14,9 +14,10 @@
  *  limitations under the License.
  */
 
+use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
 use std::collections::HashSet;
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, ComplexRegisters };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, InterpCommand };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use crate::typeinf::MemberMode;
 use serde_cbor::Value as CborValue;
@@ -62,8 +63,8 @@ impl CommandType for GetSizeHintCommandType {
 pub struct GetSizeHintCommand(Register,Vec<Register>);
 
 impl Command for GetSizeHintCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Err(format!("cannot execute size hints"))
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(ErrorInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -109,8 +110,8 @@ impl CommandType for SetSizeHintCommandType {
 pub struct SetSizeHintCommand(HashSet<Register>,Vec<Register>,Register);
 
 impl Command for SetSizeHintCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Ok(())
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NoopInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -165,8 +166,8 @@ impl CommandType for ForcePauseCommandType {
 pub struct ForcePauseCommand();
 
 impl Command for ForcePauseCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Ok(())
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NoopInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

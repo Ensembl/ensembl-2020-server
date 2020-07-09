@@ -15,7 +15,7 @@
  */
 
 use crate::model::{ Register, RegisterSignature, cbor_make_map };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpValue };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpValue, InterpCommand };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool, cbor_map };
@@ -81,6 +81,22 @@ impl CommandType for VectorCopyShallowType {
     }
 }
 
+pub struct VectorCopyShallowInterpCommand(Register,Register,Register);
+
+impl InterpCommand for VectorCopyShallowInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let registers = context.registers_mut();
+        let rightval = registers.get(&self.1);
+        let rightval = rightval.borrow_mut().get_shared()?;
+        let filter = registers.get_indexes(&self.2)?;
+        let leftval = registers.get(&self.0);
+        let leftval = leftval.borrow_mut().get_exclusive()?;
+        let leftval = vector_update_poly(leftval,&rightval,&filter)?;
+        registers.write(&self.0,leftval);
+        Ok(())    
+    }
+}
+
 pub struct VectorCopyShallow(Register,Register,Register,Option<TimeTrial>);
 
 impl VectorCopyShallow {
@@ -100,16 +116,8 @@ impl VectorCopyShallow {
 }
 
 impl Command for VectorCopyShallow {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers_mut();
-        let rightval = registers.get(&self.1);
-        let rightval = rightval.borrow_mut().get_shared()?;
-        let filter = registers.get_indexes(&self.2)?;
-        let leftval = registers.get(&self.0);
-        let leftval = leftval.borrow_mut().get_exclusive()?;
-        let leftval = vector_update_poly(leftval,&rightval,&filter)?;
-        registers.write(&self.0,leftval);
-        Ok(())    
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(VectorCopyShallowInterpCommand(self.0,self.1,self.2)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -191,7 +199,23 @@ impl CommandType for VectorAppendType {
     }
 }
 
-pub struct VectorAppend(pub Register,pub Register,pub Register,pub Option<TimeTrial>);
+pub struct VectorAppendInterpCommand(Register,Register,Register);
+
+impl InterpCommand for VectorAppendInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let registers = context.registers_mut();
+        let rightval = registers.get(&self.1);
+        let rightval = rightval.borrow_mut().get_shared()?;
+        let filter = registers.len(&self.2)?;
+        let leftval = registers.get(&self.0);
+        let leftval = leftval.borrow_mut().get_exclusive()?;
+        let leftdata = append_data(leftval,&rightval,filter)?.0;
+        registers.write(&self.0,leftdata);
+        Ok(())    
+    }
+}
+
+pub struct VectorAppend(Register,Register,Register,Option<TimeTrial>);
 
 impl VectorAppend {
     fn size(&self, context: &PreImageContext) -> Result<Option<usize>,String> {
@@ -215,16 +239,8 @@ impl VectorAppend {
 }
 
 impl Command for VectorAppend {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers_mut();
-        let rightval = registers.get(&self.1);
-        let rightval = rightval.borrow_mut().get_shared()?;
-        let filter = registers.len(&self.2)?;
-        let leftval = registers.get(&self.0);
-        let leftval = leftval.borrow_mut().get_exclusive()?;
-        let leftdata = append_data(leftval,&rightval,filter)?.0;
-        registers.write(&self.0,leftdata);
-        Ok(())    
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(VectorAppendInterpCommand(self.0,self.1,self.2)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -313,30 +329,9 @@ impl CommandType for VectorAppendIndexesType {
     }
 }
 
-pub struct VectorAppendIndexes(Register,Register,Register,Register,Register,Option<TimeTrial>);
+pub struct VectorAppendIndexesInterpCommand(Register,Register,Register,Register,Register);
 
-impl VectorAppendIndexes {
-    fn size(&self, context: &PreImageContext) -> Result<Option<usize>,String> {
-        let orig = if let Some(size) = context.get_reg_size(&self.0) {
-            size
-        } else {
-            return Ok(None)
-        };
-        let unit = if let Some(size) = context.get_reg_size(&self.1) {
-            size
-        } else {
-            return Ok(None)
-        };
-        let copies = if let Some(size) = context.get_reg_size(&self.4) {
-            size
-        } else {
-            return Ok(None)
-        };
-        Ok(Some(orig+unit*copies))
-    }
-}
-
-impl Command for VectorAppendIndexes {
+impl InterpCommand for VectorAppendIndexesInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let copies = registers.len(&self.4)?;
@@ -361,7 +356,36 @@ impl Command for VectorAppendIndexes {
             }
         }
         registers.write(&self.0,InterpValue::Indexes(leftval));
-        Ok(())    
+        Ok(())
+    }
+}
+
+pub struct VectorAppendIndexes(Register,Register,Register,Register,Register,Option<TimeTrial>);
+
+impl VectorAppendIndexes {
+    fn size(&self, context: &PreImageContext) -> Result<Option<usize>,String> {
+        let orig = if let Some(size) = context.get_reg_size(&self.0) {
+            size
+        } else {
+            return Ok(None)
+        };
+        let unit = if let Some(size) = context.get_reg_size(&self.1) {
+            size
+        } else {
+            return Ok(None)
+        };
+        let copies = if let Some(size) = context.get_reg_size(&self.4) {
+            size
+        } else {
+            return Ok(None)
+        };
+        Ok(Some(orig+unit*copies))
+    }
+}
+
+impl Command for VectorAppendIndexes {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(VectorAppendIndexesInterpCommand(self.0,self.1,self.2,self.3,self.4)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -450,6 +474,33 @@ impl CommandType for VectorUpdateIndexesType {
     }
 }
 
+pub struct VectorUpdateIndexesInterpCommand(Register,Register,Register,Register,Register);
+
+impl InterpCommand for VectorUpdateIndexesInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let registers = context.registers_mut();
+        let rightval = registers.get_indexes(&self.1)?;
+        let filter = registers.get_indexes(&self.2)?;
+        let start = registers.get_indexes(&self.3)?[0];
+        let stride = registers.get_indexes(&self.4)?[0];
+        let mut leftval = registers.take_indexes(&self.0)?;
+        let mut src_it = rightval.iter().cycle();
+        if start == 0 && stride == 0 {
+            for filter_pos in filter.iter() {
+                leftval[*filter_pos] = *src_it.next().unwrap();
+            }        
+        } else {
+            let mut offset = start;
+            for filter_pos in filter.iter() {
+                leftval[*filter_pos] = *src_it.next().unwrap() + offset;
+                offset += stride;
+            }
+        }
+        registers.write(&self.0,InterpValue::Indexes(leftval));
+        Ok(())    
+    }
+}
+
 pub struct VectorUpdateIndexes(Register,Register,Register,Register,Register,Option<TimeTrial>);
 
 impl VectorUpdateIndexes {
@@ -475,27 +526,8 @@ impl VectorUpdateIndexes {
 }
 
 impl Command for VectorUpdateIndexes {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers_mut();
-        let rightval = registers.get_indexes(&self.1)?;
-        let filter = registers.get_indexes(&self.2)?;
-        let start = registers.get_indexes(&self.3)?[0];
-        let stride = registers.get_indexes(&self.4)?[0];
-        let mut leftval = registers.take_indexes(&self.0)?;
-        let mut src_it = rightval.iter().cycle();
-        if start == 0 && stride == 0 {
-            for filter_pos in filter.iter() {
-                leftval[*filter_pos] = *src_it.next().unwrap();
-            }        
-        } else {
-            let mut offset = start;
-            for filter_pos in filter.iter() {
-                leftval[*filter_pos] = *src_it.next().unwrap() + offset;
-                offset += stride;
-            }
-        }
-        registers.write(&self.0,InterpValue::Indexes(leftval));
-        Ok(())    
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(VectorUpdateIndexesInterpCommand(self.0,self.1,self.2,self.3,self.4)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

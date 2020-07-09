@@ -14,8 +14,9 @@
  *  limitations under the License.
  */
 
+use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
 use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand };
 use crate::generate::{ Instruction, InstructionType, PreImageContext, InstructionSuperType };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool, cbor_map };
@@ -90,8 +91,8 @@ impl CommandType for ExtendCommandType {
 pub struct ExtendCommand(RegisterSignature,Vec<Register>,Option<TimeTrial>);
 
 impl Command for ExtendCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        Err(format!("compile-side command"))
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(ErrorInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

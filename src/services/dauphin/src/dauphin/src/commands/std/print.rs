@@ -17,7 +17,7 @@
 use std::rc::Rc;
 use crate::interp::InterpNatural;
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, ComplexRegisters };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, RegisterFile };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, RegisterFile, InterpCommand };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
@@ -125,9 +125,9 @@ fn print(file: &RegisterFile, xs: &XStructure<SharedVec>, regs: &[Register], pat
     })
 }
 
-pub struct PrintCommand(Vec<Register>,RegisterSignature);
+pub struct PrintInterpCommand(Vec<Register>,RegisterSignature);
 
-impl Command for PrintCommand {
+impl InterpCommand for PrintInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let xs = to_xstructure(&self.1[0])?;
         let vs = RegisterVectorSource::new(&self.0);
@@ -143,6 +143,14 @@ impl Command for PrintCommand {
             std_stream(context)?.add(StreamContents::String(s.to_string()));
         }
         Ok(())
+    }
+}
+
+pub struct PrintCommand(Vec<Register>,RegisterSignature);
+
+impl Command for PrintCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(PrintInterpCommand(self.0.clone(),self.1.clone())))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

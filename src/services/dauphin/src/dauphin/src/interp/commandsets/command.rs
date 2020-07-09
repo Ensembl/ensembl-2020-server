@@ -81,14 +81,14 @@ pub trait CommandType {
 }
 
 pub trait Command {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String>;
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String>;
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> { Ok(PreImagePrepare::Keep(vec![])) }
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> { Err(format!("preimage_post must be overridden if simple_preimage returns true")) }
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         Ok(match self.simple_preimage(context)? {
             PreImagePrepare::Replace => {
-                self.execute(context.context_mut())?;
+                self.to_interp_command()?.execute(context.context_mut())?;
                 self.preimage_post(context)?    
             },
             PreImagePrepare::Keep(sizes) => {
@@ -97,4 +97,8 @@ pub trait Command {
         })
     }
     fn execution_time(&self, _context: &PreImageContext) -> f64 { 1. }
+}
+
+pub trait InterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
 }

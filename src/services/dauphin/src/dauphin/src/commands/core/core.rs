@@ -16,7 +16,7 @@
 
 use std::rc::Rc;
 use crate::interp::InterpValue;
-use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext, PreImageOutcome };
+use crate::interp::{ Command, CommandSet, CommandSetId, InterpContext, PreImageOutcome, InterpCommand };
 use crate::model::{ Register, cbor_make_map, cbor_map };
 use serde_cbor::Value as CborValue;
 use crate::commands::common::polymorphic::arbitrate_type;
@@ -69,12 +69,20 @@ impl CommandType for NilCommandType {
     }
 }
 
-pub struct NilCommand(Register,f64);
+pub struct NilInterpCommand(Register);
 
-impl Command for NilCommand {
+impl InterpCommand for NilInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers_mut().write(&self.0,InterpValue::Empty);
         Ok(())
+    }
+}
+
+pub struct NilCommand(Register,f64);
+
+impl Command for NilCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NilInterpCommand(self.0)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -115,12 +123,20 @@ impl TimeTrialCommandType for CopyTimeTrial {
 
 type_instr2!(CopyCommandType,CopyCommand,InstructionSuperType::Copy,CopyTimeTrial);
 
-pub struct CopyCommand(Register,Register,Option<TimeTrial>);
+pub struct CopyInterpCommand(Register,Register);
 
-impl Command for CopyCommand {
+impl InterpCommand for CopyInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers_mut().copy(&self.0,&self.1)?;
         Ok(())
+    }
+}
+
+pub struct CopyCommand(Register,Register,Option<TimeTrial>);
+
+impl Command for CopyCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(CopyInterpCommand(self.0,self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -170,6 +186,19 @@ impl TimeTrialCommandType for AppendTimeTrial {
 
 type_instr2!(AppendCommandType,AppendCommand,InstructionSuperType::Append,AppendTimeTrial);
 
+pub struct AppendInterpCommand(Register,Register);
+
+impl InterpCommand for AppendInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let registers = context.registers_mut();
+        let src = registers.get(&self.1).borrow().get_shared()?;
+        let dstr = registers.get(&self.0);
+        let dst = dstr.borrow_mut().get_exclusive()?;
+        registers.write(&self.0,append(dst,&src)?);
+        Ok(())
+    }
+}
+
 pub struct AppendCommand(Register,Register,Option<TimeTrial>);
 
 fn append_typed<T>(dst: &mut Vec<T>, src: &Vec<T>) where T: Clone {
@@ -187,13 +216,8 @@ fn append(dst: InterpValue, src: &Rc<InterpValue>) -> Result<InterpValue,String>
 }
 
 impl Command for AppendCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers_mut();
-        let src = registers.get(&self.1).borrow().get_shared()?;
-        let dstr = registers.get(&self.0);
-        let dst = dstr.borrow_mut().get_exclusive()?;
-        registers.write(&self.0,append(dst,&src)?);
-        Ok(())
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(AppendInterpCommand(self.0,self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -248,14 +272,22 @@ impl TimeTrialCommandType for LengthTimeTrial {
 
 type_instr2!(LengthCommandType,LengthCommand,InstructionSuperType::Length,LengthTimeTrial);
 
-pub struct LengthCommand(Register,Register,Option<TimeTrial>);
+pub struct LengthInterpCommand(Register,Register);
 
-impl Command for LengthCommand {
+impl InterpCommand for LengthInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let len = registers.get(&self.1).borrow().get_shared()?.len();
         registers.write(&self.0,InterpValue::Indexes(vec![len]));
         Ok(())
+    }
+}
+
+pub struct LengthCommand(Register,Register,Option<TimeTrial>);
+
+impl Command for LengthCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(LengthInterpCommand(self.0,self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -307,9 +339,9 @@ impl TimeTrialCommandType for AddTimeTrial {
 
 type_instr2!(AddCommandType,AddCommand,InstructionSuperType::Add,AddTimeTrial);
 
-pub struct AddCommand(Register,Register,Option<TimeTrial>);
+pub struct AddInterpCommand(Register,Register);
 
-impl Command for AddCommand {
+impl InterpCommand for AddInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let src = &registers.get_indexes(&self.1)?;
@@ -320,6 +352,14 @@ impl Command for AddCommand {
         }
         registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
+    }
+}
+
+pub struct AddCommand(Register,Register,Option<TimeTrial>);
+
+impl Command for AddCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(AddInterpCommand(self.0,self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -376,9 +416,9 @@ impl TimeTrialCommandType for ReFilterTimeTrial {
 
 type_instr3!(ReFilterCommandType,ReFilterCommand,InstructionSuperType::ReFilter,ReFilterTimeTrial);
 
-pub struct ReFilterCommand(Register,Register,Register,Option<TimeTrial>);
+pub struct ReFilterInterpCommand(Register,Register,Register);
 
-impl Command for ReFilterCommand {
+impl InterpCommand for ReFilterInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let src : &[usize] = &registers.get_indexes(&self.1)?;
@@ -389,6 +429,14 @@ impl Command for ReFilterCommand {
         }
         registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
+    }
+}
+
+pub struct ReFilterCommand(Register,Register,Register,Option<TimeTrial>);
+
+impl Command for ReFilterCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(ReFilterInterpCommand(self.0,self.1,self.2)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -473,9 +521,9 @@ impl CommandType for NumEqCommandType {
     }
 }
 
-pub struct NumEqCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register,Option<TimeTrial>);
+pub struct NumEqInterpCommand(Register,Register,Register);
 
-impl Command for NumEqCommand {
+impl InterpCommand for NumEqInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let src1 = &registers.get_indexes(&self.1)?;
@@ -487,6 +535,14 @@ impl Command for NumEqCommand {
         }
         registers.write(&self.0,InterpValue::Boolean(dst));
         Ok(())
+    }
+}
+
+pub struct NumEqCommand(pub(crate) Register,pub(crate) Register, pub(crate) Register,Option<TimeTrial>);
+
+impl Command for NumEqCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NumEqInterpCommand(self.0,self.1,self.2)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -556,9 +612,9 @@ impl TimeTrialCommandType for FilterTimeTrial {
 
 type_instr3!(FilterCommandType,FilterCommand,InstructionSuperType::Filter,FilterTimeTrial);
 
-pub struct FilterCommand(Register,Register,Register,Option<TimeTrial>);
+pub struct FilterInterpCommand(Register,Register,Register);
 
-impl Command for FilterCommand {
+impl InterpCommand for FilterInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let filter_val = registers.get_boolean(&self.2)?;
@@ -566,6 +622,14 @@ impl Command for FilterCommand {
         let src = src.borrow().get_shared()?;
         registers.write(&self.0,filter(&src,&filter_val)?);
         Ok(())
+    }
+}
+
+pub struct FilterCommand(Register,Register,Register,Option<TimeTrial>);
+
+impl Command for FilterCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(FilterInterpCommand(self.0,self.1,self.2)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -617,6 +681,29 @@ impl TimeTrialCommandType for RunTimeTrial {
 
 type_instr4!(RunCommandType,RunCommand,InstructionSuperType::Run,RunTimeTrial);
 
+pub struct RunInterpCommand(Register,Register,Register,Register);
+
+impl InterpCommand for RunInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let registers = context.registers_mut();
+        let start = &registers.get_indexes(&self.1)?;
+        let len = &registers.get_indexes(&self.2)?;
+        let mut dst = vec![];
+        let startlen = start.len();
+        let lenlen = len.len();
+        if lenlen == 0 {
+            Err(format!("zero length run in register {:?}\n",self.2))?
+        }
+        for i in 0..startlen {
+            for j in 0..len[i%lenlen] {
+                dst.push(start[i]+j);
+            }
+        }
+        registers.write(&self.0,InterpValue::Indexes(dst));
+        Ok(())
+    }
+}
+
 pub struct RunCommand(Register,Register,Register,Register,Option<TimeTrial>);
 
 impl RunCommand {
@@ -637,23 +724,8 @@ impl RunCommand {
 }
 
 impl Command for RunCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers_mut();
-        let start = &registers.get_indexes(&self.1)?;
-        let len = &registers.get_indexes(&self.2)?;
-        let mut dst = vec![];
-        let startlen = start.len();
-        let lenlen = len.len();
-        if lenlen == 0 {
-            Err(format!("zero length run in register {:?}\n",self.2))?
-        }
-        for i in 0..startlen {
-            for j in 0..len[i%lenlen] {
-                dst.push(start[i]+j);
-            }
-        }
-        registers.write(&self.0,InterpValue::Indexes(dst));
-        Ok(())
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(RunInterpCommand(self.0,self.1,self.2,self.3)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -710,9 +782,9 @@ impl TimeTrialCommandType for AtTimeTrial {
 
 type_instr2!(AtCommandType,AtCommand,InstructionSuperType::At,AtTimeTrial);
 
-pub struct AtCommand(Register,Register,Option<TimeTrial>);
+pub struct AtInterpCommand(Register,Register);
 
-impl Command for AtCommand {
+impl InterpCommand for AtInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let src = &registers.get_indexes(&self.1)?;
@@ -722,6 +794,14 @@ impl Command for AtCommand {
         }
         registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
+    }
+}
+
+pub struct AtCommand(Register,Register,Option<TimeTrial>);
+
+impl Command for AtCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(AtInterpCommand(self.0,self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -795,9 +875,9 @@ impl TimeTrialCommandType for SeqFilterTimeTrial {
 
 type_instr4!(SeqFilterCommandType,SeqFilterCommand,InstructionSuperType::SeqFilter,SeqFilterTimeTrial);
 
-pub struct SeqFilterCommand(Register,Register,Register,Register,Option<TimeTrial>);
+pub struct SeqFilterInterpCommand(Register,Register,Register,Register);
 
-impl Command for SeqFilterCommand {
+impl InterpCommand for SeqFilterInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let src = registers.get(&self.1);
@@ -806,6 +886,14 @@ impl Command for SeqFilterCommand {
         let src = src.borrow().get_shared()?;
         registers.write(&self.0,seq_filter(&src,&start,&len)?);
         Ok(())
+    }
+}
+
+pub struct SeqFilterCommand(Register,Register,Register,Register,Option<TimeTrial>);
+
+impl Command for SeqFilterCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(SeqFilterInterpCommand(self.0,self.1,self.2,self.3)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -862,9 +950,9 @@ impl TimeTrialCommandType for SeqAtTimeTrial {
 
 type_instr3!(SeqAtCommandType,SeqAtCommand,InstructionSuperType::SeqAt,SeqAtTimeTrial);
 
-pub struct SeqAtCommand(Register,Register,Register,Option<TimeTrial>);
+pub struct SeqAtInterpCommand(Register,Register,Register);
 
-impl Command for SeqAtCommand {
+impl InterpCommand for SeqAtInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let src = &registers.get_indexes(&self.1)?;
@@ -876,6 +964,14 @@ impl Command for SeqAtCommand {
         }
         registers.write(&self.0,InterpValue::Indexes(dst));
         Ok(())
+    }
+}
+
+pub struct SeqAtCommand(Register,Register,Register,Option<TimeTrial>);
+
+impl Command for SeqAtCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(SeqAtInterpCommand(self.0,self.1,self.2)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -923,12 +1019,20 @@ impl CommandType for PauseCommandType {
     }
 }
 
-pub struct PauseCommand();
+pub struct PauseInterpCommand();
 
-impl Command for PauseCommand {
+impl InterpCommand for PauseInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.do_pause();
         Ok(())
+    }
+}
+
+pub struct PauseCommand();
+
+impl Command for PauseCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(PauseInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

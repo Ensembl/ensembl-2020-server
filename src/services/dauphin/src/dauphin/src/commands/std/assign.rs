@@ -14,8 +14,9 @@
  *  limitations under the License.
  */
 
+use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
 use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier, ComplexRegisters, VectorRegisters };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
@@ -99,10 +100,10 @@ impl AssignCommand {
 }
 
 impl Command for AssignCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        return Err("assign is compile-time only".to_string());
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(ErrorInterpCommand()))
     }
-
+    
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Err(format!("compile-side command"))
     }

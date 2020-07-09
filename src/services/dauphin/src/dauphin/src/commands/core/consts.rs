@@ -16,7 +16,7 @@
 
 use std::convert::TryInto;
 use crate::interp::InterpValue;
-use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial };
+use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, InterpCommand };
 use crate::model::Register;
 use crate::model::{ cbor_int, cbor_string, cbor_make_map, cbor_map };
 use crate::generate::{ Instruction, InstructionType, InstructionSuperType, PreImageContext };
@@ -79,12 +79,20 @@ impl CommandType for NumberConstCommandType {
     }
 }
 
-pub struct NumberConstCommand(Register,f64,f64);
+pub struct NumberConstInterpCommand(Register,f64);
 
-impl Command for NumberConstCommand {
+impl InterpCommand for NumberConstInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers_mut().write(&self.0,InterpValue::Numbers(vec![self.1]));
         Ok(())
+    }
+}
+
+pub struct NumberConstCommand(Register,f64,f64);
+
+impl Command for NumberConstCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NumberConstInterpCommand(self.0,self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -149,12 +157,20 @@ impl CommandType for ConstCommandType {
     }
 }
 
-pub struct ConstCommand(Register,Vec<usize>,Option<TimeTrial>);
+pub struct ConstInterpCommand(Register,Vec<usize>);
 
-impl Command for ConstCommand {
+impl InterpCommand for ConstInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers_mut().write(&self.0,InterpValue::Indexes(self.1.to_vec()));
         Ok(())
+    }
+}
+
+pub struct ConstCommand(Register,Vec<usize>,Option<TimeTrial>);
+
+impl Command for ConstCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(ConstInterpCommand(self.0,self.1.clone())))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -216,12 +232,20 @@ impl CommandType for BooleanConstCommandType {
     }
 }
 
-pub struct BooleanConstCommand(Register,bool,f64);
+pub struct BooleanConstInterpCommand(Register,bool);
 
-impl Command for BooleanConstCommand {
+impl InterpCommand for BooleanConstInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers_mut().write(&self.0,InterpValue::Boolean(vec![self.1]));
         Ok(())
+    }
+}
+
+pub struct BooleanConstCommand(Register,bool,f64);
+
+impl Command for BooleanConstCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(BooleanConstInterpCommand(self.0,self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -284,12 +308,20 @@ impl CommandType for StringConstCommandType {
     }
 }
 
-pub struct StringConstCommand(Register,String,Option<TimeTrial>);
+pub struct StringConstInterpCommand(Register,String);
 
-impl Command for StringConstCommand {
+impl InterpCommand for StringConstInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers_mut().write(&self.0,InterpValue::Strings(vec![self.1.to_string()]));
         Ok(())
+    }
+}
+
+pub struct StringConstCommand(Register,String,Option<TimeTrial>);
+
+impl Command for StringConstCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(StringConstInterpCommand(self.0,self.1.clone())))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -352,12 +384,20 @@ impl CommandType for BytesConstCommandType {
     }
 }
 
-pub struct BytesConstCommand(Register,Vec<u8>,Option<TimeTrial>);
+pub struct BytesConstInterpCommand(Register,Vec<u8>);
 
-impl Command for BytesConstCommand {
+impl InterpCommand for BytesConstInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.registers_mut().write(&self.0,InterpValue::Bytes(vec![self.1.to_vec()]));
         Ok(())
+    }
+}
+
+pub struct BytesConstCommand(Register,Vec<u8>,Option<TimeTrial>);
+
+impl Command for BytesConstCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(BytesConstInterpCommand(self.0,self.1.clone())))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -413,12 +453,20 @@ impl CommandType for LineNumberCommandType {
     }
 }
 
-pub struct LineNumberCommand(String,u32);
+pub struct LineNumberInterpCommand(String,u32);
 
-impl Command for LineNumberCommand {
+impl InterpCommand for LineNumberInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         context.set_line_number(&self.0,self.1);
         Ok(())
+    }
+}
+
+pub struct LineNumberCommand(String,u32);
+
+impl Command for LineNumberCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(LineNumberInterpCommand(self.0.clone(),self.1)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

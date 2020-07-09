@@ -16,7 +16,7 @@
 
 use crate::interp::{ InterpValue, PreImageOutcome, TimeTrial };
 use crate::model::{ Register, cbor_make_map, cbor_map };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, TimeTrialCommandType, PreImagePrepare };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, TimeTrialCommandType, PreImagePrepare, InterpCommand };
 use crate::generate::{ Instruction, PreImageContext, InstructionType };
 use serde_cbor::Value as CborValue;
 use super::library::std;
@@ -129,9 +129,9 @@ impl CommandType for InterpBinBoolCommandType {
     }
 }
 
-pub struct InterpBinBoolCommand(InterpBinBoolOp,Register,Register,Register,Option<TimeTrial>);
+pub struct InterpBinBoolInterpCommand(InterpBinBoolOp,Register,Register,Register);
 
-impl Command for InterpBinBoolCommand {
+impl InterpCommand for InterpBinBoolInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let a = registers.get_numbers(&self.2)?;
@@ -143,6 +143,14 @@ impl Command for InterpBinBoolCommand {
         }
         registers.write(&self.1,InterpValue::Boolean(c));
         Ok(())
+    }
+}
+
+pub struct InterpBinBoolCommand(InterpBinBoolOp,Register,Register,Register,Option<TimeTrial>);
+
+impl Command for InterpBinBoolCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(InterpBinBoolInterpCommand(self.0,self.1,self.2,self.3)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -230,9 +238,9 @@ impl CommandType for InterpBinNumCommandType {
     }
 }
 
-pub struct InterpBinNumCommand(InterpBinNumOp,Register,Register,Register,Option<TimeTrial>);
+pub struct InterpBinNumInterpCommand(InterpBinNumOp,Register,Register,Register);
 
-impl Command for InterpBinNumCommand {
+impl InterpCommand for InterpBinNumInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let a = registers.get_numbers(&self.2)?;
@@ -244,6 +252,14 @@ impl Command for InterpBinNumCommand {
         }
         registers.write(&self.1,InterpValue::Numbers(c));
         Ok(())
+    }
+}
+
+pub struct InterpBinNumCommand(InterpBinNumOp,Register,Register,Register,Option<TimeTrial>);
+
+impl Command for InterpBinNumCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(InterpBinNumInterpCommand(self.0,self.1,self.2,self.3)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -366,9 +382,9 @@ impl InterpNumModOp {
     }
 }
 
-pub struct InterpNumModCommand(InterpNumModOp,Register,Register,Option<Register>,Option<TimeTrial>);
+pub struct InterpNumModInterpCommand(InterpNumModOp,Register,Register,Option<Register>);
 
-impl InterpNumModCommand {
+impl InterpNumModInterpCommand {
     fn execute_unfiltered(&self, context: &mut InterpContext) -> Result<(),String> {
         let registers = context.registers_mut();
         let b = &registers.get_numbers(&self.2)?;
@@ -395,13 +411,21 @@ impl InterpNumModCommand {
     }
 }
 
-impl Command for InterpNumModCommand {
+impl InterpCommand for InterpNumModInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         if self.3.is_some() {
             self.execute_filtered(context)
         } else {
             self.execute_unfiltered(context)
         }
+    }
+}
+
+pub struct InterpNumModCommand(InterpNumModOp,Register,Register,Option<Register>,Option<TimeTrial>);
+
+impl Command for InterpNumModCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(InterpNumModInterpCommand(self.0,self.1,self.2,self.3)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {

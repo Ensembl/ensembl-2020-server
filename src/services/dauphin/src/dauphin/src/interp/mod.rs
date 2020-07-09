@@ -30,7 +30,7 @@ mod commandsets {
     pub mod compilesuite;
     pub mod suitebuilder;
 
-    pub use command::{ Command, CommandSchema, CommandTrigger, CommandType, PreImageOutcome, PreImagePrepare };
+    pub use command::{ Command, CommandSchema, CommandTrigger, CommandType, PreImageOutcome, PreImagePrepare, InterpCommand };
     pub use commandset::CommandSet;
     pub use commandsetid::CommandSetId;
     pub use interpretsuite::CommandInterpretSuite;
@@ -55,7 +55,7 @@ pub use self::values::registers::RegisterFile;
 pub use self::stream::{ Stream, StreamContents, StreamFactory };
 pub use self::commandsets::{
     CommandSet, CommandSetId, CommandInterpretSuite, CommandCompileSuite, LibrarySuiteBuilder, Command, CommandSchema, CommandTrigger, CommandType, 
-    PreImagePrepare, PreImageOutcome, make_librarysuite_builder, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature
+    PreImagePrepare, PreImageOutcome, make_librarysuite_builder, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand
 };
 pub use self::context::{ InterpContext, PayloadFactory };
 pub use self::interpret::{ InterpretInstance, interpreter };

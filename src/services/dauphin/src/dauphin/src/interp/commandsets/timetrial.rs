@@ -56,10 +56,11 @@ fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Com
             context.registers_mut().commit();
         }
     } else {
+        let icom = command.to_interp_command()?;
         for _ in 0..loops {
             command_type.local_prepare(&mut context,t);
             context.registers_mut().commit();
-            command.execute(&mut context)?;
+            icom.execute(&mut context)?;
             context.registers_mut().commit();
         }
     }

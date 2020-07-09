@@ -15,7 +15,8 @@
  */
 
 use std::rc::Rc;
-use crate::interp::InterpValue;
+use crate::interp::{ InterpValue, InterpCommand };
+use crate::commands::common::templates::ErrorInterpCommand;
 use crate::model::{ Register, RegisterSignature, cbor_make_map, VectorRegisters, Identifier, ComplexRegisters, ComplexPath, cbor_map };
 use super::super::common::vectorsource::RegisterVectorSource;
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, trial_write, trial_signature, TimeTrialCommandType, TimeTrial };
@@ -165,6 +166,19 @@ impl CommandType for EqCompareCommandType {
     }
 }
 
+pub struct EqCompareInterpCommand(VectorRegisters,VectorRegisters,Vec<Register>);
+
+impl InterpCommand for EqCompareInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let vs = RegisterVectorSource::new(&self.2);
+        let a = SharedVec::new(context,&vs,&self.0)?;
+        let b = SharedVec::new(context,&vs,&self.1)?;
+        let result = compare(&a,&b)?;
+        context.registers_mut().write(&self.2[0],InterpValue::Boolean(result));
+        Ok(())
+    }
+}
+
 pub struct EqCompareCommand(VectorRegisters,VectorRegisters,Vec<Register>,Option<TimeTrial>);
 
 impl EqCompareCommand {
@@ -186,13 +200,8 @@ impl EqCompareCommand {
 }
 
 impl Command for EqCompareCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let vs = RegisterVectorSource::new(&self.2);
-        let a = SharedVec::new(context,&vs,&self.0)?;
-        let b = SharedVec::new(context,&vs,&self.1)?;
-        let result = compare(&a,&b)?;
-        context.registers_mut().write(&self.2[0],InterpValue::Boolean(result));
-        Ok(())
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(EqCompareInterpCommand(self.0.clone(),self.1.clone(),self.2.clone())))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -275,9 +284,9 @@ impl CommandType for EqShallowCommandType {
     }
 }
 
-pub struct EqShallowCommand(Register,Register,Register,Option<TimeTrial>);
+pub struct EqShallowInterpCommand(Register,Register,Register);
 
-impl EqShallowCommand {
+impl EqShallowInterpCommand {
     fn compare(&self, a: &Rc<InterpValue>, b: &Rc<InterpValue>) -> Result<Vec<bool>,String> {
         if let Some(natural) = arbitrate_type(a,b,true) {
             let out = polymorphic!([a,b],natural,(|d,s| {
@@ -290,7 +299,7 @@ impl EqShallowCommand {
     }
 }
 
-impl Command for EqShallowCommand {
+impl InterpCommand for EqShallowInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         let a_data = context.registers().get(&self.1);
         let b_data = context.registers().get(&self.2);
@@ -299,6 +308,14 @@ impl Command for EqShallowCommand {
         let result = self.compare(&a_data,&b_data)?;
         context.registers_mut().write(&self.0,InterpValue::Boolean(result));
         Ok(())
+    }
+}
+
+pub struct EqShallowCommand(Register,Register,Register,Option<TimeTrial>);
+
+impl Command for EqShallowCommand {
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(EqShallowInterpCommand(self.0,self.1,self.2)))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -380,6 +397,23 @@ impl CommandType for AllCommandType {
     }   
 }
 
+pub struct AllInterpCommand(Vec<Register>);
+
+impl InterpCommand for AllInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let mut out = context.registers().get_boolean(&self.0[1])?.to_vec();
+        for reg in &self.0[2..] {
+            let more = context.registers().get_boolean(reg)?;
+            let mut more = more.iter().cycle();
+            for v in out.iter_mut() {
+                *v &= more.next().unwrap();
+            }
+        }
+        context.registers_mut().write(&self.0[0],InterpValue::Boolean(out));
+        Ok(())
+    }
+}
+
 pub struct AllCommand(Vec<Register>,Option<TimeTrial>);
 
 impl AllCommand {
@@ -401,17 +435,8 @@ impl AllCommand {
 }
 
 impl Command for AllCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let mut out = context.registers().get_boolean(&self.0[1])?.to_vec();
-        for reg in &self.0[2..] {
-            let more = context.registers().get_boolean(reg)?;
-            let mut more = more.iter().cycle();
-            for v in out.iter_mut() {
-                *v &= more.next().unwrap();
-            }
-        }
-        context.registers_mut().write(&self.0[0],InterpValue::Boolean(out));
-        Ok(())
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(AllInterpCommand(self.0.clone())))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -515,8 +540,8 @@ impl EqCommand {
 }
 
 impl Command for EqCommand {
-    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
-        return Err("assign is compile-time only".to_string());
+    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(ErrorInterpCommand()))
     }
 
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
