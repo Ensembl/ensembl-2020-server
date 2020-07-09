@@ -150,7 +150,7 @@ impl Command for InterpBinBoolCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.2) && context.is_reg_valid(&self.3) {
+        Ok(if context.is_reg_valid(&self.2) && context.is_reg_valid(&self.3) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.2) {
             PreImagePrepare::Keep(vec![(self.1.clone(),a)])
@@ -251,7 +251,7 @@ impl Command for InterpBinNumCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.2) && context.is_reg_valid(&self.3) {
+        Ok(if context.is_reg_valid(&self.2) && context.is_reg_valid(&self.3) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.2) {
             PreImagePrepare::Keep(vec![(self.1.clone(),a)])
@@ -414,7 +414,7 @@ impl Command for InterpNumModCommand {
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
         Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && 
-                self.3.map(|r| context.is_reg_valid(&r)).unwrap_or(true) {
+                self.3.map(|r| context.is_reg_valid(&r)).unwrap_or(true) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.1) {
             PreImagePrepare::Keep(vec![(self.1.clone(),a)])

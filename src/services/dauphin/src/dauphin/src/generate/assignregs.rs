@@ -113,9 +113,9 @@ mod test {
         simplify(&defstore,&mut context).expect("k");
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
-        compile_run(&linker,&resolver,&mut context,&config).expect("m");
+        compile_run(&linker,&resolver,&mut context,&config,false).expect("m");
         prune(&mut context);
-        compile_run(&linker,&resolver,&mut context,&config).expect("n");
+        compile_run(&linker,&resolver,&mut context,&config,false).expect("n");
         assign_regs(&mut context);
         print!("{:?}",context);
         let (_,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");

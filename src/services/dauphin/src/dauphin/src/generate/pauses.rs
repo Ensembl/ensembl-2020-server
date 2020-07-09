@@ -108,7 +108,7 @@ impl ExecutionProfiler {
 
 pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, defstore: &DefStore, context: &mut GenContext, config: &Config) -> Result<(),String> {
     /* force compilerun to ensure timed instructions */
-    compile_run(compiler_link,resolver,context,config)?;
+    compile_run(compiler_link,resolver,context,config,true)?;
     let mut profiler = ExecutionProfiler::new();
     let mut instr_profile = vec![];
     let mut timer = 0.;

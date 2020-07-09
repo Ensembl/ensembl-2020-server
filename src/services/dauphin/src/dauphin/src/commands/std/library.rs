@@ -113,7 +113,7 @@ impl Command for LenCommand {
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
         if let Some((_,ass)) = &self.0[1].iter().next() {
             let reg = ass.length_pos(ass.depth()-1)?;
-            if context.is_reg_valid(&self.1[reg]) {
+            if context.is_reg_valid(&self.1[reg]) && !context.is_last() {
                 /* can execute now */
                 self.execute(context.context_mut())?;
                 return Ok(PreImageOutcome::Constant(vec![self.1[0]]));
@@ -331,7 +331,7 @@ impl Command for AssertCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
-        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) {
+        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.0) {
             PreImagePrepare::Keep(vec![(self.0.clone(),a)])

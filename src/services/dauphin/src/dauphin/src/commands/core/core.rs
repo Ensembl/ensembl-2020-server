@@ -81,8 +81,12 @@ impl Command for NilCommand {
         Ok(Some(vec![self.0.serialize()]))
     }
 
-    fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
-        Ok(PreImagePrepare::Replace)
+    fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> {
+        if context.is_last() {
+            Ok(PreImagePrepare::Keep(vec![(self.0,1)]))
+        } else {
+            Ok(PreImagePrepare::Replace)
+        }
     }
     
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
@@ -124,7 +128,7 @@ impl Command for CopyCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) {
+        Ok(if context.is_reg_valid(&self.1) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(size) = context.get_reg_size(&self.1) {
             PreImagePrepare::Keep(vec![(self.0.clone(),size)])
@@ -197,7 +201,7 @@ impl Command for AppendCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) {
+        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let (Some(a),Some(b)) = (context.get_reg_size(&self.0),context.get_reg_size(&self.1)) {
             PreImagePrepare::Keep(vec![(self.0.clone(),a+b)])
@@ -259,7 +263,7 @@ impl Command for LengthCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) {
+        Ok(if context.is_reg_valid(&self.1) && !context.is_last() {
             PreImagePrepare::Replace
         } else {
             PreImagePrepare::Keep(vec![(self.0.clone(),1)])
@@ -323,7 +327,7 @@ impl Command for AddCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) {
+        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.0) {
             PreImagePrepare::Keep(vec![(self.0.clone(),a)])
@@ -392,7 +396,7 @@ impl Command for ReFilterCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.2) {
             PreImagePrepare::Keep(vec![(self.0.clone(),a)])
@@ -490,7 +494,7 @@ impl Command for NumEqCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.1) {
             PreImagePrepare::Keep(vec![(self.0.clone(),a)])
@@ -569,7 +573,7 @@ impl Command for FilterCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.1) {
             PreImagePrepare::Keep(vec![(self.0.clone(),a)])
@@ -658,7 +662,7 @@ impl Command for RunCommand {
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
         Ok(if context.is_reg_valid(&self.2) {
-            if context.is_reg_valid(&self.1) {
+            if context.is_reg_valid(&self.1) && !context.is_last() {
                 PreImagePrepare::Replace
             } else {
                 let lens = context.context_mut().registers_mut().get_indexes(&self.2)?;
@@ -725,7 +729,7 @@ impl Command for AtCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) {
+        Ok(if context.is_reg_valid(&self.1) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(a) = context.get_reg_size(&self.1) {
             PreImagePrepare::Keep(vec![(self.0.clone(),a)])
@@ -810,7 +814,7 @@ impl Command for SeqFilterCommand {
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
         Ok(if context.is_reg_valid(&self.3) {
-            if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+            if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && !context.is_last() {
                 PreImagePrepare::Replace
             } else if let Some(num) = context.get_reg_size(&self.2) {
                 let lens = context.context_mut().registers_mut().get_indexes(&self.3)?;
@@ -879,7 +883,7 @@ impl Command for SeqAtCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) {
+        Ok(if context.is_reg_valid(&self.1) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(x) = context.get_reg_size(&self.2) {
             PreImagePrepare::Keep(vec![(self.0.clone(),x)])

@@ -201,7 +201,7 @@ impl Command for EqCompareCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if self.enough_valid(context)? {
+        Ok(if self.enough_valid(context)? && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(size) = self.any_size(context) {
             PreImagePrepare::Keep(vec![(self.2[0].clone(),size)])
@@ -306,7 +306,7 @@ impl Command for EqShallowCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(size) = context.get_reg_size(&self.1) {
             PreImagePrepare::Keep(vec![(self.0.clone(),size)])
@@ -420,7 +420,7 @@ impl Command for AllCommand {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if self.enough_valid(context)? {
+        Ok(if self.enough_valid(context)? && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(size) = self.any_size(context) {
             PreImagePrepare::Keep(vec![(self.0[0].clone(),size)])

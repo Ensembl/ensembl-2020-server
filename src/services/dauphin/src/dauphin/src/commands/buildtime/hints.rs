@@ -118,23 +118,24 @@ impl Command for SetSizeHintCommand {
     }
     
     fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
-        if !context.is_reg_valid(&self.2) {
-            return Err(format!("set_size_hint needs compile-time-fixed value\n"));
-        }
-        let values = context.context_mut().registers_mut().get_indexes(&self.2)?;
-        let mut out = vec![];
-        let mut values = values.iter().cycle();
-        for reg in self.1.iter() {
-            let value = if self.0.contains(reg) {
-                values.next().cloned()
-            } else {
-                context.get_reg_size(reg)
-            };
-            if let Some(value) = value {
-                out.push((reg.clone(),value));
+        if context.is_reg_valid(&self.2) {
+            let values = context.context_mut().registers_mut().get_indexes(&self.2)?;
+            let mut out = vec![];
+            let mut values = values.iter().cycle();
+            for reg in self.1.iter() {
+                let value = if self.0.contains(reg) {
+                    values.next().cloned()
+                } else {
+                    context.get_reg_size(reg)
+                };
+                if let Some(value) = value {
+                    out.push((reg.clone(),value));
+                }
             }
+            Ok(PreImageOutcome::Skip(out))
+        } else {
+            Err(format!("set_size_hint needs compile-time-fixed value\n"))
         }
-        Ok(PreImageOutcome::Skip(out))
     }
 }
 

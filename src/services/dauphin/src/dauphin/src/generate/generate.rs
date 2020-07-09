@@ -111,8 +111,8 @@ impl GenerateMenu {
         gen_steps.push(GenerateStep::new("simplify", |step| { simplify(step.defstore,step.context) }));
         gen_steps.push(GenerateStep::new("linearize", |step| { linearize(step.context) }));
         gen_steps.push(GenerateStep::new("dealias", |step| { remove_aliases(step.context); Ok(()) }));
-        gen_steps.push(GenerateStep::new("compile-run", |step| { compile_run(step.linker,step.resolver,step.context,step.config) }));
-        opt_steps.insert("c".to_string(),GenerateStep::new("compile-run", |step| { compile_run(step.linker,step.resolver,step.context,step.config) }));
+        gen_steps.push(GenerateStep::new("compile-run", |step| { compile_run(step.linker,step.resolver,step.context,step.config,false) }));
+        opt_steps.insert("c".to_string(),GenerateStep::new("compile-run", |step| { compile_run(step.linker,step.resolver,step.context,step.config,false) }));
         opt_steps.insert("p".to_string(),GenerateStep::new("prune", |step| { prune(step.context); Ok(()) }));
         opt_steps.insert("u".to_string(),GenerateStep::new("reuse-regs", |step| { reuse_regs(step.context) }));
         opt_steps.insert("e".to_string(),GenerateStep::new("use-earliest", |step| { use_earliest_regs(step.context) }));

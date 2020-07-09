@@ -117,7 +117,7 @@ impl Command for VectorCopyShallow {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+        Ok(if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(size) = self.size(context) {
             PreImagePrepare::Keep(vec![(self.0.clone(),size)])
@@ -232,7 +232,7 @@ impl Command for VectorAppend {
     }
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
-        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) {
+        Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(size) = self.size(context)? {
             PreImagePrepare::Keep(vec![(self.0.clone(),size)])
@@ -370,7 +370,7 @@ impl Command for VectorAppendIndexes {
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
         Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) &&
-                context.is_reg_valid(&self.3) && context.is_reg_valid(&self.4) {
+                context.is_reg_valid(&self.3) && context.is_reg_valid(&self.4) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(size) = self.size(context)? {
             PreImagePrepare::Keep(vec![(self.0.clone(),size)])
@@ -504,7 +504,7 @@ impl Command for VectorUpdateIndexes {
 
     fn simple_preimage(&self, context: &mut PreImageContext) -> Result<PreImagePrepare,String> { 
         Ok(if context.is_reg_valid(&self.0) && context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) &&
-                context.is_reg_valid(&self.3) && context.is_reg_valid(&self.4) {
+                context.is_reg_valid(&self.3) && context.is_reg_valid(&self.4) && !context.is_last() {
             PreImagePrepare::Replace
         } else if let Some(size) = self.size(context)? {
             PreImagePrepare::Keep(vec![(self.0.clone(),size)])

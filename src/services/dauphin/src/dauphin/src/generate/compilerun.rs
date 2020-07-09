@@ -30,11 +30,12 @@ pub struct PreImageContext<'a,'b> {
     context: InterpContext,
     gen_context: &'a mut GenContext<'b>,
     regalloc: RegisterAllocator,
-    config: Config
+    config: Config,
+    last: bool
 }
 
 impl<'a,'b> PreImageContext<'a,'b> {
-    pub fn new(compiler_link: &CompilerLink, resolver: &'a Resolver, gen_context: &'a mut GenContext<'b>, config: &Config) -> Result<PreImageContext<'a,'b>,String> {
+    pub fn new(compiler_link: &CompilerLink, resolver: &'a Resolver, gen_context: &'a mut GenContext<'b>, config: &Config, last: bool) -> Result<PreImageContext<'a,'b>,String> {
         let mut max_reg = 0;
         for instr in gen_context.get_instructions() {
             for reg in &instr.regs {
@@ -49,7 +50,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
             context: compiler_link.new_context(),
             gen_context,
             regalloc: RegisterAllocator::new(max_reg+1),
-            config: config.clone()
+            config: config.clone(),
+            last
         })
     }
 
@@ -60,6 +62,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     pub fn linker(&self) -> &CompilerLink { &self.compiler_link }
 
     pub fn new_register(&self) -> Register { self.regalloc.allocate() }
+    pub fn is_last(&self) -> bool { self.last }
 
     fn commit(&mut self) -> Result<(),String> {
         let regs = self.context_mut().registers_mut().commit();
@@ -183,6 +186,9 @@ impl<'a,'b> PreImageContext<'a,'b> {
                 self.unable_instr(&instr,&sizes)?;
             },
             PreImageOutcome::Replace(instrs) => {
+                if self.last {
+                    Err(format!("Illegal replace during last run!: {:?}",instr))?
+                }
                 for instr in instrs {
                     self.preimage_instr(&instr)?;
                 }                    
@@ -203,7 +209,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     pub fn preimage(&mut self) -> Result<(),String> {
         for instr in &self.gen_context.get_instructions() {
-            let time = self.preimage_instr(instr).map_err(|msg| {
+            self.preimage_instr(instr,).map_err(|msg| {
                 let line = self.context().get_line_number();
                 if line.1 != 0 {
                     format!("{} at {}:{}",msg,line.0,line.1)
@@ -217,8 +223,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 }
 
-pub fn compile_run(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut GenContext, config: &Config) -> Result<(),String> {
-    let mut pic = PreImageContext::new(compiler_link,resolver,context,config)?;
+pub fn compile_run(compiler_link: &CompilerLink, resolver: &Resolver, context: &mut GenContext, config: &Config, last: bool) -> Result<(),String> {
+    let mut pic = PreImageContext::new(compiler_link,resolver,context,config,last)?;
     pic.preimage()?;
     Ok(())
 }
@@ -253,7 +259,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        compile_run(&linker,&resolver,&mut context,&config).expect("x");
+        compile_run(&linker,&resolver,&mut context,&config,false).expect("x");
         prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);
@@ -283,7 +289,7 @@ mod test {
         linearize(&mut context).expect("linearize");
         remove_aliases(&mut context);
         print!("{:?}",context);
-        compile_run(&linker,&resolver,&mut context,&config).expect("x");
+        compile_run(&linker,&resolver,&mut context,&config,false).expect("x");
         prune(&mut context);
         print!("RUN NUMS\n");
         print!("{:?}",context);

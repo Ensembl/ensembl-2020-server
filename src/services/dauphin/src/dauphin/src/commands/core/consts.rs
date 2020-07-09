@@ -381,14 +381,14 @@ impl TimeTrialCommandType for LineNumberTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,1) }
 
     fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(LineNumberCommand("x".to_string(),42,1.)))
+        Ok(Box::new(LineNumberCommand("x".to_string(),42)))
     }
 }
 
-pub struct LineNumberCommandType(f64);
+pub struct LineNumberCommandType();
 
 impl LineNumberCommandType {
-    fn new() -> LineNumberCommandType { LineNumberCommandType(1.) }
+    fn new() -> LineNumberCommandType { LineNumberCommandType() }
 }
 
 impl CommandType for LineNumberCommandType {
@@ -405,26 +405,15 @@ impl CommandType for LineNumberCommandType {
         } else {
             return Err(format!("malformatted cbor"));
         };
-        Ok(Box::new(LineNumberCommand(pos.filename().to_string(),pos.line().try_into().unwrap_or(0),self.0)))
+        Ok(Box::new(LineNumberCommand(pos.filename().to_string(),pos.line().try_into().unwrap_or(0))))
     }
 
     fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(LineNumberCommand(cbor_string(&value[0])?,cbor_int(&value[1],None)? as u32,self.0)))
-    }
-
-    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
-        let timings = TimeTrial::run(&LineNumberTimeTrial(),linker,config)?;
-        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
-    }
-
-    fn use_dynamic_data(&mut self, value: &CborValue) -> Result<(),String> {
-        let t = cbor_map(value,&vec!["t"])?;
-        self.0 = TimeTrial::deserialize(&t[0])?.evaluate(1.);
-        Ok(())
+        Ok(Box::new(LineNumberCommand(cbor_string(&value[0])?,cbor_int(&value[1],None)? as u32)))
     }
 }
 
-pub struct LineNumberCommand(String,u32,f64);
+pub struct LineNumberCommand(String,u32);
 
 impl Command for LineNumberCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
@@ -445,7 +434,7 @@ impl Command for LineNumberCommand {
         Err(format!("preimage impossible on line-number command"))
     }
 
-    fn execution_time(&self, _context: &PreImageContext) -> f64 { self.2 }
+    fn execution_time(&self, _context: &PreImageContext) -> f64 { 0. }
 }
 
 pub(super) fn const_commands(set: &mut CommandSet) -> Result<(),String> {
