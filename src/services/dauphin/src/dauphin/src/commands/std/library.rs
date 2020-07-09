@@ -29,7 +29,7 @@ use crate::typeinf::{ MemberMode, BaseType };
 use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
 
 pub fn std_id() -> CommandSetId {
-    CommandSetId::new("std",(0,0),0xCFD36D79651C5638)
+    CommandSetId::new("std",(0,0),0xAE0FBDF35D05BAE8)
 }
 
 pub(super) fn std(name: &str) -> Identifier {
@@ -126,165 +126,6 @@ impl Command for LenCommand {
         }
         /* should never happen! */
         Err(format!("cannot preimage length command"))
-    }
-}
-
-pub struct PrintRegsCommandType();
-
-impl CommandType for PrintRegsCommandType {
-    fn get_schema(&self) -> CommandSchema {
-        CommandSchema {
-            values: 1,
-            trigger: CommandTrigger::Command(std("print_regs"))
-        }
-    }
-
-    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,_,_) = &it.itype {
-            Ok(Box::new(PrintRegsCommand(it.regs.clone())))
-        } else {
-            Err("unexpected instruction".to_string())
-        }
-    }
-    
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
-        Ok(Box::new(PrintRegsCommand(regs)))
-    }
-}
-
-pub struct PrintRegsCommand(pub(crate) Vec<Register>);
-
-impl Command for PrintRegsCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        for r in &self.0 {
-            let v = StreamContents::Data(context.registers_mut().get(r).borrow().get_shared()?.copy());
-            print!("ADDING {:?}\n",v);
-            std_stream(context)?.add(v);
-        }
-        Ok(())
-    }
-
-    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
-        Ok(Some(vec![CborValue::Array(self.0.iter().map(|x| x.serialize()).collect())]))
-    }
-}
-
-fn print_value<T>(data: &[T], start: usize, len: usize) -> String where T: std::fmt::Display {
-    let mut out = Vec::new();
-    for index in start..start+len {
-        out.push(data[index].to_string());
-    }
-    out.join(",")
-}
-
-fn print_bytes<T>(data: &[Vec<T>], start: usize, len: usize) -> String where T: std::fmt::Display {
-    let mut out = vec![];
-    for index in start..start+len {
-        out.push(format!("[{}]",data[index].iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")));
-    }
-    out.join(",")
-}
-
-fn print_register(context: &mut InterpContext, reg: &Register, restrict: Option<(usize,usize)>) -> Result<String,String> {
-    let value = context.registers_mut().get(reg);
-    let value = value.borrow().get_shared()?;
-    let (start,len) = restrict.unwrap_or_else(|| { (0,value.len()) });
-    Ok(match value.get_natural() {
-        InterpNatural::Empty => { "[]".to_string() },
-        InterpNatural::Numbers => { print_value(&value.to_rc_numbers()?.0, start, len) },
-        InterpNatural::Indexes => { print_value(&value.to_rc_indexes()?.0, start, len) },
-        InterpNatural::Boolean => { print_value(&value.to_rc_boolean()?.0, start, len) },
-        InterpNatural::Strings => { print_value(&value.to_rc_strings()?.0, start, len) },
-        InterpNatural::Bytes => { print_bytes(&value.to_rc_bytes()?.0, start, len) },
-    })
-}
-
-fn print_base(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], restrict: Option<(usize,usize)>) -> Result<String,String> {
-    let data_reg = assignment.data_pos();
-    print_register(context,&regs[data_reg],restrict)
-}
-
-fn print_level(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], level_in: i64, restrict: Option<(usize,usize)>) -> Result<String,String> {
-    if level_in > -1 {
-        let level = level_in as usize;
-        /* find registers for level */
-        let offset_reg = assignment.offset_pos(level)?;
-        let len_reg = assignment.length_pos(level)?;
-        let starts = &context.registers_mut().get_indexes(&regs[offset_reg])?;
-        let lens = &context.registers_mut().get_indexes(&regs[len_reg])?;
-        let lens_len = lens.len();
-        let (a,b) = restrict.unwrap_or((0,lens_len));
-        let mut members = Vec::new();
-        for index in a..a+b {
-            members.push(print_level(context,assignment,regs,level_in-1,Some((starts[index],lens[index%lens_len])))?);
-        }
-        Ok(format!("{}",members.iter().map(|x| format!("[{}]",x)).collect::<Vec<_>>().join(",")))
-    } else {
-        print_base(context,assignment,regs,restrict)
-    }
-}
-
-fn print_array(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register]) -> Result<String,String> {
-    let mut out = print_level(context,assignment,regs,assignment.depth() as i64-1,None)?;
-    if out.len() == 0 { out = "-".to_string() }
-    Ok(out)
-}
-
-fn print_complex(context: &mut InterpContext, assignment: &VectorRegisters, regs: &[Register], complex: &ComplexPath, is_complex: bool) -> Result<String,String> {
-    if is_complex {
-        Ok(format!("{}: {}",complex.to_string(),print_array(context,assignment,regs)?))
-    } else {
-        print_array(context,assignment,regs)
-    }
-}
-
-fn print_vec(context: &mut InterpContext, sig: &RegisterSignature, regs: &Vec<Register>) -> Result<String,String> {
-    let mut out : Vec<String> = vec![];
-    let is_complex = sig[0].iter().count() > 1;
-    for (complex,a) in sig[0].iter() {
-        out.push(print_complex(context,&a,regs,&complex,is_complex)?);
-    }
-    let mut out = out.join("; ");
-    if is_complex { out = format!("{{ {} }}",out); }
-    Ok(out)
-}
-
-pub struct PrintVecCommandType();
-
-impl CommandType for PrintVecCommandType {
-    fn get_schema(&self) -> CommandSchema {
-        CommandSchema {
-            values: 2,
-            trigger: CommandTrigger::Command(std("print_vec"))
-        }
-    }
-
-    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,sig,_) = &it.itype {
-            Ok(Box::new(PrintVecCommand(sig.clone(),it.regs.clone())))
-        } else {
-            Err("unexpected instruction".to_string())
-        }
-    }
-    
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
-        Ok(Box::new(PrintVecCommand(RegisterSignature::deserialize(&value[1],true,true)?,regs)))
-    }
-}
-
-pub struct PrintVecCommand(pub(crate) RegisterSignature,pub(crate) Vec<Register>);
-
-impl Command for PrintVecCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let v = StreamContents::String(print_vec(context,&self.0,&self.1)?);
-        std_stream(context)?.add(v);
-        Ok(())
-    }
-
-    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
-        Ok(Some(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(true,true)?]))
     }
 }
 
@@ -391,9 +232,8 @@ impl Command for AlienateCommand {
 pub fn make_library() -> Result<CommandSet,String> {
     let mut set = CommandSet::new(&std_id(),false);
     library_eq_command(&mut set)?;
+    /* 2,3 are free */
     set.push("len",1,LenCommandType())?;
-    set.push("print_regs",2,PrintRegsCommandType())?;
-    set.push("print_vec",3,PrintVecCommandType())?;
     set.push("assert",4,AssertCommandType())?;
     set.push("alienate",13,AlienateCommandType())?;
     set.push("print",14,PrintCommandType())?;
