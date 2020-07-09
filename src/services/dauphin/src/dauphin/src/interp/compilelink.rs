@@ -166,7 +166,7 @@ mod test {
         let s_b = std_stream(&mut ic_b).expect("e");
         let a = stream_strings(&s_a.take());
         let b = stream_strings(&s_b.take());    
-        assert_eq!(vec!["prog2"],a);
-        assert_eq!(vec!["prog1"],b);
+        assert_eq!(vec!["\"prog2\""],a);
+        assert_eq!(vec!["\"prog1\""],b);
     }
 }

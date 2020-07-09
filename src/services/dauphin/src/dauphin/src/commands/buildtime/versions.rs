@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
- use std::collections::HashMap;
+use std::collections::HashMap;
 use crate::model::{ Register, Identifier };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome };
 use crate::generate::{ Instruction, InstructionType };
@@ -43,8 +43,8 @@ impl CommandType for VersionCommandType {
                     if name.len() == 1 {
                         // TODO utility methods
                         let name = &name[0];
-                        if name == "major" { major = Some(&it.regs[vr.data_pos()]) }
-                        if name == "minor" { minor = Some(&it.regs[vr.data_pos()]) }
+                        if name.1 == "major" { major = Some(&it.regs[vr.data_pos()]) }
+                        if name.1 == "minor" { minor = Some(&it.regs[vr.data_pos()]) }
                     }
                 }
             }

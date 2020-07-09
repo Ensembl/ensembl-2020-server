@@ -194,16 +194,6 @@ fn linearize_one(context: &mut GenContext, subregs: &BTreeMap<Register,Linearize
                 context.add(Instruction::new(InstructionType::At,vec![instr.regs[0],instr.regs[1]]));
             }
         },
-
-        InstructionType::List => {
-            let lin = subregs.get(&instr.regs[0]).ok_or_else(|| format!("Missing info for register {:?}",instr.regs[0]))?;
-            context.add(Instruction::new(InstructionType::Nil,vec![lin.data]));
-            for (start,len) in &lin.index {
-                context.add(Instruction::new(InstructionType::Nil,vec![*start]));
-                context.add(Instruction::new(InstructionType::Nil,vec![*len]));
-            }
-        },
-
         InstructionType::Append => {
             if let Some(lin_src) = subregs.get(&instr.regs[1]) {
                 let lin_dst = subregs.get(&instr.regs[0]).ok_or_else(|| format!("Missing info for register {:?} in push",instr.regs[0]))?;

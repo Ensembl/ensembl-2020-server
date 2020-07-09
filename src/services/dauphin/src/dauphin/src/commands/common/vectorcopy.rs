@@ -41,7 +41,7 @@ pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<I
         };
         let depth : usize = cap.get(2).ok_or(())?.as_str().parse::<usize>().map_err(|_| ())?;
         let mut cr = ComplexRegisters::new_empty(mode);
-        cr.add(ComplexPath::new_empty(),VectorRegisters::new(depth,base),&vec![depth]);
+        cr.add(ComplexPath::new_empty().add_levels(depth),VectorRegisters::new(depth,base));
         sigs.add(cr);
         let flow_s = cap.get(3).ok_or(())?.as_str();
         flows.push(if flow_s.contains("o") {

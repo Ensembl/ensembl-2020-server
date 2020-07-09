@@ -22,6 +22,7 @@ use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
 use super::eq::library_eq_command;
 use super::assign::library_assign_commands;
+use super::print::PrintCommandType;
 use super::vector::library_vector_commands;
 use crate::cli::Config;
 use crate::typeinf::{ MemberMode, BaseType };
@@ -385,48 +386,6 @@ impl Command for AlienateCommand {
         }
         Ok(PreImageOutcome::Skip(vec![]))
     }
-}
-
-// TODO ARRAY-proof!
-pub struct PrintCommandType();
-
-impl CommandType for PrintCommandType {
-    fn get_schema(&self) -> CommandSchema {
-        CommandSchema {
-            values: 1,
-            trigger: CommandTrigger::Command(std("print"))
-        }
-    }
-
-    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
-        if let InstructionType::Call(_,_,_,_) = &it.itype {
-            Ok(Box::new(PrintCommand(it.regs[0])))
-        } else {
-            Err("unexpected instruction".to_string())
-        }
-    }
-    
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let reg = Register::deserialize(value[0])?;
-        Ok(Box::new(PrintCommand(reg)))
-    }
-}
-
-pub struct PrintCommand(Register);
-
-impl Command for PrintCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers_mut();
-        let a = &registers.coerce_strings(&self.0)?;
-        for s in a.iter() {
-            std_stream(context)?.add(StreamContents::String(s.to_string()));
-        }
-        Ok(())
-    }
-
-    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
-       Ok(Some(vec![self.0.serialize()]))
-    }    
 }
 
 pub fn make_library() -> Result<CommandSet,String> {

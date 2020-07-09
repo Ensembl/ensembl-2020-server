@@ -22,6 +22,7 @@ mod common {
     pub(super) mod vectorcopy;
     pub(super) mod vectorsource;
     pub(super) mod writevec;
+    pub(super) mod expandedsig;
 }
 mod core {
     #[macro_use]
@@ -33,6 +34,7 @@ mod core {
 mod std {
     pub(super) mod assign;
     pub(super) mod extend;
+    pub(super) mod print;
     pub(super) mod vector;
     pub(super) mod library;
     mod numops;
@@ -55,3 +57,4 @@ pub use self::core::consts::{
 pub use self::core::core::make_core;
 pub use self::std::library::{ make_library, std_stream };
 pub use self::buildtime::buildtime::make_buildtime;
+pub use self::common::expandedsig::{ XStructure, to_xstructure };

@@ -32,6 +32,7 @@ pub fn peephole_nil_append(context: &mut GenContext) -> Result<(),String> {
                 if nil_regs.contains(&instr.regs[0]) {
                     instr = Instruction::new(InstructionType::Copy,vec![instr.regs[0].clone(),instr.regs[1].clone()]);
                 }
+                nil_regs.remove(&instr.regs[0]);
             },
             _ => {
                 for idx in instr.itype.out_registers() {

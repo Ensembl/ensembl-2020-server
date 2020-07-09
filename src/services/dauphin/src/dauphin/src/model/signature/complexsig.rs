@@ -30,8 +30,7 @@ pub struct ComplexRegisters {
     start: usize,
     mode: MemberMode,
     order: Vec<ComplexPath>,
-    vectors: HashMap<ComplexPath,VectorRegisters>,
-    vec_break: HashMap<ComplexPath,Vec<usize>>
+    vectors: HashMap<ComplexPath,VectorRegisters>
 }
 
 impl PartialEq for ComplexRegisters {
@@ -40,7 +39,7 @@ impl PartialEq for ComplexRegisters {
             return false;
         }
         for path in self.order.iter() {
-            if self.vectors.get(path) != other.vectors.get(path) || self.vec_break.get(path) != other.vec_break.get(path) {
+            if self.vectors.get(path) != other.vectors.get(path) {
                 return false;
             }
         }
@@ -55,7 +54,6 @@ impl Hash for ComplexRegisters {
         self.order.hash(hasher);
         for path in self.order.iter() {
             self.vectors.get(path).hash(hasher);
-            self.vec_break.get(path).hash(hasher);
         }
     }
 }
@@ -76,8 +74,7 @@ impl ComplexRegisters {
             mode,
             start: 0,
             order: Vec::new(),
-            vectors: HashMap::new(),
-            vec_break: HashMap::new()
+            vectors: HashMap::new()
         }
     }
 
@@ -94,12 +91,12 @@ impl ComplexRegisters {
     }
 
     pub fn get_vec_depth(&self, path: &ComplexPath) -> Result<usize,String> {
-        Ok(self.vec_break.get(path).ok_or_else(|| format!("no depth present"))?.iter().sum())
+        Ok(path.get_breaks().iter().sum())
     }
 
     pub fn new(defstore: &DefStore, mode: MemberMode, type_: &MemberType) -> Result<ComplexRegisters,String> {
         let mut out = ComplexRegisters::new_empty(mode);
-        out.vec_from_type(defstore,type_,&ComplexPath::new_empty(),&ContainerType::new_empty(),&vec![])?;
+        out.vec_from_type(defstore,type_,&ComplexPath::new_empty(),&ContainerType::new_empty())?;
         Ok(out)
     }
 
@@ -108,7 +105,6 @@ impl ComplexRegisters {
         let mut out = ComplexRegisters::new_empty(MemberMode::deserialize(&data[0])?);
         let mut mult = 1;
         let mut named_off = 2;
-        if depth { mult +=1; named_off += 1; }
         if named { mult +=1; }
         let len = (data.len()-1)/mult;
         if len*mult+1 != data.len() {
@@ -116,17 +112,12 @@ impl ComplexRegisters {
         }
         for i in 0..len {
             let vs = VectorRegisters::deserialize(&data[i*mult+1])?;
-            let breaks = if depth {
-                cbor_array(&data[i*mult+2],0,true)?.iter().map(|x| cbor_int(x,None).map(|y| y as usize)).collect::<Result<Vec<usize>,_>>()?
-            } else {
-                vec![]
-            };
             let path = if named {
                 ComplexPath::deserialize(&data[i*mult+named_off])?
             } else {
                 ComplexPath::new_anon()
             };
-            out.add(path,vs,&breaks);
+            out.add(path,vs);
         }
         Ok(out)
     }
@@ -135,10 +126,6 @@ impl ComplexRegisters {
         let mut regs = vec![self.mode.serialize()];
         for complex in &self.order {
             regs.push(self.vectors.get(complex).as_ref().unwrap().serialize(false)?);
-            if depth {
-                let breaks = self.vec_break.get(complex).ok_or_else(|| format!("bad complexsig"))?;
-                regs.push(CborValue::Array(breaks.iter().map(|x| CborValue::Integer(*x as i128)).collect()));
-            }
             if named {
                 regs.push(complex.serialize()?);
             }
@@ -155,12 +142,11 @@ impl ComplexRegisters {
 
     pub fn get_mode(&self) -> MemberMode { self.mode }
 
-    pub fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters, breaks: &[usize]) {
+    pub fn add(&mut self, complex: ComplexPath, mut vr: VectorRegisters) {
         vr.add_start(self.start);
         self.start += vr.register_count();
         self.order.push(complex.clone());
         self.vectors.insert(complex.clone(),vr);
-        self.vec_break.insert(complex,breaks.to_vec());
     }
 
     pub fn iter<'a>(&'a self) -> ComplexRegistersIterator<'a> {
@@ -174,41 +160,40 @@ impl ComplexRegisters {
         self.iter().map(|x| x.1.register_count()).sum()
     }
 
-    fn vec_from_type(&mut self, defstore: &DefStore, type_: &MemberType, path: &ComplexPath, container: &ContainerType, breaks: &[usize]) -> Result<(),String> {
-        let mut breaks = breaks.to_vec();
-        breaks.push(type_.get_container().depth());
+    fn vec_from_type(&mut self, defstore: &DefStore, type_: &MemberType, path: &ComplexPath, container: &ContainerType) -> Result<(),String> {
+        let path = path.add_levels(type_.get_container().depth());
         let container = container.merge(&type_.get_container());
         match type_.get_base() {
             BaseType::StructType(name) => {
                 let struct_ = defstore.get_struct_id(&name)?;
-                self.from_struct(defstore,struct_,path,&container,&breaks)
+                self.from_struct(defstore,struct_,&path,&container)
             },
             BaseType::EnumType(name) => {
                 let enum_ = defstore.get_enum_id(&name)?;
-                self.from_enum(defstore,enum_,path,&container,&breaks)
+                self.from_enum(defstore,enum_,&path,&container)
             },
             base => {
-                self.add(path.clone(),VectorRegisters::new(container.depth(),base),&breaks);
+                self.add(path.clone(),VectorRegisters::new(container.depth(),base));
                 Ok(())
             }
         }
     }
 
-    fn from_struct(&mut self, defstore: &DefStore, se: &StructDef, cpath: &ComplexPath, container: &ContainerType, breaks: &[usize]) -> Result<(),String> {
+    fn from_struct(&mut self, defstore: &DefStore, se: &StructDef, cpath: &ComplexPath, container: &ContainerType) -> Result<(),String> {
         for name in se.get_names() {
-            let new_cpath = cpath.add(name);
+            let new_cpath = cpath.add(se.identifier(),name);
             let type_ = se.get_member_type(name).unwrap();
-            self.vec_from_type(defstore,&type_,&new_cpath,container,breaks)?;
+            self.vec_from_type(defstore,&type_,&new_cpath,container)?;
         }
         Ok(())
     }
 
-    fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &ComplexPath, container: &ContainerType, breaks: &[usize]) -> Result<(),String> {
-        self.add(cpath.clone(),VectorRegisters::new(container.depth(),BaseType::NumberType),breaks);
+    fn from_enum(&mut self, defstore: &DefStore, se: &EnumDef, cpath: &ComplexPath, container: &ContainerType) -> Result<(),String> {
+        self.add(cpath.clone(),VectorRegisters::new(container.depth(),BaseType::NumberType));
         for name in se.get_names() {
-            let new_cpath = cpath.add(name);
+            let new_cpath = cpath.add(se.identifier(),name);
             let type_ = se.get_branch_type(name).unwrap();
-            self.vec_from_type(defstore,&type_,&new_cpath,container,breaks)?;
+            self.vec_from_type(defstore,&type_,&new_cpath,container)?;
         }
         Ok(())
     }

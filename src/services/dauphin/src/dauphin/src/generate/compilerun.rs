@@ -303,7 +303,7 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        assert_eq!(vec!["hello world!", "1", "1", "3", "2", "2", "1000000000", "1000000000", "1000000000", "1000000000", "1000000000", "10", "10", "10", "1", "11", "11", "11"],strings);
+        assert_eq!(vec!["\"hello world!\"", "1", "1", "3", "2", "2", "1000000000", "1000000000", "1000000000", "1000000000", "1000000000", "10", "10", "10", "1", "11", "11", "11"],strings);
         print!("{:?}\n",strings);
     }
 }

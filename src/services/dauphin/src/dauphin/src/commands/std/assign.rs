@@ -164,7 +164,6 @@ mod test {
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         print!("{:?}\n",strings);
-        assert_eq!("0",strings[0]);
-        assert_eq!("0",strings[1]);
+        assert_eq!("[0, 0]",strings[0]);
     }
 }

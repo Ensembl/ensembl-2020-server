@@ -482,13 +482,13 @@ impl EqCommand {
             };
             let mut sigs = RegisterSignature::new();
             let mut cr = ComplexRegisters::new_empty(MemberMode::Out);
-            cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
+            cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType));
             sigs.add(cr);
             let mut cr = ComplexRegisters::new_empty(MemberMode::In);
-            cr.add(ComplexPath::new_empty(),VectorRegisters::new(vr_a.depth(),vr_a.get_base().clone()),&vec![vr_a.depth()]);
+            cr.add(ComplexPath::new_empty().add_levels(vr_a.depth()),VectorRegisters::new(vr_a.depth(),vr_a.get_base().clone()));
             sigs.add(cr);
             let mut cr = ComplexRegisters::new_empty(MemberMode::In);
-            cr.add(ComplexPath::new_empty(),VectorRegisters::new(vr_b.depth(),vr_b.get_base().clone()),&vec![vr_b.depth()]);
+            cr.add(ComplexPath::new_empty().add_levels(vr_b.depth()),VectorRegisters::new(vr_b.depth(),vr_b.get_base().clone()));
             sigs.add(cr);
             let mut regs = vec![target];
             regs.extend(vr_a.all_registers().iter().map(|x| self.1[*x].clone()));
@@ -500,10 +500,10 @@ impl EqCommand {
         if !short {
             let mut sigs = RegisterSignature::new();
             let mut cr = ComplexRegisters::new_empty(MemberMode::Out);
-            cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
+            cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType));
             for _ in 0..parts.len() {
                 let mut cr = ComplexRegisters::new_empty(MemberMode::In);
-                cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType),&vec![0]);
+                cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType));
             }
             sigs.add(cr);
             let mut flows = vec![MemberDataFlow::Out];

@@ -96,7 +96,11 @@ fn extend_vertical<F>(in_: &Vec<Register>, mapping: &HashMap<Register,Vec<Regist
 /* Some easy value for unused enum branches */
 fn build_nil(context: &mut GenContext, defstore: &DefStore, reg: &Register, type_: &MemberType) -> Result<(),String> {
     match type_ {
-        MemberType::Vec(_) =>  instr!(context,List,*reg),
+        MemberType::Vec(m) =>  {
+            let subreg = context.allocate_register(Some(m));
+            instr!(context,Nil,subreg);
+            instr!(context,Star,*reg,subreg);
+        },
         MemberType::Base(b) => match b {
             BaseType::BooleanType => context.add(Instruction::new(InstructionType::BooleanConst(false),vec![*reg])),
             BaseType::StringType => context.add(Instruction::new(InstructionType::StringConst(String::new()),vec![*reg])),
@@ -159,7 +163,6 @@ fn extend_common(context: &mut GenContext, instr: &Instruction, mapping: &HashMa
         InstructionType::Nil |
         InstructionType::Alias |
         InstructionType::Copy |
-        InstructionType::List |
         InstructionType::Append |
         InstructionType::Square |
         InstructionType::RefSquare |
