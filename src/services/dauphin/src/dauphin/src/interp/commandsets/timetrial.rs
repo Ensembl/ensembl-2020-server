@@ -17,7 +17,8 @@
 use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
 use crate::interp::{ CompilerLink, InterpContext };
-use crate::interp::{ Command, InterpValue };
+use crate::interp::{ Command, InterpValue, InterpCommand, CommandType };
+use crate::generate::Instruction;
 use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters, cbor_array, cbor_float };
 use crate::typeinf::{ MemberMode, BaseType };
 use serde_cbor::Value as CborValue;
@@ -46,7 +47,7 @@ pub fn regress(input: &[(f64,f64)]) -> Result<(f64,f64),String> {
     Ok((grad,icept))
 }
 
-fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Command>, linker: &CompilerLink, _config: &Config, t: i64, loops: i64, dry: bool) -> Result<f64,String> {
+fn run_time_trial(command_type: &dyn TimeTrialCommandType, icom: &Box<dyn InterpCommand>, linker: &CompilerLink, _config: &Config, t: i64, loops: i64, dry: bool) -> Result<f64,String> {
     let mut context = linker.new_context();
     command_type.global_prepare(&mut context,t);
     let start_time = SystemTime::now();
@@ -56,7 +57,6 @@ fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Com
             context.registers_mut().commit();
         }
     } else {
-        let icom = command.to_interp_command()?;
         for _ in 0..loops {
             command_type.local_prepare(&mut context,t);
             context.registers_mut().commit();
@@ -67,12 +67,13 @@ fn run_time_trial(command_type: &dyn TimeTrialCommandType, command: &Box<dyn Com
     Ok(start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f64()*1000.)
 }
 
-fn generate_one_timing(command_type: &dyn TimeTrialCommandType, linker: &CompilerLink, config: &Config, param: i64, block: i64) -> Result<f64,String> {
+fn generate_one_timing(trial: &dyn TimeTrialCommandType, linker: &CompilerLink, config: &Config, param: i64, block: i64) -> Result<f64,String> {
     let mut data = vec![];
     for i in 0..5 {
-        let command = command_type.timetrial_make_command(param,linker,config)?;
-        let run = run_time_trial(command_type,&command,linker,config,param,i*block,false)?;
-        let dry = run_time_trial(command_type,&command,linker,config,param,i*block,true)?;
+        let instr = trial.timetrial_make_command(param,linker,config)?;
+        let interp_command = linker.instruction_to_interp_command(&instr,false)?.ok_or_else(|| format!("cannot run time trial"))?;
+        let run = run_time_trial(trial,&interp_command,linker,config,param,i*block,false)?;
+        let dry = run_time_trial(trial,&interp_command,linker,config,param,i*block,true)?;
         data.push(((i*block) as f64,run-dry));
         if config.get_verbose() > 2 {
             print!("loops={} time={:.2}ms\n",i*block,run-dry);
@@ -123,7 +124,7 @@ pub trait TimeTrialCommandType {
     fn local_prepare(&self, _context: &mut InterpContext, _: i64) {}
     fn global_prepare(&self, _context: &mut InterpContext, _: i64) {}
 
-    fn timetrial_make_command(&self, instance: i64, linker: &CompilerLink, config: &Config) -> Result<Box<dyn Command>,String>;
+    fn timetrial_make_command(&self, instance: i64, linker: &CompilerLink, config: &Config) -> Result<Instruction,String>;
 }
 
 

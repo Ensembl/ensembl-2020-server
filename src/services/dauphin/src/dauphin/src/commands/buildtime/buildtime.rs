@@ -14,24 +14,25 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ CommandSet, CommandSetId };
+use crate::interp::{ CommandSetId, Deserializer, CompLibRegister };
 use super::defines::DefineCommandType;
 use super::ini::LoadIniCommandType;
 use super::dump::DumpSigCommandType;
 use super::versions::VersionCommandType;
 use super::hints::{ GetSizeHintCommandType, SetSizeHintCommandType, ForcePauseCommandType };
+use crate::commands::common::templates::{ ErrorDeserializer, NoopDeserializer };
 
-pub fn make_buildtime() -> Result<CommandSet,String> {
-    let set_id = CommandSetId::new("buildtime",(0,1),0xA2B92F8C219E382A);
-    let mut set = CommandSet::new(&set_id,true);
-    set.push("load_ini",1,LoadIniCommandType())?;
-    set.push("dump_sig",2,DumpSigCommandType())?;
-    set.push("get_size_hint",3,GetSizeHintCommandType())?;
-    set.push("set_size_hint",4,SetSizeHintCommandType())?;
-    set.push("force_pause",5,ForcePauseCommandType())?;
-    set.push("is_defined",6,DefineCommandType(false))?;
-    set.push("get_define",7,DefineCommandType(true))?;
-    set.push("get_version",8,VersionCommandType())?;
+pub fn make_buildtime() -> Result<CompLibRegister,String> {
+    let set_id = CommandSetId::new("buildtime",(0,1),0xB790000000000000);
+    let mut set = CompLibRegister::new(&set_id,None);
+    set.push("load_ini",None,LoadIniCommandType());
+    set.push("dump_sig",None,DumpSigCommandType());
+    set.push("get_size_hint",None,GetSizeHintCommandType());
+    set.push("set_size_hint",None,SetSizeHintCommandType());
+    set.push("force_pause",None,ForcePauseCommandType());
+    set.push("is_defined",None,DefineCommandType(false));
+    set.push("get_define",None,DefineCommandType(true));
+    set.push("get_version",None,VersionCommandType());
     set.add_header("buildtime",include_str!("header.dp"));
     Ok(set)
 }

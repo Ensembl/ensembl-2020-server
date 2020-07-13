@@ -17,147 +17,134 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use super::command::CommandType;
-use super::commandset::CommandSet;
-use super::member::CommandSuiteMember;
 use super::CommandSetId;
 use crate::model::{ cbor_array, cbor_int };
 use serde_cbor::Value as CborValue;
+use crate::interp::{ PayloadFactory, InterpLibRegister, CommandTypeId, CommandTypeStore, Deserializer, CommandDeserializer };
+use super::suite::{ CommandSetVerifier, OpcodeMapping };
 
 pub struct CommandInterpretSuite {
-    sets: Vec<Rc<CommandSet>>,
-    opcodes: HashMap<u32,(CommandSuiteMember,usize)>
+    store: Deserializer,
+    offset_to_command: HashMap<(CommandSetId,u32),CommandTypeId>,
+    opcode_mapper: OpcodeMapping,
+    minors: HashMap<(String,u32),u32>,
+    verifier: CommandSetVerifier
 }
 
 impl CommandInterpretSuite {
     pub(super) fn new() -> CommandInterpretSuite {
         CommandInterpretSuite {
-            sets: vec![],
-            opcodes: HashMap::new()
+            opcode_mapper: OpcodeMapping::new(),
+            offset_to_command: HashMap::new(),
+            store: Deserializer::new(),
+            minors: HashMap::new(),
+            verifier: CommandSetVerifier::new()        
         }
     }
 
-    fn deserialize(&self, cbor: &CborValue) -> Result<HashMap<CommandSetId,u32>,String> {
+    pub fn register(&mut self, mut set: InterpLibRegister) -> Result<(),String> {
+        let sid = set.id().clone();
+        let version = sid.version();
+        self.minors.insert((sid.name().to_string(),version.0),version.1);
+        for ds in set.drain_commands().drain(..) {
+            if let Some((opcode,_)) = ds.get_opcode_len()? {
+                let cid = self.store.add(ds)?;
+                self.offset_to_command.insert((sid.clone(),opcode),cid.clone());
+                self.opcode_mapper.add_opcode(&sid,opcode);
+            }
+        }
+        self.verifier.register2(&sid)?;
+        self.opcode_mapper.recalculate();
+        Ok(())
+    }
+
+    pub fn adjust(&mut self, cbor: &CborValue) -> Result<(),String> {
         let data = cbor_array(cbor,0,true)?;
         if data.len()%2 != 0 {
             return Err(format!("badly formed cbor"))
         }
-        let mut out = HashMap::new();
+        let mut adjustments = HashMap::new();
         for i in (0..data.len()).step_by(2) {
-            out.insert(CommandSetId::deserialize(&data[i+1])?,cbor_int(&data[i],None)? as u32);
-        }
-        Ok(out)
-    }
-
-    pub(super) fn add_member(&mut self, real_opcode: u32, member: &CommandSuiteMember, set_index: usize) {
-        self.opcodes.insert(real_opcode,(member.clone(),set_index));
-    }
-
-    pub(super) fn add_set(&mut self, set: Rc<CommandSet>) -> usize {
-        let out = self.sets.len();
-        self.sets.push(set);
-        out
-    }
-
-    pub(super) fn adjust(&mut self, cbor: &CborValue) -> Result<(),String> {
-        let stored_id_list = self.sets.iter().map(|s| s.id()).enumerate()
-            .map(|(idx,id)| {
-                let version = id.version();
-                ((id.name(),version.0),(idx,version.1))
-            })
-            .collect::<HashMap<_,_>>();
-        let mut offsets = HashMap::new();
-        for (incoming_id,offset) in self.deserialize(cbor)? {
-            let name = incoming_id.name();
-            let version = incoming_id.version();
-            if let Some((set_index,minor)) = stored_id_list.get(&(name,version.0)) {
-                if *minor < version.1 {
-                    return Err(format!("version too old. have {} need {}",self.sets[*set_index].id(),incoming_id))
+            let (sid,base) = (CommandSetId::deserialize(&data[i+1])?,cbor_int(&data[i],None)? as u32);
+            let name = sid.name().to_string();
+            let version = sid.version();
+            if let Some(stored_minor) = self.minors.get(&(name.clone(),version.0)) {
+                if *stored_minor < version.1 {
+                    return Err(format!("version of {}.{} too old. have {} need {}",name,version.0,stored_minor,version.1));
                 }
-                offsets.insert(*set_index,offset);
             } else {
-                return Err(format!("missing command suite {}",incoming_id));
+                return Err(format!("missing command suite {}.{}",name,version.0));
             }
+            adjustments.insert(sid,base);
         }
-        let mut new_opcodes = HashMap::new();
-        for (_,(mut member,index)) in self.opcodes.drain() {
-            if let Some(offset) = offsets.get(&index) {
-                member.set_offset(*offset);
-                new_opcodes.insert(member.opcode(),(member,index));
-            }
-        }
-        self.opcodes = new_opcodes;
+        self.opcode_mapper.adjust(&adjustments)?;
         Ok(())
     }
 
-    pub fn get_by_opcode(&self, real_opcode: u32) -> Result<&Box<dyn CommandType>,String> {
-        let member = self.opcodes.get(&real_opcode).ok_or(format!("Unknown opcode {}",real_opcode))?;
-        member.0.get_object()
+    pub fn get_deserializer(&self, real_opcode: u32) -> Result<&Box<dyn CommandDeserializer>,String> {
+        let (sid,offset) = self.opcode_mapper.decode_opcode(real_opcode)?;
+        let cid = self.offset_to_command.get(&(sid,offset)).ok_or(format!("Unknown opcode {}",real_opcode))?;
+        self.store.get(cid)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::cell::RefCell;
+    use std::rc::Rc;
     use super::*;
     use super::super::{ CommandSetId, CommandTrigger, CommandCompileSuite };
-    use crate::commands::{ ConstCommandType, NumberConstCommandType };
+    use crate::commands::{ ConstCommandType, NumberConstCommandType, NoopDeserializer, BooleanConstCommandType };
     use crate::generate::InstructionSuperType;
-
+    use crate::interp::{ InterpContext, InterpLibRegister, CompLibRegister };
+    use crate::interp::harness::FakeDeserializer;
 
     #[test]
     fn test_interpretsuite_smoke() {
+        let v : Rc<RefCell<u32>> = Rc::new(RefCell::new(0));
         /* imagine all this at the compiler end */
         let mut ccs = CommandCompileSuite::new();
         //
-        let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType::new()).expect("a");
-        let cs1 = Rc::new(cs1);
-        ccs.add_set(cs1.clone(),10);
-        let m = CommandSuiteMember::new(5,cs1.clone(),10);
-        ccs.add_member(CommandTrigger::Instruction(InstructionSuperType::Const),&m,false);
+        let csi1 = CommandSetId::new("test",(1,2),0x1C5F9E7C72C86288);
+        let mut is1 = InterpLibRegister::new(&csi1);
+        is1.push(FakeDeserializer(v.clone(),5));
+        let mut cs1 = CompLibRegister::new(&csi1,Some(is1));
+        cs1.push("test1",Some(5),ConstCommandType::new());
+        ccs.register(cs1).expect("a");
         //
-        let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
-        let mut cs2 = CommandSet::new(&csi2,false);
-        cs2.push("test2",5,NumberConstCommandType::new()).expect("a");
-        let cs2 = Rc::new(cs2);
-        ccs.add_set(cs2.clone(),20);
-        let m = CommandSuiteMember::new(5,cs2.clone(),20);
-        ccs.add_member(CommandTrigger::Instruction(InstructionSuperType::NumberConst),&m,false);
-        let (_,opcode,_) = ccs.get_by_trigger(&CommandTrigger::Instruction(InstructionSuperType::NumberConst)).expect("c");
-        assert_eq!(25,opcode);
+        let csi2 = CommandSetId::new("test2",(1,2),0xB35D4E7C72C8628A);
+        let mut is2 = InterpLibRegister::new(&csi2);
+        is2.push(FakeDeserializer(v.clone(),6));
+        let mut cs2 = CompLibRegister::new(&csi2,Some(is2));
+        cs2.push("test2",Some(6),NumberConstCommandType::new());
+        ccs.register(cs2).expect("b");
+        let opcode = ccs.get_opcode_by_trigger(&CommandTrigger::Instruction(InstructionSuperType::NumberConst)).expect("c");
+        assert_eq!(Some(12),opcode);
 
         /* and here's the same thing, but subtly rearranged, at the interpreter end */
         let mut cis = CommandInterpretSuite::new();
         //
-        let csi1 = CommandSetId::new("test",(1,2),0x2A9E7C72C8628854);
-        let mut cs1 = CommandSet::new(&csi1,false);
-        cs1.push("test1",5,ConstCommandType::new()).expect("a");
-        let cs1 = Rc::new(cs1);
-        let cs1i = cis.add_set(cs1.clone());
-        let m = CommandSuiteMember::new(5,cs1.clone(),10);
-        cis.add_member(15,&m,cs1i);
+        let csi1 = CommandSetId::new("test",(1,2),0x1C5F9E7C72C86288);
+        let mut cs1 = InterpLibRegister::new(&csi1);
+        cs1.push(FakeDeserializer(v.clone(),5));
+        cis.register(cs1).expect("c");
         //
-        let csi2 = CommandSetId::new("test2",(1,2),0x284E7C72C8628854);
-        let mut cs2 = CommandSet::new(&csi2,false);
-        cs2.push("test2",5,NumberConstCommandType::new()).expect("a");
-        let cs2 = Rc::new(cs2);
-        let cs2i = cis.add_set(cs2.clone());
-        let m = CommandSuiteMember::new(5,cs2.clone(),30);
-        cis.add_member(35,&m,cs2i);
-
-        /* now, our opcodes should be 15/35, ie local assignments, for now */
-        let cmd = cis.get_by_opcode(15).expect("c");
-        assert_eq!(CommandTrigger::Instruction(InstructionSuperType::Const),cmd.get_schema().trigger);
-        let cmd = cis.get_by_opcode(35).expect("d");
-        assert_eq!(CommandTrigger::Instruction(InstructionSuperType::NumberConst),cmd.get_schema().trigger);
-        assert!(cis.get_by_opcode(25).is_err());
+        let csi3 = CommandSetId::new("test3",(1,2),0x5B5E7C72C8628B34);
+        let mut cs3 = InterpLibRegister::new(&csi3);
+        cs3.push(FakeDeserializer(v.clone(),7));
+        cis.register(cs3).expect("c");
+        //
+        let csi2 = CommandSetId::new("test2",(1,2),0xB35D4E7C72C8628A);
+        let mut cs2 = InterpLibRegister::new(&csi2);
+        cs2.push(FakeDeserializer(v.clone(),6));
+        cis.register(cs2).expect("c");
 
         cis.adjust(&ccs.serialize()).expect("e");
-        /* but after magic adjustment, should be 15/25 */
-        let cmd = cis.get_by_opcode(15).expect("c");
-        assert_eq!(CommandTrigger::Instruction(InstructionSuperType::Const),cmd.get_schema().trigger);
-        let cmd = cis.get_by_opcode(25).expect("d");
-        assert_eq!(CommandTrigger::Instruction(InstructionSuperType::NumberConst),cmd.get_schema().trigger);
-        assert!(cis.get_by_opcode(35).is_err());
+
+        let mut context = InterpContext::new(&HashMap::new());
+        cis.get_deserializer(5).expect("e").deserialize(5,&vec![]).expect("f").execute(&mut context).expect("g");
+        assert_eq!(5,*v.borrow());
+        cis.get_deserializer(12).expect("e").deserialize(12,&vec![]).expect("f").execute(&mut context).expect("g");
+        assert_eq!(6,*v.borrow());
     }
 }

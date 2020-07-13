@@ -22,21 +22,24 @@ mod interplink;
 mod interpret;
 mod commandsets {
     pub mod command;
-    pub mod commandset;
     pub mod commandsetid;
+    pub mod commandtypestore;
+    mod deserializer;
     pub mod interpretsuite;
-    mod member;
     pub mod timetrial;
     pub mod compilesuite;
+    pub mod suite;
     pub mod suitebuilder;
 
     pub use command::{ Command, CommandSchema, CommandTrigger, CommandType, PreImageOutcome, PreImagePrepare, InterpCommand, CommandDeserializer };
-    pub use commandset::CommandSet;
     pub use commandsetid::CommandSetId;
     pub use interpretsuite::CommandInterpretSuite;
     pub use compilesuite::CommandCompileSuite;
-    pub use suitebuilder::{ LibrarySuiteBuilder, make_librarysuite_builder };
+    pub use suitebuilder::{ make_compiler_suite, make_interpret_suite };
+    pub use suite::{ CompLibRegister, InterpLibRegister };
     pub use timetrial::{ TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
+    pub use deserializer::Deserializer;
+    pub use commandtypestore::{ CommandTypeStore, CommandTypeId };
 }
 mod values {
     pub mod registers;
@@ -54,8 +57,9 @@ pub use self::values::supercow::SuperCow;
 pub use self::values::registers::RegisterFile;
 pub use self::stream::{ Stream, StreamContents, StreamFactory };
 pub use self::commandsets::{
-    CommandSet, CommandSetId, CommandInterpretSuite, CommandCompileSuite, LibrarySuiteBuilder, Command, CommandSchema, CommandTrigger, CommandType, 
-    PreImagePrepare, PreImageOutcome, make_librarysuite_builder, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand, CommandDeserializer
+    CommandSetId, CommandInterpretSuite, CommandCompileSuite, Command, CommandSchema, CommandTrigger, CommandType, Deserializer, CompLibRegister,
+    PreImagePrepare, PreImageOutcome, make_compiler_suite, make_interpret_suite, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand, CommandDeserializer,
+    CommandTypeStore, CommandTypeId, InterpLibRegister
 };
 pub use self::context::{ InterpContext, PayloadFactory };
 pub use self::interpret::{ InterpretInstance, interpreter };

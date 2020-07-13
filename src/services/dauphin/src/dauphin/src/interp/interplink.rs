@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::interp::commandsets::{ Command, CommandInterpretSuite, LibrarySuiteBuilder, CommandSetId };
+use crate::interp::commandsets::{ Command, CommandInterpretSuite, CommandSetId, InterpCommand };
 use crate::interp::{ InterpContext, PayloadFactory };
 use crate::model::Register;
 use serde_cbor::Value as CborValue;
@@ -49,7 +49,7 @@ impl<'a> ProgramCursor<'a> {
 }
 
 pub struct InterpreterLinkProgram {
-    commands: Vec<Box<dyn Command>>,
+    commands: Vec<Box<dyn InterpCommand>>,
     instructions: Option<Vec<(String,Vec<Register>)>>
 }
 
@@ -59,7 +59,7 @@ pub struct InterpreterLink {
 }
 
 impl InterpreterLink {
-    fn make_commands(ips: &CommandInterpretSuite, program: &CborValue) -> Result<Vec<Box<dyn Command>>,String> {
+    fn make_commands(ips: &CommandInterpretSuite, program: &CborValue) -> Result<Vec<Box<dyn InterpCommand>>,String> {
         let mut cursor = ProgramCursor {
             value: cbor_array(program,0,true)?,
             index: 0
@@ -67,10 +67,10 @@ impl InterpreterLink {
         let mut out = vec![];
         while cursor.more() {
             let opcode = cbor_int(cursor.next()?,None)? as u32;
-            let commandtype = ips.get_by_opcode(opcode)?;
-            let num_args = commandtype.get_schema().values;
+            let ds = ips.get_deserializer(opcode)?;
+            let (_,num_args) = ds.get_opcode_len()?.ok_or_else(|| format!("attempt to deserialize an unserializable"))?;
             let args = cursor.next_n(num_args)?;
-            out.push(commandtype.deserialize(&args).map_err(|x| format!("{} while deserializing {}",x,commandtype.get_schema().trigger))?);
+            out.push(ds.deserialize(opcode,&args).map_err(|x| format!("{} while deserializing",x))?);
         }
         Ok(out)
     }
@@ -93,21 +93,21 @@ impl InterpreterLink {
         Ok(self.programs.get(name).ok_or_else(|| format!("No such program {}",name))?)
     }
 
-    pub fn new(cs: LibrarySuiteBuilder, cbor: &CborValue) -> Result<InterpreterLink,String> {
+    pub fn new(mut ips: CommandInterpretSuite, cbor: &CborValue) -> Result<InterpreterLink,String> {
         let mut out = InterpreterLink {
             programs: HashMap::new(),
-            payloads: cs.payloads().clone()
+            payloads: HashMap::new()
         };
         let data = cbor_map(cbor,&vec!["version","suite","programs"])?;
-        let ips = cs.make_interpret_suite(data[1]).map_err(|x| format!("{} while building linker",x))?;
+        ips.adjust(data[1])?;
+        let got_ver = cbor_int(data[0],None)? as u32;
+        if got_ver != VERSION {
+            return Err(format!("Incompatible code. got v{} understand v{}",got_ver,VERSION));
+        }
         for (name,program) in cbor_map_iter(data[2])? {
             let name = cbor_string(name)?;
             let cmds = cbor_entry(program,"cmds")?.ok_or_else(|| "bad cbor: no cmds section".to_string())?;
             let symbols = cbor_entry(program,"symbols")?;
-            let got_ver = cbor_int(data[0],None)? as u32;
-            if got_ver != VERSION {
-                return Err(format!("Incompatible code. got v{} understand v{}",got_ver,VERSION));
-            }
             out.programs.insert(name.to_string(),InterpreterLinkProgram {
                 commands: InterpreterLink::make_commands(&ips,cmds).map_err(|x| format!("{} while making commands",x))?,
                 instructions: symbols.map(|x| InterpreterLink::make_instructions(x)).transpose()?
@@ -116,7 +116,7 @@ impl InterpreterLink {
         Ok(out)
     }
 
-    pub fn get_commands(&self, name: &str) -> Result<&Vec<Box<dyn Command>>,String> {
+    pub fn get_commands(&self, name: &str) -> Result<&Vec<Box<dyn InterpCommand>>,String> {
         Ok(&self.get_program(name)?.commands)
     }
 

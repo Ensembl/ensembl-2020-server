@@ -16,7 +16,7 @@
 
 #[macro_export]
 macro_rules! type_instr2 {
-    ($type:ident,$command:ident,$supertype:expr,$trial:ident) => {
+    ($type:ident,$dstype:ident,$opcode:expr,$ic:ident,$command:ident,$supertype:expr,$trial:ident) => {
         pub struct $type(Option<TimeTrial>);
 
         impl $type {
@@ -34,10 +34,6 @@ macro_rules! type_instr2 {
                 Ok(Box::new($command(it.regs[0],it.regs[1],self.0.clone())))
             }
 
-            fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-                Ok(Box::new($command(Register::deserialize(value[0])?,Register::deserialize(value[1])?,self.0.clone())))
-            }
-
             fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
                 let timings = TimeTrial::run(&$trial(),linker,config)?;
                 Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -49,12 +45,21 @@ macro_rules! type_instr2 {
                 Ok(())
             }
         }
+
+        pub struct $dstype();
+
+        impl CommandDeserializer for $dstype {
+            fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some(($opcode,2))) }
+            fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+                Ok(Box::new($ic(Register::deserialize(value[0])?,Register::deserialize(value[1])?)))
+            }
+        }
     };
 }
 
 #[macro_export]
 macro_rules! type_instr3 {
-    ($type:ident,$command:ident,$supertype:expr,$trial:ident) => {
+    ($type:ident,$dstype:ident,$opcode:expr,$ic:ident,$command:ident,$supertype:expr,$trial:ident) => {
         pub struct $type(Option<TimeTrial>);
 
         impl $type {
@@ -72,11 +77,6 @@ macro_rules! type_instr3 {
                 Ok(Box::new($command(it.regs[0],it.regs[1],it.regs[2],self.0.clone())))
             }
 
-            fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-                Ok(Box::new($command(Register::deserialize(value[0])?,Register::deserialize(value[1])?,
-                                     Register::deserialize(value[2])?,self.0.clone())))
-            }
-
             fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
                 let timings = TimeTrial::run(&$trial(),linker,config)?;
                 Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -88,12 +88,22 @@ macro_rules! type_instr3 {
                 Ok(())
             }
         }
+
+        pub struct $dstype();
+
+        impl CommandDeserializer for $dstype {
+            fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some(($opcode,3))) }
+            fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+                Ok(Box::new($ic(Register::deserialize(value[0])?,Register::deserialize(value[1])?,
+                Register::deserialize(value[2])?)))
+            }
+        }    
     };
 }
 
 #[macro_export]
 macro_rules! type_instr4 {
-    ($type:ident,$command:ident,$supertype:expr,$trial:ident) => {
+    ($type:ident,$dstype:ident,$opcode:expr,$ic:ident,$command:ident,$supertype:expr,$trial:ident) => {
         pub struct $type(Option<TimeTrial>);
 
         impl $type {
@@ -111,12 +121,6 @@ macro_rules! type_instr4 {
                 Ok(Box::new($command(it.regs[0],it.regs[1],it.regs[2],it.regs[3],self.0.clone())))
             }
 
-            fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-                Ok(Box::new($command(Register::deserialize(value[0])?,Register::deserialize(value[1])?,
-                                     Register::deserialize(value[2])?,Register::deserialize(value[3])?,
-                                    self.0.clone())))
-            }
-
             fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
                 let timings = TimeTrial::run(&$trial(),linker,config)?;
                 Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -128,5 +132,15 @@ macro_rules! type_instr4 {
                 Ok(())
             }
         }
+
+        pub struct $dstype();
+
+        impl CommandDeserializer for $dstype {
+            fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some(($opcode,4))) }
+            fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+                Ok(Box::new($ic(Register::deserialize(value[0])?,Register::deserialize(value[1])?,
+                Register::deserialize(value[2])?,Register::deserialize(value[3])?)))
+            }
+        }    
     };
 }

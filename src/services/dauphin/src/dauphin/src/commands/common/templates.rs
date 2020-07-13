@@ -14,7 +14,8 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ InterpCommand, InterpContext };
+use crate::interp::{ InterpCommand, InterpContext, CommandDeserializer };
+use serde_cbor::Value as CborValue;
 
 pub struct ErrorInterpCommand();
 
@@ -29,5 +30,27 @@ pub struct NoopInterpCommand();
 impl InterpCommand for NoopInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
         Ok(())
+    }
+}
+
+pub struct ErrorDeserializer();
+
+impl CommandDeserializer for ErrorDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> {
+        Ok(None)
+    }
+    fn deserialize(&self, _opcode: u32, _value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Err(format!("compile time command somehow ended up in binary"))
+    }
+}
+
+pub struct NoopDeserializer(pub u32);
+
+impl CommandDeserializer for NoopDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> {
+        Ok(Some((self.0,0)))
+    }
+    fn deserialize(&self, _opcode: u32, _value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NoopInterpCommand()))
     }
 }

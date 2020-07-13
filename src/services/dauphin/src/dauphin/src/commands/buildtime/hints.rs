@@ -17,7 +17,7 @@
 use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
 use std::collections::HashSet;
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, ComplexRegisters };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, InterpCommand };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, InterpCommand };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use crate::typeinf::MemberMode;
 use serde_cbor::Value as CborValue;
@@ -54,24 +54,16 @@ impl CommandType for GetSizeHintCommandType {
             Err("unexpected instruction".to_string())
         }
     }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err(format!("cannot deseriailize size hints"))
-    }
 }
 
 pub struct GetSizeHintCommand(Register,Vec<Register>);
 
 impl Command for GetSizeHintCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(ErrorInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Err(format!("cannot seriailize size hints"))
     }
     
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         let mut out = vec![];
         for reg in self.1.iter() {
             out.push(context.get_reg_size(reg).unwrap_or(1000000000));
@@ -101,24 +93,16 @@ impl CommandType for SetSizeHintCommandType {
             Err("unexpected instruction".to_string())
         }
     }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(SetSizeHintCommand(HashSet::new(),vec![],Register(0))))
-    }
 }
 
 pub struct SetSizeHintCommand(HashSet<Register>,Vec<Register>,Register);
 
 impl Command for SetSizeHintCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(NoopInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(None)
     }
     
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         if context.is_reg_valid(&self.2) {
             let values = context.context_mut().registers_mut().get_indexes(&self.2)?;
             let mut out = vec![];
@@ -156,25 +140,17 @@ impl CommandType for ForcePauseCommandType {
         } else {
             Err("unexpected instruction".to_string())
         }
-    }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(ForcePauseCommand()))
-    }
+    }    
 }
 
 pub struct ForcePauseCommand();
 
 impl Command for ForcePauseCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(NoopInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(None)
     }
     
-    fn preimage(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, _context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Replace(vec![Instruction::new(InstructionType::Pause(true),vec![])]))
     }
 

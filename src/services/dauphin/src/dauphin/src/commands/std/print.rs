@@ -17,7 +17,7 @@
 use std::rc::Rc;
 use crate::interp::InterpNatural;
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, ComplexRegisters };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, RegisterFile, InterpCommand };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, RegisterFile, InterpCommand };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use super::numops::library_numops_commands;
@@ -30,6 +30,7 @@ use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_sign
 use super::super::common::vectorsource::{ RegisterVectorSource };
 use super::super::common::sharedvec::SharedVec;
 use crate::commands::{ to_xstructure, XStructure };
+use crate::interp::{ CommandDeserializer };
 
 // XXX dedup
 pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
@@ -53,13 +54,7 @@ impl CommandType for PrintCommandType {
         } else {
             Err("unexpected instruction".to_string())
         }
-    }
-    
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let sig = RegisterSignature::deserialize(value[1],true,true)?;
-        Ok(Box::new(PrintCommand(regs,sig)))
-    }
+    }    
 }
 
 fn print_simple(sv: &SharedVec, path: &[usize], first: usize) -> Result<String,String> {
@@ -146,13 +141,20 @@ impl InterpCommand for PrintInterpCommand {
     }
 }
 
+pub struct PrintDeserializer();
+
+impl CommandDeserializer for PrintDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((14,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
+        let sig = RegisterSignature::deserialize(value[1],true,true)?;
+        Ok(Box::new(PrintInterpCommand(regs,sig)))        
+    }
+}
+
 pub struct PrintCommand(Vec<Register>,RegisterSignature);
 
 impl Command for PrintCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(PrintInterpCommand(self.0.clone(),self.1.clone())))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         let regs = CborValue::Array(self.0.iter().map(|x| x.serialize()).collect());
         Ok(Some(vec![regs,self.1.serialize(true,true)?]))
@@ -165,12 +167,12 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 
     #[test]
     fn print_smoke() {
         let mut config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:std/print").expect("cannot load file");

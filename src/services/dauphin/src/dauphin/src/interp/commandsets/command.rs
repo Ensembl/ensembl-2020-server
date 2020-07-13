@@ -73,27 +73,26 @@ pub struct CommandSchema {
 }
 
 pub trait CommandDeserializer {
-    fn opcodes(&self) -> Result<Vec<u32>,String>;
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String>;
     fn deserialize(&self, opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String>;
 }
 
 pub trait CommandType {
     fn get_schema(&self) -> CommandSchema;
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String>;
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String>;
     fn generate_dynamic_data(&self, _linker: &CompilerLink, _config: &Config) -> Result<CborValue,String> { Ok(CborValue::Null) }
     fn use_dynamic_data(&mut self, _value: &CborValue) -> Result<(),String> { Ok(()) }
 }
 
 pub trait Command {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String>;
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String>;
     fn simple_preimage(&self, _context: &mut PreImageContext) -> Result<PreImagePrepare,String> { Ok(PreImagePrepare::Keep(vec![])) }
     fn preimage_post(&self, _context: &mut PreImageContext) -> Result<PreImageOutcome,String> { Err(format!("preimage_post must be overridden if simple_preimage returns true")) }
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         Ok(match self.simple_preimage(context)? {
             PreImagePrepare::Replace => {
-                self.to_interp_command()?.execute(context.context_mut())?;
+                let ic = ic.ok_or_else(|| format!("cannot compile-side run despite being asked to!"))?;
+                ic.execute(context.context_mut())?;
                 self.preimage_post(context)?    
             },
             PreImagePrepare::Keep(sizes) => {

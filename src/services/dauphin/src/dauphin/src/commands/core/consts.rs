@@ -16,9 +16,13 @@
 
 use std::convert::TryInto;
 use crate::interp::InterpValue;
-use crate::interp::{ InterpContext, Command, CommandSchema, CommandType, CommandTrigger, CommandSet, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, InterpCommand };
+use crate::interp::{ 
+    InterpContext, Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, 
+    InterpCommand, CommandDeserializer, CompLibRegister, InterpLibRegister
+};
+use crate::lexer::LexerPosition;
 use crate::model::Register;
-use crate::model::{ cbor_int, cbor_string, cbor_make_map, cbor_map };
+use crate::model::{ cbor_int, cbor_string, cbor_make_map, cbor_map, DFloat };
 use crate::generate::{ Instruction, InstructionType, InstructionSuperType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::cli::Config;
@@ -40,8 +44,17 @@ struct NumberConstTimeTrial();
 impl TimeTrialCommandType for NumberConstTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,1) }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NumberConstCommand(Register(0),42.,0.)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        Ok(Instruction::new(InstructionType::NumberConst(DFloat::new(42.)),vec![Register(0)]))
+    }
+}
+
+pub struct NumberConstDeserializer();
+
+impl CommandDeserializer for NumberConstDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((0,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(NumberConstInterpCommand(Register::deserialize(&value[0])?,*force_branch!(value[1],CborValue,Float)))) 
     }
 }
 
@@ -61,10 +74,6 @@ impl CommandType for NumberConstCommandType {
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(NumberConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,NumberConst).as_f64(),self.0)))
-    }
-
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(NumberConstCommand(Register::deserialize(&value[0])?,*force_branch!(value[1],CborValue,Float),self.0)))
     }
 
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
@@ -91,10 +100,6 @@ impl InterpCommand for NumberConstInterpCommand {
 pub struct NumberConstCommand(Register,f64,f64);
 
 impl Command for NumberConstCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(NumberConstInterpCommand(self.0,self.1)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),CborValue::Float(self.1)]))
     }
@@ -115,10 +120,10 @@ struct ConstTimeTrial();
 impl TimeTrialCommandType for ConstTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
 
-    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
         let t = t*100;
         let num : Vec<usize> = (0..t).map(|x| x as usize).collect();
-        Ok(Box::new(ConstCommand(Register(0),num,None)))
+        Ok(Instruction::new(InstructionType::Const(num),vec![Register(0)]))
     }
 }
 
@@ -139,12 +144,6 @@ impl CommandType for ConstCommandType {
         Ok(Box::new(ConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,Const).to_vec(),self.0.clone())))
     }
 
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let v = force_branch!(&value[1],CborValue,Array);
-        let v = v.iter().map(|x| { Ok(*force_branch!(x,CborValue,Integer) as usize) }).collect::<Result<Vec<usize>,String>>()?;
-        Ok(Box::new(ConstCommand(Register::deserialize(&value[0])?,v,self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&ConstTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -154,6 +153,17 @@ impl CommandType for ConstCommandType {
         let t = cbor_map(value,&vec!["t"])?;
         self.0 = Some(TimeTrial::deserialize(&t[0])?);
         Ok(())
+    }
+}
+
+pub struct ConstDeserializer();
+
+impl CommandDeserializer for ConstDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((1,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        let v = force_branch!(&value[1],CborValue,Array);
+        let v = v.iter().map(|x| { Ok(*force_branch!(x,CborValue,Integer) as usize) }).collect::<Result<Vec<usize>,String>>()?;
+        Ok(Box::new(ConstInterpCommand(Register::deserialize(&value[0])?,v)))
     }
 }
 
@@ -169,10 +179,6 @@ impl InterpCommand for ConstInterpCommand {
 pub struct ConstCommand(Register,Vec<usize>,Option<TimeTrial>);
 
 impl Command for ConstCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(ConstInterpCommand(self.0,self.1.clone())))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         let v = self.1.iter().map(|x| CborValue::Integer(*x as i128)).collect();
         Ok(Some(vec![self.0.serialize(),CborValue::Array(v)]))
@@ -194,8 +200,8 @@ struct BooleanConstTimeTrial();
 impl TimeTrialCommandType for BooleanConstTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,1) }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(BooleanConstCommand(Register(0),false,0.)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        Ok(Instruction::new(InstructionType::BooleanConst(false),vec![Register(0)]))
     }
 }
 
@@ -216,10 +222,6 @@ impl CommandType for BooleanConstCommandType {
         Ok(Box::new(BooleanConstCommand(it.regs[0],force_branch!(it.itype,InstructionType,BooleanConst),self.0)))
     }
 
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(BooleanConstCommand(Register::deserialize(&value[0])?,*force_branch!(value[1],CborValue,Bool),self.0)))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&BooleanConstTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -229,6 +231,15 @@ impl CommandType for BooleanConstCommandType {
         let t = cbor_map(value,&vec!["t"])?;
         self.0 = TimeTrial::deserialize(&t[0])?.evaluate(1.);
         Ok(())
+    }
+}
+
+pub struct BooleanConstDeserializer();
+
+impl CommandDeserializer for BooleanConstDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((2,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(BooleanConstInterpCommand(Register::deserialize(&value[0])?,*force_branch!(value[1],CborValue,Bool))))
     }
 }
 
@@ -244,10 +255,6 @@ impl InterpCommand for BooleanConstInterpCommand {
 pub struct BooleanConstCommand(Register,bool,f64);
 
 impl Command for BooleanConstCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(BooleanConstInterpCommand(self.0,self.1)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),CborValue::Bool(self.1)]))
     }
@@ -268,9 +275,9 @@ struct StringTimeTrial();
 impl TimeTrialCommandType for StringTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
 
-    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
         let x = "x".repeat((t*100) as usize);
-        Ok(Box::new(StringConstCommand(Register(0),x,None)))
+        Ok(Instruction::new(InstructionType::StringConst(x),vec![Register(0)]))
     }
 }
 
@@ -291,11 +298,6 @@ impl CommandType for StringConstCommandType {
         Ok(Box::new(StringConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,StringConst).to_string(),self.0.clone())))
     }
 
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let v = force_branch!(value[1],CborValue,Text).to_string();
-        Ok(Box::new(StringConstCommand(Register::deserialize(&value[0])?,v,self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&StringTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -305,6 +307,16 @@ impl CommandType for StringConstCommandType {
         let t = cbor_map(value,&vec!["t"])?;
         self.0 = Some(TimeTrial::deserialize(&t[0])?);
         Ok(())
+    }
+}
+
+pub struct StringConstDeserializer();
+
+impl CommandDeserializer for StringConstDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((3,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        let v = force_branch!(value[1],CborValue,Text).to_string();
+        Ok(Box::new(StringConstInterpCommand(Register::deserialize(&value[0])?,v)))
     }
 }
 
@@ -320,10 +332,6 @@ impl InterpCommand for StringConstInterpCommand {
 pub struct StringConstCommand(Register,String,Option<TimeTrial>);
 
 impl Command for StringConstCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(StringConstInterpCommand(self.0,self.1.clone())))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),CborValue::Text(self.1.to_string())]))
     }
@@ -344,9 +352,9 @@ struct BytesTimeTrial();
 impl TimeTrialCommandType for BytesTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,10) }
 
-    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+    fn timetrial_make_command(&self, t: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
         let x = vec![3].repeat((t*100) as usize);
-        Ok(Box::new(BytesConstCommand(Register(0),x,None)))
+        Ok(Instruction::new(InstructionType::BytesConst(x),vec![Register(0)]))
     }
 }
 
@@ -367,11 +375,6 @@ impl CommandType for BytesConstCommandType {
         Ok(Box::new(BytesConstCommand(it.regs[0],force_branch!(&it.itype,InstructionType,BytesConst).to_vec(),self.0.clone())))
     }
 
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let v = force_branch!(value[1],CborValue,Bytes).to_vec();
-        Ok(Box::new(BytesConstCommand(Register::deserialize(&value[0])?,v,self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&BytesTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -381,6 +384,16 @@ impl CommandType for BytesConstCommandType {
         let t = cbor_map(value,&vec!["t"])?;
         self.0 = Some(TimeTrial::deserialize(&t[0])?);
         Ok(())
+    }
+}
+
+pub struct BytesConstDeserializer();
+
+impl CommandDeserializer for BytesConstDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((4,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        let v = force_branch!(value[1],CborValue,Bytes).to_vec();
+        Ok(Box::new(BytesConstInterpCommand(Register::deserialize(&value[0])?,v)))
     }
 }
 
@@ -396,10 +409,6 @@ impl InterpCommand for BytesConstInterpCommand {
 pub struct BytesConstCommand(Register,Vec<u8>,Option<TimeTrial>);
 
 impl Command for BytesConstCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(BytesConstInterpCommand(self.0,self.1.clone())))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),CborValue::Bytes(self.1.to_vec())]))
     }
@@ -420,8 +429,8 @@ struct LineNumberTimeTrial();
 impl TimeTrialCommandType for LineNumberTimeTrial {
     fn timetrial_make_trials(&self) -> (i64,i64) { (0,1) }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(LineNumberCommand("x".to_string(),42)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        Ok(Instruction::new(InstructionType::LineNumber(LexerPosition::new("x",42,0,None)),vec![]))
     }
 }
 
@@ -447,11 +456,17 @@ impl CommandType for LineNumberCommandType {
         };
         Ok(Box::new(LineNumberCommand(pos.filename().to_string(),pos.line().try_into().unwrap_or(0))))
     }
+}
 
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(LineNumberCommand(cbor_string(&value[0])?,cbor_int(&value[1],None)? as u32)))
+pub struct LineNumberDeserializer();
+
+impl CommandDeserializer for LineNumberDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((17,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(LineNumberInterpCommand(cbor_string(&value[0])?,cbor_int(&value[1],None)? as u32)))
     }
 }
+
 
 pub struct LineNumberInterpCommand(String,u32);
 
@@ -465,10 +480,6 @@ impl InterpCommand for LineNumberInterpCommand {
 pub struct LineNumberCommand(String,u32);
 
 impl Command for LineNumberCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(LineNumberInterpCommand(self.0.clone(),self.1)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![CborValue::Text(self.0.to_string()),CborValue::Integer(self.1 as i128)]))
     }
@@ -485,12 +496,22 @@ impl Command for LineNumberCommand {
     fn execution_time(&self, _context: &PreImageContext) -> f64 { 0. }
 }
 
-pub(super) fn const_commands(set: &mut CommandSet) -> Result<(),String> {
-    set.push("number",0,NumberConstCommandType::new())?;
-    set.push("const",1,ConstCommandType::new())?;
-    set.push("boolean",2,BooleanConstCommandType::new())?;
-    set.push("string",3,StringConstCommandType::new())?;
-    set.push("bytes",4,BytesConstCommandType::new())?;
-    set.push("linenumber",17,LineNumberCommandType::new())?;
+pub(super) fn const_commands(set: &mut CompLibRegister) -> Result<(),String> {
+    set.push("number",Some(0),NumberConstCommandType::new());
+    set.push("const",Some(1),ConstCommandType::new());
+    set.push("boolean",Some(2),BooleanConstCommandType::new());
+    set.push("string",Some(3),StringConstCommandType::new());
+    set.push("bytes",Some(4),BytesConstCommandType::new());
+    set.push("linenumber",Some(17),LineNumberCommandType::new());
+    Ok(())
+}
+
+pub(super) fn const_commands_interp(set: &mut InterpLibRegister) -> Result<(),String> {
+    set.push(NumberConstDeserializer());
+    set.push(ConstDeserializer());
+    set.push(BooleanConstDeserializer());
+    set.push(StringConstDeserializer());
+    set.push(BytesConstDeserializer());
+    set.push(LineNumberDeserializer());
     Ok(())
 }

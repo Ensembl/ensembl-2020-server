@@ -14,12 +14,15 @@
  *  limitations under the License.
  */
 
-use crate::model::{ Register, RegisterSignature, cbor_make_map };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpValue, InterpCommand };
+use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier };
+use crate::interp::{
+    Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress,
+    trial_write, trial_signature, InterpValue, InterpCommand, CommandDeserializer, Deserializer, CompLibRegister, InterpLibRegister
+};
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool, cbor_map };
-use crate::typeinf::MemberMode;
+use crate::typeinf::{ MemberMode, BaseType, MemberDataFlow };
 use super::super::common::vectorcopy::{ vector_update_poly, append_data };
 use super::super::common::vectorsource::RegisterVectorSource;
 use super::super::common::sharedvec::{ SharedVec };
@@ -42,8 +45,10 @@ impl TimeTrialCommandType for VectorCopyShallowTimeTrial {
         context.registers_mut().commit();
     }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(VectorCopyShallow(Register(0),Register(1),Register(2),None)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        let sig = trial_signature(&vec![(MemberMode::Out,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType)]);
+        Ok(Instruction::new(InstructionType::Call(Identifier::new("std","_vector_copy_shallow"),true,sig,vec![MemberDataFlow::Out,MemberDataFlow::In,MemberDataFlow::In]),
+            vec![Register(0),Register(1),Register(2)]))
     }
 }
 
@@ -65,10 +70,6 @@ impl CommandType for VectorCopyShallowType {
         Ok(Box::new(VectorCopyShallow(it.regs[0].clone(),it.regs[1].clone(),it.regs[2].clone(),self.0.clone())))
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(VectorCopyShallow(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?,self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&VectorCopyShallowTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -97,6 +98,15 @@ impl InterpCommand for VectorCopyShallowInterpCommand {
     }
 }
 
+pub struct VectorCopyShallowDeserializer();
+
+impl CommandDeserializer for VectorCopyShallowDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((9,3))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(VectorCopyShallowInterpCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?)))
+    }
+}
+
 pub struct VectorCopyShallow(Register,Register,Register,Option<TimeTrial>);
 
 impl VectorCopyShallow {
@@ -116,10 +126,6 @@ impl VectorCopyShallow {
 }
 
 impl Command for VectorCopyShallow {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(VectorCopyShallowInterpCommand(self.0,self.1,self.2)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
     }
@@ -160,8 +166,10 @@ impl TimeTrialCommandType for VectorAppendTimeTrial {
         context.registers_mut().commit();
     }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(VectorAppend(Register(0),Register(1),Register(2),None)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        let sig = trial_signature(&vec![(MemberMode::Out,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType)]);
+        Ok(Instruction::new(InstructionType::Call(Identifier::new("std","_vector_append"),true,sig,vec![MemberDataFlow::Out,MemberDataFlow::In,MemberDataFlow::In]),
+            vec![Register(0),Register(1),Register(2)]))
     }
 }
 
@@ -182,10 +190,6 @@ impl CommandType for VectorAppendType {
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(VectorAppend(it.regs[0].clone(),it.regs[1].clone(),it.regs[2].clone(),self.0.clone())))
     }
-    
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(VectorAppend(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?,self.0.clone())))
-    }
 
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&VectorAppendTimeTrial(),linker,config)?;
@@ -196,6 +200,15 @@ impl CommandType for VectorAppendType {
         let t = cbor_map(value,&vec!["t"])?;
         self.0 = Some(TimeTrial::deserialize(&t[0])?);
         Ok(())
+    }
+}
+
+pub struct VectorAppendDeserializer();
+
+impl CommandDeserializer for VectorAppendDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((10,3))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(VectorAppendInterpCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?)))
     }
 }
 
@@ -239,10 +252,6 @@ impl VectorAppend {
 }
 
 impl Command for VectorAppend {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(VectorAppendInterpCommand(self.0,self.1,self.2)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
     }
@@ -285,8 +294,11 @@ impl TimeTrialCommandType for VectorAppendIndexesTimeTrial {
         context.registers_mut().commit();
     }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(VectorAppendIndexes(Register(0),Register(1),Register(2),Register(3),Register(4),None)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        let sig = trial_signature(&vec![(MemberMode::Out,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType),
+                                        (MemberMode::In,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType)]);
+        Ok(Instruction::new(InstructionType::Call(Identifier::new("std","_vector_append_indexes"),true,sig,vec![MemberDataFlow::Out,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]),
+            vec![Register(0),Register(1),Register(2),Register(3),Register(4)]))
     }
 }
 
@@ -310,13 +322,6 @@ impl CommandType for VectorAppendIndexesType {
                                         self.0.clone())))
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(VectorAppendIndexes(
-            Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?,
-            Register::deserialize(&value[3])?,Register::deserialize(&value[4])?,
-            self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&VectorAppendIndexesTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -326,6 +331,17 @@ impl CommandType for VectorAppendIndexesType {
         let t = cbor_map(value,&vec!["t"])?;
         self.0 = Some(TimeTrial::deserialize(&t[0])?);
         Ok(())
+    }
+}
+
+pub struct VectorAppendIndexesDeserializer();
+
+impl CommandDeserializer for VectorAppendIndexesDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((17,5))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(VectorAppendIndexesInterpCommand(
+            Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?,
+            Register::deserialize(&value[3])?,Register::deserialize(&value[4])?)))
     }
 }
 
@@ -384,10 +400,6 @@ impl VectorAppendIndexes {
 }
 
 impl Command for VectorAppendIndexes {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(VectorAppendIndexesInterpCommand(self.0,self.1,self.2,self.3,self.4)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize(),self.3.serialize(),self.4.serialize()]))
     }
@@ -431,8 +443,11 @@ impl TimeTrialCommandType for VectorUpdateIndexesTimeTrial {
         context.registers_mut().commit();
     }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(VectorUpdateIndexes(Register(0),Register(1),Register(2),Register(3),Register(4),None)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        let sig = trial_signature(&vec![(MemberMode::Out,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType),
+                                        (MemberMode::In,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType)]);
+        Ok(Instruction::new(InstructionType::Call(Identifier::new("std","_vector_update_indexes"),true,sig,vec![MemberDataFlow::Out,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In,MemberDataFlow::In]),
+            vec![Register(0),Register(1),Register(2),Register(3),Register(4)]))
     }
 }
 
@@ -455,13 +470,6 @@ impl CommandType for VectorUpdateIndexesType {
                                         it.regs[3].clone(),it.regs[4].clone(),self.0.clone())))
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(VectorUpdateIndexes(
-            Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?,
-            Register::deserialize(&value[3])?,Register::deserialize(&value[4])?,
-            self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&VectorUpdateIndexesTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -473,6 +481,18 @@ impl CommandType for VectorUpdateIndexesType {
         Ok(())
     }
 }
+
+pub struct VectorUpdateIndexesDeserializer();
+
+impl CommandDeserializer for VectorUpdateIndexesDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((18,5))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(VectorUpdateIndexesInterpCommand(
+            Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?,
+            Register::deserialize(&value[3])?,Register::deserialize(&value[4])?)))
+    }
+}
+
 
 pub struct VectorUpdateIndexesInterpCommand(Register,Register,Register,Register,Register);
 
@@ -526,10 +546,6 @@ impl VectorUpdateIndexes {
 }
 
 impl Command for VectorUpdateIndexes {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(VectorUpdateIndexesInterpCommand(self.0,self.1,self.2,self.3,self.4)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize(),self.3.serialize(),self.4.serialize()]))
     }
@@ -558,10 +574,18 @@ impl Command for VectorUpdateIndexes {
     }
 }
 
-pub(super) fn library_vector_commands(set: &mut CommandSet) -> Result<(),String> {
-    set.push("_vector_copy_shallow",9,VectorCopyShallowType::new())?;
-    set.push("_vector_append",10,VectorAppendType::new())?;
-    set.push("_vector_append_indexes",17,VectorAppendIndexesType::new())?;
-    set.push("_vector_update_indexes",18,VectorUpdateIndexesType::new())?;
+pub(super) fn library_vector_commands(set: &mut CompLibRegister) -> Result<(),String> {
+    set.push("_vector_copy_shallow",Some(9),VectorCopyShallowType::new());
+    set.push("_vector_append",Some(10),VectorAppendType::new());
+    set.push("_vector_append_indexes",Some(17),VectorAppendIndexesType::new());
+    set.push("_vector_update_indexes",Some(18),VectorUpdateIndexesType::new());
+    Ok(())
+}
+
+pub(super) fn library_vector_commands_interp(set: &mut InterpLibRegister) -> Result<(),String> {
+    set.push(VectorCopyShallowDeserializer());
+    set.push(VectorAppendDeserializer());
+    set.push(VectorAppendIndexesDeserializer());
+    set.push(VectorUpdateIndexesDeserializer());
     Ok(())
 }

@@ -16,7 +16,10 @@
 
 use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
 use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier, ComplexRegisters, VectorRegisters };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand };
+use crate::interp::{
+    Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress,
+    trial_write, trial_signature, InterpCommand, Deserializer, CompLibRegister, InterpLibRegister
+};
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool };
@@ -29,6 +32,7 @@ use super::extend::ExtendCommandType;
 use super::library::std;
 use crate::cli::Config;
 use crate::interp::CompilerLink;
+use crate::commands::common::templates::{ ErrorDeserializer, NoopDeserializer };
 
 fn preimage_instrs(regs: &Vec<Register>) -> Result<Vec<Instruction>,String> {
     let mut instrs = vec![];
@@ -74,11 +78,7 @@ impl CommandType for AssignCommandType {
         } else {
             Err("unexpected instruction".to_string())
         }
-    }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err(format!("compile-side command"))
-    }
+    }    
 }
 
 pub struct AssignCommand(bool,RegisterSignature,Vec<Register>);
@@ -100,10 +100,6 @@ impl AssignCommand {
 }
 
 impl Command for AssignCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(ErrorInterpCommand()))
-    }
-    
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Err(format!("compile-side command"))
     }
@@ -112,7 +108,7 @@ impl Command for AssignCommand {
         Ok(PreImageOutcome::Constant(self.1[1].all_registers().iter().map(|x| self.2[*x]).collect()))
     }
 
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> { 
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> { 
         Ok(if !self.0 {
             /* unfiltered */
             PreImageOutcome::Replace(preimage_instrs(&self.2)?)
@@ -123,10 +119,13 @@ impl Command for AssignCommand {
     }
 }
 
-// TODO filtered-assign rewrite
-pub(super) fn library_assign_commands(set: &mut CommandSet) -> Result<(),String> {
-    set.push("assign",1000001,AssignCommandType())?;
-    set.push("extend",1000000,ExtendCommandType::new())?;
+pub(super) fn library_assign_commands(set: &mut CompLibRegister) -> Result<(),String> {
+    set.push("assign",None,AssignCommandType());
+    set.push("extend",None,ExtendCommandType::new());
+    Ok(())
+}
+
+pub(super) fn library_assign_commands_interp(set: &mut InterpLibRegister) -> Result<(),String> {
     Ok(())
 }
 
@@ -136,12 +135,12 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 
     #[test]
     fn assign_filtered() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:std/filterassign").expect("cannot load file");
@@ -156,7 +155,7 @@ mod test {
     fn assign_shallow() {
         let mut config = xxx_test_config();
         config.set_debug_run(true);
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:std/assignshallow").expect("cannot load file");

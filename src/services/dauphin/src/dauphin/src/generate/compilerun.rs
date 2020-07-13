@@ -18,7 +18,7 @@ use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
 use crate::resolver::Resolver;
 use crate::model::{ Register, RegisterAllocator, DFloat };
-use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
+use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes, InterpCommand };
 use crate::generate::{ Instruction, InstructionType };
 use crate::cli::Config;
 
@@ -134,7 +134,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn add(&mut self, instr: Instruction) -> Result<(),String> {
-        let command = self.compiler_link.compile_instruction(&instr,true)?.2;
+        let command = self.compiler_link.instruction_to_command(&instr,true)?.1;
         let time = command.execution_time(&self);
         self.gen_context.add_timed(instr,time);
         Ok(())
@@ -180,8 +180,9 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn preimage_instr(&mut self, instr: &Instruction) -> Result<(),String> {
         //print!("{:?}",instr);
-        let command = self.compiler_link.compile_instruction(instr,true)?.2;
-        match command.preimage(self)? {
+        let command = self.compiler_link.instruction_to_command(instr,true)?.1;
+        let ic = self.compiler_link.instruction_to_interp_command(instr,true)?;
+        match command.preimage(self,ic)? {
             PreImageOutcome::Skip(sizes) => {
                 self.unable_instr(&instr,&sizes)?;
             },
@@ -209,7 +210,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     pub fn preimage(&mut self) -> Result<(),String> {
         for instr in &self.gen_context.get_instructions() {
-            self.preimage_instr(instr,).map_err(|msg| {
+            self.preimage_instr(instr).map_err(|msg| {
                 let line = self.context().get_line_number();
                 if line.1 != 0 {
                     format!("{} at {}:{}",msg,line.0,line.1)
@@ -238,7 +239,7 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::prune::prune;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
     use super::super::codegen::generate_code;
     use super::super::linearize::linearize;
     use super::super::dealias::remove_aliases;
@@ -247,7 +248,7 @@ mod test {
     #[test]
     fn runnums_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
@@ -277,7 +278,7 @@ mod test {
     #[test]
     fn runnums2_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/runnums").expect("cannot load file");
@@ -301,7 +302,7 @@ mod test {
     fn size_hint() {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/size-hint").expect("cannot load file");

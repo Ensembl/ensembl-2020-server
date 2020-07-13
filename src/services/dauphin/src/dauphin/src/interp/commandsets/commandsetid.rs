@@ -36,7 +36,7 @@ impl CommandSetId {
         CommandSetId { name: name.to_string(), version, trace }
     }
 
-    pub(super) fn trace(&self) -> u64 { self.trace }
+    pub fn trace(&self) -> u64 { self.trace }
 
     pub fn name(&self) -> &str { &self.name }
     pub fn version(&self) -> (u32,u32) { self.version }

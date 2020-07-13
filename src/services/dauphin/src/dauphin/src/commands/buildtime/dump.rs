@@ -43,24 +43,16 @@ impl CommandType for DumpSigCommandType {
             Err("unexpected instruction".to_string())
         }
     }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err(format!("buildtime::dump_sig can only be executed at compile time"))
-    }
 }
 
 pub struct DumpSigCommand(Register,String);
 
 impl Command for DumpSigCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(ErrorInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(None)
     }
 
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         context.context_mut().registers_mut().write(&self.0,InterpValue::Strings(vec![self.1.to_string()]));
         Ok(PreImageOutcome::Constant(vec![self.0]))
     }
@@ -72,12 +64,12 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 
     #[test]
     fn dump_sig() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:buildtime/dump_sig").expect("cannot load file");

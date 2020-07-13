@@ -18,7 +18,7 @@ use std::slice::Iter;
 use crate::cli::Config;
 use crate::model::Register;
 use crate::interp::context::InterpContext;
-use crate::interp::Command;
+use crate::interp::{ Command, InterpCommand };
 use super::interplink::InterpreterLink;
 
 pub trait InterpretInstance<'a> {
@@ -27,7 +27,7 @@ pub trait InterpretInstance<'a> {
 }
 
 pub struct StandardInterpretInstance<'a> {
-    commands: Iter<'a,Box<dyn Command>>,
+    commands: Iter<'a,Box<dyn InterpCommand>>,
     context: Option<InterpContext>
 }
 
@@ -43,7 +43,7 @@ impl<'a> StandardInterpretInstance<'a> {
     fn more_internal(&mut self) -> Result<bool,String> {
         let context = self.context.as_mut().unwrap();
         while let Some(command) = self.commands.next() {
-            command.to_interp_command()?.execute(context)?;
+            command.execute(context)?;
             context.registers_mut().commit();
             if context.test_pause() {
                 return Ok(true);
@@ -72,7 +72,7 @@ impl<'a> InterpretInstance<'a> for StandardInterpretInstance<'a> {
 }
 
 pub struct DebugInterpretInstance<'a> {
-    commands: Iter<'a,Box<dyn Command>>,
+    commands: Iter<'a,Box<dyn InterpCommand>>,
     context: Option<InterpContext>,
     instrs: Vec<(String,Vec<Register>)>,
     index: usize
@@ -97,7 +97,7 @@ impl<'a> DebugInterpretInstance<'a> {
             let (instr,regs) = &self.instrs[idx];
             print!("{}",context.registers_mut().dump_many(&regs)?);
             print!("{}",instr);
-            command.to_interp_command()?.execute(context)?;
+            command.execute(context)?;
             context.registers_mut().commit();
             print!("{}",context.registers_mut().dump_many(&regs)?);
             if context.test_pause() {

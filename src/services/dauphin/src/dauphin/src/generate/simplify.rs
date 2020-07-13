@@ -358,7 +358,7 @@ mod test {
     use crate::generate::codegen::generate_code;
     use crate::test::files::load_testdata;
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_test_config, CompilerLink, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, xxx_test_config, CompilerLink, make_compiler_suite };
 
 
     // XXX common
@@ -382,7 +382,7 @@ mod test {
     #[test]
     fn simplify_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/simplify-smoke").expect("cannot load file");
@@ -399,7 +399,7 @@ mod test {
     #[test]
     fn simplify_enum_nest() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/simplify-enum-nest").expect("cannot load file");
@@ -413,7 +413,7 @@ mod test {
     #[test]
     fn simplify_enum_lvalue() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/enum-lvalue").expect("cannot load file");
@@ -429,7 +429,7 @@ mod test {
     #[test]
     fn simplify_struct_lvalue() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/struct-lvalue").expect("cannot load file");
@@ -446,7 +446,7 @@ mod test {
     #[test]
     fn simplify_both_lvalue() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/both-lvalue").expect("cannot load file");

@@ -60,13 +60,13 @@ mod test {
     use super::super::call::call;
     use super::super::linearize::linearize;
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 
     #[test]
     fn dealias_smoke() {
         // XXX check all aliases gone
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");

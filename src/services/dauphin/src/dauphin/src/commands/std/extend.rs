@@ -16,7 +16,7 @@
 
 use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
 use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand };
 use crate::generate::{ Instruction, InstructionType, PreImageContext, InstructionSuperType };
 use serde_cbor::Value as CborValue;
 use crate::model::{ cbor_array, cbor_bool, cbor_map };
@@ -81,25 +81,17 @@ impl CommandType for ExtendCommandType {
         } else {
             Err("unexpected instruction".to_string())
         }
-    }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err("extend is a compile-side instruction".to_string())
-    }
+    }    
 }
 
 pub struct ExtendCommand(RegisterSignature,Vec<Register>,Option<TimeTrial>);
 
 impl Command for ExtendCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(ErrorInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(None)
     }
 
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Replace(extend(context,&self.0,&self.1)?))
     }
 }
@@ -110,12 +102,12 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::{ generate, InstructionType, Instruction, InstructionSuperType };
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 
     #[test]
     fn extend_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:std/extend").expect("cannot load file");
@@ -142,7 +134,7 @@ mod test {
     #[test]
     fn vector_append() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:std/vector-append").expect("cannot load file");

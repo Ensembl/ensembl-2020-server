@@ -14,21 +14,40 @@
  *  limitations under the License.
  */
 
+use std::cell::RefCell;
 use std::collections::{ HashMap };
 use std::path::PathBuf;
-use std::time::{ SystemTime, Duration };
 use std::rc::Rc;
+use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
 use crate::commands::std_stream;
 use crate::generate::Instruction;
 use crate::model::{ Register, cbor_serialize };
 use crate::interp::context::InterpContext;
-use crate::interp::{ LibrarySuiteBuilder, make_librarysuite_builder, interpreter, InterpretInstance };
+use crate::interp::{ interpreter, InterpretInstance, make_interpret_suite, CommandDeserializer, InterpCommand };
 use crate::interp::{ InterpValue, StreamContents, StreamFactory };
 use crate::test::cbor::hexdump;
 use serde_cbor::Value as CborValue;
 use super::compilelink::CompilerLink;
 use super::interplink::InterpreterLink;
+
+struct FakeInterpCommand(Rc<RefCell<u32>>,u32);
+
+impl InterpCommand for FakeInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        *self.0.borrow_mut() = self.1;
+        Ok(())
+    }
+}
+
+pub struct FakeDeserializer(pub Rc<RefCell<u32>>,pub u32);
+
+impl CommandDeserializer for FakeDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((self.1,0))) }
+    fn deserialize(&self, opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(FakeInterpCommand(self.0.clone(),self.1)))
+    }
+}
 
 pub fn stream_strings(stream: &[StreamContents]) -> Vec<String> {
     let mut out = vec![];
@@ -69,9 +88,8 @@ pub fn interpret(interpret_linker: &InterpreterLink, config: &Config, name: &str
 
 #[cfg(test)]
 pub fn comp_interpret(compiler_linker: &CompilerLink, config: &Config, name: &str) -> Result<InterpContext,String> {
-    let suite = make_librarysuite_builder(config)?;
     let program = compiler_linker.serialize(config)?;
-    let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
+    let mut interpret_linker = InterpreterLink::new(make_interpret_suite(config)?,&program).map_err(|x| format!("{} while linking",x))?;
     interpret_linker.add_payload("std","stream",StreamFactory::new()); 
     interpret(&interpret_linker,config,name)
 }
@@ -109,7 +127,7 @@ pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Co
     let program = cl.serialize(config)?;
     let buffer = cbor_serialize(&program)?;
     print!("{}\n",hexdump(&buffer));
-    let suite = make_librarysuite_builder(config)?;
+    let suite = make_interpret_suite(config)?;
     let program = serde_cbor::from_slice(&buffer).map_err(|x| format!("{} while deserialising",x))?;
     let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x))?;
     interpret_linker.add_payload("std","stream",StreamFactory::new());

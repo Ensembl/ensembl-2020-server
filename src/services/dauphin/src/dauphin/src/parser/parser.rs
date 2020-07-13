@@ -104,7 +104,7 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::model::Identifier;
     use crate::test::files::{ load_testdata };
-    use crate::interp::{ xxx_test_config, CompilerLink, make_librarysuite_builder };
+    use crate::interp::{ xxx_test_config, CompilerLink, make_compiler_suite };
 
     fn last_statement(p: &mut Parser) -> Result<ParserStatement,ParseError> {
         let mut prev = Err(ParseError::new("unexpected EOF",&mut p.lexer));
@@ -122,7 +122,7 @@ mod test {
     #[test]
     fn statement() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("data: import \"x\";").ok();
@@ -134,7 +134,7 @@ mod test {
     #[test]
     fn import_statement() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("data: import \"data: $;\";").ok();
@@ -146,7 +146,7 @@ mod test {
     #[test]
     fn import_search_statement() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("A");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:import-search").expect("cannot load file");
@@ -158,7 +158,7 @@ mod test {
     #[test]
     fn test_preprocess() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/import-smoke").expect("cannot load file");
@@ -170,7 +170,7 @@ mod test {
     #[test]
     fn test_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/parser-smoke").expect("cannot load file");
@@ -185,7 +185,7 @@ mod test {
     #[test]
     fn test_no_nested_dollar() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/parser-nonest").expect("cannot load file");
@@ -197,7 +197,7 @@ mod test {
     #[test]
     fn test_id_clash() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/id-clash").expect("cannot load file");
@@ -217,7 +217,7 @@ mod test {
     #[test]
     fn test_struct() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/struct-smoke").expect("cannot load file");
@@ -236,7 +236,7 @@ mod test {
     #[test]
     fn test_enum() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/enum-smoke").expect("cannot load file");
@@ -251,7 +251,7 @@ mod test {
     #[test]
     fn test_short() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/short").expect("cannot load file");
@@ -265,7 +265,7 @@ mod test {
     #[test]
     fn test_macro() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:parser/macro").expect("cannot load file");

@@ -162,12 +162,12 @@ mod test {
     use super::*;
     use crate::test::files::load_testdata;
     use crate::resolver::common_resolver;
-    use crate::interp::{ xxx_test_config, CompilerLink, make_librarysuite_builder };
+    use crate::interp::{ xxx_test_config, CompilerLink, make_compiler_suite };
 
     #[test]
     fn lexer_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:lexer/smoke2").expect("import failed");
@@ -191,7 +191,7 @@ mod test {
     #[test]
     fn missing() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         assert!(lexer.import("file:missing").err().unwrap().contains("No such file or directory"));

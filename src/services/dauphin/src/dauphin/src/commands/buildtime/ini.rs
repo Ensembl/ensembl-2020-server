@@ -36,11 +36,7 @@ impl CommandType for LoadIniCommandType {
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
         Ok(Box::new(LoadIniCommand(it.regs[0],it.regs[1],it.regs[2],it.regs[3])))
-    }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err(format!("buildtime::load_ini can only be executed at compile time"))
-    }
+    }    
 }
 
 pub struct LoadIniCommand(Register,Register,Register,Register);
@@ -65,15 +61,11 @@ fn load_inis(resolver: &Resolver, filenames: &[String], sections: &[String], key
 }
 
 impl Command for LoadIniCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(ErrorInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Err(format!("buildtime::load_ini can only be executed at compile time"))
     }
 
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         if context.is_reg_valid(&self.1) && context.is_reg_valid(&self.2) && context.is_reg_valid(&self.3) {
             let (filenames,sections,keys) = {
                 let regs = context.context_mut().registers_mut();
@@ -99,12 +91,12 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 
     #[test]
     fn load_ini_smoke() {
         let mut config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:buildtime/load_ini").expect("cannot load file");

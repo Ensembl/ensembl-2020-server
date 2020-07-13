@@ -111,7 +111,7 @@ mod test {
     use std::str::FromStr;
     use std::rc::Rc;
     use crate::resolver::common_resolver;
-    use crate::interp::{ xxx_test_config, CompilerLink, make_librarysuite_builder };
+    use crate::interp::{ xxx_test_config, CompilerLink, make_compiler_suite };
 
     fn add_token(out: &mut String, token: &(Token,LexerPosition)) {
         out.push_str(&format!("{:?} {}\n",token.0,token.1));
@@ -119,7 +119,7 @@ mod test {
 
     fn try_lex(path_in: &str) -> Vec<(Token,LexerPosition)> {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let mut path = String::from_str("search:").ok().unwrap();
         path.push_str(path_in);
         let resolver = Rc::new(common_resolver(&config,&linker).expect("a"));

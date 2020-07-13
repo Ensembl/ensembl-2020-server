@@ -15,22 +15,27 @@
  */
 
 use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
-use crate::interp::{ InterpNatural, InterpCommand };
+use crate::interp::{ InterpNatural, InterpCommand, Deserializer };
 use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, ComplexRegisters };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue };
+use crate::interp::{
+    Command, CommandSchema, CommandType, CommandTrigger, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare,
+    InterpValue, CompLibRegister, InterpLibRegister
+};
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
-use super::numops::library_numops_commands;
-use super::eq::library_eq_command;
-use super::assign::library_assign_commands;
-use super::print::PrintCommandType;
-use super::vector::library_vector_commands;
+use super::numops::{ library_numops_commands, library_numops_commands_interp };
+use super::eq::{ library_eq_command, library_eq_command_interp };
+use super::assign::{ library_assign_commands, library_assign_commands_interp };
+use super::print::{ PrintCommandType, PrintDeserializer };
+use super::vector::{ library_vector_commands, library_vector_commands_interp };
 use crate::cli::Config;
 use crate::typeinf::{ MemberMode, BaseType };
 use crate::interp::{ CompilerLink, TimeTrialCommandType, trial_write, trial_signature, TimeTrial };
+use crate::commands::common::templates::{ ErrorDeserializer, NoopDeserializer };
+use crate::interp::{ CommandDeserializer };
 
 pub fn std_id() -> CommandSetId {
-    CommandSetId::new("std",(0,0),0xAE0FBDF35D05BAE8)
+    CommandSetId::new("std",(0,0),0x8A07AE1254D6E44B)
 }
 
 pub(super) fn std(name: &str) -> Identifier {
@@ -40,28 +45,6 @@ pub(super) fn std(name: &str) -> Identifier {
 pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
     let p = context.payload("std","stream")?;
     Ok(p.downcast_mut().ok_or_else(|| "No stream context".to_string())?)
-}
-
-struct LenTimeTrial();
-
-impl TimeTrialCommandType for LenTimeTrial {
-    fn timetrial_make_trials(&self) -> (i64,i64) { (1,10) }
-
-    fn global_prepare(&self, context: &mut InterpContext, t: i64) {
-        let t = (t*100) as usize;
-        trial_write(context,1,1,|_| 0);
-        trial_write(context,2,1,|_| t);
-        trial_write(context,3,t,|x| x*10);
-        trial_write(context,4,t,|_| 10);
-        trial_write(context,5,t*10,|x| x);
-        context.registers_mut().commit();
-    }
-
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        let sig = trial_signature(&vec![(MemberMode::In,0,BaseType::NumberType),(MemberMode::In,2,BaseType::NumberType)]);
-        let regs : Vec<Register> = (0..6).map(|x| Register(x)).collect();
-        Ok(Box::new(LenCommand(sig,regs)))
-    }
 }
 
 pub struct LenCommandType();
@@ -81,50 +64,21 @@ impl CommandType for LenCommandType {
             Err("unexpected instruction".to_string())
         }
     }
-    
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<Vec<_>,_>>()?;
-        Ok(Box::new(LenCommand(RegisterSignature::deserialize(&value[1],false,false)?,regs)))
-    }
-
-    fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
-        let timings = TimeTrial::run(&LenTimeTrial(),linker,config)?;
-        Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
-    }
-}
-
-pub struct LenInterpCommand(RegisterSignature,Vec<Register>);
-
-impl InterpCommand for LenInterpCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers_mut();
-        if let Some((_,ass)) = &self.0[1].iter().next() {
-            let reg = ass.length_pos(ass.depth()-1)?;
-            registers.copy(&self.1[0],&self.1[reg])?;
-            Ok(())
-        } else {
-            Err("len on non-list".to_string())
-        }
-    }
 }
 
 pub struct LenCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
 impl Command for LenCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(LenInterpCommand(self.0.clone(),self.1.clone())))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false,false)?]))
     }
 
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         if let Some((_,ass)) = &self.0[1].iter().next() {
             let reg = ass.length_pos(ass.depth()-1)?;
             if context.is_reg_valid(&self.1[reg]) && !context.is_last() {
                 /* can execute now */
-                self.to_interp_command()?.execute(context.context_mut())?;
+                context.context_mut().registers_mut().copy(&self.1[0],&self.1[reg])?;
                 return Ok(PreImageOutcome::Constant(vec![self.1[0]]));
             } else {
                 /* replace */
@@ -154,10 +108,15 @@ impl CommandType for AssertCommandType {
         } else {
             Err("unexpected instruction".to_string())
         }
-    }
-    
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(AssertCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?)))
+    }    
+}
+
+pub struct AssertDeserializer();
+
+impl CommandDeserializer for AssertDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((4,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(AssertInterpCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?)))
     }
 }
 
@@ -180,10 +139,6 @@ impl InterpCommand for AssertInterpCommand {
 pub struct AssertCommand(Register,Register);
 
 impl Command for AssertCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(AssertInterpCommand(self.0,self.1)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),self.1.serialize()]))
     }
@@ -219,25 +174,17 @@ impl CommandType for AlienateCommandType {
         } else {
             Err("unexpected instruction".to_string())
         }
-    }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(AlienateCommand(vec![])))
-    }
+    }    
 }
 
 pub struct AlienateCommand(pub(crate) Vec<Register>);
 
 impl Command for AlienateCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(NoopInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(None)
     }
     
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         for reg in self.0.iter() {
             context.set_reg_invalid(reg);
             context.set_reg_size(reg,None);
@@ -246,18 +193,30 @@ impl Command for AlienateCommand {
     }
 }
 
-pub fn make_library() -> Result<CommandSet,String> {
-    let mut set = CommandSet::new(&std_id(),false);
+pub fn make_std() -> Result<CompLibRegister,String> {
+    let mut set = CompLibRegister::new(&std_id(),Some(make_std_interp()?));
     library_eq_command(&mut set)?;
     /* 2,3 are free */
-    set.push("len",1,LenCommandType())?;
-    set.push("assert",4,AssertCommandType())?;
-    set.push("alienate",13,AlienateCommandType())?;
-    set.push("print",14,PrintCommandType())?;
+    set.push("len",None,LenCommandType());
+    set.push("assert",Some(4),AssertCommandType());
+    set.push("alienate",Some(13),AlienateCommandType());
+    set.push("print",Some(14),PrintCommandType());
     set.add_header("std",include_str!("header.dp"));
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;
     library_vector_commands(&mut set)?;
-    set.load_dynamic_data(include_bytes!("std-0.0.ddd"))?;
+    set.dynamic_data(include_bytes!("std-0.0.ddd"));
+    Ok(set)
+}
+
+pub fn make_std_interp() -> Result<InterpLibRegister,String> {
+    let mut set = InterpLibRegister::new(&std_id());
+    library_eq_command_interp(&mut set)?;
+    set.push(AssertDeserializer());
+    set.push(NoopDeserializer(13));
+    set.push(PrintDeserializer());
+    library_numops_commands_interp(&mut set)?;
+    library_assign_commands_interp(&mut set)?;
+    library_vector_commands_interp(&mut set)?;
     Ok(set)
 }

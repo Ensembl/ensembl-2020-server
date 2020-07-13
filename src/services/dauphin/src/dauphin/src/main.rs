@@ -46,8 +46,8 @@ use crate::resolver::common_resolver;
 use crate::parser::Parser;
 use crate::generate::generate;
 use crate::test::files::load_testdata;
-use crate::interp::{ CompilerLink, xxx_test_config, make_librarysuite_builder };
-use crate::interp::{ LibrarySuiteBuilder, interpreter, InterpreterLink, StreamFactory };
+use crate::interp::{ CompilerLink, xxx_test_config };
+use crate::interp::{ interpreter, InterpreterLink, StreamFactory };
 
 fn main() {
     let options_config = config_from_options();

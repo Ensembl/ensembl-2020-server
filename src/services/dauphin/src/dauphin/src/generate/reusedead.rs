@@ -69,12 +69,12 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, xxx_test_config, CompilerLink, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, xxx_test_config, CompilerLink, make_compiler_suite };
 
     #[test]
     fn reuse_dead_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");

@@ -19,7 +19,7 @@ use std::fmt::Display;
 use std::fs::write;
 use std::process::exit;
 use regex::Regex;
-use crate::interp::{ make_librarysuite_builder, CompilerLink };
+use crate::interp::{ CompilerLink, make_compiler_suite };
 use crate::model::{ cbor_serialize, fix_filename };
 use crate::lexer::Lexer;
 use crate::parser::{ Parser, ParseError };
@@ -74,7 +74,7 @@ struct GenerateDynamicData();
 impl Action for GenerateDynamicData {
     fn name(&self) -> String { "generate-dynamic-data".to_string() }
     fn execute(&self, config: &Config) {
-        let builder = make_librarysuite_builder(&config).expect("y");
+        let builder = make_compiler_suite(&config).expect("y");
         let linker = CompilerLink::new(builder).expect("z");
         let data = linker.generate_dynamic_data(&config).expect("x");
         for (suite,data) in data.iter() {
@@ -94,7 +94,7 @@ impl Action for CompileAction {
     fn name(&self) -> String { "compile".to_string() }
     fn execute(&self, config: &Config) {
         let lib = bomb(|| format!("cannot make library suite"),
-            make_librarysuite_builder(&config)
+            make_compiler_suite(&config)
         );
         let mut linker = bomb(|| format!("cannot make linker"),
             CompilerLink::new(lib)

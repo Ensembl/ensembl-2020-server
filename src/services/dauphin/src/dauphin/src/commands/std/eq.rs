@@ -15,11 +15,14 @@
  */
 
 use std::rc::Rc;
-use crate::interp::{ InterpValue, InterpCommand };
+use crate::interp::{ InterpValue, InterpCommand, CommandDeserializer };
 use crate::commands::common::templates::ErrorInterpCommand;
 use crate::model::{ Register, RegisterSignature, cbor_make_map, VectorRegisters, Identifier, ComplexRegisters, ComplexPath, cbor_map };
 use super::super::common::vectorsource::RegisterVectorSource;
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSet, InterpContext, PreImageOutcome, PreImagePrepare, trial_write, trial_signature, TimeTrialCommandType, TimeTrial };
+use crate::interp::{
+    Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, PreImagePrepare, trial_write, trial_signature,
+    TimeTrialCommandType, TimeTrial, CompLibRegister, InterpLibRegister
+};
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::typeinf::{ MemberMode, MemberDataFlow, BaseType };
@@ -30,6 +33,7 @@ use crate::cli::Config;
 use crate::interp::CompilerLink;
 use std::fmt::Debug;
 use crate::commands::common::polymorphic::arbitrate_type;
+use crate::commands::common::templates::{ ErrorDeserializer, NoopDeserializer };
 
 fn compare_work<T>(a: &SharedVec, a_off: (usize,usize), a_data: &[T], b: &SharedVec, b_off: (usize,usize), b_data: &[T], level: usize) -> Result<bool,String>
         where T: PartialEq {
@@ -113,13 +117,10 @@ impl TimeTrialCommandType for EqCompareTimeTrial {
         context.registers_mut().commit();
     }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
         let regs = (0..15).map(|i| Register(i)).collect();
-        let mut vr1 = VectorRegisters::new(3,BaseType::NumberType);
-        vr1.add_start(1);
-        let mut vr2 = VectorRegisters::new(3,BaseType::NumberType);
-        vr2.add_start(8);
-        Ok(Box::new(EqCompareCommand(vr1,vr2,regs,None)))
+        let sig = trial_signature(&vec![(MemberMode::Out,0,BaseType::NumberType),(MemberMode::In,3,BaseType::NumberType),(MemberMode::In,3,BaseType::NumberType)]);
+        Ok(Instruction::new(InstructionType::Call(Identifier::new("std","_eq_compare"),true,sig,vec![MemberDataFlow::Out,MemberDataFlow::In,MemberDataFlow::In]),regs))
     }
 }
 
@@ -147,13 +148,6 @@ impl CommandType for EqCompareCommandType {
         }
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[2],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let a = VectorRegisters::deserialize(&value[0])?;
-        let b = VectorRegisters::deserialize(&value[1])?;
-        Ok(Box::new(EqCompareCommand(a,b,regs,self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&EqCompareTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -163,6 +157,18 @@ impl CommandType for EqCompareCommandType {
         let t = cbor_map(value,&vec!["t"])?;
         self.0 = Some(TimeTrial::deserialize(&t[0])?);
         Ok(())
+    }
+}
+
+pub struct EqCompareDeserializer();
+
+impl CommandDeserializer for EqCompareDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((19,3))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        let regs = cbor_array(&value[2],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
+        let a = VectorRegisters::deserialize(&value[0])?;
+        let b = VectorRegisters::deserialize(&value[1])?;
+        Ok(Box::new(EqCompareInterpCommand(a,b,regs)))
     }
 }
 
@@ -200,10 +206,6 @@ impl EqCompareCommand {
 }
 
 impl Command for EqCompareCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(EqCompareInterpCommand(self.0.clone(),self.1.clone(),self.2.clone())))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         let regs = CborValue::Array(self.2.iter().map(|x| x.serialize()).collect());
         Ok(Some(vec![self.0.serialize(true)?,self.1.serialize(true)?,regs]))
@@ -245,8 +247,10 @@ impl TimeTrialCommandType for EqShallowTimeTrial {
         context.registers_mut().commit();
     }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(EqShallowCommand(Register(0),Register(1),Register(2),None)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        let sig = trial_signature(&vec![(MemberMode::Out,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType)]);
+        Ok(Instruction::new(InstructionType::Call(Identifier::new("std","_eq_shallow"),true,sig,vec![MemberDataFlow::Out,MemberDataFlow::In,MemberDataFlow::In]),
+            vec![Register(0),Register(1),Register(2)]))
     }
 }
 
@@ -268,10 +272,6 @@ impl CommandType for EqShallowCommandType {
         Ok(Box::new(EqShallowCommand(it.regs[0].clone(),it.regs[1].clone(),it.regs[2].clone(),self.0.clone())))
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(EqShallowCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?,self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&EqShallowTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -281,6 +281,15 @@ impl CommandType for EqShallowCommandType {
         let t = cbor_map(value,&vec!["t"])?;
         self.0 = Some(TimeTrial::deserialize(&t[0])?);
         Ok(())
+    }
+}
+
+pub struct EqShallowDeserializer();
+
+impl CommandDeserializer for EqShallowDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((0,3))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        Ok(Box::new(EqShallowInterpCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?,Register::deserialize(&value[2])?)))
     }
 }
 
@@ -314,10 +323,6 @@ impl InterpCommand for EqShallowInterpCommand {
 pub struct EqShallowCommand(Register,Register,Register,Option<TimeTrial>);
 
 impl Command for EqShallowCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(EqShallowInterpCommand(self.0,self.1,self.2)))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Ok(Some(vec![self.0.serialize(),self.1.serialize(),self.2.serialize()]))
     }
@@ -357,8 +362,10 @@ impl TimeTrialCommandType for EqAllTimeTrial {
         context.registers_mut().commit();
     }
 
-    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Box<dyn Command>,String> {
-        Ok(Box::new(AllCommand(vec![Register(0),Register(1),Register(2)],None)))
+    fn timetrial_make_command(&self, _: i64, _linker: &CompilerLink, _config: &Config) -> Result<Instruction,String> {
+        let sig = trial_signature(&vec![(MemberMode::Out,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType),(MemberMode::In,0,BaseType::NumberType)]);
+        Ok(Instruction::new(InstructionType::Call(Identifier::new("std","_eq_all"),true,sig,vec![MemberDataFlow::Out,MemberDataFlow::In,MemberDataFlow::In]),
+            vec![Register(0),Register(1),Register(2)]))
     }
 }
 
@@ -380,11 +387,6 @@ impl CommandType for AllCommandType {
         Ok(Box::new(AllCommand(it.regs.to_vec(),self.0.clone())))
     }
     
-    fn deserialize(&self, value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        Ok(Box::new(AllCommand(regs,self.0.clone())))
-    }
-
     fn generate_dynamic_data(&self, linker: &CompilerLink, config: &Config) -> Result<CborValue,String> {
         let timings = TimeTrial::run(&EqAllTimeTrial(),linker,config)?;
         Ok(cbor_make_map(&vec!["t"],vec![timings.serialize()])?)
@@ -395,6 +397,16 @@ impl CommandType for AllCommandType {
         self.0 = Some(TimeTrial::deserialize(&t[0])?);
         Ok(())
     }   
+}
+
+pub struct AllDeserializer();
+
+impl CommandDeserializer for AllDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((20,1))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
+        Ok(Box::new(AllInterpCommand(regs)))
+    }
 }
 
 pub struct AllInterpCommand(Vec<Register>);
@@ -435,10 +447,6 @@ impl AllCommand {
 }
 
 impl Command for AllCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(AllInterpCommand(self.0.clone())))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         let regs = CborValue::Array(self.0.iter().map(|x| x.serialize()).collect());
         Ok(Some(vec![regs]))
@@ -483,11 +491,7 @@ impl CommandType for EqCommandType {
         } else {
             Err("unexpected instruction".to_string())
         }
-    }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err(format!("compile-side command"))
-    }
+    }    
 }
 
 pub struct EqCommand(RegisterSignature,Vec<Register>);
@@ -540,24 +544,27 @@ impl EqCommand {
 }
 
 impl Command for EqCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(ErrorInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Err(format!("compile-side command"))
     }
 
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Replace(self.build_instrs(context)?))
     }
 }
 
-pub(super) fn library_eq_command(set: &mut CommandSet) -> Result<(),String> {
-    set.push("eq",1000003,EqCommandType())?;
-    set.push("_eq_shallow",0,EqShallowCommandType::new())?;
-    set.push("_eq_compare",19,EqCompareCommandType::new())?;
-    set.push("_eq_all",20,AllCommandType::new())?;
+pub(super) fn library_eq_command(set: &mut CompLibRegister) -> Result<(),String> {
+    set.push("eq",None,EqCommandType());
+    set.push("_eq_shallow",Some(0),EqShallowCommandType::new());
+    set.push("_eq_compare",Some(19),EqCompareCommandType::new());
+    set.push("_eq_all",Some(20),AllCommandType::new());
+    Ok(())
+}
+
+pub(super) fn library_eq_command_interp(set: &mut InterpLibRegister) -> Result<(),String> {
+    set.push(EqShallowDeserializer());
+    set.push(EqCompareDeserializer());
+    set.push(AllDeserializer());
     Ok(())
 }
 
@@ -567,14 +574,14 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 
     #[test]
     fn eq_smoke() {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
         config.set_verbose(3);
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:std/eq").expect("cannot load file");

@@ -353,14 +353,14 @@ mod test {
     use super::*;
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
-    use crate::interp::{ xxx_test_config, CompilerLink, make_librarysuite_builder, mini_interp };
+    use crate::interp::{ xxx_test_config, CompilerLink, make_compiler_suite, mini_interp };
     use crate::parser::Parser;
     use crate::test::files::load_testdata;
     use crate::generate::generate;
 
     fn run_pass(filename: &str) -> Result<(),Vec<String>> {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import(&format!("search:codegen/{}",filename)).expect("cannot load file");
@@ -374,7 +374,7 @@ mod test {
     #[test]
     fn codegen_smoke() {
         let config = xxx_test_config();
-        let linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/generate-smoke2").expect("cannot load file");
@@ -397,7 +397,7 @@ mod test {
     fn lvalue_regression() {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/lvalue").expect("cannot load file");

@@ -58,24 +58,16 @@ impl CommandType for VersionCommandType {
             Err(format!("buildtime::version cannot be built"))
         }
     }
-    
-    fn deserialize(&self, _value: &[&CborValue]) -> Result<Box<dyn Command>,String> {
-        Err(format!("buildtime::version can only be executed at compile time"))
-    }
 }
 
 pub struct VersionCommand(Register,Register,Register);
 
 impl Command for VersionCommand {
-    fn to_interp_command(&self) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(ErrorInterpCommand()))
-    }
-
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
         Err(format!("buildtime::version can only be executed at compile time"))
     }
 
-    fn preimage(&self, context: &mut PreImageContext) -> Result<PreImageOutcome,String> {
+    fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         if context.is_reg_valid(&self.2) {
             let suite = context.linker().get_suite().get_set_ids();
             let versions : HashMap<_,_> = suite.iter().map(|x| (x.name().to_string(),x.version())).collect();
@@ -105,12 +97,12 @@ mod test {
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
     use crate::generate::generate;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_librarysuite_builder };
+    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 
     #[test]
     fn versions_smoke() {
         let mut config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
+        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:buildtime/versions").expect("cannot load file");
