@@ -17,7 +17,7 @@
 use std::rc::Rc;
 use crate::interp::{ InterpValue, InterpCommand, CommandDeserializer };
 use crate::commands::common::templates::ErrorInterpCommand;
-use crate::model::{ Register, RegisterSignature, cbor_make_map, VectorRegisters, Identifier, ComplexRegisters, ComplexPath, cbor_map };
+use crate::model::{ Register, RegisterSignature, cbor_make_map, VectorRegisters, Identifier, FullType, ComplexPath, cbor_map };
 use super::super::common::vectorsource::RegisterVectorSource;
 use crate::interp::{
     Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, PreImagePrepare, trial_write, trial_signature,
@@ -510,13 +510,13 @@ impl EqCommand {
                 part
             };
             let mut sigs = RegisterSignature::new();
-            let mut cr = ComplexRegisters::new_empty(MemberMode::Out);
+            let mut cr = FullType::new_empty(MemberMode::Out);
             cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType));
             sigs.add(cr);
-            let mut cr = ComplexRegisters::new_empty(MemberMode::In);
+            let mut cr = FullType::new_empty(MemberMode::In);
             cr.add(ComplexPath::new_empty().add_levels(vr_a.depth()),VectorRegisters::new(vr_a.depth(),vr_a.get_base().clone()));
             sigs.add(cr);
-            let mut cr = ComplexRegisters::new_empty(MemberMode::In);
+            let mut cr = FullType::new_empty(MemberMode::In);
             cr.add(ComplexPath::new_empty().add_levels(vr_b.depth()),VectorRegisters::new(vr_b.depth(),vr_b.get_base().clone()));
             sigs.add(cr);
             let mut regs = vec![target];
@@ -528,10 +528,10 @@ impl EqCommand {
         }
         if !short {
             let mut sigs = RegisterSignature::new();
-            let mut cr = ComplexRegisters::new_empty(MemberMode::Out);
+            let mut cr = FullType::new_empty(MemberMode::Out);
             cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType));
             for _ in 0..parts.len() {
-                let mut cr = ComplexRegisters::new_empty(MemberMode::In);
+                let mut cr = FullType::new_empty(MemberMode::In);
                 cr.add(ComplexPath::new_empty(),VectorRegisters::new(0,BaseType::BooleanType));
             }
             sigs.add(cr);

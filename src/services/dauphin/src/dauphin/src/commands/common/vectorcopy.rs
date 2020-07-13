@@ -19,7 +19,7 @@ use crate::interp::{ InterpValue, InterpContext, trial_signature };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use crate::commands::common::polymorphic::arbitrate_type;
 use crate::typeinf::{ MemberMode, MemberDataFlow, BaseType };
-use crate::model::{ Register, VectorRegisters, Identifier, ComplexPath, ComplexRegisters, RegisterSignature };
+use crate::model::{ Register, VectorRegisters, Identifier, ComplexPath, ComplexRegisters, RegisterSignature, FullType };
 use regex::Regex;
 
 pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<InstructionType,()> {
@@ -40,7 +40,7 @@ pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<I
             _ => BaseType::NumberType
         };
         let depth : usize = cap.get(2).ok_or(())?.as_str().parse::<usize>().map_err(|_| ())?;
-        let mut cr = ComplexRegisters::new_empty(mode);
+        let mut cr = FullType::new_empty(mode);
         cr.add(ComplexPath::new_empty().add_levels(depth),VectorRegisters::new(depth,base));
         sigs.add(cr);
         let flow_s = cap.get(3).ok_or(())?.as_str();

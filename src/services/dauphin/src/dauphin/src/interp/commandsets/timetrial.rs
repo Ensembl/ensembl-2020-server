@@ -19,7 +19,7 @@ use crate::cli::Config;
 use crate::interp::{ CompilerLink, InterpContext };
 use crate::interp::{ Command, InterpValue, InterpCommand, CommandType };
 use crate::generate::Instruction;
-use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters, cbor_array, cbor_float };
+use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters, cbor_array, cbor_float, FullType };
 use crate::typeinf::{ MemberMode, BaseType };
 use serde_cbor::Value as CborValue;
 
@@ -136,7 +136,7 @@ pub fn trial_write<F>(context: &mut InterpContext, i: usize, t: usize, cb: F) wh
 pub fn trial_signature(layout: &[(MemberMode,usize,BaseType)]) -> RegisterSignature {
     let mut sigs = RegisterSignature::new();
     for (mode,depth,base) in layout {
-        let mut cr = ComplexRegisters::new_empty(*mode);
+        let mut cr = FullType::new_empty(*mode);
         cr.add(ComplexPath::new_empty().add_levels(*depth),VectorRegisters::new(*depth,base.clone()));
         sigs.add(cr);
     }

@@ -18,13 +18,13 @@ use std::iter::Iterator;
 use std::ops::Index;
 use std::slice::SliceIndex;
 use crate::model::cbor_array;
-use super::complexsig::ComplexRegisters;
+use super::fulltype::FullType;
 use serde_cbor::Value as CborValue;
 
 #[derive(Clone,Debug,PartialEq,Eq,Hash)]
 pub struct RegisterSignature {
     index: usize,
-    args: Vec<ComplexRegisters>
+    args: Vec<FullType>
 }
 
 impl RegisterSignature {
@@ -35,7 +35,7 @@ impl RegisterSignature {
         }
     }
 
-    pub fn add(&mut self, mut cr: ComplexRegisters) {
+    pub fn add(&mut self, mut cr: FullType) {
         cr.add_start(self.index);
         self.index += cr.register_count();
         self.args.push(cr);
@@ -54,7 +54,7 @@ impl RegisterSignature {
 
     pub fn deserialize(cbor: &CborValue, named: bool, depth: bool) -> Result<RegisterSignature,String> {
         let mut out = RegisterSignature::new();
-        for cr in cbor_array(cbor,0,true)?.iter().map(|x| ComplexRegisters::deserialize(x,named,depth)).collect::<Result<Vec<_>,_>>()? {
+        for cr in cbor_array(cbor,0,true)?.iter().map(|x| FullType::deserialize(x,named,depth)).collect::<Result<Vec<_>,_>>()? {
             out.add(cr);
         }
         Ok(out)
@@ -67,7 +67,7 @@ pub struct RegisterSignatureIterator<'a> {
 }
 
 impl<'a> Iterator for RegisterSignatureIterator<'a> {
-    type Item = &'a ComplexRegisters;
+    type Item = &'a FullType;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.rs.args.len() {
@@ -80,7 +80,7 @@ impl<'a> Iterator for RegisterSignatureIterator<'a> {
     }
 }
 
-impl<I> Index<I> for RegisterSignature where I: SliceIndex<[ComplexRegisters]> {
+impl<I> Index<I> for RegisterSignature where I: SliceIndex<[FullType]> {
     type Output = I::Output;
 
     fn index(&self, index: I) -> &Self::Output {
@@ -100,7 +100,7 @@ mod test {
     use crate::generate::generate;
     use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
     use crate::test::cbor::cbor_cmp;
-    use crate::model::{ DefStore };
+    use crate::model::{ DefStore, make_full_type };
     use crate::typeinf::{ MemberType, MemberMode };
 
     // XXX move to common test utils
@@ -113,7 +113,7 @@ mod test {
         parse_type(&mut lexer,defstore).expect("bad type")
     }
 
-    fn format_pvec(ass: &ComplexRegisters) -> String {
+    fn format_pvec(ass: &FullType) -> String {
         ass.to_string()
     }
 
@@ -140,9 +140,9 @@ mod test {
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::In,&make_type(&defstore,"boolean")).expect("a");
+        let regs = make_full_type(&defstore,MemberMode::In,&make_type(&defstore,"boolean")).expect("a");
         assert_eq!("*<0>/R",format_pvec(&regs));
-        let regs = ComplexRegisters::new(&defstore,MemberMode::In,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
+        let regs = make_full_type(&defstore,MemberMode::In,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
         assert_eq!(load_cmp("offset-smoke.out"),format_pvec(&regs));
     }
 
@@ -155,7 +155,7 @@ mod test {
         lexer.import("search:codegen/offset-enums").expect("cannot load file");
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::In,&make_type(&defstore,"offset_enums::stest")).expect("b");
+        let regs = make_full_type(&defstore,MemberMode::In,&make_type(&defstore,"offset_enums::stest")).expect("b");
         assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
         let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
@@ -174,14 +174,14 @@ mod test {
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
-        let regs = ComplexRegisters::new(&defstore,MemberMode::In,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
+        let regs = make_full_type(&defstore,MemberMode::In,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
         let named = regs.serialize(true,true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");
-        let cr2 = ComplexRegisters::deserialize(&named,true,true).expect("cbor d");
+        let cr2 = FullType::deserialize(&named,true,true).expect("cbor d");
         assert_eq!(cr2,regs);
         let anon = regs.serialize(false,false).expect("cbor c");
         cbor_cmp(&anon,"cbor-signature-unnamed.out");
-        let cr2 = ComplexRegisters::deserialize(&anon,false,false).expect("cbor e");
+        let cr2 = FullType::deserialize(&anon,false,false).expect("cbor e");
         assert_ne!(cr2,regs);
         assert_eq!(MemberMode::In,cr2.get_mode());
         let vs_in = regs.iter().map(|x| x.1).cloned().collect::<Vec<_>>();

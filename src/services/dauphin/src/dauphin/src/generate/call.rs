@@ -17,7 +17,7 @@
 use crate::generate::{ Instruction, InstructionType };
 use crate::typeinf::{ MemberMode, MemberDataFlow };
 use super::gencontext::GenContext;
-use crate::model::{ RegisterSignature, ComplexRegisters };
+use crate::model::{ RegisterSignature, ComplexRegisters, make_full_type };
 
 pub fn call(context: &mut GenContext) -> Result<(),String> {
     for instr in &context.get_instructions() {
@@ -32,7 +32,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                         MemberMode::Out => MemberDataFlow::Out,
                         _ => MemberDataFlow::In
                     });
-                    rs.add(ComplexRegisters::new(&context.get_defstore(),modes[i],&type_)?);
+                    rs.add(make_full_type(&context.get_defstore(),modes[i],&type_)?);
                 }
                 context.add(Instruction::new(InstructionType::Call(identifier.clone(),true,rs,flows),instr.regs.to_vec()));
             },
@@ -43,7 +43,7 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
                 for (i,reg) in instr.regs.iter().enumerate() {
                     flows.push(if i == 0 { MemberDataFlow::Out } else { MemberDataFlow::In });
                     let type_ = context.xxx_types().get(&reg).unwrap().clone();
-                    rs.add(ComplexRegisters::new(&context.get_defstore(),if i==0 { MemberMode::Out } else { MemberMode::In },&type_)?);
+                    rs.add(make_full_type(&context.get_defstore(),if i==0 { MemberMode::Out } else { MemberMode::In },&type_)?);
                 }
                 context.add(Instruction::new(InstructionType::Call(identifier.clone(),false,rs,flows),instr.regs.to_vec()));
             },
