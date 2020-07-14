@@ -82,6 +82,7 @@ pub fn config_from_options() -> Config {
         ConfigOption::new("source","source",Some("c"),Some("SOURCE-FILE"),true,|config,v| { config.add_source(v) }),
         ConfigOption::new("output","output",Some("o"),Some("BINARY-FILE"),false,|config,v| { config.set_output(v) }),
         ConfigOption::new("profile","profile",Some("p"),None,false,|config,_| { config.set_profile(true) }),
+        ConfigOption::new("execute","execute",Some("x"),Some("PROG-NAME"),false,|config,v| { config.set_run(v); config.set_action("run") }),
         ConfigOption::new("define","define",Some("D"),Some("KEY=VALUE"),true,|config,v| { 
             let (k,v) = if let Some(eq_pos) = v.chars().position(|x| x== '=') {
                 let (k,v) = v.split_at(eq_pos);

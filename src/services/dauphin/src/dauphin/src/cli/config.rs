@@ -39,7 +39,8 @@ pub struct Config {
     source: Vec<String>,
     output: Option<String>,
     profile: Option<bool>,
-    define: Vec<(String,String)>
+    define: Vec<(String,String)>,
+    run: Option<String>
 }
 
 macro_rules! push {
@@ -140,7 +141,8 @@ impl Config {
             unit_test: None,
             output: None,
             profile: None,
-            define: vec![]
+            define: vec![],
+            run: None
         }
     }
 
@@ -151,6 +153,9 @@ impl Config {
     pub fn verify(&self) -> Result<(),String> {
         if self.get_profile() && !self.get_generate_debug() {
             return Err(format!("cannot generate profile (-p) without debug info (-g)"));
+        }
+        if self.get_action() == "run" && !self.isset_output() {
+            return Err(format!("cannot run (-x) without object file (-o)"));
         }
         Ok(())
     }
@@ -168,6 +173,7 @@ impl Config {
     push_str!(self,libs,add_lib,get_libs);
     push_str!(self,source,add_source,get_sources);
     flag_str!(self,output,set_output,get_output,isset_output,"out.dpb");
+    flag_str!(self,run,set_run,get_run,isset_run,"");
     flag!(self,profile,set_profile,get_profile,isset_profile,bool,false);
     push!(self,define,add_define,get_defines,(String,String));
 }

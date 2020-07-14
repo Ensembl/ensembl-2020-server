@@ -98,7 +98,7 @@ mod test {
 
     #[test]
     fn versions_smoke() {
-        let mut config = xxx_test_config();
+        let config = xxx_test_config();
         let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");

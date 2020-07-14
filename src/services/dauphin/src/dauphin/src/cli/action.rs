@@ -16,10 +16,11 @@
 
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::fs::write;
+use std::fs::{ write, read };
 use std::process::exit;
 use regex::Regex;
-use crate::interp::{ CompilerLink, make_compiler_suite };
+use crate::interp::{ CompilerLink, make_compiler_suite, make_interpret_suite, InterpreterLink, interpreter };
+use dauphin_interp_common::interp::StreamFactory;
 use crate::model::{ fix_filename };
 use dauphin_interp_common::common::{ cbor_serialize };
 use crate::lexer::Lexer;
@@ -38,6 +39,13 @@ fn bomb<A,E,T>(action: T, x: Result<A,E>) -> A where T: Fn() -> String, E: Displ
             exit(2);
         }
     }
+}
+
+fn read_binary_file(filename: &str) -> Vec<u8> {
+    bomb(
+        || format!("Reading {}",filename),
+        read(filename)
+    )
 }
 
 fn write_binary_file(filename: &str, contents: &[u8]) {
@@ -137,11 +145,33 @@ impl Action for CompileAction {
     }
 }
 
+struct RunAction();
+
+impl Action for RunAction {
+    fn name(&self) -> String { "run".to_string() }
+    fn execute(&self, config: &Config) {
+        let suite = bomb(|| format!("could not construct library"),
+            make_interpret_suite(config)
+        );
+        let buffer = read_binary_file(config.get_output());
+        let program = bomb(|| format!("corrupted cbor in {}",config.get_output()),
+                        serde_cbor::from_slice(&buffer).map_err(|x| format!("{} while deserialising",x)));
+        let mut interpret_linker = bomb(|| format!("could not link binary"),
+            InterpreterLink::new(suite,&program)
+        );
+        interpret_linker.add_payload("std","stream",StreamFactory::new());
+        let mut interp = interpreter(&interpret_linker,&config,config.get_run()).expect("interpreter");
+        while interp.more().expect("interpreting") {}
+        interp.finish();    
+    }
+}
+
 pub(super) fn make_actions() -> HashMap<String,Box<dyn Action>> {
     let mut out : Vec<Box<dyn Action>> = vec![];
     out.push(Box::new(VersionAction()));
     out.push(Box::new(CompileAction()));
     out.push(Box::new(GenerateDynamicData()));
+    out.push(Box::new(RunAction()));
     out.drain(..).map(|a| (a.name(),a)).collect()
 }
 

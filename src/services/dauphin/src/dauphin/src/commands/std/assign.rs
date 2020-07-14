@@ -117,7 +117,7 @@ pub(super) fn library_assign_commands(set: &mut CompLibRegister) -> Result<(),St
     Ok(())
 }
 
-pub(super) fn library_assign_commands_interp(set: &mut InterpLibRegister) -> Result<(),String> {
+pub(super) fn library_assign_commands_interp(_set: &mut InterpLibRegister) -> Result<(),String> {
     Ok(())
 }
 
@@ -139,7 +139,7 @@ mod test {
         let p = Parser::new(&mut lexer);
         let (stmts,defstore) = p.parse().expect("error");
         let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
+        let (_,_strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
         // XXX todo test it!
     }
 
