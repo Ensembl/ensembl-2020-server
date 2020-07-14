@@ -14,9 +14,6 @@
  *  limitations under the License.
  */
 
-#[macro_use]
-use dauphin_interp_common;
-
 use std::rc::Rc;
 use crate::interp::{ Command, PreImageOutcome };
 use dauphin_interp_common::common::{ Register, cbor_make_map, cbor_map, InterpCommand, CommandDeserializer, arbitrate_type, CommandSetId };

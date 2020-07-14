@@ -350,23 +350,6 @@ mod test {
     use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
     use super::super::dealias::remove_aliases;
 
-    fn find_assigns<'a>( instrs: &Vec<Instruction>, subregs: &'a BTreeMap<Register,Linearized>) -> (Vec<&'a Linearized>,Vec<Register>) {
-        let mut lin = Vec::new();
-        let mut norm = Vec::new();
-        for instr in instrs {
-            if let InstructionType::Call(s,_,_,_) = &instr.itype {
-                if s.name() == "assign" {
-                    if let Some(reg) = subregs.get(&instr.regs[1]) {
-                        lin.push(reg);
-                    } else {
-                        norm.push(instr.regs[1]);
-                    }
-                }
-            }
-        }
-        (lin,norm)
-    }
-
     #[test]
     fn linearize_smoke() {
         let config = xxx_test_config();
@@ -389,7 +372,7 @@ mod test {
 
     fn linearize_stable_pass() -> Vec<Instruction> {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/linearize-smoke").expect("cannot load file");

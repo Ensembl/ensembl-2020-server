@@ -14,21 +14,12 @@
  *  limitations under the License.
  */
 
-use std::rc::Rc;
 use dauphin_interp_common::common::{ 
-    Register, VectorRegisters, RegisterSignature, cbor_array, Identifier, InterpCommand, CommandDeserializer, RegisterVectorSource, SharedVec,
-    to_xstructure, XStructure
+    Register, RegisterSignature, Identifier
 };
-use dauphin_interp_common::interp::{ Stream, StreamContents, InterpNatural, InterpContext, InterpValue, RegisterFile };
 use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger };
 use crate::generate::{ Instruction, InstructionType };
 use serde_cbor::Value as CborValue;
-
-// XXX dedup
-pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
-    let p = context.payload("std","stream")?;
-    Ok(p.downcast_mut().ok_or_else(|| "No stream context".to_string())?)
-}
 
 pub struct PrintCommandType();
 
@@ -47,101 +38,6 @@ impl CommandType for PrintCommandType {
             Err("unexpected instruction".to_string())
         }
     }    
-}
-
-fn print_simple(sv: &SharedVec, path: &[usize], first: usize) -> Result<String,String> {
-    let (data,offset) = vr_lookup_data(sv,path,first)?;
-    Ok(match data.get_natural() {
-        InterpNatural::Empty => "".to_string(),
-        InterpNatural::Indexes => format!("{}",data.to_rc_indexes()?.0[offset]),
-        InterpNatural::Numbers => format!("{}",data.to_rc_numbers()?.0[offset]),
-        InterpNatural::Boolean => format!("{}",data.to_rc_boolean()?.0[offset]),
-        InterpNatural::Strings => format!("\"{}\"",data.to_rc_strings()?.0[offset]),
-        InterpNatural::Bytes => format!("\'{}\'",data.to_rc_bytes()?.0[offset].iter().map(|x| format!("{:02x}",x)).collect::<Vec<_>>().join("")),
-    })
-}
-
-fn vr_lookup_data(sv: &SharedVec, path: &[usize], first: usize) -> Result<(Rc<InterpValue>,usize),String> {
-    let mut position = first;
-    for (i,index) in path.iter().enumerate() {
-        let offset_val = sv.get_offset(sv.depth()-1-i)?;
-        position = offset_val[position] + index;
-    }
-    Ok((sv.get_data().clone(),position))
-}
-
-fn vr_lookup_len(sv: &SharedVec, path: &[usize], first: usize) -> Result<usize,String> {
-    let mut position = first;
-    for (i,index) in path.iter().enumerate() {
-        let offset_val = sv.get_offset(sv.depth()-1-i)?;
-        position = offset_val[position] + index;
-    }
-    let len_val = sv.get_length(sv.depth()-1-path.len())?;
-    Ok(len_val[position])
-}
-
-fn print(file: &RegisterFile, xs: &XStructure<SharedVec>, regs: &[Register], path: &[usize], first: usize) -> Result<String,String> {
-    Ok(match xs {
-        XStructure::Vector(xs_inner) => {
-            let sv = xs.any();
-            let len = vr_lookup_len(&sv,path,first)?;
-            let mut out = vec![];
-            for i in 0..len {
-                let mut new_path = path.to_vec();
-                new_path.push(i);
-                out.push(print(file,xs_inner,regs,&new_path,first)?);
-            }
-            format!("[{}]",out.join(", "))
-        },
-        XStructure::Struct(id,kvs) => {
-            let mut subs : Vec<String> = kvs.keys().cloned().collect();
-            subs.sort();
-            let kvs : Vec<(String,_)> = subs.drain(..).map(|k| (k.clone(),kvs.get(&k).unwrap().clone())).collect();
-            let out = kvs.iter().map(|(name,xs_inner)| 
-                Ok(format!("{}: {}",name,print(file,xs_inner,regs,path,first)?))
-            ).collect::<Result<Vec<_>,String>>()?;
-            format!("{} {{ {} }}",id.to_string(),out.join(", "))
-        },
-        XStructure::Enum(id,order,kvs,disc) => {
-            let (data,offset) = vr_lookup_data(&disc.borrow(),path,first)?;
-            let disc_val = data.to_rc_indexes()?.0[offset];
-            let inner_xs = kvs.get(&order[disc_val]).ok_or_else(|| format!("bad enum"))?;
-            format!("{}:{} {}",id,order[disc_val],print(file,inner_xs,regs,path,first)?)
-        },
-        XStructure::Simple(sv) => print_simple(&sv.borrow(),path,first)?,
-    })
-}
-
-pub struct PrintInterpCommand(Vec<Register>,RegisterSignature);
-
-impl InterpCommand for PrintInterpCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let xs = to_xstructure(&self.1[0])?;
-        let vs = RegisterVectorSource::new(&self.0);
-        let xs2 = xs.derive(&mut (|vr: &VectorRegisters| SharedVec::new(context,&vs,vr)))?;
-        let sv = xs2.any();
-        let num = if sv.depth() > 0 { sv.get_offset(sv.depth()-1)?.len() } else { sv.get_data().len() };
-        let registers = context.registers();
-        let mut out = vec![];
-        for i in 0..num {
-            out.push(print(&registers,&xs2,&self.0,&vec![],i)?);
-        }
-        for s in &out {
-            std_stream(context)?.add(StreamContents::String(s.to_string()));
-        }
-        Ok(())
-    }
-}
-
-pub struct PrintDeserializer();
-
-impl CommandDeserializer for PrintDeserializer {
-    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((14,2))) }
-    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
-        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let sig = RegisterSignature::deserialize(value[1],true,true)?;
-        Ok(Box::new(PrintInterpCommand(regs,sig)))        
-    }
 }
 
 pub struct PrintCommand(Vec<Register>,RegisterSignature);
@@ -163,7 +59,7 @@ mod test {
 
     #[test]
     fn print_smoke() {
-        let mut config = xxx_test_config();
+        let config = xxx_test_config();
         let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");

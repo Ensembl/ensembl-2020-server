@@ -383,7 +383,7 @@ mod test {
     #[test]
     fn simplify_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/simplify-smoke").expect("cannot load file");
@@ -400,7 +400,7 @@ mod test {
     #[test]
     fn simplify_enum_nest() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/simplify-enum-nest").expect("cannot load file");

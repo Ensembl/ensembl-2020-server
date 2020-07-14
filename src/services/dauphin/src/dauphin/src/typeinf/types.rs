@@ -15,8 +15,7 @@
  */
 
 use std::fmt;
-use dauphin_interp_common::common::{ Register, cbor_int, Identifier, BaseType };
-use serde_cbor::Value as CborValue;
+use dauphin_interp_common::common::{ Register, BaseType };
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
 pub enum ExpressionType {

@@ -136,7 +136,7 @@ impl<'a,'b> PreImageContext<'a,'b> {
     }
 
     fn add(&mut self, instr: Instruction) -> Result<(),String> {
-        let command = self.compiler_link.instruction_to_command(&instr,true)?.1;
+        let command = self.compiler_link.instruction_to_command(&instr)?.1;
         let time = command.execution_time(&self);
         self.gen_context.add_timed(instr,time);
         Ok(())
@@ -182,8 +182,8 @@ impl<'a,'b> PreImageContext<'a,'b> {
 
     fn preimage_instr(&mut self, instr: &Instruction) -> Result<(),String> {
         //print!("{:?}",instr);
-        let command = self.compiler_link.instruction_to_command(instr,true)?.1;
-        let ic = self.compiler_link.instruction_to_interp_command(instr,true)?;
+        let command = self.compiler_link.instruction_to_command(instr)?.1;
+        let ic = self.compiler_link.instruction_to_interp_command(instr)?;
         match command.preimage(self,ic)? {
             PreImageOutcome::Skip(sizes) => {
                 self.unable_instr(&instr,&sizes)?;
@@ -280,7 +280,7 @@ mod test {
     #[test]
     fn runnums2_smoke() {
         let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/runnums").expect("cannot load file");

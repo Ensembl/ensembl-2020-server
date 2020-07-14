@@ -50,5 +50,5 @@ pub use self::core::consts::{
     ConstCommandType, NumberConstCommandType, BooleanConstCommandType, StringConstCommandType
 };
 pub use self::core::core::{ make_core, make_core_interp };
-pub use self::std::library::{ make_std, make_std_interp, std_stream };
+pub use self::std::library::{ make_std };
 pub use self::buildtime::buildtime::{ make_buildtime };

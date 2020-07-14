@@ -69,6 +69,7 @@ macro_rules! push_str {
 
 macro_rules! flag {
     ($self:ident,$option:ident,$setter:ident,$getter:ident,$isset:ident,$t:ty,$dft:expr) => {
+        #[allow(unused)]
         pub fn $setter(&mut $self, value: $t) {
             $self.$option = Some(value);
         }
@@ -83,6 +84,7 @@ macro_rules! flag {
             }
         }            
 
+        #[allow(unused)]
         pub fn $isset(&$self) -> bool {
             if let Some(ref value) = $self.$option {
                 true
@@ -111,6 +113,7 @@ macro_rules! flag_str {
             }
         }
 
+        #[allow(unused)]
         pub fn $isset(&$self) -> bool {
             if let Some(ref value) = $self.$option {
                 true
@@ -146,6 +149,7 @@ impl Config {
         }
     }
 
+    #[allow(unused)]
     pub fn set_subconfig(&mut self, sub: Config) {
         self.subconfig = Some(Box::new(sub));
     }

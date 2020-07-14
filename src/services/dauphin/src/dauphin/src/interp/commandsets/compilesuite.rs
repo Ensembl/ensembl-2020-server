@@ -148,7 +148,7 @@ impl CommandCompileSuite {
                 let trigger = CommandTrigger::deserialize(trigger)?;
                 if let Some(cid) = self.trigger_commands.get(&trigger) {
                     let command = self.store.get_mut(&cid);
-                    command.use_dynamic_data(data).unwrap_or_else(|x| {
+                    command.use_dynamic_data(data).unwrap_or_else(|_| {
                         eprint!("Cannot load dynamic data for {:?}\n",trigger);
                     });
                 }

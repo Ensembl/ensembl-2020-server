@@ -31,13 +31,13 @@ pub enum InterpBinNumOp {
 }
 
 impl InterpBinNumOp {
-    fn evaluate(&self, a: f64, b: f64) -> f64 {
+    pub fn evaluate(&self, a: f64, b: f64) -> f64 {
         match self {
             InterpBinNumOp::Plus => a + b
         }
     }
 
-    fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         match self {
             InterpBinNumOp::Plus => "plus",
         }
@@ -53,7 +53,7 @@ pub enum InterpBinBoolOp {
 }
 
 impl InterpBinBoolOp {
-    fn evaluate(&self, a: f64, b: f64) -> bool {
+    pub fn evaluate(&self, a: f64, b: f64) -> bool {
         match self {
             InterpBinBoolOp::Lt => a < b,
             InterpBinBoolOp::LtEq => a <= b,
@@ -62,7 +62,7 @@ impl InterpBinBoolOp {
         }
     }
 
-    fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         match self {
             InterpBinBoolOp::Lt => "lt",
             InterpBinBoolOp::LtEq => "lteq",
@@ -138,13 +138,13 @@ pub enum InterpNumModOp {
 }
 
 impl InterpNumModOp {
-    fn evaluate(&self, a: &mut f64, b: f64) {
+    pub fn evaluate(&self, a: &mut f64, b: f64) {
         match self {
             InterpNumModOp::Incr => *a += b
         }
     }
 
-    fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         match self {
             InterpNumModOp::Incr => "incr",
         }

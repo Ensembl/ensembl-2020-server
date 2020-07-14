@@ -165,7 +165,7 @@ mod test {
         let mut config = xxx_test_config();
         config.set_generate_debug(false);
         config.set_opt_seq("pcpmuedpdpa"); /* no r to avoid re-ordering */
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("a");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import(&format!("search:codegen/{}",filename)).expect("cannot load file");

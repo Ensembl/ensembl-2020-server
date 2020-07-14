@@ -15,7 +15,6 @@
  */
 
 use dauphin_interp_common::common::{ Register, RegisterSignature, VectorRegisters, InterpCommand, MemberMode };
-use dauphin_interp_common::interp::InterpLibRegister;
 use crate::interp::{
     Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome,
     CompLibRegister
@@ -114,10 +113,6 @@ impl Command for AssignCommand {
 pub(super) fn library_assign_commands(set: &mut CompLibRegister) -> Result<(),String> {
     set.push("assign",None,AssignCommandType());
     set.push("extend",None,ExtendCommandType::new());
-    Ok(())
-}
-
-pub(super) fn library_assign_commands_interp(_set: &mut InterpLibRegister) -> Result<(),String> {
     Ok(())
 }
 

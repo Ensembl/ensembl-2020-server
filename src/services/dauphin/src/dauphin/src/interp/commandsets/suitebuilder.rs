@@ -15,7 +15,8 @@
  */
 
 use super::{ CommandCompileSuite, CommandInterpretSuite };
-use crate::commands::{ make_core, make_std, make_buildtime, make_core_interp, make_std_interp };
+use crate::commands::{ make_core, make_std, make_buildtime, make_core_interp };
+use dauphin_interp_common::commands::std::make_std_interp;
 use crate::cli::Config;
 
 pub fn make_compiler_suite(config: &Config) -> Result<CommandCompileSuite,String> {

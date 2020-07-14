@@ -126,7 +126,7 @@ mod test {
     fn typing_smoke() {
         let mut config = xxx_test_config();
         config.set_opt_seq("");
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
+        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
         let resolver = common_resolver(&config,&linker).expect("cfg");
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import("search:codegen/typepass-smoke").expect("cannot load file");

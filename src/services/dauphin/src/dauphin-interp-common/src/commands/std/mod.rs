@@ -21,3 +21,4 @@ mod print;
 mod vector;
 
 pub use library::make_std_interp;
+pub use numops::{ InterpBinBoolOp, InterpBinNumOp, InterpNumModOp };

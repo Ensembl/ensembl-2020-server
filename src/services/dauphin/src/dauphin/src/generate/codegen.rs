@@ -412,10 +412,6 @@ mod test {
 
     #[cfg(test)]
     mod test {
-        use std::any::Any;
-        use std::collections::HashMap;
-        use std::rc::Rc;
-        use dauphin_interp_common::interp::RegisterFile;
         use crate::lexer::Lexer;
         use crate::resolver::common_resolver;
         use crate::parser::{ Parser };

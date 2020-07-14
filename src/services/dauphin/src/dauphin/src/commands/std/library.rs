@@ -19,13 +19,13 @@ use crate::interp::{
 };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
-use super::numops::{ library_numops_commands, library_numops_commands_interp };
-use super::eq::{ library_eq_command, library_eq_command_interp };
-use super::assign::{ library_assign_commands, library_assign_commands_interp };
-use super::print::{ PrintCommandType, PrintDeserializer };
-use super::vector::{ library_vector_commands, library_vector_commands_interp };
-use dauphin_interp_common::common::{ InterpCommand, Register, RegisterSignature, Identifier, CommandDeserializer, NoopDeserializer, CommandSetId };
-use dauphin_interp_common::interp::{ InterpLibRegister, Stream, InterpContext };
+use super::numops::{ library_numops_commands };
+use super::eq::{ library_eq_command };
+use super::assign::{ library_assign_commands };
+use super::print::{ PrintCommandType };
+use super::vector::{ library_vector_commands };
+use dauphin_interp_common::common::{ InterpCommand, Register, RegisterSignature, Identifier, CommandSetId };
+use dauphin_interp_common::commands::std::make_std_interp;
 
 pub fn std_id() -> CommandSetId {
     CommandSetId::new("std",(0,0),0x8A07AE1254D6E44B)
@@ -33,11 +33,6 @@ pub fn std_id() -> CommandSetId {
 
 pub(super) fn std(name: &str) -> Identifier {
     Identifier::new("std",name)
-}
-
-pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
-    let p = context.payload("std","stream")?;
-    Ok(p.downcast_mut().ok_or_else(|| "No stream context".to_string())?)
 }
 
 pub struct LenCommandType();
@@ -102,31 +97,6 @@ impl CommandType for AssertCommandType {
             Err("unexpected instruction".to_string())
         }
     }    
-}
-
-pub struct AssertDeserializer();
-
-impl CommandDeserializer for AssertDeserializer {
-    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((4,2))) }
-    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
-        Ok(Box::new(AssertInterpCommand(Register::deserialize(&value[0])?,Register::deserialize(&value[1])?)))
-    }
-}
-
-pub struct AssertInterpCommand(Register,Register);
-
-impl InterpCommand for AssertInterpCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let registers = context.registers_mut();
-        let a = &registers.get_boolean(&self.0)?;
-        let b = &registers.get_boolean(&self.1)?;
-        for i in 0..a.len() {
-            if a[i] != b[i%b.len()] {
-                return Err(format!("assertion failed index={}!",i));
-            }
-        }
-        Ok(())
-    }
 }
 
 pub struct AssertCommand(Register,Register);
@@ -199,17 +169,5 @@ pub fn make_std() -> Result<CompLibRegister,String> {
     library_assign_commands(&mut set)?;
     library_vector_commands(&mut set)?;
     set.dynamic_data(include_bytes!("std-0.0.ddd"));
-    Ok(set)
-}
-
-pub fn make_std_interp() -> Result<InterpLibRegister,String> {
-    let mut set = InterpLibRegister::new(&std_id());
-    library_eq_command_interp(&mut set)?;
-    set.push(AssertDeserializer());
-    set.push(NoopDeserializer(13));
-    set.push(PrintDeserializer());
-    library_numops_commands_interp(&mut set)?;
-    library_assign_commands_interp(&mut set)?;
-    library_vector_commands_interp(&mut set)?;
     Ok(set)
 }

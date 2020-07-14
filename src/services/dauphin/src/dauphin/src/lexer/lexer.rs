@@ -48,6 +48,7 @@ impl LexerPosition {
 
     pub fn filename(&self) -> &str { &self.filename }
     pub fn line(&self) -> u32 { self.line }
+    #[allow(unused)]
     pub fn col(&self) -> u32 { self.col }
     pub fn contents(&self) -> Option<String> { self.handle.as_ref().map(|x| x.get()) }
 }

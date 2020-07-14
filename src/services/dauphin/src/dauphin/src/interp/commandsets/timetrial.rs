@@ -70,7 +70,7 @@ fn generate_one_timing(trial: &dyn TimeTrialCommandType, linker: &CompilerLink, 
     let mut data = vec![];
     for i in 0..5 {
         let instr = trial.timetrial_make_command(param,linker,config)?;
-        let interp_command = linker.instruction_to_interp_command(&instr,false)?.ok_or_else(|| format!("cannot run time trial"))?;
+        let interp_command = linker.instruction_to_interp_command(&instr)?.ok_or_else(|| format!("cannot run time trial"))?;
         let run = run_time_trial(trial,&interp_command,linker,config,param,i*block,false)?;
         let dry = run_time_trial(trial,&interp_command,linker,config,param,i*block,true)?;
         data.push(((i*block) as f64,run-dry));

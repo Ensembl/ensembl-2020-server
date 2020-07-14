@@ -20,7 +20,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
-use crate::commands::std_stream;
 use crate::generate::Instruction;
 use crate::interp::{ interpreter, InterpretInstance, make_interpret_suite };
 use serde_cbor::Value as CborValue;
@@ -28,6 +27,8 @@ use super::compilelink::CompilerLink;
 use super::interplink::InterpreterLink;
 #[cfg(test)]
 use crate::test::files::{ find_testdata };
+#[cfg(test)]
+use dauphin_interp_common::interp::{ Stream };
 
 use dauphin_interp_common::common::{ Register, cbor_serialize, CommandDeserializer, InterpCommand };
 use dauphin_interp_common::interp::{ InterpValue, StreamContents, StreamFactory, InterpContext };
@@ -73,7 +74,7 @@ fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>
 
 #[cfg(test)]
 pub fn mini_interp_run(interpret_linker: &InterpreterLink, config: &Config, name: &str) -> Result<InterpContext,String> {
-    let mut interp = interpreter(interpret_linker,config,name)?;
+    let interp = interpreter(interpret_linker,config,name)?;
     let start_time = SystemTime::now();
     let out = interpret(interpret_linker,config,name)?;
     print!("command time {}ms\n",start_time.elapsed().unwrap_or(Duration::new(0,0)).as_secs_f32()*1000.);
@@ -113,6 +114,12 @@ pub fn xxx_test_config() -> Config {
 
 #[cfg(test)]
 use crate::test::cbor::hexdump;
+
+#[cfg(test)]
+pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
+    let p = context.payload("std","stream")?;
+    Ok(p.downcast_mut().ok_or_else(|| "No stream context".to_string())?)
+}
 
 #[cfg(test)]
 pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {

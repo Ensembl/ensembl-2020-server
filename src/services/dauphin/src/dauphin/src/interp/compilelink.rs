@@ -57,15 +57,15 @@ impl CompilerLink {
         })
     }
 
-    pub fn instruction_to_command(&self, instr: &Instruction, compile_side: bool) -> Result<(CommandSchema,Box<dyn Command>),String> {
+    pub fn instruction_to_command(&self, instr: &Instruction) -> Result<(CommandSchema,Box<dyn Command>),String> {
         let ct = self.cs.get_command_by_trigger(&self.instruction_to_trigger(instr)?)?;
         Ok((ct.get_schema(),ct.from_instruction(instr)?))
     }
 
-    pub fn instruction_to_interp_command(&self, instr: &Instruction, compile_side: bool) -> Result<Option<Box<dyn InterpCommand>>,String> {
+    pub fn instruction_to_interp_command(&self, instr: &Instruction) -> Result<Option<Box<dyn InterpCommand>>,String> {
         if let Some(ds) = self.cs.get_deserializer_by_trigger(&self.instruction_to_trigger(instr)?)? {
             if let Some(opcode) = ds.get_opcode_len()? {
-                let (sch,command) = self.instruction_to_command(instr,compile_side)?;
+                let (_sch,command) = self.instruction_to_command(instr)?;
                 if let Some(data) = command.serialize()? {
                     let data_ref : Vec<&CborValue> = data.iter().collect();
                     return Ok(Some(ds.deserialize(opcode.0,&data_ref)?));
@@ -75,7 +75,7 @@ impl CompilerLink {
         return Ok(None)
     }
 
-    pub fn instruction_to_opcode(&self, instr: &Instruction, compile_side: bool) -> Result<Option<u32>,String> {
+    pub fn instruction_to_opcode(&self, instr: &Instruction) -> Result<Option<u32>,String> {
         let opcode = if let InstructionType::Call(identifier,_,_,_) = &instr.itype {
             self.cs.get_opcode_by_trigger(&CommandTrigger::Command(identifier.clone()))?
         } else {
@@ -115,8 +115,8 @@ impl CompilerLink {
         let mut cmds_s = vec![];
         let mut symbols = vec![];
         for (i,instr) in instrs.iter().enumerate() {
-            if let Some(opcode) = self.instruction_to_opcode(instr,false)? {
-                let (sch,cmd) = self.instruction_to_command(instr,false)?;
+            if let Some(opcode) = self.instruction_to_opcode(instr)? {
+                let (sch,cmd) = self.instruction_to_command(instr)?;
                 let gen = self.serialize_command(&mut cmds_s,opcode,&sch,&cmd)?;
                 if gen && config.get_generate_debug() {
                     symbols.push(self.serialize_instruction(&instrs[i]));
@@ -131,7 +131,7 @@ impl CompilerLink {
         Ok(CborValue::Map(program))
     }
 
-    pub fn serialize(&self, config: &Config) -> Result<CborValue,String> {
+    pub fn serialize(&self, _config: &Config) -> Result<CborValue,String> {
         let mut out = BTreeMap::new();
         out.insert(CborValue::Text("version".to_string()),CborValue::Integer(VERSION as i128));
         out.insert(CborValue::Text("suite".to_string()),self.cs.serialize().clone());
@@ -152,11 +152,15 @@ mod test {
     use crate::parser::{ Parser };
     use crate::resolver::Resolver;
     use crate::generate::generate;
-    use crate::commands::std_stream;
     use crate::interp::{ mini_interp_run, CompilerLink, xxx_test_config, stream_strings, make_compiler_suite, make_interpret_suite };
-    use dauphin_interp_common::interp::StreamFactory;
+    use dauphin_interp_common::interp::{ StreamFactory, InterpContext, Stream };
     use crate::interp::interplink::InterpreterLink;
 
+    pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
+        let p = context.payload("std","stream")?;
+        Ok(p.downcast_mut().ok_or_else(|| "No stream context".to_string())?)
+    }
+    
     fn make_program(linker: &mut CompilerLink, resolver: &Resolver, config: &Config, name: &str, path: &str) -> Result<(),String> {
         let mut lexer = Lexer::new(&resolver,"");
         lexer.import(path).expect("cannot load file");
