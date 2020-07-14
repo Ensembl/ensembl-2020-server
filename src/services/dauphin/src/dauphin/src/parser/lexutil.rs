@@ -16,7 +16,7 @@
 
 use crate::lexer::{ Lexer, Token };
 use super::node::ParseError;
-use crate::model::{ Identifier };
+use dauphin_interp_common::common::Identifier;
 
 lazy_static! {
     static ref KEYWORDS: Vec<&'static str> = {

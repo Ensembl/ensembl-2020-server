@@ -102,7 +102,7 @@ impl<'a> Parser<'a> {
 mod test {
     use super::*;
     use crate::resolver::common_resolver;
-    use crate::model::Identifier;
+    use dauphin_interp_common::common::Identifier;
     use crate::test::files::{ load_testdata };
     use crate::interp::{ xxx_test_config, CompilerLink, make_compiler_suite };
 

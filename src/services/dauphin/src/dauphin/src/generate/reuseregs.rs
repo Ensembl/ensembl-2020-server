@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use super::gencontext::GenContext;
 use crate::generate::instruction::{ InstructionType, Instruction };
-use crate::model::Register;
+use dauphin_interp_common::common::Register;
 
 #[derive(Clone,Debug,PartialEq,Eq,Hash)]
 struct UnknownValue {

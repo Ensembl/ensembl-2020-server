@@ -17,8 +17,10 @@
 use std::collections::{ HashMap, HashSet };
 use super::gencontext::GenContext;
 use crate::resolver::Resolver;
-use crate::model::{ Register, RegisterAllocator, DFloat };
-use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes, InterpCommand };
+use crate::model::{ RegisterAllocator, DFloat };
+use crate::interp::{ CompilerLink, PreImageOutcome };
+use dauphin_interp_common::common::{ Register };
+use dauphin_interp_common::interp::{ InterpContext, InterpValue, numbers_to_indexes };
 use crate::generate::{ Instruction, InstructionType };
 use crate::cli::Config;
 

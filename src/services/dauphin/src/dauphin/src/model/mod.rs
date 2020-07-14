@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-mod cborutil;
 mod definition;
 mod definitionstore;
 mod dfloat;
@@ -22,28 +21,14 @@ mod fileutil;
 mod identifierstore;
 mod register;
 mod structenum;
-mod signature {
-    pub mod fulltype;
-    pub mod complexpath;
-    pub mod signature;
-    pub mod complexsig;
-    pub mod vectorsig;
-}
+mod signature;
 
 pub use self::definition::{ Inline, InlineMode, ExprMacro, StmtMacro, ProcDecl, FuncDecl };
 pub use self::definitionstore::DefStore;
 pub use self::fileutil::{ fix_filename, fix_incoming_filename };
-pub use self::identifierstore::{ IdentifierPattern, Identifier, IdentifierStore, IdentifierUse };
-pub use self::signature::complexpath::ComplexPath;
-pub use self::signature::signature::RegisterSignature;
-pub use self::signature::complexsig::ComplexRegisters;
-pub use self::signature::vectorsig::VectorRegisters;
-pub use self::register::{ Register, RegisterAllocator };
+pub use self::identifierstore::{ IdentifierPattern, IdentifierStore, IdentifierUse };
+pub use self::signature::ComplexRegisters;
+pub use self::register::{ RegisterAllocator };
 pub use self::structenum::{ StructDef, EnumDef };
 pub use self::dfloat::DFloat;
-pub use self::signature::complexsig::make_full_type;
-pub use self::signature::fulltype::FullType;
-pub use self::cborutil::{
-    cbor_int, cbor_array, cbor_bool, cbor_string, cbor_map, cbor_entry, cbor_type, CborType, cbor_map_iter, cbor_make_map, cbor_float,
-    cbor_serialize
-};
+pub use self::signature::make_full_type;

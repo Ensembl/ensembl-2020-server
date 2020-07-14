@@ -14,15 +14,17 @@
  *  limitations under the License.
  */
 
+#[macro_use]
+use dauphin_interp_common;
+
 use std::rc::Rc;
-use crate::interp::InterpValue;
-use crate::interp::{ Command, CommandSetId, InterpContext, PreImageOutcome, InterpCommand, CommandDeserializer };
-use crate::model::{ Register, cbor_make_map, cbor_map };
+use crate::interp::{ Command, PreImageOutcome };
+use dauphin_interp_common::common::{ Register, cbor_make_map, cbor_map, InterpCommand, CommandDeserializer, arbitrate_type, CommandSetId };
+use dauphin_interp_common::interp::{ InterpLibRegister, InterpValue, InterpContext };
 use serde_cbor::Value as CborValue;
-use crate::commands::common::polymorphic::arbitrate_type;
 use super::consts::{ const_commands, const_commands_interp };
 use crate::generate::{ Instruction, InstructionSuperType, PreImageContext, InstructionType };
-use crate::interp::{ CommandSchema, CommandType, CommandTrigger, TimeTrialCommandType, TimeTrial, PreImagePrepare, CompLibRegister, InterpLibRegister };
+use crate::interp::{ CommandSchema, CommandType, CommandTrigger, TimeTrialCommandType, TimeTrial, PreImagePrepare, CompLibRegister };
 use crate::cli::Config;
 use crate::interp::CompilerLink;
 
@@ -567,7 +569,7 @@ fn filter_typed<T>(dst: &mut Vec<T>, src: &[T], filter: &[bool]) where T: Clone 
 
 pub fn filter(src: &Rc<InterpValue>, filter_val: &[bool]) -> Result<InterpValue,String> {
     if let Some(natural) = arbitrate_type(&InterpValue::Empty,src,true) {
-        Ok(polymorphic!(InterpValue::Empty,[src],natural,(|d,s| {
+        Ok(dauphin_interp_common::polymorphic!(InterpValue::Empty,[src],natural,(|d,s| {
             filter_typed(d,s,filter_val)
         })))
     } else {

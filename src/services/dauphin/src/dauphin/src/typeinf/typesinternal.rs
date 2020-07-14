@@ -15,8 +15,10 @@
  */
 
 use super::types::{
-    ArgumentExpressionConstraint, ArgumentConstraint, BaseType, ExpressionType
+    ArgumentExpressionConstraint, ArgumentConstraint, ExpressionType
 };
+
+use dauphin_interp_common::common::BaseType;
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
 pub(super) enum Key {

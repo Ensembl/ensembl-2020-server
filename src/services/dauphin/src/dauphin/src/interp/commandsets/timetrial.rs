@@ -16,12 +16,11 @@
 
 use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
-use crate::interp::{ CompilerLink, InterpContext };
-use crate::interp::{ Command, InterpValue, InterpCommand, CommandType };
+use crate::interp::{ CompilerLink };
 use crate::generate::Instruction;
-use crate::model::{ Register, RegisterSignature, ComplexRegisters, ComplexPath, VectorRegisters, cbor_array, cbor_float, FullType };
-use crate::typeinf::{ MemberMode, BaseType };
 use serde_cbor::Value as CborValue;
+use dauphin_interp_common::common::{ InterpCommand, Register, RegisterSignature, ComplexPath, VectorRegisters, cbor_array, cbor_float, FullType, MemberMode, BaseType };
+use dauphin_interp_common::interp::{ InterpContext, InterpValue };
 
 pub fn regress(input: &[(f64,f64)]) -> Result<(f64,f64),String> {
     if input.len() == 0 {

@@ -14,25 +14,17 @@
  *  limitations under the License.
  */
 
-use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
-use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier, ComplexRegisters, VectorRegisters };
+use dauphin_interp_common::common::{ Register, RegisterSignature, VectorRegisters, InterpCommand, MemberMode };
+use dauphin_interp_common::interp::InterpLibRegister;
 use crate::interp::{
-    Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress,
-    trial_write, trial_signature, InterpCommand, Deserializer, CompLibRegister, InterpLibRegister
+    Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome,
+    CompLibRegister
 };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
-use crate::model::{ cbor_array, cbor_bool };
-use crate::typeinf::{ MemberMode, MemberDataFlow };
-use super::super::common::vectorcopy::{ vector_update_poly, vector_push_instrs, append_data, vector_update_offsets, vector_update_lengths, vector_copy };
-use super::super::common::vectorsource::RegisterVectorSource;
-use super::super::common::sharedvec::{ SharedVec };
-use super::super::common::writevec::WriteVec;
+use super::super::common::vectorcopy::{ vector_push_instrs, vector_update_offsets, vector_update_lengths, vector_copy };
 use super::extend::ExtendCommandType;
 use super::library::std;
-use crate::cli::Config;
-use crate::interp::CompilerLink;
-use crate::commands::common::templates::{ ErrorDeserializer, NoopDeserializer };
 
 fn preimage_instrs(regs: &Vec<Register>) -> Result<Vec<Instruction>,String> {
     let mut instrs = vec![];

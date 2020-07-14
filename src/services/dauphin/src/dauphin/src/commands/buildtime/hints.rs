@@ -14,12 +14,11 @@
  *  limitations under the License.
  */
 
-use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
 use std::collections::HashSet;
-use crate::model::{ Register, VectorRegisters, RegisterSignature, cbor_array, ComplexPath, Identifier, cbor_make_map, FullType };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, CommandSetId, InterpContext, StreamContents, PreImageOutcome, Stream, PreImagePrepare, InterpValue, InterpCommand };
+use dauphin_interp_common::common::{ Register, Identifier, FullType, InterpCommand, MemberMode };
+use dauphin_interp_common::interp::{ InterpValue };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
-use crate::typeinf::MemberMode;
 use serde_cbor::Value as CborValue;
 
 fn hint_reg(sig: &FullType, regs: &[Register], incl_length: bool) -> Result<HashSet<Register>,String> {

@@ -17,13 +17,7 @@
 #[macro_use]
 mod common {
     #[macro_use]
-    pub(super) mod polymorphic;
-    pub(super) mod templates;
-    pub(super) mod sharedvec;
     pub(super) mod vectorcopy;
-    pub(super) mod vectorsource;
-    pub(super) mod writevec;
-    pub(super) mod expandedsig;
 }
 mod core {
     #[macro_use]
@@ -58,5 +52,3 @@ pub use self::core::consts::{
 pub use self::core::core::{ make_core, make_core_interp };
 pub use self::std::library::{ make_std, make_std_interp, std_stream };
 pub use self::buildtime::buildtime::{ make_buildtime };
-pub use self::common::expandedsig::{ XStructure, to_xstructure };
-pub use self::common::templates::{ ErrorInterpCommand, NoopDeserializer, ErrorDeserializer };

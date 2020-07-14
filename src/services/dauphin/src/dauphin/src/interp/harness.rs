@@ -22,14 +22,15 @@ use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
 use crate::commands::std_stream;
 use crate::generate::Instruction;
-use crate::model::{ Register, cbor_serialize };
-use crate::interp::context::InterpContext;
-use crate::interp::{ interpreter, InterpretInstance, make_interpret_suite, CommandDeserializer, InterpCommand };
-use crate::interp::{ InterpValue, StreamContents, StreamFactory };
-use crate::test::cbor::hexdump;
+use crate::interp::{ interpreter, InterpretInstance, make_interpret_suite };
 use serde_cbor::Value as CborValue;
 use super::compilelink::CompilerLink;
 use super::interplink::InterpreterLink;
+#[cfg(test)]
+use crate::test::files::{ find_testdata };
+
+use dauphin_interp_common::common::{ Register, cbor_serialize, CommandDeserializer, InterpCommand };
+use dauphin_interp_common::interp::{ InterpValue, StreamContents, StreamFactory, InterpContext };
 
 struct FakeInterpCommand(Rc<RefCell<u32>>,u32);
 
@@ -94,18 +95,7 @@ pub fn comp_interpret(compiler_linker: &CompilerLink, config: &Config, name: &st
     interpret(&interpret_linker,config,name)
 }
 
-pub fn find_testdata() -> PathBuf {
-    let mut dir = std::env::current_exe().expect("cannot get current exec path");
-    while dir.pop() {
-        let mut testdata = PathBuf::from(&dir);
-        testdata.push("testdata");
-        if testdata.exists() {
-            return testdata;
-        }
-    }
-    panic!("cannot find testdata directory");
-}
-
+#[cfg(test)]
 pub fn xxx_test_config() -> Config {
     let mut cfg = Config::new();
     cfg.set_root_dir(&find_testdata().to_string_lossy());
@@ -120,6 +110,9 @@ pub fn xxx_test_config() -> Config {
     cfg.add_file_search_path("parser/import-subdir/*.dp");
     cfg
 }
+
+#[cfg(test)]
+use crate::test::cbor::hexdump;
 
 #[cfg(test)]
 pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Config, name: &str) -> Result<(HashMap<Register,Vec<usize>>,Vec<String>),String> {

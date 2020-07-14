@@ -15,7 +15,7 @@
  */
 
 use std::collections::{ HashMap, HashSet };
-use crate::model::Register;
+use dauphin_interp_common::common::Register;
 use super::gencontext::GenContext;
 use super::instruction::Instruction;
 

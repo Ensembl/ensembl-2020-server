@@ -13,6 +13,7 @@ serde_cbor="*"
 crc="*"
 rust-ini="*"
 regex="*"
+dauphin_interp_common = { path = "../dauphin-interp-common" }
 
 #[profile.test]
 #opt-level = 3

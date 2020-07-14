@@ -22,9 +22,9 @@ mod typing;
 
 
 pub use self::types::{
-    ArgumentConstraint, ArgumentExpressionConstraint, BaseType, ExpressionType,
+    ArgumentConstraint, ArgumentExpressionConstraint, ExpressionType,
     InstructionConstraint, MemberType, SignatureConstraint, ContainerType,
-    SignatureMemberConstraint, MemberMode, MemberDataFlow
+    SignatureMemberConstraint
 };
 
 pub use self::typing::Typing;

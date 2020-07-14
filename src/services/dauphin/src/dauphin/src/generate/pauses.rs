@@ -14,16 +14,15 @@
  *  limitations under the License.
  */
 
-use std::collections::{ HashMap, HashSet };
+use std::collections::{ HashMap };
 use std::fs::write;
-use regex::Regex;
 use crate::cli::Config;
 use super::gencontext::GenContext;
 use super::compilerun::compile_run;
 use crate::resolver::Resolver;
 use crate::lexer::LexerPosition;
-use crate::model::{ DefStore, Register, fix_incoming_filename };
-use crate::interp::{ InterpContext, InterpValue, CompilerLink, PreImageOutcome, numbers_to_indexes };
+use crate::model::{ DefStore, fix_incoming_filename };
+use crate::interp::{ CompilerLink };
 use crate::generate::{ Instruction, InstructionType };
 
 fn format_line(line: &str, time: Option<f64>) -> String {
@@ -156,16 +155,10 @@ pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, defstore: &DefS
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::call::call;
-    use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
-    use crate::generate::prune::prune;
-    use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
-    use super::super::codegen::generate_code;
-    use super::super::linearize::linearize;
-    use super::super::dealias::remove_aliases;
+    use crate::interp::{ CompilerLink, xxx_test_config, make_compiler_suite };
     use crate::generate::generate;
 
     fn pause_check(filename: &str) -> bool {

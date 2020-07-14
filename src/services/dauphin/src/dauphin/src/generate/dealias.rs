@@ -15,7 +15,7 @@
  */
 
 use std::collections::HashMap;
-use crate::model::Register;
+use dauphin_interp_common::common::{ Register };
 use super::gencontext::GenContext;
 use super::instruction::{ Instruction, InstructionType };
 
@@ -52,13 +52,9 @@ pub fn remove_aliases(context: &mut GenContext) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::simplify::simplify;
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
     use crate::parser::{ Parser };
-    use super::super::codegen::generate_code;
-    use super::super::call::call;
-    use super::super::linearize::linearize;
     use crate::generate::generate;
     use crate::interp::{ mini_interp, CompilerLink, xxx_test_config, make_compiler_suite };
 

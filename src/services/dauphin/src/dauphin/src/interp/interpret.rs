@@ -16,10 +16,9 @@
 
 use std::slice::Iter;
 use crate::cli::Config;
-use crate::model::Register;
-use crate::interp::context::InterpContext;
-use crate::interp::{ Command, InterpCommand };
 use super::interplink::InterpreterLink;
+use dauphin_interp_common::common::{ Register, InterpCommand };
+use dauphin_interp_common::interp::{ InterpContext };
 
 pub trait InterpretInstance<'a> {
     fn finish(&mut self) -> InterpContext;

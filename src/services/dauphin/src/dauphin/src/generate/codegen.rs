@@ -19,10 +19,10 @@ use std::collections::HashMap;
 use super::gencontext::GenContext;
 use super::instruction::{ Instruction, InstructionType };
 use crate::parser::{ Expression, Statement };
-use crate::model::Register;
+use dauphin_interp_common::common::{ Register, Identifier, BaseType, MemberMode };
 use crate::model::DefStore;
-use crate::typeinf::{ BaseType, ExpressionType, SignatureMemberConstraint, MemberMode };
-use crate::model::{ Identifier, DFloat };
+use crate::typeinf::{ExpressionType, SignatureMemberConstraint };
+use crate::model::{ DFloat };
 
 macro_rules! addf {
     ($this:expr,$opcode:tt,$($regs:expr),*) => {
@@ -408,4 +408,53 @@ mod test {
         print!("{:?}\n",strings);
         assert_eq!(vec!["1","2","33"],strings);
     }
+
+
+    #[cfg(test)]
+    mod test {
+        use std::any::Any;
+        use std::collections::HashMap;
+        use std::rc::Rc;
+        use dauphin_interp_common::interp::RegisterFile;
+        use crate::lexer::Lexer;
+        use crate::resolver::common_resolver;
+        use crate::parser::{ Parser };
+        use crate::generate::generate;
+        use crate::interp::{ xxx_test_config,CompilerLink, comp_interpret, make_compiler_suite };
+    
+        #[test]
+        fn line_number_smoke() {
+            let mut config = xxx_test_config();
+            config.set_opt_seq("");
+            let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
+            let resolver = common_resolver(&config,&linker).expect("a");
+            let mut lexer = Lexer::new(&resolver,"");
+            lexer.import("search:std/line-number").expect("cannot load file");
+            let p = Parser::new(&mut lexer);
+            let (stmts,defstore) = p.parse().expect("error");
+            let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+            linker.add("main",&instrs,&config).expect("a");
+            let message = comp_interpret(&mut linker,&config,"main").map(|_| ()).expect_err("x");
+            print!("{}\n",message);
+            assert!(message.ends_with("std/line-number:10"));
+        }
+    
+        #[test]
+        fn no_line_number_smoke() {
+            let mut config = xxx_test_config();
+            config.set_generate_debug(false);
+            config.set_opt_seq("");
+            let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
+            let resolver = common_resolver(&config,&linker).expect("a");
+            let mut lexer = Lexer::new(&resolver,"");
+            lexer.import("search:std/line-number").expect("cannot load file");
+            let p = Parser::new(&mut lexer);
+            let (stmts,defstore) = p.parse().expect("error");
+            let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
+            linker.add("main",&instrs,&config).expect("a");
+            let message = comp_interpret(&mut linker,&config,"main").map(|_| ()).expect_err("x");
+            print!("{}\n",message);
+            assert!(!message.contains(" at "));
+        }
+    }    
 }

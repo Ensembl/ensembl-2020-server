@@ -17,7 +17,7 @@
 use std::collections::{ HashSet, HashMap };
 use super::gencontext::GenContext;
 use crate::generate::instruction::{ InstructionType, Instruction };
-use crate::model::Register;
+use dauphin_interp_common::common::Register;
 
 /* Relabel instead of copying from sources which are never reused. Recurse this until no change */
 pub fn reuse_dead_once(context: &mut GenContext) -> bool {

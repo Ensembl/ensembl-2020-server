@@ -18,10 +18,10 @@ use crate::lexer::{ Lexer, Token };
 use super::node::{ ParserStatement, ParseError, Statement };
 use crate::model::{ DefStore, IdentifierPattern };
 use crate::typeinf::{ ArgumentExpressionConstraint, SignatureConstraint, SignatureMemberConstraint, MemberType };
-use crate::typeinf::BaseType as BaseType2;
 use super::lexutil::{ get_other, get_identifier };
 use super::parseexpr::{ parse_full_identifier, parse_expr };
 use super::parsestmt::{ parse_statement };
+use dauphin_interp_common::common::{ BaseType };
 
 pub(in super) fn parse_exprdecl(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();
@@ -174,12 +174,12 @@ pub fn parse_signature(lexer: &mut Lexer, defstore: &DefStore) -> Result<Signatu
     Ok(member)
 }
 
-fn id_to_type(pattern: &IdentifierPattern, lexer: &Lexer, defstore: &DefStore) -> Result<BaseType2,ParseError> {
+fn id_to_type(pattern: &IdentifierPattern, lexer: &Lexer, defstore: &DefStore) -> Result<BaseType,ParseError> {
     let id = defstore.pattern_to_identifier(lexer,&pattern,true).map_err(|e| ParseError::new(&e.to_string(),lexer))?;
     if defstore.get_struct_id(&id.0).is_ok() {
-        Ok(BaseType2::StructType(id.0.clone()))
+        Ok(BaseType::StructType(id.0.clone()))
     } else if defstore.get_enum_id(&id.0).is_ok() {
-        Ok(BaseType2::EnumType(id.0.clone()))
+        Ok(BaseType::EnumType(id.0.clone()))
     } else {
         Err(ParseError::new(&format!("No such struct/enum '{}'",id.0),lexer))
     }
@@ -189,10 +189,10 @@ pub fn parse_type(lexer: &mut Lexer, defstore: &DefStore) -> Result<MemberType,P
     let pattern = parse_full_identifier(lexer,None)?;
     if pattern.0.is_none() {
         Ok(match &pattern.1[..] {
-            "boolean" => MemberType::Base(BaseType2::BooleanType),
-            "number" => MemberType::Base(BaseType2::NumberType),
-            "string" => MemberType::Base(BaseType2::StringType),
-            "bytes" => MemberType::Base(BaseType2::BytesType),
+            "boolean" => MemberType::Base(BaseType::BooleanType),
+            "number" => MemberType::Base(BaseType::NumberType),
+            "string" => MemberType::Base(BaseType::StringType),
+            "bytes" => MemberType::Base(BaseType::BytesType),
             "vec" => {
                 get_other(lexer,"(")?;
                 let out = MemberType::Vec(Box::new(parse_type(lexer,defstore)?));
@@ -214,10 +214,10 @@ pub fn parse_typesigexpr(lexer: &mut Lexer, defstore: &DefStore) -> Result<Argum
     let pattern = parse_full_identifier(lexer,None)?;
     if pattern.0.is_none() {
         Ok(match &pattern.1[..] {
-            "boolean" => ArgumentExpressionConstraint::Base(BaseType2::BooleanType),
-            "number" => ArgumentExpressionConstraint::Base(BaseType2::NumberType),
-            "string" => ArgumentExpressionConstraint::Base(BaseType2::StringType),
-            "bytes" => ArgumentExpressionConstraint::Base(BaseType2::BytesType),
+            "boolean" => ArgumentExpressionConstraint::Base(BaseType::BooleanType),
+            "number" => ArgumentExpressionConstraint::Base(BaseType::NumberType),
+            "string" => ArgumentExpressionConstraint::Base(BaseType::StringType),
+            "bytes" => ArgumentExpressionConstraint::Base(BaseType::BytesType),
             "vec" => {
                 get_other(lexer,"(")?;
                 let out =  ArgumentExpressionConstraint::Vec(Box::new(parse_typesigexpr(lexer,defstore)?));

@@ -16,11 +16,10 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::interp::commandsets::{ Command, CommandInterpretSuite, CommandSetId, InterpCommand };
-use crate::interp::{ InterpContext, PayloadFactory };
-use crate::model::Register;
+use crate::interp::commandsets::{ CommandInterpretSuite };
 use serde_cbor::Value as CborValue;
-use crate::model::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string, cbor_map_iter };
+use dauphin_interp_common::common::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string, cbor_map_iter, Register, InterpCommand };
+use dauphin_interp_common::interp::{ InterpContext, PayloadFactory };
 
 pub(super) const VERSION : u32 = 0;
 

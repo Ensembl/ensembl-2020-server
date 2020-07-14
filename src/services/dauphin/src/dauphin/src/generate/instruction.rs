@@ -17,9 +17,10 @@
 use std::fmt;
 
 use crate::lexer::LexerPosition;
-use crate::model::{ DefStore, Register, RegisterSignature, Identifier, cbor_int, DFloat };
-use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, BaseType, InstructionConstraint, MemberMode, MemberDataFlow };
+use crate::model::{ DefStore, DFloat };
+use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, InstructionConstraint };
 use serde_cbor::Value as CborValue;
+use dauphin_interp_common::common::{ Register, RegisterSignature, Identifier, cbor_int, BaseType, MemberMode, MemberDataFlow };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
     if ref_ {

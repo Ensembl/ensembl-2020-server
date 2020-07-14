@@ -18,7 +18,8 @@ use crate::lexer::{ Lexer, Token };
 use crate::model::{ DefStore, InlineMode, ExprMacro };
 use super::node::{ ParseError, Expression };
 use super::lexutil::{get_other, get_identifier };
-use crate::model::{ IdentifierPattern, Identifier, IdentifierUse };
+use crate::model::{ IdentifierPattern, IdentifierUse };
+use dauphin_interp_common::common::Identifier;
 
 fn vec_ctor(lexer: &mut Lexer, defstore: &DefStore, nested: bool) -> Result<Expression,ParseError> {
     Ok(Expression::Vector(parse_exprlist(lexer,defstore,']',nested)?))

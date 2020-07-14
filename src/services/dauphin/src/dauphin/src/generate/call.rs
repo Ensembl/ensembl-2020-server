@@ -15,9 +15,9 @@
  */
 
 use crate::generate::{ Instruction, InstructionType };
-use crate::typeinf::{ MemberMode, MemberDataFlow };
 use super::gencontext::GenContext;
-use crate::model::{ RegisterSignature, ComplexRegisters, make_full_type };
+use dauphin_interp_common::common::{ RegisterSignature,  MemberMode, MemberDataFlow };
+use crate::model::{ make_full_type };
 
 pub fn call(context: &mut GenContext) -> Result<(),String> {
     for instr in &context.get_instructions() {

@@ -15,14 +15,14 @@
  */
 
 use std::convert::TryInto;
-use crate::interp::InterpValue;
 use crate::interp::{ 
-    InterpContext, Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, 
-    InterpCommand, CommandDeserializer, CompLibRegister, InterpLibRegister
+    Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, 
+    CompLibRegister
 };
 use crate::lexer::LexerPosition;
-use crate::model::Register;
-use crate::model::{ cbor_int, cbor_string, cbor_make_map, cbor_map, DFloat };
+use dauphin_interp_common::common::{ cbor_int, cbor_string, cbor_make_map, cbor_map, Register, InterpCommand, CommandDeserializer };
+use crate::model::DFloat;
+use dauphin_interp_common::interp::{ InterpLibRegister, InterpValue, InterpContext };
 use crate::generate::{ Instruction, InstructionType, InstructionSuperType, PreImageContext };
 use serde_cbor::Value as CborValue;
 use crate::cli::Config;

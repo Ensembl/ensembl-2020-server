@@ -17,8 +17,9 @@
 use std::fmt;
 use std::mem::swap;
 use super::instruction::{ Instruction, InstructionType };
-use crate::model::{ DefStore, Register, RegisterAllocator };
+use crate::model::{ DefStore, RegisterAllocator };
 use crate::typeinf::{ ExpressionType, MemberType, TypeModel, Typing };
+use dauphin_interp_common::common::Register;
 
 pub struct GenContext<'a> {
     defstore: &'a DefStore,

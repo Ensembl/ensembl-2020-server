@@ -16,8 +16,8 @@
 
 use std::collections::HashMap;
 use super::gencontext::GenContext;
-use crate::generate::instruction::{ InstructionType, Instruction };
-use crate::model::Register;
+use crate::generate::instruction::{ InstructionType };
+use dauphin_interp_common::common::Register;
 
 struct RegEquiv {
     next_set: usize,

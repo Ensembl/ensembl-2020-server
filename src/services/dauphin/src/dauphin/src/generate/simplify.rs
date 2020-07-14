@@ -16,9 +16,10 @@
 
 use std::collections::HashMap;
 use crate::generate::{ Instruction, InstructionType };
-use crate::model::{ DefStore, Register, StructDef, EnumDef, Identifier, DFloat };
-use crate::typeinf::{ BaseType, ContainerType, MemberType };
+use crate::model::{ DefStore, StructDef, EnumDef, DFloat };
+use crate::typeinf::{ ContainerType, MemberType };
 use super::gencontext::GenContext;
+use dauphin_interp_common::common::{ Register, Identifier, BaseType };
 
 /* simplification is the process of converting arbitrary assemblies of structs, enums and vecs into sets of vecs of
  * simple values. To achieve this, vecs of structured types are converted to sets of vecs of simpler types.

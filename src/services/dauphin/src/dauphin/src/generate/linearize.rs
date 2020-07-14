@@ -17,10 +17,11 @@
 // TODO Copy for registers
 use std::collections::BTreeMap;
 
-use crate::model::{ Register, DFloat };
-use crate::typeinf::{ BaseType, MemberType };
+use crate::model::DFloat;
+use crate::typeinf::{ MemberType };
 use super::gencontext::GenContext;
 use super::instruction::{ Instruction, InstructionType };
+use dauphin_interp_common::common::{ Register, BaseType };
 
 /* Linearization is the process of converting arbitrarily deep vectors of simple values into multivals. Although a 
  * multival is a sequence of values, as we need to support multivals of single level lists, all lists get additional

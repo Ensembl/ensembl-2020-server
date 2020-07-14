@@ -14,15 +14,12 @@
  *  limitations under the License.
  */
 
-mod context;
 mod harness;
-mod stream;
 mod compilelink;
 mod interplink;
 mod interpret;
 mod commandsets {
     pub mod command;
-    pub mod commandsetid;
     pub mod commandtypestore;
     mod deserializer;
     pub mod interpretsuite;
@@ -31,36 +28,26 @@ mod commandsets {
     pub mod suite;
     pub mod suitebuilder;
 
-    pub use command::{ Command, CommandSchema, CommandTrigger, CommandType, PreImageOutcome, PreImagePrepare, InterpCommand, CommandDeserializer };
-    pub use commandsetid::CommandSetId;
+    pub use command::{ Command, CommandSchema, CommandTrigger, CommandType, PreImageOutcome, PreImagePrepare };
     pub use interpretsuite::CommandInterpretSuite;
     pub use compilesuite::CommandCompileSuite;
     pub use suitebuilder::{ make_compiler_suite, make_interpret_suite };
-    pub use suite::{ CompLibRegister, InterpLibRegister };
+    pub use suite::{ CompLibRegister };
     pub use timetrial::{ TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature };
     pub use deserializer::Deserializer;
     pub use commandtypestore::{ CommandTypeStore, CommandTypeId };
 }
-mod values {
-    pub mod registers;
-    pub mod supercow;
-    pub mod value;
-
-}
 
 pub use self::compilelink::CompilerLink;
-pub use self::harness::{  xxx_test_config, find_testdata,stream_strings };
+
+
+pub use self::harness::{ stream_strings };
 #[cfg(test)]
-pub use self::harness::{ mini_interp,  mini_interp_run, interpret, comp_interpret };
-pub use self::values::value::{ to_index, InterpValue, InterpNatural, InterpValueNumbers, InterpValueIndexes, numbers_to_indexes };
-pub use self::values::supercow::SuperCow;
-pub use self::values::registers::RegisterFile;
-pub use self::stream::{ Stream, StreamContents, StreamFactory };
+pub use self::harness::{ xxx_test_config, mini_interp,  mini_interp_run, interpret, comp_interpret };
 pub use self::commandsets::{
-    CommandSetId, CommandInterpretSuite, CommandCompileSuite, Command, CommandSchema, CommandTrigger, CommandType, Deserializer, CompLibRegister,
-    PreImagePrepare, PreImageOutcome, make_compiler_suite, make_interpret_suite, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature, InterpCommand, CommandDeserializer,
-    CommandTypeStore, CommandTypeId, InterpLibRegister
+    CommandInterpretSuite, CommandCompileSuite, Command, CommandSchema, CommandTrigger, CommandType, Deserializer, CompLibRegister,
+    PreImagePrepare, PreImageOutcome, make_compiler_suite, make_interpret_suite, TimeTrialCommandType, TimeTrial, regress, trial_write, trial_signature,
+    CommandTypeStore, CommandTypeId
 };
-pub use self::context::{ InterpContext, PayloadFactory };
 pub use self::interpret::{ InterpretInstance, interpreter };
 pub use self::interplink::InterpreterLink;

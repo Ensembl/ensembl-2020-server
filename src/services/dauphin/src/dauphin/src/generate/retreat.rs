@@ -17,7 +17,7 @@
 use std::collections::HashSet;
 use super::gencontext::GenContext;
 use crate::generate::instruction::{ InstructionType, Instruction };
-use crate::model::Register;
+use dauphin_interp_common::common::Register;
 use crate::lexer::LexerPosition;
 
 struct RetreatOutput {

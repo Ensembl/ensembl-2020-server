@@ -16,38 +16,10 @@
 
 use std::fmt::Debug;
 use std::collections::HashMap;
-use serde_cbor::Value as CborValue;
-use crate::model::{ cbor_array, cbor_string };
+use dauphin_interp_common::common::{ Identifier };
 
 #[derive(Clone,Debug)]
 pub struct IdentifierUse(pub Identifier,pub bool);
-
-#[derive(Clone,Debug,PartialEq,Eq,Hash,PartialOrd,Ord)]
-pub struct Identifier(String,String);
-
-impl Identifier {
-    pub fn new(library: &str, name: &str) -> Identifier {
-        Identifier(library.to_string(),name.to_string())
-    }
-
-    pub fn serialize(&self) -> CborValue {
-        CborValue::Array(vec![CborValue::Text(self.0.clone()),CborValue::Text(self.1.clone())])
-    }
-
-    pub fn deserialize(value: &CborValue) -> Result<Identifier,String> {
-        let data = cbor_array(value,2,false)?;
-        Ok(Identifier::new(&cbor_string(&data[0])?,&cbor_string(&data[1])?))
-    }
-
-    pub fn module(&self) -> &str { &self.0 }
-    pub fn name(&self) -> &str { &self.1 }
-}
-
-impl std::fmt::Display for Identifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f,"{}::{}",self.0,self.1)
-    }
-}
 
 #[derive(Clone,Debug,PartialEq,Eq,Hash)]
 pub struct IdentifierPattern(pub Option<String>,pub String);

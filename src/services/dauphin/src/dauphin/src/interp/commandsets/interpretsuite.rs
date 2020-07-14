@@ -15,13 +15,11 @@
  */
 
 use std::collections::HashMap;
-use std::rc::Rc;
-use super::command::CommandType;
-use super::CommandSetId;
-use crate::model::{ cbor_array, cbor_int };
 use serde_cbor::Value as CborValue;
-use crate::interp::{ PayloadFactory, InterpLibRegister, CommandTypeId, CommandTypeStore, Deserializer, CommandDeserializer };
+use crate::interp::{ CommandTypeId, Deserializer };
 use super::suite::{ CommandSetVerifier, OpcodeMapping };
+use dauphin_interp_common::common::{ cbor_array, cbor_int, CommandDeserializer, CommandSetId };
+use dauphin_interp_common::interp::{ InterpLibRegister };
 
 pub struct CommandInterpretSuite {
     store: Deserializer,
@@ -93,10 +91,12 @@ mod test {
     use std::cell::RefCell;
     use std::rc::Rc;
     use super::*;
-    use super::super::{ CommandSetId, CommandTrigger, CommandCompileSuite };
-    use crate::commands::{ ConstCommandType, NumberConstCommandType, NoopDeserializer, BooleanConstCommandType };
+    use dauphin_interp_common::common::{ CommandSetId };
+    use dauphin_interp_common::interp::{ InterpContext, InterpLibRegister };
+    use super::super::{ CommandTrigger, CommandCompileSuite };
+    use crate::commands::{ ConstCommandType, NumberConstCommandType };
     use crate::generate::InstructionSuperType;
-    use crate::interp::{ InterpContext, InterpLibRegister, CompLibRegister };
+    use crate::interp::{ CompLibRegister };
     use crate::interp::harness::FakeDeserializer;
 
     #[test]

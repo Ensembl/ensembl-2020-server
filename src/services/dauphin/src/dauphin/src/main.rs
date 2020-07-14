@@ -14,6 +14,9 @@
  *  limitations under the License.
  */
 
+#[macro_use]
+extern crate dauphin_interp_common;
+
 mod commands;
 mod cli;
 mod generate;
@@ -24,6 +27,7 @@ mod parser;
 mod resolver;
 mod typeinf;
 
+#[cfg(test)]
 mod test {
     pub mod cbor;
     pub mod files;
@@ -40,14 +44,6 @@ extern crate clap;
 /* This to remove RLS unused warns */
 
 use crate::cli::{ config_from_options, run };
-
-use crate::lexer::Lexer;
-use crate::resolver::common_resolver;
-use crate::parser::Parser;
-use crate::generate::generate;
-use crate::test::files::load_testdata;
-use crate::interp::{ CompilerLink, xxx_test_config };
-use crate::interp::{ interpreter, InterpreterLink, StreamFactory };
 
 fn main() {
     let options_config = config_from_options();

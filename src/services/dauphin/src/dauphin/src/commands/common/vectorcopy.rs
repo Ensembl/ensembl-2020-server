@@ -14,12 +14,8 @@
  *  limitations under the License.
  */
 
-use std::rc::Rc;
-use crate::interp::{ InterpValue, InterpContext, trial_signature };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
-use crate::commands::common::polymorphic::arbitrate_type;
-use crate::typeinf::{ MemberMode, MemberDataFlow, BaseType };
-use crate::model::{ Register, VectorRegisters, Identifier, ComplexPath, ComplexRegisters, RegisterSignature, FullType };
+use dauphin_interp_common::common::{ Register, VectorRegisters, Identifier, ComplexPath, RegisterSignature, FullType, MemberMode, MemberDataFlow, BaseType };
 use regex::Regex;
 
 pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<InstructionType,()> {
@@ -59,40 +55,6 @@ pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<I
 
 pub fn call_flat(lib: &str, name: &str, pure_: bool, spec: &str) -> Result<InstructionType,String> {
     do_call_flat(lib,name,pure_,spec).map_err(|_| format!("could not call_flat"))
-}
-
-fn update_poly<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: &[usize]) where T: Clone {
-    let mut target = vec![];
-    while target.len() < filter.len() {
-        target.append(&mut src.to_vec());
-    }
-    let mut value_it = target.drain(..);
-    for index in filter.iter() {
-        dst[*index] = value_it.next().unwrap();
-    }
-}
-
-pub fn vector_update_poly(dst: InterpValue, src: &Rc<InterpValue>, filter_val: &[usize]) -> Result<InterpValue,String> {
-    if let Some(natural) = arbitrate_type(&dst,src,true) {
-        Ok(polymorphic!(dst,[src],natural,(|d,s| {
-            update_poly(d,s,filter_val)
-        })))
-    } else {
-        Ok(dst)
-    }
-}
-
-pub fn append_data(dst: InterpValue, src: &Rc<InterpValue>, copies: usize) -> Result<(InterpValue,usize),String> {
-    let offset = src.len();
-    if let Some(natural) = arbitrate_type(&dst,src,false) {
-        Ok((polymorphic!(dst,[src],natural,(|d: &mut Vec<_>, s: &[_]| {
-            for _ in 0..copies {
-                d.append(&mut s.to_vec());
-            }
-        })),offset))
-    } else {
-        Ok((dst,offset))
-    }
 }
 
 pub fn vector_append_offsets(dst: &VectorRegisters, src: &VectorRegisters, 

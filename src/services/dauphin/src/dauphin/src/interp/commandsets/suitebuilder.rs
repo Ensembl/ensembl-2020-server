@@ -14,14 +14,9 @@
  *  limitations under the License.
  */
 
-use std::collections::HashMap;
-use std::rc::Rc;
 use super::{ CommandCompileSuite, CommandInterpretSuite };
 use crate::commands::{ make_core, make_std, make_buildtime, make_core_interp, make_std_interp };
-use crate::interp::PayloadFactory;
 use crate::cli::Config;
-use serde_cbor::Value as CborValue;
-use super::suite::{ CommandSetVerifier };
 
 pub fn make_compiler_suite(config: &Config) -> Result<CommandCompileSuite,String> {
     let mut suite = CommandCompileSuite::new();
@@ -47,14 +42,17 @@ pub fn make_interpret_suite(config: &Config) -> Result<CommandInterpretSuite,Str
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
     use std::cell::RefCell;
+    use std::collections::HashMap;
     use super::*;
-    use super::super::{ CommandSetId, CommandTrigger };
-    use crate::commands::{ ConstCommandType, NumberConstCommandType, NoopDeserializer };
+    use dauphin_interp_common::common::{ CommandSetId, NoopDeserializer, cbor_serialize };
+    use dauphin_interp_common::interp::{ InterpLibRegister, InterpContext };
+    use super::super::{ CommandTrigger };
+    use crate::commands::{ ConstCommandType, NumberConstCommandType };
     use crate::generate::InstructionSuperType;
-    use crate::interp::{ xxx_test_config, CompilerLink, CompLibRegister, InterpContext, InterpLibRegister };
+    use crate::interp::{ xxx_test_config, CompilerLink, CompLibRegister };
     use crate::interp::harness::FakeDeserializer;
-    use crate::model::cbor_serialize;
 
     #[test]
     fn test_suite_smoke() {

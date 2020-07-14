@@ -16,10 +16,9 @@
 
 use std::fmt;
 use crate::cli::Config;
-use crate::interp::context::InterpContext;
 use crate::interp::CompilerLink;
-use crate::model::{ Identifier, Register, cbor_array, cbor_int };
 use crate::generate::{ Instruction, InstructionSuperType, PreImageContext };
+use dauphin_interp_common::common::{ cbor_array, cbor_int, Identifier, Register, InterpCommand };
 use serde_cbor::Value as CborValue;
 
 #[derive(Eq,PartialEq,Hash,Clone,Debug)]
@@ -72,11 +71,6 @@ pub struct CommandSchema {
     pub trigger: CommandTrigger
 }
 
-pub trait CommandDeserializer {
-    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String>;
-    fn deserialize(&self, opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String>;
-}
-
 pub trait CommandType {
     fn get_schema(&self) -> CommandSchema;
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String>;
@@ -101,8 +95,4 @@ pub trait Command {
         })
     }
     fn execution_time(&self, _context: &PreImageContext) -> f64 { 1. }
-}
-
-pub trait InterpCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
 }

@@ -14,13 +14,13 @@
  *  limitations under the License.
  */
 
-use crate::interp::{ CommandSetId, Deserializer, CompLibRegister };
+use dauphin_interp_common::common::{ CommandSetId };
+use crate::interp::{ CompLibRegister };
 use super::defines::DefineCommandType;
 use super::ini::LoadIniCommandType;
 use super::dump::DumpSigCommandType;
 use super::versions::VersionCommandType;
 use super::hints::{ GetSizeHintCommandType, SetSizeHintCommandType, ForcePauseCommandType };
-use crate::commands::common::templates::{ ErrorDeserializer, NoopDeserializer };
 
 pub fn make_buildtime() -> Result<CompLibRegister,String> {
     let set_id = CommandSetId::new("buildtime",(0,1),0xB790000000000000);

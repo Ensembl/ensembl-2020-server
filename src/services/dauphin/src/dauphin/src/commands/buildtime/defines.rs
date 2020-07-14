@@ -14,15 +14,12 @@
  *  limitations under the License.
  */
 
-use crate::commands::common::templates::{ ErrorInterpCommand, NoopInterpCommand };
-use crate::model::{ Register, Identifier };
-use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, InterpCommand };
+use dauphin_interp_common::common::{ Register, Identifier, InterpCommand };
+use dauphin_interp_common::interp::{ InterpValue };
+use crate::interp::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
 use crate::generate::Instruction;
 use serde_cbor::Value as CborValue;
-use crate::interp::InterpValue;
 use crate::generate::PreImageContext;
-use crate::resolver::Resolver;
-use ini::Ini;
 
 pub struct DefineCommandType(pub bool);
 

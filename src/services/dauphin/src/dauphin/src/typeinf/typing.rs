@@ -18,8 +18,8 @@ use std::fmt;
 use std::iter::FromIterator;
 use std::collections::{ HashMap, HashSet };
 
-use crate::model::Register;
-use super::types::{ InstructionConstraint, ExpressionType, BaseType };
+use super::types::{ InstructionConstraint, ExpressionType };
+use dauphin_interp_common::common::{ Register, BaseType };
 use super::typesinternal::{ Key, TypeConstraint };
 use super::typemodel::TypeModel;
 use super::typestore::TypeStore;

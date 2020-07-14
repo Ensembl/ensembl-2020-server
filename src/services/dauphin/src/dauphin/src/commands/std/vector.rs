@@ -14,20 +14,16 @@
  *  limitations under the License.
  */
 
-use crate::model::{ Register, RegisterSignature, cbor_make_map, Identifier };
+use dauphin_interp_common::common::{
+    Register, cbor_make_map, Identifier, InterpCommand, CommandDeserializer, cbor_map, vector_update_poly, append_data, MemberMode, BaseType, MemberDataFlow
+};
+use dauphin_interp_common::interp::{ InterpLibRegister, InterpValue, InterpContext };
 use crate::interp::{
-    Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial, regress,
-    trial_write, trial_signature, InterpValue, InterpCommand, CommandDeserializer, Deserializer, CompLibRegister, InterpLibRegister
+    Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare, TimeTrialCommandType, TimeTrial,
+    trial_write, trial_signature, CompLibRegister
 };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
-use crate::model::{ cbor_array, cbor_bool, cbor_map };
-use crate::typeinf::{ MemberMode, BaseType, MemberDataFlow };
-use super::super::common::vectorcopy::{ vector_update_poly, append_data };
-use super::super::common::vectorsource::RegisterVectorSource;
-use super::super::common::sharedvec::{ SharedVec };
-use super::super::common::writevec::WriteVec;
-use super::extend::ExtendCommandType;
 use super::library::std;
 use crate::cli::Config;
 use crate::interp::CompilerLink;

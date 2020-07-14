@@ -17,7 +17,6 @@
 use std::collections::HashSet;
 use super::gencontext::GenContext;
 use crate::generate::instruction::{ InstructionType, Instruction };
-use crate::model::Register;
 
 pub fn peephole_nil_append(context: &mut GenContext) -> Result<(),String> {
     let mut nil_regs = HashSet::new();

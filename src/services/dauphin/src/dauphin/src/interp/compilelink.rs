@@ -18,8 +18,9 @@ use std::collections::{ BTreeMap, HashMap };
 use std::rc::Rc;
 use crate::cli::Config;
 use crate::generate::{ Instruction, InstructionType };
-use crate::interp::{ InterpContext, PayloadFactory };
-use crate::interp::commandsets::{ Command, CommandSchema, CommandCompileSuite, CommandTrigger, CommandSetId, InterpCommand, CommandType };
+use crate::interp::commandsets::{ Command, CommandSchema, CommandCompileSuite, CommandTrigger };
+use dauphin_interp_common::interp::{ InterpContext };
+use dauphin_interp_common::common::{ CommandSetId, InterpCommand };
 use serde_cbor::Value as CborValue;
 
 pub(super) const VERSION : u32 = 0;
@@ -152,7 +153,8 @@ mod test {
     use crate::resolver::Resolver;
     use crate::generate::generate;
     use crate::commands::std_stream;
-    use crate::interp::{ mini_interp_run, CompilerLink, xxx_test_config, StreamFactory, stream_strings, make_compiler_suite, make_interpret_suite };
+    use crate::interp::{ mini_interp_run, CompilerLink, xxx_test_config, stream_strings, make_compiler_suite, make_interpret_suite };
+    use dauphin_interp_common::interp::StreamFactory;
     use crate::interp::interplink::InterpreterLink;
 
     fn make_program(linker: &mut CompilerLink, resolver: &Resolver, config: &Config, name: &str, path: &str) -> Result<(),String> {

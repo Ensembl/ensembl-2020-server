@@ -14,9 +14,8 @@
  *  limitations under the License.
  */
 
-use std::collections::HashMap;
-use super::CommandSetId;
-use crate::interp::{ CommandDeserializer, CommandTypeId };
+use crate::interp::{ CommandTypeId };
+use dauphin_interp_common::common::CommandDeserializer;
 
 pub struct Deserializer {
     mapping: Vec<Box<dyn CommandDeserializer>>

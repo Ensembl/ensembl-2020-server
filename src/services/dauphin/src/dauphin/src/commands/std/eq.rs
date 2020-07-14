@@ -14,26 +14,26 @@
  *  limitations under the License.
  */
 
+#[macro_use]
+use dauphin_interp_common;
+
 use std::rc::Rc;
-use crate::interp::{ InterpValue, InterpCommand, CommandDeserializer };
-use crate::commands::common::templates::ErrorInterpCommand;
-use crate::model::{ Register, RegisterSignature, cbor_make_map, VectorRegisters, Identifier, FullType, ComplexPath, cbor_map };
-use super::super::common::vectorsource::RegisterVectorSource;
+
+use dauphin_interp_common::common::{ 
+    InterpCommand, CommandDeserializer, Register, RegisterSignature, cbor_make_map, VectorRegisters, Identifier, FullType, ComplexPath, cbor_map,
+    RegisterVectorSource, cbor_array, SharedVec, arbitrate_type, MemberMode, MemberDataFlow, BaseType
+};
+use dauphin_interp_common::interp::{ InterpValue, InterpLibRegister, InterpContext };
 use crate::interp::{
-    Command, CommandSchema, CommandType, CommandTrigger, InterpContext, PreImageOutcome, PreImagePrepare, trial_write, trial_signature,
-    TimeTrialCommandType, TimeTrial, CompLibRegister, InterpLibRegister
+    Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare, trial_write, trial_signature,
+    TimeTrialCommandType, TimeTrial, CompLibRegister
 };
 use crate::generate::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;
-use crate::typeinf::{ MemberMode, MemberDataFlow, BaseType };
-use crate::model::cbor_array;
-use crate::commands::common::sharedvec::{ SharedVec };
 use super::library::std;
 use crate::cli::Config;
 use crate::interp::CompilerLink;
 use std::fmt::Debug;
-use crate::commands::common::polymorphic::arbitrate_type;
-use crate::commands::common::templates::{ ErrorDeserializer, NoopDeserializer };
 
 fn compare_work<T>(a: &SharedVec, a_off: (usize,usize), a_data: &[T], b: &SharedVec, b_off: (usize,usize), b_data: &[T], level: usize) -> Result<bool,String>
         where T: PartialEq {

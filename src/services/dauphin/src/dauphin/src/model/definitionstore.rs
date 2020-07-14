@@ -19,9 +19,10 @@ use super::definition::{
     ExprMacro, StmtMacro, FuncDecl, ProcDecl, Inline, InlineMode
 };
 use super::structenum::{ StructDef, EnumDef };
-use super::identifierstore::{ IdentifierStore, Identifier, IdentifierPattern, IdentifierUse };
+use super::identifierstore::{ IdentifierStore, IdentifierPattern, IdentifierUse };
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
+use dauphin_interp_common::common::Identifier;
 
 #[derive(Debug)]
 pub enum IdentifierValue {

@@ -14,14 +14,11 @@
  *  limitations under the License.
  */
 
-use crate::test::cbor::hexdump;
-use crate::model::{ cbor_serialize, cbor_array, cbor_int };
 use std::collections::{ HashMap, BTreeMap, HashSet };
 use std::mem::replace;
-use std::sync::Mutex;
-use super::command::{ CommandDeserializer, CommandType };
-use crate::interp::CommandTypeId;
-use super::commandsetid::CommandSetId;
+use dauphin_interp_common::common::{ CommandSetId };
+use dauphin_interp_common::interp::{ InterpLibRegister };
+use super::command::{ CommandType };
 use serde_cbor::Value as CborValue;
 use crc::crc64::checksum_iso;
 
@@ -197,30 +194,6 @@ impl CompLibRegister {
     }
 }
 
-pub struct InterpLibRegister {
-    id: CommandSetId,
-    commands: Vec<Box<dyn CommandDeserializer + 'static>>,
-}
-
-impl InterpLibRegister {
-    pub fn new(id: &CommandSetId) -> InterpLibRegister {
-        InterpLibRegister {
-            id: id.clone(),
-            commands: vec![],
-        }
-    }
-
-    pub fn id(&self) -> &CommandSetId { &self.id }
-
-    pub fn push<F>(&mut self, deserializer: F) where F: CommandDeserializer + 'static {
-        self.commands.push(Box::new(deserializer));
-    }
-    
-    pub(super) fn drain_commands(&mut self) -> Vec<Box<dyn CommandDeserializer>> {
-        replace(&mut self.commands,vec![])
-    }
-}
-
 pub struct CommandSetVerifier {
     seen: HashMap<(String,u32),String>,
 }
@@ -252,9 +225,9 @@ mod test {
         ConstCommandType, NumberConstCommandType, BooleanConstCommandType, StringConstCommandType
     };
     use crate::interp::harness::{ FakeDeserializer };
-    use crate::interp::{ CompLibRegister, InterpLibRegister, CommandCompileSuite, CommandTrigger, CommandInterpretSuite , InterpContext};
+    use crate::interp::{ CompLibRegister, CommandCompileSuite, CommandTrigger, CommandInterpretSuite };
     use crate::generate::InstructionSuperType;
-    use crate::commands::{ ErrorDeserializer, NoopDeserializer };
+    use dauphin_interp_common::interp::{ InterpContext };
 
     #[test]
     fn test_command_smoke() {

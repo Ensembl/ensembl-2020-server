@@ -15,14 +15,12 @@
  */
 
 use crate::cli::Config;
-use std::collections::{ HashMap, HashSet, BTreeMap };
-use std::rc::Rc;
+use std::collections::{ HashMap, BTreeMap };
 use super::command::{ CommandTrigger, CommandType };
-use super::commandsetid::CommandSetId;
-use crate::interp::{ CompilerLink, CommandTypeStore, CommandTypeId, CommandDeserializer, InterpCommand, Command };
+use dauphin_interp_common::common::{ CommandSetId, CommandDeserializer, cbor_map_iter };
+use crate::interp::{ CompilerLink, CommandTypeStore, CommandTypeId };
 use serde_cbor::Value as CborValue;
 use super::suite::{ CommandSetVerifier, CompLibRegister, OpcodeMapping };
-use crate::model:: { cbor_map_iter };
 
 pub struct CommandCompileSuite {
     store: CommandTypeStore,
@@ -163,9 +161,10 @@ impl CommandCompileSuite {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::{ CommandSetId, CommandTrigger };
-    use crate::interp::InterpLibRegister;
-    use crate::commands::{ ConstCommandType, NumberConstCommandType, NoopDeserializer };
+    use super::super::{ CommandTrigger };
+    use dauphin_interp_common::common::{ CommandSetId, NoopDeserializer };
+    use dauphin_interp_common::interp::{ InterpLibRegister };
+    use crate::commands::{ ConstCommandType, NumberConstCommandType };
     use crate::generate::InstructionSuperType;
     use crate::test::cbor::cbor_cmp;
 
