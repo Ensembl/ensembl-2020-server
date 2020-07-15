@@ -20,7 +20,7 @@ use serde_cbor::Value as CborValue;
 use super::eq::{ library_eq_command_interp };
 use super::numops::{ library_numops_commands_interp };
 use super::vector::{ library_vector_commands_interp };
-use super::print::PrintDeserializer;
+use super::print::{ library_print_commands_interp };
 
 pub fn std_id() -> CommandSetId {
     CommandSetId::new("std",(0,0),0x8A07AE1254D6E44B)
@@ -56,7 +56,7 @@ pub fn make_std_interp() -> Result<InterpLibRegister,String> {
     library_eq_command_interp(&mut set)?;
     set.push(AssertDeserializer());
     set.push(NoopDeserializer(13));
-    set.push(PrintDeserializer());
+    library_print_commands_interp(&mut set)?;
     library_numops_commands_interp(&mut set)?;
     library_vector_commands_interp(&mut set)?;
     Ok(set)

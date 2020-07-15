@@ -5,29 +5,29 @@ import "lib:buildtime";
 use "buildtime";
 
 x := "hello world!";
-print(x);
-print(get_size_hint(x));
+print(format(x));
+print(format(get_size_hint(x)));
 
 y := [1,2,3];
-print(get_size_hint(y));
-print(get_size_hint(y[]));
-print(get_size_hint(y[@<2]));
-print(get_size_hint(y[$>1]));
+print(format(get_size_hint(y)));
+print(format(get_size_hint(y[])));
+print(format(get_size_hint(y[@<2])));
+print(format(get_size_hint(y[$>1])));
 
 alienate(y);
-print(get_size_hint(y));
-print(get_size_hint(y[]));
-print(get_size_hint(y[@<2]));
-print(get_size_hint(y[$>1]));
+print(format(get_size_hint(y)));
+print(format(get_size_hint(y[])));
+print(format(get_size_hint(y[@<2])));
+print(format(get_size_hint(y[$>1])));
 
 set_size_hint(y[],10);
-print(get_size_hint(y));
-print(get_size_hint(y[]));
-print(get_size_hint(y[@<2]));
-print(get_size_hint(y[$>1]));
+print(format(get_size_hint(y)));
+print(format(get_size_hint(y[])));
+print(format(get_size_hint(y[@<2])));
+print(format(get_size_hint(y[$>1])));
 
 y := push(y,32);
-print(get_size_hint(y));
-print(get_size_hint(y[]));
-print(get_size_hint(y[@<2]));
-print(get_size_hint(y[$>1]));
+print(format(get_size_hint(y)));
+print(format(get_size_hint(y[])));
+print(format(get_size_hint(y[@<2])));
+print(format(get_size_hint(y[$>1])));

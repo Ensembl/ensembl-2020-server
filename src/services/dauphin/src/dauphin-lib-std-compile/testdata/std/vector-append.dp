@@ -13,4 +13,4 @@ set_size_hint(y,2);
 
 z := [x (+) y];
 assert(z==[1,2,3,4],true);
-print(z);
+print(format(z));

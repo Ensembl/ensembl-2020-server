@@ -19,7 +19,8 @@ use dauphin_interp_common::common::{
     InterpCommand, Register, CommandDeserializer, SharedVec, RegisterSignature, XStructure, RegisterVectorSource, VectorRegisters, to_xstructure,
     cbor_array
 };
-use dauphin_interp_common::interp::{ InterpContext, InterpValue, Stream, InterpNatural, RegisterFile, StreamContents };
+use dauphin_interp_common::interp::{ InterpContext, InterpValue, InterpNatural, RegisterFile, InterpLibRegister };
+use crate::stream::Stream;
 use serde_cbor::Value as CborValue;
 
 // XXX dedup
@@ -91,23 +92,45 @@ fn print(file: &RegisterFile, xs: &XStructure<SharedVec>, regs: &[Register], pat
     })
 }
 
-pub struct PrintInterpCommand(Vec<Register>,RegisterSignature);
+pub struct PrintInterpCommand(Register);
 
 impl InterpCommand for PrintInterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
-        let xs = to_xstructure(&self.1[0])?;
+        let registers = context.registers();
+        let ss = registers.get_strings(&self.0)?;
+        for s in ss.iter() {
+            std_stream(context)?.add(s);
+        }
+        Ok(())
+    }
+}
+
+pub struct FormatDeserializer();
+
+impl CommandDeserializer for FormatDeserializer {
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((2,2))) }
+    fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
+        let sig = RegisterSignature::deserialize(value[1],true)?;
+        Ok(Box::new(FormatInterpCommand(regs,sig)))        
+    }
+}
+
+pub struct FormatInterpCommand(Vec<Register>,RegisterSignature);
+
+impl InterpCommand for FormatInterpCommand {
+    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+        let xs = to_xstructure(&self.1[1])?;
         let vs = RegisterVectorSource::new(&self.0);
         let xs2 = xs.derive(&mut (|vr: &VectorRegisters| SharedVec::new(context,&vs,vr)))?;
         let sv = xs2.any();
         let num = if sv.depth() > 0 { sv.get_offset(sv.depth()-1)?.len() } else { sv.get_data().len() };
-        let registers = context.registers();
+        let registers = context.registers_mut();
         let mut out = vec![];
         for i in 0..num {
             out.push(print(&registers,&xs2,&self.0,&vec![],i)?);
         }
-        for s in &out {
-            std_stream(context)?.add(StreamContents::String(s.to_string()));
-        }
+        registers.write(&self.0[0],InterpValue::Strings(out));
         Ok(())
     }
 }
@@ -115,10 +138,14 @@ impl InterpCommand for PrintInterpCommand {
 pub struct PrintDeserializer();
 
 impl CommandDeserializer for PrintDeserializer {
-    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((14,2))) }
+    fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((14,1))) }
     fn deserialize(&self, _opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
-        let regs = cbor_array(&value[0],0,true)?.iter().map(|x| Register::deserialize(x)).collect::<Result<_,_>>()?;
-        let sig = RegisterSignature::deserialize(value[1],true,true)?;
-        Ok(Box::new(PrintInterpCommand(regs,sig)))        
+        Ok(Box::new(PrintInterpCommand(Register::deserialize(value[0])?)))
     }
+}
+
+pub(super) fn library_print_commands_interp(set: &mut InterpLibRegister) -> Result<(),String> {
+    set.push(PrintDeserializer());
+    set.push(FormatDeserializer());
+    Ok(())
 }

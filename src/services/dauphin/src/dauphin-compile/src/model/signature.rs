@@ -160,13 +160,13 @@ mod test {
         let (stmts,defstore) = p.parse().expect("error");
         generate(&linker,&stmts,&defstore,&resolver,&xxx_test_config()).expect("j");
         let regs = make_full_type(&defstore,MemberMode::In,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
-        let named = regs.serialize(true,true).expect("cbor a");
+        let named = regs.serialize(true).expect("cbor a");
         cbor_cmp(&named,"cbor-signature-named.out");
-        let cr2 = FullType::deserialize(&named,true,true).expect("cbor d");
+        let cr2 = FullType::deserialize(&named,true).expect("cbor d");
         assert_eq!(cr2,regs);
-        let anon = regs.serialize(false,false).expect("cbor c");
+        let anon = regs.serialize(false).expect("cbor c");
         cbor_cmp(&anon,"cbor-signature-unnamed.out");
-        let cr2 = FullType::deserialize(&anon,false,false).expect("cbor e");
+        let cr2 = FullType::deserialize(&anon,false).expect("cbor e");
         assert_ne!(cr2,regs);
         assert_eq!(MemberMode::In,cr2.get_mode());
         let vs_in = regs.iter().map(|x| x.1).cloned().collect::<Vec<_>>();

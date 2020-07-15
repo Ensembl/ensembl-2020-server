@@ -9,8 +9,8 @@ y := [1,2,3];
 alienate(y);
 alienate(y[]);
 
-print(x==y);
-print([[1,2],[3,4]]);
-print([[1,2],[3,4]]);
-print(x[]<1);
-print(x[]<1);
+print(format(x==y));
+print(format([[1,2],[3,4]]));
+print(format([[1,2],[3,4]]));
+print(format(x[]<1));
+print(format(x[]<1));

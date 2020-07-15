@@ -9,4 +9,4 @@ alienate(y);
 set_size_hint(y,1);
 set_size_hint(y[],3);
 y[] := 0;
-print(y);
+print(format(y));

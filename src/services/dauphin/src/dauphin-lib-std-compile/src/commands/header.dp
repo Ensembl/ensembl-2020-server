@@ -27,7 +27,9 @@ inline "(+)" extend left 14;
 
 proc alienate(mask _A);
 
-proc print(_);
+proc print(string);
+
+func format(_) becomes string;
 
 expr push(list,item) [list[] (+) item];
 expr append(list,items) [list[] (+) items[]];

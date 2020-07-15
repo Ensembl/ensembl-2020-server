@@ -99,7 +99,6 @@ impl OpcodeMapping {
     pub fn decode_opcode(&self, offset: u32) -> Result<(CommandSetId,u32),String> {
         if !self.ready { return Err(format!("recalculate not called after adding")); }
         if let Some((base,csi)) = self.opcode_sid.range(..(offset+1)).next_back() {
-            print!("94 {:?} {:?}\n",base,csi);
             Ok((csi.clone(),offset-base))
         } else {
             Err("no such offset".to_string())

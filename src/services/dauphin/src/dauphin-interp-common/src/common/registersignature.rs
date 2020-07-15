@@ -48,13 +48,13 @@ impl RegisterSignature {
         }
     }
 
-    pub fn serialize(&self, named: bool, depth: bool) -> Result<CborValue,String> {
-        Ok(CborValue::Array(self.args.iter().map(|x| x.serialize(named,depth)).collect::<Result<Vec<_>,_>>()?))
+    pub fn serialize(&self, named: bool) -> Result<CborValue,String> {
+        Ok(CborValue::Array(self.args.iter().map(|x| x.serialize(named)).collect::<Result<Vec<_>,_>>()?))
     }
 
-    pub fn deserialize(cbor: &CborValue, named: bool, depth: bool) -> Result<RegisterSignature,String> {
+    pub fn deserialize(cbor: &CborValue, named: bool) -> Result<RegisterSignature,String> {
         let mut out = RegisterSignature::new();
-        for cr in cbor_array(cbor,0,true)?.iter().map(|x| FullType::deserialize(x,named,depth)).collect::<Result<Vec<_>,_>>()? {
+        for cr in cbor_array(cbor,0,true)?.iter().map(|x| FullType::deserialize(x,named)).collect::<Result<Vec<_>,_>>()? {
             out.add(cr);
         }
         Ok(out)

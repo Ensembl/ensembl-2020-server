@@ -119,7 +119,7 @@ mod test {
 
     #[test]
     fn assign_filtered() {
-        let mut config = xxx_test_config();
+        let config = xxx_test_config();
         let strings = compile(&config,"search:std/filterassign").expect("a");
         for s in &strings {
             print!("{}\n",s);
@@ -129,7 +129,7 @@ mod test {
 
     #[test]
     fn assign_shallow() {
-        let mut config = xxx_test_config();
+        let config = xxx_test_config();
         let strings = compile(&config,"search:std/assignshallow").expect("a");
         for s in &strings {
             print!("{}\n",s);

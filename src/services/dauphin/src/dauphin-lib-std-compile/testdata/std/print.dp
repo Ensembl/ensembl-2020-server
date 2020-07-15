@@ -24,15 +24,15 @@ y := test3 {
     B: [[4]]
 };
 
-print([x,y]);
+print(format([x,y]));
 
-print([get_version(["buildtime","missing"][]),get_version(["std"][])]);
+print(format([get_version(["buildtime","missing"][]),get_version(["std"][])]));
 
 struct test {
     x: vec(boolean)
 };
 
-print([test { x: [false,true] },test { x: [true,false] }]);
+print(format([test { x: [false,true] },test { x: [true,false] }]));
 
 enum test2 {
     A: vec(boolean),
@@ -40,7 +40,7 @@ enum test2 {
     C: boolean
 };
 
-print([test2:A [true,true], test2:B [[0],[1,2,3]], test2:C false, test2:A [false]]);
+print(format([test2:A [true,true], test2:B [[0],[1,2,3]], test2:C false, test2:A [false]]));
 
-print([1,2,3][]);
-print('4241030040');
+print(format([1,2,3][]));
+print(format('4241030040'));

@@ -15,6 +15,11 @@
  */
 
 pub mod commands;
+pub mod stream {
+    pub mod stream;
+    pub use self::stream::{ Stream, StreamFactory };
+}
 
 pub use commands::{ InterpBinBoolOp, InterpBinNumOp, InterpNumModOp };
 pub use commands::make_std_interp;
+pub use self::stream::{ Stream, StreamFactory };

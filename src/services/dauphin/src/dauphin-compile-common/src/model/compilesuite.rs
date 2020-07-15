@@ -14,11 +14,12 @@
  *  limitations under the License.
  */
 
+use std::rc::Rc;
 use crate::cli::Config;
 use std::collections::{ HashMap, BTreeMap };
 use crate::command::{ CommandTrigger, CommandType };
 use dauphin_interp_common::common::{ CommandSetId, CommandDeserializer, cbor_map_iter };
-use dauphin_interp_common::interp::{ CommandTypeId, OpcodeMapping, CommandSetVerifier };
+use dauphin_interp_common::interp::{ CommandTypeId, OpcodeMapping, CommandSetVerifier, PayloadFactory };
 use crate::model::{ CompilerLink, CommandTypeStore, CompLibRegister };
 use serde_cbor::Value as CborValue;
 
@@ -32,7 +33,8 @@ pub struct CommandCompileSuite {
     interp_commands: HashMap<CommandTypeId,Box<dyn CommandDeserializer>>,
     opcode_mapper: OpcodeMapping,
     headers: HashMap<String,String>,
-    verifier: CommandSetVerifier
+    verifier: CommandSetVerifier,
+    payloads: HashMap<(String,String),Rc<Box<dyn PayloadFactory>>>
 }
 
 impl CommandCompileSuite {
@@ -47,7 +49,8 @@ impl CommandCompileSuite {
             interp_commands: HashMap::new(),
             headers: HashMap::new(),
             opcode_mapper: OpcodeMapping::new(),
-            verifier: CommandSetVerifier::new()        
+            verifier: CommandSetVerifier::new(),
+            payloads: HashMap::new()
         }
     }
 
@@ -62,6 +65,7 @@ impl CommandCompileSuite {
                     offset_interp_command.insert(offset.0,ds);
                 }
             }
+            self.payloads.extend(&mut ils.drain_payloads().drain());
         } else {
             self.opcode_mapper.dont_serialize(&sid);
         }
@@ -92,6 +96,10 @@ impl CommandCompileSuite {
 
     pub fn get_headers(&self) -> &HashMap<String,String> { &self.headers }
 
+    pub fn copy_payloads(&self) -> HashMap<(String,String),Rc<Box<dyn PayloadFactory>>> {
+        self.payloads.clone()
+    }
+
     pub fn get_set_ids(&self) -> Vec<CommandSetId> {
         self.sets.iter().cloned().collect()
     }
@@ -101,18 +109,18 @@ impl CommandCompileSuite {
     }
 
     pub fn get_command_by_trigger(&self, trigger: &CommandTrigger) -> Result<&Box<dyn CommandType>,String> {
-        let cid = self.trigger_commands.get(trigger).ok_or(format!("Unknown command {}",trigger))?;
+        let cid = self.trigger_commands.get(trigger).ok_or(format!("Unknown command/1 {}",trigger))?;
         let cmdtype = self.store.get(cid);
         Ok(cmdtype)
     }
 
     pub fn get_deserializer_by_trigger(&self, trigger: &CommandTrigger) -> Result<Option<&Box<dyn CommandDeserializer>>,String> {
-        let cid = self.trigger_commands.get(trigger).ok_or(format!("Unknown command {:?}",trigger))?;
+        let cid = self.trigger_commands.get(trigger).ok_or(format!("Unknown command/2 {:?}",trigger))?;
         Ok(self.interp_commands.get(cid))
     }
 
     pub fn get_opcode_by_trigger(&self, trigger: &CommandTrigger) -> Result<Option<u32>,String> {
-        let cid = self.trigger_commands.get(trigger).ok_or(format!("Unknown command {}",trigger))?;
+        let cid = self.trigger_commands.get(trigger).ok_or(format!("Unknown command/3 {}",trigger))?;
         if let Some((sid,offset)) = self.command_offsets.get(cid) {
             Ok(Some(self.opcode_mapper.sid_to_offset(sid)?+offset))
         } else {

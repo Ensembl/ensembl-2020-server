@@ -20,7 +20,7 @@ use dauphin_compile_common::model::{
     CompLibRegister, Instruction, InstructionType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial, trial_signature, trial_write
 };
 use dauphin_interp_common::common::{
-    cbor_make_map, cbor_map, Register, InterpCommand, CommandDeserializer, VectorRegisters, MemberMode, RegisterSignature,
+    cbor_make_map, cbor_map, Register, InterpCommand, VectorRegisters, MemberMode, RegisterSignature,
     BaseType, Identifier, MemberDataFlow, FullType, ComplexPath
 };
 use dauphin_interp_common::interp::{ InterpContext };
@@ -405,7 +405,7 @@ pub(super) fn library_eq_command(set: &mut CompLibRegister) -> Result<(),String>
 
 #[cfg(test)]
 mod test {
-    use crate::test::{ xxx_test_config, make_compiler_suite, compile };
+    use crate::test::{ xxx_test_config, compile };
 
     #[test]
     fn eq_smoke() {

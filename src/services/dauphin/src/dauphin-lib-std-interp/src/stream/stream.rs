@@ -15,46 +15,56 @@
  */
 
 use std::any::Any;
-use crate::interp::{ InterpValue };
-use crate::interp::{ PayloadFactory };
+use std::mem::replace;
+use dauphin_interp_common::interp::{ PayloadFactory };
 
-#[derive(Debug)]
-pub enum StreamContents {
-    String(String),
-    Data(InterpValue),
-}
-
-#[derive(Debug)]
 pub struct Stream {
-    contents: Vec<StreamContents>
+    contents: Vec<String>,
+    to_stdout: bool
 }
 
 impl Stream {
-    pub fn new() -> Stream {
+    pub fn new(to_stdout: bool) -> Stream {
         Stream {
-            contents: Vec::new()
+            contents: vec![],
+            to_stdout
         }
     }
 
-    pub fn add(&mut self, contents: StreamContents) {
-        self.contents.push(contents);
+    pub fn to_stdout(&mut self, yn: bool) {
+        self.to_stdout = yn;
+    } 
+
+    pub fn add(&mut self, more: &str) {
+        self.contents.push(more.to_string());
+        if self.to_stdout {
+            print!("{}\n",more);
+        }
     }
 
-    pub fn take(&mut self) -> Vec<StreamContents> {
-        self.contents.drain(..).collect()
+    pub fn take(&mut self) -> Vec<String> {
+        replace(&mut self.contents,vec![])
     }
 }
 
-pub struct StreamFactory {}
+pub struct StreamFactory {
+    to_stdout: bool
+}
 
 impl StreamFactory {
     pub fn new() -> StreamFactory {
-        StreamFactory {}
+        StreamFactory{
+            to_stdout: false
+        }
     }
+
+    pub fn to_stdout(&mut self, yn: bool) {
+        self.to_stdout = yn;
+    } 
 }
 
 impl PayloadFactory for StreamFactory {
     fn make_payload(&self) -> Box<dyn Any> {
-        Box::new(Stream::new())
+        Box::new(Stream::new(self.to_stdout))
     }
 }

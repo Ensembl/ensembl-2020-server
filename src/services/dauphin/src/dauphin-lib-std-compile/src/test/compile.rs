@@ -22,7 +22,8 @@ use dauphin_compile_common::model::{ CommandCompileSuite, CompilerLink, Instruct
 use dauphin_interp::interp::{ CommandInterpretSuite, InterpreterLink };
 use dauphin_interp::{ make_core_interp };
 use dauphin_lib_std_interp::{ make_std_interp };
-use dauphin_interp_common::interp::{ InterpContext, StreamContents, Stream, InterpValue, StreamFactory };
+use dauphin_lib_std_interp::stream::{ Stream, StreamFactory };
+use dauphin_interp_common::interp::{ InterpContext, InterpValue };
 use dauphin_interp_common::common::{ Register, cbor_serialize };
 use dauphin_compile::commands::{ make_core, make_buildtime };
 use crate::make_std;
@@ -40,17 +41,6 @@ pub fn interpreter<'a>(interpret_linker: &'a InterpreterLink, config: &Config, n
         }
     }
     Ok(Box::new(StandardInterpretInstance::new(interpret_linker,name)?))
-}
-
-pub fn stream_strings(stream: &[StreamContents]) -> Vec<String> {
-    let mut out = vec![];
-    for s in stream {
-        match s {
-            StreamContents::String(s) => out.push(s.to_string()),
-            _ => {}
-        }
-    }
-    out
 }
 
 fn export_indexes(ic: &mut InterpContext) -> Result<HashMap<Register,Vec<usize>>,String> {
@@ -100,7 +90,7 @@ pub fn mini_interp(instrs: &Vec<Instruction>, cl: &mut CompilerLink, config: &Co
     interpret_linker.add_payload("std","stream",StreamFactory::new());
     let mut ic = mini_interp_run(&interpret_linker,config,name)?;
     let stream = std_stream(&mut ic)?;
-    let strings = stream_strings(&stream.take());
+    let strings = stream.take();
     Ok((export_indexes(&mut ic)?,strings))
 }
 

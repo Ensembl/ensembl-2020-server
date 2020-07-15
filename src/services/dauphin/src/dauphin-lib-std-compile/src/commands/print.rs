@@ -15,35 +15,62 @@
  */
 
 use dauphin_compile_common::command::{ Command, CommandSchema, CommandType, CommandTrigger };
-use dauphin_compile_common::model::{ CompLibRegister, Instruction, InstructionType };
+use dauphin_compile_common::model::{ Instruction, InstructionType };
 use dauphin_interp_common::common::{ Register, RegisterSignature, Identifier };
 use serde_cbor::Value as CborValue;
 
-pub struct PrintCommandType();
+pub struct FormatCommandType();
 
-impl CommandType for PrintCommandType {
+impl CommandType for FormatCommandType {
     fn get_schema(&self) -> CommandSchema {
         CommandSchema {
             values: 2,
-            trigger: CommandTrigger::Command(Identifier::new("std","print"))
+            trigger: CommandTrigger::Command(Identifier::new("std","format"))
         }
     }
 
     fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
         if let InstructionType::Call(_,_,sig,_) = &it.itype {
-            Ok(Box::new(PrintCommand(it.regs.clone(),sig.clone())))
+            Ok(Box::new(FormatCommand(it.regs.to_vec(),sig.clone())))
         } else {
             Err("unexpected instruction".to_string())
         }
     }    
 }
 
-pub struct PrintCommand(Vec<Register>,RegisterSignature);
+pub struct FormatCommand(Vec<Register>,RegisterSignature);
+
+impl Command for FormatCommand {
+    fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
+        let regs = CborValue::Array(self.0.iter().map(|x| x.serialize()).collect());
+        Ok(Some(vec![regs,self.1.serialize(true)?]))
+    }
+}
+
+pub struct PrintCommandType();
+
+impl CommandType for PrintCommandType {
+    fn get_schema(&self) -> CommandSchema {
+        CommandSchema {
+            values: 1,
+            trigger: CommandTrigger::Command(Identifier::new("std","print"))
+        }
+    }
+
+    fn from_instruction(&self, it: &Instruction) -> Result<Box<dyn Command>,String> {
+        if let InstructionType::Call(_,_,sig,_) = &it.itype {
+            Ok(Box::new(PrintCommand(it.regs[0])))
+        } else {
+            Err("unexpected instruction".to_string())
+        }
+    }    
+}
+
+pub struct PrintCommand(Register);
 
 impl Command for PrintCommand {
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
-        let regs = CborValue::Array(self.0.iter().map(|x| x.serialize()).collect());
-        Ok(Some(vec![regs,self.1.serialize(true,true)?]))
+        Ok(Some(vec![self.0.serialize()]))
     }    
 }
 

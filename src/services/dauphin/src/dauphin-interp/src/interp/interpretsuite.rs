@@ -15,18 +15,20 @@
  */
 
 use std::collections::HashMap;
+use std::rc::Rc;
 use serde_cbor::Value as CborValue;
 use dauphin_interp_common::interp::{ CommandTypeId };
 use crate::interp::Deserializer;
 use dauphin_interp_common::common::{ cbor_array, cbor_int, CommandDeserializer, CommandSetId };
-use dauphin_interp_common::interp::{ InterpLibRegister, OpcodeMapping, CommandSetVerifier };
+use dauphin_interp_common::interp::{ InterpLibRegister, OpcodeMapping, CommandSetVerifier, PayloadFactory };
 
 pub struct CommandInterpretSuite {
     store: Deserializer,
     offset_to_command: HashMap<(CommandSetId,u32),CommandTypeId>,
     opcode_mapper: OpcodeMapping,
     minors: HashMap<(String,u32),u32>,
-    verifier: CommandSetVerifier
+    verifier: CommandSetVerifier,
+    payloads: HashMap<(String,String),Rc<Box<dyn PayloadFactory>>>
 }
 
 impl CommandInterpretSuite {
@@ -36,7 +38,8 @@ impl CommandInterpretSuite {
             offset_to_command: HashMap::new(),
             store: Deserializer::new(),
             minors: HashMap::new(),
-            verifier: CommandSetVerifier::new()        
+            verifier: CommandSetVerifier::new(),
+            payloads: HashMap::new()
         }
     }
 
@@ -51,9 +54,16 @@ impl CommandInterpretSuite {
                 self.opcode_mapper.add_opcode(&sid,opcode);
             }
         }
+        for (k,p) in set.drain_payloads().drain() {
+            self.payloads.insert(k,p);
+        }
         self.verifier.register2(&sid)?;
         self.opcode_mapper.recalculate();
         Ok(())
+    }
+
+    pub fn copy_payloads(&self) -> HashMap<(String,String),Rc<Box<dyn PayloadFactory>>> {
+        self.payloads.clone()
     }
 
     pub fn adjust(&mut self, cbor: &CborValue) -> Result<(),String> {

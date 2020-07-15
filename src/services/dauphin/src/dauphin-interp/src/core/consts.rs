@@ -14,8 +14,7 @@
  *  limitations under the License.
  */
 
-use std::convert::TryInto;
-use dauphin_interp_common::common::{ cbor_int, cbor_string, cbor_make_map, cbor_map, Register, InterpCommand, CommandDeserializer };
+use dauphin_interp_common::common::{ cbor_int, cbor_string, Register, InterpCommand, CommandDeserializer };
 use dauphin_interp_common::interp::{ InterpLibRegister, InterpValue, InterpContext };
 use serde_cbor::Value as CborValue;
 

@@ -21,7 +21,7 @@ use std::process::exit;
 use regex::Regex;
 use crate::suitebuilder::{ make_compiler_suite, make_interpret_suite };
 use dauphin_interp::interp::InterpreterLink;
-use dauphin_interp_common::interp::StreamFactory;
+use dauphin_lib_std_interp::{ StreamFactory };
 use dauphin_interp::interp::{ InterpretInstance, DebugInterpretInstance, StandardInterpretInstance };
 use dauphin_compile::model::{ fix_filename };
 use dauphin_interp_common::common::{ cbor_serialize };
@@ -171,7 +171,9 @@ impl Action for RunAction {
         let mut interpret_linker = bomb(|| format!("could not link binary"),
             InterpreterLink::new(suite,&program)
         );
-        interpret_linker.add_payload("std","stream",StreamFactory::new());
+        let mut sf = StreamFactory::new();
+        sf.to_stdout(true);
+        interpret_linker.add_payload("std","stream",sf);
         let mut interp = interpreter(&interpret_linker,&config,config.get_run()).expect("interpreter");
         while interp.more().expect("interpreting") {}
         interp.finish();    

@@ -92,7 +92,7 @@ impl FullType {
         Ok(path.get_breaks().iter().sum())
     }
 
-    pub fn deserialize(cbor: &CborValue, named: bool, depth: bool) -> Result<FullType,String> {
+    pub fn deserialize(cbor: &CborValue, named: bool) -> Result<FullType,String> {
         let data = cbor_array(cbor,1,true)?;
         let mut out = FullType::new_empty(MemberMode::deserialize(&data[0])?);
         let mut mult = 1;
@@ -113,7 +113,7 @@ impl FullType {
         Ok(out)
     }
 
-    pub fn serialize(&self, named: bool, depth: bool) -> Result<CborValue,String> {
+    pub fn serialize(&self, named: bool) -> Result<CborValue,String> {
         let mut regs = vec![self.mode.serialize()];
         for complex in &self.order {
             regs.push(self.vectors.get(complex).as_ref().unwrap().serialize(false)?);

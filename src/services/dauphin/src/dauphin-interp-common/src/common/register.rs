@@ -51,10 +51,7 @@ impl fmt::Display for Register {
 #[cfg(test)]
 mod test {
     use crate::common::{ Register };
-    use crate::interp::{
-        InterpValue, InterpValueNumbers, InterpValueIndexes, InterpValueBoolean, InterpValueStrings, InterpValueBytes, SuperCow, SuperCowCommit,
-        RegisterFile
-    };
+    use crate::interp::{ InterpValue, RegisterFile };
 
     #[test]
     fn registers_smoke() {

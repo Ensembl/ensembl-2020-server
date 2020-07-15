@@ -3,6 +3,6 @@ use "std";
 
 y := [1,2,3];
 y[@==2] (+=) 30;
-print(y[@==0]);
-print(y[@==1]);
-print(y[@==2]);
+print(format(y[@==0]));
+print(format(y[@==1]));
+print(format(y[@==2]));

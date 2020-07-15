@@ -14,12 +14,16 @@
  *  limitations under the License.
  */
 
+use std::collections::HashMap;
 use std::mem::replace;
+use std::rc::Rc;
 use crate::common::{ CommandDeserializer, CommandSetId };
+use crate::interp::PayloadFactory;
 
 pub struct InterpLibRegister {
     id: CommandSetId,
     commands: Vec<Box<dyn CommandDeserializer + 'static>>,
+    payloads: HashMap<(String,String),Rc<Box<dyn PayloadFactory>>>
 }
 
 impl InterpLibRegister {
@@ -27,6 +31,7 @@ impl InterpLibRegister {
         InterpLibRegister {
             id: id.clone(),
             commands: vec![],
+            payloads: HashMap::new()
         }
     }
 
@@ -36,7 +41,15 @@ impl InterpLibRegister {
         self.commands.push(Box::new(deserializer));
     }
     
+    pub fn add_payload<P>(&mut self, set: &str, name: &str, pf: P) where P: PayloadFactory + 'static {
+        self.payloads.insert((set.to_string(),name.to_string()),Rc::new(Box::new(pf)));
+    }
+
     pub fn drain_commands(&mut self) -> Vec<Box<dyn CommandDeserializer>> {
         replace(&mut self.commands,vec![])
+    }
+
+    pub fn drain_payloads(&mut self) -> HashMap<(String,String),Rc<Box<dyn PayloadFactory>>> {
+        replace(&mut self.payloads, HashMap::new())
     }
 }

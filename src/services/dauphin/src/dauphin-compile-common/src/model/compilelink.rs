@@ -19,7 +19,7 @@ use std::rc::Rc;
 use crate::cli::Config;
 use crate::model::{ Instruction, InstructionType, CommandCompileSuite };
 use crate::command::{ Command, CommandSchema, CommandTrigger };
-use dauphin_interp_common::interp::{ InterpContext };
+use dauphin_interp_common::interp::{ InterpContext, PayloadFactory };
 use dauphin_interp_common::common::{ CommandSetId, InterpCommand };
 use serde_cbor::Value as CborValue;
 
@@ -30,15 +30,18 @@ pub struct CompilerLink {
     cs: Rc<CommandCompileSuite>,
     headers: HashMap<String,String>,
     programs: BTreeMap<CborValue,CborValue>,
+    payloads: HashMap<(String,String),Rc<Box<dyn PayloadFactory>>>
 }
 
 impl CompilerLink {
     pub fn new(cs: CommandCompileSuite) -> Result<CompilerLink,String> {
+        let payloads = cs.copy_payloads().clone();
         let headers = cs.get_headers().clone();
         Ok(CompilerLink {
             cs: Rc::new(cs),
             headers: headers.clone(),
-            programs: BTreeMap::new()
+            programs: BTreeMap::new(),
+            payloads
         })
     }
 
@@ -140,6 +143,6 @@ impl CompilerLink {
     }
 
     pub fn new_context(&self) -> InterpContext {
-        InterpContext::new(&HashMap::new())
+        InterpContext::new(&self.payloads)
     }
 }

@@ -15,14 +15,28 @@
  */
 
 use std::fmt;
+use std::hash::{ Hash, Hasher };
 use crate::common::{ cbor_array, cbor_string, cbor_int };
 use serde_cbor::Value as CborValue;
 
-#[derive(Clone,PartialEq,Eq,Hash,Debug,PartialOrd,Ord)]
+#[derive(Clone,Eq,Debug,PartialOrd,Ord)]
 pub struct CommandSetId {
     name: String,
     version: (u32,u32),
     trace: u64
+}
+
+impl Hash for CommandSetId {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.name.hash(hasher);
+        self.version.hash(hasher);
+    }
+}
+
+impl PartialEq for CommandSetId {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.version == other.version
+    }
 }
 
 impl fmt::Display for CommandSetId {

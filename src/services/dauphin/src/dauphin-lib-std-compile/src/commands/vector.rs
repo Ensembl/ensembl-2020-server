@@ -14,21 +14,18 @@
  *  limitations under the License.
  */
 
-use std::rc::Rc;
 use dauphin_compile_common::cli::Config;
 use dauphin_compile_common::command::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
 use dauphin_compile_common::model::{
-    CompLibRegister, Instruction, InstructionType, InstructionSuperType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial, trial_signature,
+    CompLibRegister, Instruction, InstructionType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial, trial_signature,
     trial_write
 };
 use dauphin_interp_common::common::{
     cbor_make_map, cbor_map, Register, MemberMode,
-    BaseType, Identifier, MemberDataFlow, FullType, ComplexPath
+    BaseType, Identifier, MemberDataFlow
 };
-use dauphin_compile_common::util::{ vector_push_instrs, vector_append, vector_append_offsets, vector_register_copy_instrs, vector_append_lengths };
-use dauphin_interp_common::interp::{ InterpLibRegister, InterpValue, InterpContext };
+use dauphin_interp_common::interp::{ InterpContext };
 use serde_cbor::Value as CborValue;
-use dauphin_lib_std_interp::{ InterpBinBoolOp, InterpBinNumOp, InterpNumModOp };
 use super::library::std;
 
 struct VectorCopyShallowTimeTrial();

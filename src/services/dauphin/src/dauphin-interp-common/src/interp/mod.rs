@@ -18,7 +18,6 @@ mod context;
 mod interplibregister;
 mod misc;
 mod opcodemapping;
-mod stream;
 
 mod values {
     pub mod supercow;
@@ -37,6 +36,5 @@ pub use self::values::value::{
 pub use self::values::supercow::{ SuperCow, SuperCowCommit };
 pub use self::values::registers::RegisterFile;
 pub use self::interplibregister::InterpLibRegister;
-pub use self::stream::{ Stream, StreamContents, StreamFactory };
 pub use self::misc::CommandSetVerifier;
 pub use self::opcodemapping::OpcodeMapping;

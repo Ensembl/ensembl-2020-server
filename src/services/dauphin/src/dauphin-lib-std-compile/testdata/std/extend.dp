@@ -11,9 +11,9 @@ x := [[1,2] (+) [3,4]];
 assert(x==[[1,2],[3,4]],true);
 
 x := [1,2];
-print(push(x,3));
+print(format(push(x,3)));
 x := push(x,3);
-print(x);
+print(format(x));
 assert(x==[1,2,3],true);
 
 x := [1,2];
@@ -22,7 +22,7 @@ assert(x==[1,2,3,4],true);
 
 x := [[1,2],[3,4]];
 x := [x,x];
-print(x);
+print(format(x));
 assert(x==[[[1,2],[3,4]],[[1,2],[3,4]]],true);
 
 y := [[6,6,6],[7]];

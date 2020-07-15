@@ -21,12 +21,12 @@ use serde_cbor::Value as CborValue;
 use super::numops::{ library_numops_commands };
 use super::eq::{ library_eq_command };
 use super::assign::{ library_assign_commands };
-use super::print::{ PrintCommandType };
+use super::print::{ PrintCommandType, FormatCommandType };
 use super::vector::{ library_vector_commands };
 use dauphin_lib_std_interp::make_std_interp;
 
 pub fn std_id() -> CommandSetId {
-    CommandSetId::new("std",(0,0),0x8A07AE1254D6E44B)
+    CommandSetId::new("std",(0,0),0xDB806BE64887FAA9)
 }
 
 pub(super) fn std(name: &str) -> Identifier {
@@ -56,7 +56,7 @@ pub struct LenCommand(pub(crate) RegisterSignature, pub(crate) Vec<Register>);
 
 impl Command for LenCommand {
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
-        Ok(Some(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false,false)?]))
+        Ok(Some(vec![CborValue::Array(self.1.iter().map(|x| x.serialize()).collect()),self.0.serialize(false)?]))
     }
 
     fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
@@ -157,11 +157,12 @@ impl Command for AlienateCommand {
 pub fn make_std() -> Result<CompLibRegister,String> {
     let mut set = CompLibRegister::new(&std_id(),Some(make_std_interp()?));
     library_eq_command(&mut set)?;
-    /* 2,3 are free */
+    /* 3 is free */
     set.push("len",None,LenCommandType());
     set.push("assert",Some(4),AssertCommandType());
     set.push("alienate",Some(13),AlienateCommandType());
     set.push("print",Some(14),PrintCommandType());
+    set.push("format",Some(2),FormatCommandType());
     set.add_header("std",include_str!("header.dp"));
     library_numops_commands(&mut set)?;
     library_assign_commands(&mut set)?;

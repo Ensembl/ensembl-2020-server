@@ -18,10 +18,9 @@ use std::fmt::Display;
 use std::fs::read;
 use std::process::exit;
 use serde_cbor;
-use dauphin_interp_common::interp::{ StreamFactory };
 use dauphin_interp::make_core_interp;
 use dauphin_interp::interp::{ CommandInterpretSuite, InterpreterLink, StandardInterpretInstance, InterpretInstance };
-use dauphin_lib_std_interp::make_std_interp;
+use dauphin_lib_std_interp::{ make_std_interp, StreamFactory };
 
 fn bomb<A,E,T>(action: T, x: Result<A,E>) -> A where T: Fn() -> String, E: Display {
     match x {
@@ -64,7 +63,9 @@ fn main() {
     let mut interpret_linker = bomb(|| format!("could not link binary"),
         InterpreterLink::new(suite,&program)
     );
-    interpret_linker.add_payload("std","stream",StreamFactory::new());
+    let mut sf = StreamFactory::new();
+    sf.to_stdout(true);
+    interpret_linker.add_payload("std","stream",sf);
     let mut interp = bomb(|| format!(""),
         interpreter(&interpret_linker,&name)
     );

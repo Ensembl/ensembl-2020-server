@@ -95,7 +95,7 @@ impl InterpreterLink {
     pub fn new(mut ips: CommandInterpretSuite, cbor: &CborValue) -> Result<InterpreterLink,String> {
         let mut out = InterpreterLink {
             programs: HashMap::new(),
-            payloads: HashMap::new()
+            payloads: ips.copy_payloads()
         };
         let data = cbor_map(cbor,&vec!["version","suite","programs"])?;
         ips.adjust(data[1])?;
@@ -137,8 +137,9 @@ mod test {
     use dauphin_compile::parser::{ Parser };
     use dauphin_compile::resolver::Resolver;
     use dauphin_compile::generate::generate;
-    use crate::test::{ mini_interp_run, xxx_test_config, stream_strings, make_compiler_suite, make_interpret_suite };
-    use dauphin_interp_common::interp::{ StreamFactory, InterpContext, Stream };
+    use crate::test::{ mini_interp_run, xxx_test_config, make_compiler_suite, make_interpret_suite };
+    use dauphin_interp_common::interp::{ InterpContext };
+    use dauphin_lib_std_interp::stream::{ StreamFactory, Stream };
     use crate::interp::interplink::InterpreterLink;
 
     pub fn std_stream(context: &mut InterpContext) -> Result<&mut Stream,String> {
@@ -174,9 +175,9 @@ mod test {
         let mut ic_b = mini_interp_run(&interpret_linker,&config,"prog1").expect("B");
         let s_a = std_stream(&mut ic_a).expect("d");
         let s_b = std_stream(&mut ic_b).expect("e");
-        let a = stream_strings(&s_a.take());
-        let b = stream_strings(&s_b.take());    
-        assert_eq!(vec!["\"prog2\""],a);
-        assert_eq!(vec!["\"prog1\""],b);
+        let a = &s_a.take();
+        let b = &s_b.take();    
+        assert_eq!(vec!["prog2"],a.iter().map(|x| x).collect::<Vec<_>>());
+        assert_eq!(vec!["prog1"],b.iter().map(|x| x).collect::<Vec<_>>());
     }
 }

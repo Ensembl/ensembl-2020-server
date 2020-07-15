@@ -4,12 +4,12 @@ use "std";
 x := [[1,1],[2],[3,3],[4]];
 
 x[len($)>1] := [0];
-print(x);
+print(format(x));
 x[@>1] := [9,9,9];
-print(x);
+print(format(x));
 y := [1,2,3];
 y[] := 0;
-print(y);
+print(format(y));
 
 x[@==2][@==0] := 8;
-print(x);
+print(format(x));
