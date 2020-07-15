@@ -19,17 +19,29 @@ use std::fmt::Display;
 use std::fs::{ write, read };
 use std::process::exit;
 use regex::Regex;
-use crate::interp::{ CompilerLink, make_compiler_suite, make_interpret_suite, InterpreterLink, interpreter };
+use crate::suitebuilder::{ make_compiler_suite, make_interpret_suite };
+use dauphin_interp::interp::InterpreterLink;
 use dauphin_interp_common::interp::StreamFactory;
-use crate::model::{ fix_filename };
+use dauphin_interp::interp::{ InterpretInstance, DebugInterpretInstance, StandardInterpretInstance };
+use dauphin_compile::model::{ fix_filename };
 use dauphin_interp_common::common::{ cbor_serialize };
-use crate::lexer::Lexer;
-use crate::parser::{ Parser, ParseError };
-use crate::resolver::common_resolver;
-use crate::generate::generate;
-use super::Config;
+use dauphin_compile::lexer::{ Lexer };
+use dauphin_compile::parser::{ Parser, ParseError };
+use dauphin_compile::resolver::common_resolver;
+use dauphin_compile::generate::generate;
+use dauphin_compile_common::cli::Config;
+use dauphin_compile_common::model::CompilerLink;
 use serde_cbor::Value as CborValue;
 use serde_cbor::to_writer;
+
+pub fn interpreter<'a>(interpret_linker: &'a InterpreterLink, config: &Config, name: &str) -> Result<Box<dyn InterpretInstance<'a> + 'a>,String> {
+    if let Some(instrs) = interpret_linker.get_instructions(name)? {
+        if config.get_debug_run() {
+            return Ok(Box::new(DebugInterpretInstance::new(interpret_linker,&instrs,name)?));
+        }
+    }
+    Ok(Box::new(StandardInterpretInstance::new(interpret_linker,name)?))
+}
 
 fn bomb<A,E,T>(action: T, x: Result<A,E>) -> A where T: Fn() -> String, E: Display {
     match x {

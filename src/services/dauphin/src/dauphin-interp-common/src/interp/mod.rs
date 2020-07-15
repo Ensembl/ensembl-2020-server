@@ -16,6 +16,8 @@
 
 mod context;
 mod interplibregister;
+mod misc;
+mod opcodemapping;
 mod stream;
 
 mod values {
@@ -23,6 +25,10 @@ mod values {
     pub mod value;
     pub mod registers;
 }
+
+mod command;
+pub use self::command::CommandTypeId;
+
 pub use self::context::{ InterpContext, PayloadFactory };
 pub use self::values::value::{
     to_index, InterpValue, InterpNatural, InterpValueNumbers, InterpValueIndexes, InterpValueBoolean, InterpValueStrings, InterpValueBytes,
@@ -32,3 +38,5 @@ pub use self::values::supercow::{ SuperCow, SuperCowCommit };
 pub use self::values::registers::RegisterFile;
 pub use self::interplibregister::InterpLibRegister;
 pub use self::stream::{ Stream, StreamContents, StreamFactory };
+pub use self::misc::CommandSetVerifier;
+pub use self::opcodemapping::OpcodeMapping;

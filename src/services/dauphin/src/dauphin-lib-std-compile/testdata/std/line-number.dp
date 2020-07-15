@@ -1,0 +1,10 @@
+import "lib:std";
+use "std";
+/*
+
+this error is on line 10
+
+*/
+x := false;
+alienate(x);
+assert(x,true);

@@ -15,9 +15,9 @@
  */
 
 use std::process::exit;
-use super::Config;
+use dauphin_compile_common::cli::Config;
 use super::action::make_actions;
-use crate::clap::{ App, Arg };
+use clap::{ App, Arg };
 
 static APP_NAME : &str = "dauphin style compiler";
 static APP_VERSION : &str = "v0.0";

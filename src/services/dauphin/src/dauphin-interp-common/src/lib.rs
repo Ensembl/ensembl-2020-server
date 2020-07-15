@@ -16,18 +16,10 @@
 
 #[macro_use]
 pub mod common;
-
-pub mod commands {
-    pub mod std;
-}
 pub mod interp;
-
-pub use commands::std;
 
 #[macro_use]
 extern crate lazy_static;
-
-pub use crate::commands::std::make_std_interp;
 
 #[cfg(test)]
 pub mod test;

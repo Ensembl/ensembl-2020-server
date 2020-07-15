@@ -14,61 +14,15 @@
  *  limitations under the License.
  */
 
-#[macro_use]
-extern crate dauphin_interp_common;
-
-mod commands;
 mod cli;
-mod generate;
-mod interp;
-mod lexer;
-mod model;
-mod parser;
-mod resolver;
-mod typeinf;
+mod suitebuilder;
 
 #[cfg(test)]
-mod test {
-    pub mod cbor;
-    pub mod files;
-}
-
-#[macro_use]
-extern crate lazy_static;
-extern crate owning_ref;
-extern crate serde_cbor;
-extern crate crc;
-extern crate ini;
-extern crate clap;
-
-/* This to remove RLS unused warns */
+mod test;
 
 use crate::cli::{ config_from_options, run };
 
 fn main() {
     let options_config = config_from_options();
     run(&options_config);
-
-    /*
-    let config = xxx_test_config();
-    let mut linker = CompilerLink::new(make_librarysuite_builder(&config).expect("y")).expect("y2");
-    let resolver = common_resolver(&config,&linker).expect("setting up path resolver");
-    let mut lexer = Lexer::new(&resolver,"");
-    lexer.import("search:parser/parser-smoke.dp").expect("cannot load file");
-    let p = Parser::new(&mut lexer);
-    let (stmts,defstore) = p.parse().map_err(|e| e[0].message().to_string()).expect("error");
-    let mut out : Vec<String> = stmts.iter().map(|x| format!("{:?}",x)).collect();
-    out.push("".to_string()); /* For trailing \n */
-    let outdata = load_testdata(&["parser","parser-smoke.out"]).ok().unwrap();
-    assert_eq!(outdata,out.join("\n"));
-    let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("codegen");
-    let suite = make_librarysuite_builder(&config).expect("suite");
-    linker.add("main",&instrs,&config).expect("adding program");
-    let program = linker.serialize(&config).expect("serialize");
-    let mut interpret_linker = InterpreterLink::new(suite,&program).map_err(|x| format!("{} while linking",x)).expect("linking");
-    interpret_linker.add_payload("std","stream",StreamFactory::new()); 
-    let mut interp = interpreter(&interpret_linker,&config,"main").expect("interpreter");
-    while interp.more().expect("interpreting") {}
-    interp.finish();
-    */
 }

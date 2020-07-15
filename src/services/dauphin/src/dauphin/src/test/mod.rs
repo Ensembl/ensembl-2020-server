@@ -15,7 +15,11 @@
  */
 
 mod cbor;
+mod commands;
+mod config;
 mod files;
 
 pub use cbor::{ hexdump, cbor_cmp };
+pub use commands::{ FakeDeserializer, FakeInterpCommand, fake_command, fake_trigger };
+pub use config::{ xxx_test_config };
 pub use files::{ load_testdata };
