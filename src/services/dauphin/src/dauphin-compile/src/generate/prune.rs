@@ -53,19 +53,3 @@ pub fn prune(context: &mut GenContext) {
     }
     context.phase_finished();
 }
-
-#[cfg(test)]
-mod test {
-    use crate::test::{ xxx_test_config, compile };
-
-    // XXX test pruning, eg fewer lines
-    #[test]
-    fn prune_smoke() {
-        let mut config = xxx_test_config();
-        let strings = compile(&config,"search:codegen/linearize-refsquare").expect("a");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        assert_eq!(vec!["[[0], [2], [0], [4]]", "[[0], [2], [9, 9, 9], [9, 9, 9]]", "[0, 0, 0]", "[[0], [2], [8, 9, 9], [9, 9, 9]]"],strings);
-    }
-}

@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 
-use dauphin_compile_common::command::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
-use dauphin_compile_common::model::{ CompLibRegister, Instruction, InstructionType, PreImageContext };
+use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
+use dauphin_compile::model::{ CompLibRegister, Instruction, InstructionType, PreImageContext };
 use dauphin_interp_common::common::{ Register, InterpCommand, CommandSetId, RegisterSignature, Identifier };
 use serde_cbor::Value as CborValue;
 use super::numops::{ library_numops_commands };

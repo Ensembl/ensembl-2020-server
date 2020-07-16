@@ -20,8 +20,8 @@ use super::gencontext::GenContext;
 use super::compilerun::compile_run;
 use crate::resolver::Resolver;
 use crate::model::{ DefStore, fix_incoming_filename };
-use dauphin_compile_common::cli::Config;
-use dauphin_compile_common::model::{ InstructionType, Instruction, LexerPosition, CompilerLink };
+use crate::cli::Config;
+use crate::model::{ InstructionType, Instruction, LexerPosition, CompilerLink };
 
 fn format_line(line: &str, time: Option<f64>) -> String {
     let time = if let Some(time) = time {
@@ -148,49 +148,4 @@ pub fn pauses(compiler_link: &CompilerLink, resolver: &Resolver, defstore: &DefS
         write(filename.clone(),instr_profile.join("\n")).map_err(|e| format!("Could not write {}: {}",filename,e))?;
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::lexer::Lexer;
-    use crate::resolver::common_resolver;
-    use crate::parser::{ Parser };
-    use crate::test::{ xxx_test_config, make_compiler_suite };
-    use dauphin_compile_common::model::CompilerLink;
-    use crate::generate::generate;
-
-    fn pause_check(filename: &str) -> bool {
-        let mut config = xxx_test_config();
-        config.set_generate_debug(false);
-        config.set_opt_seq("pcpmuedpdpa"); /* no r to avoid re-ordering */
-        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import(&format!("search:codegen/{}",filename)).expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let mut seen_force_pause = false;
-        for instr in &instrs {
-            if seen_force_pause {
-                print!("AFTER {:?}",instr);
-                return if let InstructionType::Pause(_) = &instr.itype {
-                    true
-                } else {
-                    false
-                };
-            }
-            if let InstructionType::Pause(true) = &instr.itype {
-                seen_force_pause = true;
-            }
-        }
-        false
-    }
-
-    #[test]
-    fn pause() {
-        assert!(pause_check("pause"));
-        assert!(!pause_check("no-pause"));
-    }
 }

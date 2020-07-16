@@ -17,7 +17,7 @@
 use std::collections::{ HashMap, HashSet };
 use dauphin_interp_common::common::Register;
 use super::gencontext::GenContext;
-use dauphin_compile_common::model::Instruction;
+use crate::model::Instruction;
 
 fn find_first_last_use(context: &mut GenContext) -> HashMap<Register,(usize,usize)> {
     /* find first and last use of every register */
@@ -81,21 +81,4 @@ pub fn assign_regs(context: &mut GenContext) {
         context.add(Instruction::new(instr.itype.clone(),new_regs));
     }
     context.phase_finished();
-}
-
-#[cfg(test)]
-mod test {
-    use crate::test::{ compile, xxx_test_config };
-
-    // XXX test pruning, eg fewer lines
-    #[test]
-    fn assign_regs_smoke() {
-        let mut config = xxx_test_config();
-        config.set_opt_seq("pca");
-        let strings = compile(&config,"search:codegen/linearize-refsquare").expect("a");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        assert_eq!(vec!["[[0], [2], [0], [4]]", "[[0], [2], [9, 9, 9], [9, 9, 9]]", "[0, 0, 0]", "[[0], [2], [8, 9, 9], [9, 9, 9]]"],strings);
-    }
 }

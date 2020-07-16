@@ -86,7 +86,7 @@ mod test {
     use crate::model::{ DefStore, make_full_type };
     use crate::typeinf::{ MemberType };
     use dauphin_interp_common::common::{ FullType, MemberMode };
-    use dauphin_compile_common::model::CompilerLink;
+    use crate::model::CompilerLink;
 
     // XXX move to common test utils
     fn make_type(defstore: &DefStore, name: &str) -> MemberType {
@@ -129,24 +129,6 @@ mod test {
         assert_eq!("*<0>/R",format_pvec(&regs));
         let regs = make_full_type(&defstore,MemberMode::In,&make_type(&defstore,"vec(offset_smoke::etest3)")).expect("b");
         assert_eq!(load_cmp("offset-smoke.out"),format_pvec(&regs));
-    }
-
-    #[test]
-    fn offset_enums() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/offset-enums").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let regs = make_full_type(&defstore,MemberMode::In,&make_type(&defstore,"offset_enums::stest")).expect("b");
-        assert_eq!(load_cmp("offset-enums.out"),format_pvec(&regs));
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        for s in &strings {
-            print!("{}\n",s);
-        }
     }
 
     #[test]

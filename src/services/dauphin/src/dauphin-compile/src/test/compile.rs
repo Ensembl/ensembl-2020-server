@@ -17,21 +17,21 @@
 use std::time::{ SystemTime, Duration };
 use std::collections::HashMap;
 use std::rc::Rc;
-use dauphin_compile_common::cli::Config;
-use dauphin_compile_common::model::{ CommandCompileSuite, CompilerLink, Instruction };
-use dauphin_interp::interp::{ CommandInterpretSuite, InterpreterLink };
-use dauphin_interp::{ make_core_interp };
-use dauphin_lib_std_interp::{ make_std_interp, Stream, StreamFactory };
+use crate::cli::Config;
+use crate::model::{ CommandCompileSuite, CompilerLink, Instruction };
+use dauphin_interp_common::interp::{ CommandInterpretSuite, InterpreterLink };
+use dauphin_interp_common::{ make_core_interp };
+use dauphin_lib_std_interp::{ make_std_interp };
 use dauphin_interp_common::interp::{ InterpContext, InterpValue };
+use dauphin_lib_std_interp::stream::{ StreamFactory, Stream };
 use dauphin_interp_common::common::{ Register, cbor_serialize };
-use crate::commands::{ make_core, make_buildtime };
-use dauphin_lib_std_compile::make_std;
+use crate::commands::{ make_core };
 use crate::generate::generate;
 use crate::resolver::common_resolver;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::test::cbor::hexdump;
-use dauphin_interp::interp::{ StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };
+use dauphin_interp_common::interp::{ StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };
 
 pub fn interpreter<'a>(interpret_linker: &'a InterpreterLink, config: &Config, name: &str) -> Result<Box<dyn InterpretInstance<'a> + 'a>,String> {
     if let Some(instrs) = interpret_linker.get_instructions(name)? {
@@ -103,8 +103,6 @@ pub fn make_interpret_suite() -> Result<CommandInterpretSuite,String> {
 pub fn make_compiler_suite(config: &Config) -> Result<CommandCompileSuite,String> {
     let mut suite = CommandCompileSuite::new();
     suite.register(make_core()?)?;
-    suite.register(make_std()?)?;
-    suite.register(make_buildtime()?)?;
     Ok(suite)
 }
 

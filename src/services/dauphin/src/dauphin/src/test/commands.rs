@@ -18,14 +18,14 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use dauphin_interp_common::common::{ CommandDeserializer, InterpCommand, Identifier };
 use dauphin_interp_common::interp::{ InterpContext };
-use dauphin_compile_common::model::{ Instruction };
-use dauphin_compile_common::command::{ Command, CommandSchema, CommandTrigger, CommandType };
+use dauphin_compile::model::{ Instruction };
+use dauphin_compile::model::{ Command, CommandSchema, CommandTrigger, CommandType };
 use serde_cbor::Value as CborValue;
 
 pub struct FakeInterpCommand(Rc<RefCell<u32>>,u32);
 
 impl InterpCommand for FakeInterpCommand {
-    fn execute(&self, context: &mut InterpContext) -> Result<(),String> {
+    fn execute(&self, _context: &mut InterpContext) -> Result<(),String> {
         *self.0.borrow_mut() = self.1;
         Ok(())
     }
@@ -35,7 +35,7 @@ pub struct FakeDeserializer(pub Rc<RefCell<u32>>,pub u32);
 
 impl CommandDeserializer for FakeDeserializer {
     fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String> { Ok(Some((self.1,0))) }
-    fn deserialize(&self, opcode: u32, value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
+    fn deserialize(&self, _opcode: u32, _value: &[&CborValue]) -> Result<Box<dyn InterpCommand>,String> {
         Ok(Box::new(FakeInterpCommand(self.0.clone(),self.1)))
     }
 }

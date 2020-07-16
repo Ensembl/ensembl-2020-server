@@ -15,8 +15,8 @@
  */
 
 use std::rc::Rc;
-use dauphin_compile_common::cli::Config;
-use dauphin_compile_common::model::ResolveFile;
+use crate::cli::Config;
+use crate::model::ResolveFile;
 use std::collections::HashMap;
 use crate::lexer::CharSource;
 

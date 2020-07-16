@@ -16,6 +16,12 @@
 
 mod cbor;
 mod files;
+mod config;
+mod compile;
+mod commands;
 
 pub use cbor::{ hexdump, cbor_cmp };
 pub use files::{ load_testdata };
+pub use compile::{ make_compiler_suite, mini_interp_run, make_interpret_suite };
+pub use commands::{ FakeDeserializer, FakeInterpCommand };
+pub use config::{ xxx_test_config };

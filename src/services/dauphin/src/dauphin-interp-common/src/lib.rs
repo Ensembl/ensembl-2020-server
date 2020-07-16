@@ -15,11 +15,20 @@
  */
 
 #[macro_use]
+extern crate lazy_static;
+
+#[macro_use]
 pub mod common;
 pub mod interp;
 
-#[macro_use]
-extern crate lazy_static;
-
 #[cfg(test)]
 pub mod test;
+
+pub mod core {
+    pub mod core;
+    mod consts;
+    mod commontype;
+    pub use self::core::make_core_interp;
+}
+
+pub use self::core::make_core_interp;

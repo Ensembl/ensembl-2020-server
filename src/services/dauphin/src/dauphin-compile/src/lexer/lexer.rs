@@ -15,10 +15,8 @@
  */
 
 use std::collections::HashSet;
-use std::fmt;
-use std::rc::Rc;
 use super::filelexer::{ FileLexer };
-use dauphin_compile_common::model::{ FileContentsHandle, LexerPosition };
+use crate::model::{ LexerPosition };
 use crate::resolver::Resolver;
 use super::inlinetokens::InlineTokens;
 use super::token::Token;
@@ -135,7 +133,7 @@ mod test {
     use super::*;
     use crate::resolver::common_resolver;
     use crate::test::{ xxx_test_config, make_compiler_suite, load_testdata };
-    use dauphin_compile_common::model::CompilerLink;
+    use crate::model::CompilerLink;
 
     #[test]
     fn lexer_smoke() {

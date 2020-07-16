@@ -1,0 +1,37 @@
+/* a fake std to avoid circular dependencies */
+
+module "std";
+
+proc assign(stomp mask _A, _A);
+inline ":=" assign left 14;
+
+func eq(_A,_A) becomes boolean;
+inline "==" eq left 5;
+
+func gt(number,number) becomes boolean;
+inline ">" gt left 6;
+
+func lt(number,number) becomes boolean;
+inline "<" lt left 6;
+
+func plus(number,number) becomes number;
+inline "+" plus left 4;
+
+proc incr(mask number, number);
+inline "(+=)" incr left 14;
+
+func len(vec(_)) becomes number;
+
+proc assert(boolean,boolean);
+
+func extend(_A,_A) becomes _A;
+inline "(+)" extend left 14;
+
+proc alienate(mask _A);
+
+proc print(string);
+
+func format(_) becomes string;
+
+expr push(list,item) [list[] (+) item];
+expr append(list,items) [list[] (+) items[]];

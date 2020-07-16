@@ -34,3 +34,7 @@ mod useearliest;
 pub use self::gencontext::GenContext;
 pub use self::generate::generate;
 
+// For testing in another crate
+pub use self::codegen::generate_code;
+pub use self::simplify::simplify;
+pub use self::call::call;

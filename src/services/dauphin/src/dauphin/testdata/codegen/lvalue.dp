@@ -1,0 +1,8 @@
+import "lib:std";
+use "std";
+
+y := [1,2,3];
+y[@==2] (+=) 30;
+print(format(y[@==0]));
+print(format(y[@==1]));
+print(format(y[@==2]));

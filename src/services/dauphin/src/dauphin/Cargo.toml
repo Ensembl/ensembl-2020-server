@@ -12,10 +12,9 @@ serde_cbor="*"
 clap="*"
 
 dauphin_interp_common = { path = "../dauphin-interp-common" }
-dauphin_compile_common = { path = "../dauphin-compile-common" }
 
 dauphin_lib_std_compile = { path = "../dauphin-lib-std-compile" }
 dauphin_lib_std_interp = { path = "../dauphin-lib-std-interp" }
+dauphin_lib_buildtime_compile = { path = "../dauphin-lib-buildtime-compile" }
 
-dauphin_interp = { path = "../dauphin-interp" }
 dauphin_compile = { path = "../dauphin-compile" }

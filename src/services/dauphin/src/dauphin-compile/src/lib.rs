@@ -17,22 +17,29 @@
 #[macro_use]
 extern crate dauphin_interp_common;
 
+pub mod cli {
+    pub mod config;
+    pub use config::Config;
+}
+
+pub mod util {
+    pub mod vectorcopy;
+    pub use vectorcopy::{ 
+        vector_append, vector_append_lengths, vector_append_offsets, vector_update_lengths, vector_update_offsets, vector_push_instrs, vector_copy,
+        vector_register_copy_instrs
+    };
+}
+
 pub mod commands;
 pub mod generate;
 pub mod lexer;
 pub mod model;
 pub mod parser;
 pub mod resolver;
-mod typeinf;
+pub mod typeinf;
 
 #[cfg(test)]
 mod test;
 
 #[macro_use]
 extern crate lazy_static;
-extern crate owning_ref;
-extern crate serde_cbor;
-extern crate crc;
-extern crate ini;
-extern crate clap;
-

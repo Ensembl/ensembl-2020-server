@@ -17,8 +17,8 @@
 use std::collections::HashMap;
 use std::fs::write;
 use std::time::{ SystemTime, Duration };
-use dauphin_compile_common::cli::Config;
-use dauphin_compile_common::model::{ Instruction, InstructionType, CompilerLink };
+use crate::cli::Config;
+use crate::model::{ Instruction, InstructionType, CompilerLink };
 use super::{ GenContext };
 use crate::model::DefStore;
 use crate::resolver::Resolver;
@@ -120,7 +120,7 @@ impl GenerateMenu {
         opt_steps.insert("a".to_string(),GenerateStep::new("assign-regs", |step| { assign_regs(step.context); Ok(()) }));
         opt_steps.insert("m".to_string(),GenerateStep::new("peephole", |step| { peephole_nil_append(step.context)?; peephole_linenum_remove(step.context) }));
         opt_steps.insert("r".to_string(),GenerateStep::new("retreat", |step| { retreat(step.context) }));
-        post_steps.push(GenerateStep::new("pauses",|step| { pauses(step.linker,step.resolver,step.defstore,step.context,step.config) }));
+        post_steps.push(GenerateStep::new("pauses", |step| { pauses(step.linker,step.resolver,step.defstore,step.context,step.config) }));
         GenerateMenu { gen_steps, opt_steps, post_steps }
     }
 

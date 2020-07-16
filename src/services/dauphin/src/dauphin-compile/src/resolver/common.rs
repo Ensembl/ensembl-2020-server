@@ -16,13 +16,13 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use dauphin_compile_common::cli::Config;
+use crate::cli::Config;
 use crate::lexer::StringCharSource;
 use super::core::{ DocumentResolver, Resolver, ResolverQuery, ResolverResult };
 use super::preamble::PREAMBLE;
 use super::file::FileResolver;
 use super::search::SearchResolver;
-use dauphin_compile_common::model::CompilerLink;
+use crate::model::CompilerLink;
 
 pub struct DataResolver {}
 

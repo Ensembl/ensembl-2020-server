@@ -28,5 +28,5 @@ pub use parser::Parser;
 
 pub use parsedecl::parse_signature;
 
-#[cfg(test)]
+// For nosey tests in other crates
 pub use parsedecl::{ parse_type, parse_typesig };

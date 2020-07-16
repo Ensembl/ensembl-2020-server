@@ -8,10 +8,8 @@ edition = "2018"
 
 [dependencies]
 dauphin_interp_common = { path = "../dauphin-interp-common" }
-dauphin_compile_common = { path = "../dauphin-compile-common" }
+dauphin_compile = { path = "../dauphin-compile" }
 dauphin_lib_std_interp = { path = "../dauphin-lib-std-interp" }
 serde_cbor = "*"
 
-[dev-dependencies]
-dauphin_compile = { path = "../dauphin-compile" }
-dauphin_interp = { path = "../dauphin-interp" }
+

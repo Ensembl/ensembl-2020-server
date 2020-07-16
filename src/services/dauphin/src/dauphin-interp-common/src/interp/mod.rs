@@ -18,6 +18,11 @@ mod context;
 mod interplibregister;
 mod misc;
 mod opcodemapping;
+mod deserializer;
+mod interpretsuite;
+mod interplink;
+mod interpret;
+
 
 mod values {
     pub mod supercow;
@@ -38,3 +43,7 @@ pub use self::values::registers::RegisterFile;
 pub use self::interplibregister::InterpLibRegister;
 pub use self::misc::CommandSetVerifier;
 pub use self::opcodemapping::OpcodeMapping;
+pub use self::deserializer::Deserializer;
+pub use self::interpretsuite::CommandInterpretSuite;
+pub use self::interplink::InterpreterLink;
+pub use self::interpret::{ StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };

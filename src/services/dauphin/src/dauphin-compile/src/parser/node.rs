@@ -21,7 +21,7 @@ use crate::model::{ InlineMode, IdentifierPattern };
 use crate::lexer::Lexer;
 use crate::typeinf::{ MemberType, SignatureConstraint };
 use dauphin_interp_common::common::Identifier;
-use dauphin_compile_common::model::LexerPosition;
+use crate::model::LexerPosition;
 
 #[derive(PartialEq,Clone)]
 pub enum Expression {

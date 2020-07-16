@@ -9,3 +9,8 @@ edition = "2018"
 [dependencies]
 serde_cbor="*"
 lazy_static="*"
+
+[dev-dependencies]
+dauphin_compile = { path = "../dauphin-compile" }
+dauphin_lib_std_interp = { path = "../dauphin-lib-std-interp" }
+dauphin_lib_std_compile = { path = "../dauphin-lib-std-compile" }

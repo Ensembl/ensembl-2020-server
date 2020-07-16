@@ -16,7 +16,7 @@
 
 use std::collections::{ HashSet, HashMap };
 use super::gencontext::GenContext;
-use dauphin_compile_common::model::{ InstructionType, Instruction };
+use crate::model::{ InstructionType, Instruction };
 use dauphin_interp_common::common::Register;
 
 /* Relabel instead of copying from sources which are never reused. Recurse this until no change */
@@ -61,19 +61,4 @@ pub fn reuse_dead_once(context: &mut GenContext) -> bool {
 
 pub fn reuse_dead(context: &mut GenContext) {
     while reuse_dead_once(context) {}
-}
-
-#[cfg(test)]
-mod test {
-    use crate::test::{ xxx_test_config, compile };
-
-    #[test]
-    fn reuse_dead_smoke() {
-        let config = xxx_test_config();
-        let strings = compile(&config,"search:codegen/linearize-refsquare").expect("a");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        assert_eq!(vec!["[[0], [2], [0], [4]]","[[0], [2], [9, 9, 9], [9, 9, 9]]","[0, 0, 0]","[[0], [2], [8, 9, 9], [9, 9, 9]]"],strings);
-    }
 }

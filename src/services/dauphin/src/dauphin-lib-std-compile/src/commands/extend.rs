@@ -14,10 +14,10 @@
  *  limitations under the License.
  */
 
-use dauphin_compile_common::command::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
-use dauphin_compile_common::model::{ Instruction, InstructionType, PreImageContext, TimeTrial };
+use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
+use dauphin_compile::model::{ Instruction, InstructionType, PreImageContext, TimeTrial };
 use dauphin_interp_common::common::{ Register, InterpCommand, RegisterSignature };
-use dauphin_compile_common::util::{ vector_push_instrs, vector_append, vector_append_offsets, vector_register_copy_instrs, vector_append_lengths };
+use dauphin_compile::util::{ vector_push_instrs, vector_append, vector_append_offsets, vector_register_copy_instrs, vector_append_lengths };
 use serde_cbor::Value as CborValue;
 use super::library::std;
 
@@ -85,58 +85,5 @@ impl Command for ExtendCommand {
 
     fn preimage(&self, context: &mut PreImageContext, _ic: Option<Box<dyn InterpCommand>>) -> Result<PreImageOutcome,String> {
         Ok(PreImageOutcome::Replace(extend(context,&self.0,&self.1)?))
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::test::{ mini_interp, xxx_test_config, make_compiler_suite };
-    use dauphin_compile_common::model::{ CompilerLink, Instruction, InstructionSuperType, InstructionType };
-    use dauphin_compile::generate::generate;
-    use dauphin_compile::parser::Parser;
-    use dauphin_compile::lexer::Lexer;
-    use dauphin_compile::resolver::common_resolver;
-
-    #[test]
-    fn extend_smoke() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:std/extend").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let mut prev : Option<Instruction> = None;
-        for instr in &instrs {
-            if let InstructionType::Call(id,_,_,_) = &instr.itype {
-                if id.name() == "extend" {
-                    if let Some(prev) = prev {
-                        assert_ne!(InstructionSuperType::Pause,prev.itype.supertype().expect("a"));
-                    }
-                }
-            }
-            prev = Some(instr.clone());
-        }
-        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-    }
-
-    #[test]
-    fn vector_append() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:std/vector-append").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        for s in &strings {
-            print!("{}\n",s);
-        }
     }
 }

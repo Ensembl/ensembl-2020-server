@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 
 use super::gencontext::GenContext;
-use dauphin_compile_common::model::{ Instruction, InstructionType, DFloat };
+use crate::model::{ Instruction, InstructionType, DFloat };
 use crate::parser::{ Expression, Statement };
 use dauphin_interp_common::common::{ Register, Identifier, BaseType, MemberMode };
 use crate::model::DefStore;
@@ -352,12 +352,9 @@ mod test {
     use super::*;
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
-    //use crate::interp::{ xxx_test_config, make_compiler_suite, mini_interp };
-    use dauphin_compile_common::model::CompilerLink;
+    use crate::model::CompilerLink;
     use crate::parser::Parser;
-    //use crate::test::files::load_testdata;
-    use crate::generate::generate;
-    use crate::test::{ xxx_test_config, make_compiler_suite, load_testdata, compile, comp_interpret };
+    use crate::test::{ xxx_test_config, make_compiler_suite, load_testdata };
 
     fn run_pass(filename: &str) -> Result<(),Vec<String>> {
         let config = xxx_test_config();
@@ -392,50 +389,5 @@ mod test {
     fn codegen_lvalue_checks() {
         run_pass("typepass-reassignok").expect("A");
         run_pass("typepass-reassignbad").expect_err("B");
-    }
-
-    #[test]
-    fn lvalue_regression() {
-        let config = xxx_test_config();
-        let strings = compile(&config,"search:codegen/lvalue").expect("a");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        assert_eq!(vec!["1","2","33"],strings);
-    }
-    
-    #[test]
-    fn line_number_smoke() {
-        let mut config = xxx_test_config();
-        config.set_opt_seq("");
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:std/line-number").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        linker.add("main",&instrs,&config).expect("a");
-        let message = comp_interpret(&mut linker,&config,"main").map(|_| ()).expect_err("x");
-        print!("{}\n",message);
-        assert!(message.ends_with("std/line-number:10"));
-    }
-
-    #[test]
-    fn no_line_number_smoke() {
-        let mut config = xxx_test_config();
-        config.set_generate_debug(false);
-        config.set_opt_seq("");
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:std/line-number").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        linker.add("main",&instrs,&config).expect("a");
-        let message = comp_interpret(&mut linker,&config,"main").map(|_| ()).expect_err("x");
-        print!("{}\n",message);
-        assert!(!message.contains(" at "));
     }
 }

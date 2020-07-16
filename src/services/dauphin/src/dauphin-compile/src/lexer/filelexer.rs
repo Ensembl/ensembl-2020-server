@@ -20,7 +20,7 @@ use super::charsource::{ CharSource, LocatedCharSource };
 use super::inlinetokens::InlineTokens;
 use super::getting::LexerGetting;
 use super::token::Token;
-use dauphin_compile_common::model::{ LexerPosition, FileContentsHandle };
+use crate::model::{ LexerPosition, FileContentsHandle };
 use crate::resolver::Resolver;
 
 pub struct FileLexer {
@@ -98,7 +98,7 @@ mod test {
     use std::rc::Rc;
     use crate::resolver::common_resolver;
     use crate::test::{ xxx_test_config, make_compiler_suite, load_testdata };
-    use dauphin_compile_common::model::CompilerLink;
+    use crate::model::CompilerLink;
 
     fn add_token(out: &mut String, token: &(Token,LexerPosition)) {
         out.push_str(&format!("{:?} {}\n",token.0,token.1));

@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use dauphin_interp_common::common::{ Register };
 use super::gencontext::GenContext;
-use dauphin_compile_common::model::{ Instruction, InstructionType };
+use crate::model::{ Instruction, InstructionType };
 
 struct Aliases(HashMap<Register,Register>);
 
@@ -47,39 +47,4 @@ pub fn remove_aliases(context: &mut GenContext) {
         }
     }
     context.phase_finished();
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::lexer::Lexer;
-    use crate::resolver::common_resolver;
-    use crate::parser::{ Parser };
-    use crate::generate::generate;
-    use crate::test::{ mini_interp, xxx_test_config, make_compiler_suite };
-    use dauphin_compile_common::model::CompilerLink;
-
-    #[test]
-    fn dealias_smoke() {
-        // XXX check all aliases gone
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let (values,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        print!("{:?}\n",values);
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        for instr in &instrs {
-            if let InstructionType::Alias = instr.itype {
-                assert!(false);
-            }
-        }
-        assert_eq!(vec!["[[0], [2], [0], [4]]", "[[0], [2], [9, 9, 9], [9, 9, 9]]", "[0, 0, 0]", "[[0], [2], [8, 9, 9], [9, 9, 9]]"],strings);
-    }
 }

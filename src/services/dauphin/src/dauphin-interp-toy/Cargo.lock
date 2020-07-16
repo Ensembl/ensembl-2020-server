@@ -4,17 +4,8 @@
 name = "dauphin-interp-toy"
 version = "0.1.0"
 dependencies = [
- "dauphin_interp",
  "dauphin_interp_common",
  "dauphin_lib_std_interp",
- "serde_cbor",
-]
-
-[[package]]
-name = "dauphin_interp"
-version = "0.1.0"
-dependencies = [
- "dauphin_interp_common",
  "serde_cbor",
 ]
 

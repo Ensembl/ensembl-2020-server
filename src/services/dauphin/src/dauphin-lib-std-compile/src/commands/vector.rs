@@ -14,9 +14,9 @@
  *  limitations under the License.
  */
 
-use dauphin_compile_common::cli::Config;
-use dauphin_compile_common::command::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
-use dauphin_compile_common::model::{
+use dauphin_compile::cli::Config;
+use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
+use dauphin_compile::model::{
     CompLibRegister, Instruction, InstructionType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial, trial_signature,
     trial_write
 };

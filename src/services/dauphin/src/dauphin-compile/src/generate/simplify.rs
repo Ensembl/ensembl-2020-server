@@ -15,7 +15,7 @@
  */
 
 use std::collections::HashMap;
-use dauphin_compile_common::model::{ Instruction, InstructionType, DFloat };
+use crate::model::{ Instruction, InstructionType, DFloat };
 use crate::model::{ DefStore, StructDef, EnumDef };
 use crate::typeinf::{ ContainerType, MemberType };
 use super::gencontext::GenContext;
@@ -347,116 +347,4 @@ pub fn simplify(defstore: &DefStore, context: &mut GenContext) -> Result<(),Stri
         extend_one(defstore,context,name)?;
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::super::call::call;
-    use super::super::simplify::simplify;
-    use crate::lexer::Lexer;
-    use crate::resolver::common_resolver;
-    use crate::parser::{ Parser };
-    use crate::generate::codegen::generate_code;
-    use crate::generate::generate;
-    use crate::test::{ mini_interp, xxx_test_config, make_compiler_suite, load_testdata };
-    use dauphin_compile_common::model::CompilerLink;
-
-    // XXX common
-    fn compare_instrs(a: &Vec<String>,b: &Vec<String>) {
-        print!("compare:\nLHS\n{:?}\n\nRHS\n{:?}\n",a.join("\n"),b.join("\n"));
-        let mut a_iter = a.iter();
-        for (i,b) in b.iter().enumerate() {
-            if let Some(a) = a_iter.next() {
-                let a = a.trim();
-                let b = b.trim();
-                assert_eq!(a,b,"mismatch {:?} {:?} line {}",a,b,i);
-            } else if b != "" {
-                panic!("premature eof lhs");
-            }
-        }
-        if a_iter.next().is_some() {
-            panic!("premature eof rhs");
-        }
-    }
-
-    #[test]
-    fn simplify_smoke() {
-        let config = xxx_test_config();
-        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/simplify-smoke").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        let outdata = load_testdata(&["codegen","simplify-smoke.out"]).ok().unwrap();
-        let cmds : Vec<String> = context.get_instructions().iter().map(|e| format!("{:?}",e)).collect();
-        compare_instrs(&cmds,&outdata.split("\n").map(|x| x.to_string()).collect());
-    }
-
-    #[test]
-    fn simplify_enum_nest() {
-        let config = xxx_test_config();
-        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/simplify-enum-nest").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-    }
-
-    #[test]
-    fn simplify_enum_lvalue() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/enum-lvalue").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        for s in &strings {
-            print!("{}\n",s);
-        }  
-    }
-
-    #[test]
-    fn simplify_struct_lvalue() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/struct-lvalue").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-    }
-
-    #[test]
-    fn simplify_both_lvalue() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/both-lvalue").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        for s in &strings {
-            print!("{}\n",s);
-        }  
-    }
 }

@@ -14,17 +14,16 @@
  *  limitations under the License.
  */
 
-use std::rc::Rc;
-use dauphin_compile_common::cli::Config;
-use dauphin_compile_common::command::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
-use dauphin_compile_common::model::{
+use crate::cli::Config;
+use crate::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
+use crate::model::{
     CompLibRegister, Instruction, InstructionType, InstructionSuperType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial
 };
-use dauphin_interp_common::common::{ cbor_make_map, cbor_map, Register, InterpCommand, CommandDeserializer, arbitrate_type, CommandSetId };
-use dauphin_interp_common::interp::{ InterpLibRegister, InterpValue, InterpContext };
+use dauphin_interp_common::common::{ cbor_make_map, cbor_map, Register, CommandSetId };
+use dauphin_interp_common::interp::{ InterpValue, InterpContext };
 use serde_cbor::Value as CborValue;
 use super::consts::{ const_commands };
-use dauphin_interp::{ make_core_interp };
+use dauphin_interp_common::{ make_core_interp };
 
 struct NilTimeTrial();
 
@@ -158,20 +157,6 @@ impl TimeTrialCommandType for AppendTimeTrial {
 type_instr2!(AppendCommandType,AppendCommand,InstructionSuperType::Append,AppendTimeTrial);
 
 pub struct AppendCommand(Register,Register,Option<TimeTrial>);
-
-fn append_typed<T>(dst: &mut Vec<T>, src: &Vec<T>) where T: Clone {
-    dst.append(&mut src.clone());
-}
-
-fn append(dst: InterpValue, src: &Rc<InterpValue>) -> Result<InterpValue,String> {
-    if let Some(natural) = arbitrate_type(&dst,src,false) {
-        Ok(polymorphic!(dst,[src],natural,(|d,s| {
-            append_typed(d,s)
-        })))
-    } else {
-        Ok(dst)
-    }
-}
 
 impl Command for AppendCommand {
     fn serialize(&self) -> Result<Option<Vec<CborValue>>,String> {
@@ -446,25 +431,6 @@ impl Command for NumEqCommand {
     }    
 }
 
-fn filter_typed<T>(dst: &mut Vec<T>, src: &[T], filter: &[bool]) where T: Clone {
-    let filter_len = filter.len();
-    for (i,value) in src.iter().enumerate() {
-        if filter[i%filter_len] {
-            dst.push(value.clone());
-        }
-    }
-}
-
-pub fn filter(src: &Rc<InterpValue>, filter_val: &[bool]) -> Result<InterpValue,String> {
-    if let Some(natural) = arbitrate_type(&InterpValue::Empty,src,true) {
-        Ok(dauphin_interp_common::polymorphic!(InterpValue::Empty,[src],natural,(|d,s| {
-            filter_typed(d,s,filter_val)
-        })))
-    } else {
-        Ok(InterpValue::Empty)
-    }
-}
-
 struct FilterTimeTrial();
 
 impl TimeTrialCommandType for FilterTimeTrial {
@@ -639,27 +605,6 @@ impl Command for AtCommand {
         } else {
             1.
         }
-    }
-}
-
-fn seq_filter_typed<T>(dst: &mut Vec<T>, src: &[T], starts: &[usize], lens: &[usize]) where T: Clone {
-    let starts_len = starts.len();
-    let lens_len = lens.len();
-    let src_len = src.len();
-    for i in 0..starts_len {
-        for j in 0..lens[i%lens_len] {
-            dst.push(src[(starts[i]+j)%src_len].clone());
-        }
-    }
-}
-
-fn seq_filter(src: &Rc<InterpValue>, starts: &[usize], lens: &[usize]) -> Result<InterpValue,String> {
-    if let Some(natural) = arbitrate_type(&InterpValue::Empty,src,true) {
-        Ok(polymorphic!(InterpValue::Empty,[src],natural,(|d,s| {
-            seq_filter_typed(d,s,starts,lens)
-        })))
-    } else {
-        Ok(InterpValue::Empty)
     }
 }
 

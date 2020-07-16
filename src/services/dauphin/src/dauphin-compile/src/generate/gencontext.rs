@@ -16,7 +16,7 @@
 
 use std::fmt;
 use std::mem::swap;
-use dauphin_compile_common::model::{ Instruction, InstructionType, RegisterAllocator };
+use crate::model::{ Instruction, InstructionType, RegisterAllocator };
 use crate::model::DefStore;
 use crate::typeinf::{ ExpressionType, MemberType, TypeModel, Typing, get_constraint };
 use dauphin_interp_common::common::Register;

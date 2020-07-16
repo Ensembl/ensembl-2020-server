@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use super::gencontext::GenContext;
-use dauphin_compile_common::model::{ InstructionType, Instruction };
+use crate::model::{ InstructionType, Instruction };
 use dauphin_interp_common::common::Register;
 
 #[derive(Clone,Debug,PartialEq,Eq,Hash)]
@@ -210,38 +210,4 @@ pub fn reuse_regs(context: &mut GenContext) -> Result<(),String> {
     }
     context.phase_finished();
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use crate::lexer::Lexer;
-    use crate::resolver::common_resolver;
-    use crate::parser::{ Parser };
-    use crate::generate::generate;
-    use dauphin_compile_common::model::{ CompilerLink, InstructionType };
-    use crate::test::{ mini_interp, xxx_test_config, make_compiler_suite };
-
-    #[test]
-    fn reuse_regs_smoke() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/reuse-regs").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        print!("{:?}",instrs.iter().map(|x| format!("{:?}",x)).collect::<Vec<_>>().join(""));
-        let (_,strings) = mini_interp(&instrs,&mut linker,&config,"main").expect("x");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        let mut lt = 0;
-        for instr in instrs {
-            if let InstructionType::Call(id,_,_,_) = &instr.itype {
-                if id.name() == "lt" { lt += 1; }
-            }
-        }
-        assert_eq!(1,lt);
-    }
 }

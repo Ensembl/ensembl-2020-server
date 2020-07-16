@@ -16,9 +16,9 @@
 
 use super::gencontext::GenContext;
 use crate::resolver::Resolver;
-use dauphin_compile_common::cli::Config;
-use dauphin_compile_common::model::{ CompilerLink, DFloat, Instruction, InstructionType, PreImageContext };
-use dauphin_compile_common::command::PreImageOutcome;
+use crate::cli::Config;
+use crate::model::{ CompilerLink, DFloat, Instruction, InstructionType, PreImageContext };
+use crate::model::PreImageOutcome;
 use dauphin_interp_common::common::{ Register };
 use dauphin_interp_common::interp::{ InterpValue, numbers_to_indexes };
 
@@ -177,82 +177,4 @@ pub fn compile_run(compiler_link: &CompilerLink, resolver: &Resolver, context: &
     let mut pic = CompileRun::new(compiler_link,resolver,context,config,last)?;
     pic.preimage()?;
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use super::super::call::call;
-    use super::super::simplify::simplify;
-    use crate::lexer::Lexer;
-    use crate::resolver::common_resolver;
-    use crate::parser::{ Parser };
-    use crate::generate::prune::prune;
-    use crate::test::{ xxx_test_config, make_compiler_suite, mini_interp, compile };
-    use dauphin_compile_common::model::CompilerLink;
-    use super::super::codegen::generate_code;
-    use super::super::linearize::linearize;
-    use super::super::dealias::remove_aliases;
-
-    #[test]
-    fn runnums_smoke() {
-        let config = xxx_test_config();
-        let mut linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/linearize-refsquare").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        linearize(&mut context).expect("linearize");
-        remove_aliases(&mut context);
-        print!("{:?}",context);
-        compile_run(&linker,&resolver,&mut context,&config,false).expect("x");
-        prune(&mut context);
-        print!("RUN NUMS\n");
-        print!("{:?}",context);
-        let lines = format!("{:?}",context).as_bytes().iter().filter(|&&c| c == b'\n').count();
-        print!("{}\n",lines);
-        assert!(lines<350);
-        let (values,strings) = mini_interp(&mut context.get_instructions(),&mut linker,&config,"main").expect("x");
-        print!("{:?}\n",values);
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        assert_eq!(vec!["[[0], [2], [0], [4]]", "[[0], [2], [9, 9, 9], [9, 9, 9]]", "[0, 0, 0]", "[[0], [2], [8, 9, 9], [9, 9, 9]]"],strings);
-    }
-
-    #[test]
-    fn runnums2_smoke() {
-        let config = xxx_test_config();
-        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("a");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/runnums").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let mut context = generate_code(&defstore,&stmts,true).expect("codegen");
-        call(&mut context).expect("j");
-        simplify(&defstore,&mut context).expect("k");
-        linearize(&mut context).expect("linearize");
-        remove_aliases(&mut context);
-        print!("{:?}",context);
-        compile_run(&linker,&resolver,&mut context,&config,false).expect("x");
-        prune(&mut context);
-        print!("RUN NUMS\n");
-        print!("{:?}",context);
-        let lines = format!("{:?}",context).as_bytes().iter().filter(|&&c| c == b'\n').count();
-        print!("{}\n",lines);
-    }
-
-    #[test]
-    fn size_hint() {
-        let mut config = xxx_test_config();
-        config.set_generate_debug(false);
-        let strings = compile(&config,"search:codegen/size-hint").expect("a");
-        assert_eq!(vec!["\"hello world!\"", "1", "1", "3", "2", "2", "1000000000", "1000000000", "1000000000", "1000000000", "1000000000", "10", "10", "10", "1", "11", "11", "11"],strings);
-        print!("{:?}\n",strings);
-    }
 }

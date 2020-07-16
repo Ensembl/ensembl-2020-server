@@ -10,4 +10,3 @@ edition = "2018"
 serde_cbor="*"
 dauphin_interp_common = { path = "../dauphin-interp-common" }
 dauphin_lib_std_interp = { path = "../dauphin-lib-std-interp" }
-dauphin_interp = { path = "../dauphin-interp" }

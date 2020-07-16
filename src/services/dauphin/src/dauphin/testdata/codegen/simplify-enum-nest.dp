@@ -1,0 +1,15 @@
+import "lib:std";
+use "std";
+
+struct stest { A: vec(boolean), B: vec(boolean) };
+enum etest { X: string, Y: vec(boolean) };
+
+c := [ etest:Y [false,true], etest:Y [true,false] ][$?Y];
+d := c!Y[@==1];
+assert(d,[true,false][]);
+
+x := [[ stest { A: [false,true], B: [true,false] }, stest { A: [true,false], B: [true,true] } ]];
+y := x[][$.A[@==0]]; // of all the members of A select the one which has an A field, the first member of which is true (ie the second stest)
+assert(y.B[@==1],true); // the second value in the B field should be true
+
+print(format(y));

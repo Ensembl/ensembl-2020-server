@@ -1,0 +1,7 @@
+module "library";
+
+import "lib:std";
+use "std";
+
+x := [ [1,2] (+) [3]];
+assert(true,true);

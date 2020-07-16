@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use dauphin_compile_common::model::{ Instruction, InstructionType };
+use crate::model::{ Instruction, InstructionType };
 use crate::model::DefStore;
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, InstructionConstraint };
 use dauphin_interp_common::common::{ BaseType, MemberMode };

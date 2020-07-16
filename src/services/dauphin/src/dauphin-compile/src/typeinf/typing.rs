@@ -112,36 +112,3 @@ impl Typing {
         }
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use super::super::constraints::get_constraint;
-    use crate::lexer::Lexer;
-    use crate::parser::{ Parser };
-    use crate::generate::generate;
-    use crate::test::{ xxx_test_config, make_compiler_suite };
-    use crate::resolver::common_resolver;
-    use dauphin_compile_common::model::CompilerLink;
-
-    #[test]
-    fn typing_smoke() {
-        let mut config = xxx_test_config();
-        config.set_opt_seq("");
-        let linker = CompilerLink::new(make_compiler_suite(&config).expect("y")).expect("y2");
-        let resolver = common_resolver(&config,&linker).expect("cfg");
-        let mut lexer = Lexer::new(&resolver,"");
-        lexer.import("search:codegen/typepass-smoke").expect("cannot load file");
-        let p = Parser::new(&mut lexer);
-        let (stmts,defstore) = p.parse().expect("error");
-        let instrs = generate(&linker,&stmts,&defstore,&resolver,&config).expect("j");
-        let instrs_str : Vec<String> = instrs.iter().map(|v| format!("{:?}",v)).collect();
-        print!("{}\n",instrs_str.join(""));
-        let mut tp = Typing::new();
-        for instr in &instrs {
-            print!("=== {:?}",instr);
-            tp.add(&get_constraint(&instr,&defstore).expect("A")).expect("ok");
-            print!("{:?}\n",tp);
-        }
-    }
-}

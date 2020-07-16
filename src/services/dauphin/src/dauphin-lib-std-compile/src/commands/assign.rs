@@ -14,11 +14,11 @@
  *  limitations under the License.
  */
 
-use dauphin_compile_common::command::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
-use dauphin_compile_common::model::{ CompLibRegister, Instruction, InstructionType, PreImageContext };
+use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
+use dauphin_compile::model::{ CompLibRegister, Instruction, InstructionType, PreImageContext };
 use dauphin_interp_common::common::{ Register, InterpCommand, VectorRegisters, MemberMode, RegisterSignature };
 use serde_cbor::Value as CborValue;
-use dauphin_compile_common::util::{ vector_push_instrs, vector_update_offsets, vector_update_lengths, vector_copy };
+use dauphin_compile::util::{ vector_push_instrs, vector_update_offsets, vector_update_lengths, vector_copy };
 use super::extend::ExtendCommandType;
 use super::library::std;
 
@@ -111,30 +111,4 @@ pub(super) fn library_assign_commands(set: &mut CompLibRegister) -> Result<(),St
     set.push("assign",None,AssignCommandType());
     set.push("extend",None,ExtendCommandType::new());
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use crate::test::{ xxx_test_config, compile };
-
-    #[test]
-    fn assign_filtered() {
-        let config = xxx_test_config();
-        let strings = compile(&config,"search:std/filterassign").expect("a");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        // XXX todo test it!
-    }
-
-    #[test]
-    fn assign_shallow() {
-        let config = xxx_test_config();
-        let strings = compile(&config,"search:std/assignshallow").expect("a");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-        print!("{:?}\n",strings);
-        assert_eq!("[0, 0]",strings[0]);
-    }
 }

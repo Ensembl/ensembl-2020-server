@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use dauphin_compile_common::cli::Config;
+use crate::cli::Config;
 use crate::test::files::{ find_testdata };
 
 pub fn xxx_test_config() -> Config {

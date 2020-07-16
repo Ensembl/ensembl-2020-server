@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use dauphin_compile_common::model::{ Instruction, InstructionType };
+use crate::model::{ Instruction, InstructionType };
 use super::gencontext::GenContext;
 use dauphin_interp_common::common::{ RegisterSignature,  MemberMode, MemberDataFlow };
 use crate::model::{ make_full_type };
@@ -53,18 +53,4 @@ pub fn call(context: &mut GenContext) -> Result<(),String> {
     }
     context.phase_finished();
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use crate::test::{ compile, xxx_test_config };
-
-    #[test]
-    fn module_smoke() {
-        let config = xxx_test_config();
-        let strings = compile(&config,"search:codegen/module-smoke").expect("a");
-        for s in &strings {
-            print!("{}\n",s);
-        }
-    }
 }

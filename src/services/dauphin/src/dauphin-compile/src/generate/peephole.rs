@@ -16,7 +16,7 @@
 
 use std::collections::HashSet;
 use super::gencontext::GenContext;
-use dauphin_compile_common::model::{ Instruction, InstructionType };
+use crate::model::{ Instruction, InstructionType };
 
 pub fn peephole_nil_append(context: &mut GenContext) -> Result<(),String> {
     let mut nil_regs = HashSet::new();

@@ -15,7 +15,7 @@
  */
 
 use std::process::exit;
-use dauphin_compile_common::cli::Config;
+use dauphin_compile::cli::Config;
 use super::action::make_actions;
 use clap::{ App, Arg };
 

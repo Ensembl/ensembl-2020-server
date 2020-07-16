@@ -104,7 +104,7 @@ mod test {
     use crate::resolver::common_resolver;
     use dauphin_interp_common::common::Identifier;
     use crate::test::{ xxx_test_config, make_compiler_suite, load_testdata };
-    use dauphin_compile_common::model::CompilerLink;
+    use crate::model::CompilerLink;
 
     fn last_statement(p: &mut Parser) -> Result<ParserStatement,ParseError> {
         let mut prev = Err(ParseError::new("unexpected EOF",&mut p.lexer));
