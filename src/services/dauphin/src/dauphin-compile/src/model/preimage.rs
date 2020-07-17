@@ -16,8 +16,7 @@
 
 use std::collections::{ HashMap, HashSet };
 use crate::model::{ RegisterAllocator, ResolveFile, CompilerLink };
-use dauphin_interp::common::{ Register };
-use dauphin_interp::interp::{ InterpContext };
+use dauphin_interp::runtime::{ Register, InterpContext };
 use crate::cli::Config;
 
 pub struct PreImageContext<'a> {

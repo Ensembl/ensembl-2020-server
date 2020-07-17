@@ -17,10 +17,9 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use serde_cbor::Value as CborValue;
-use crate::interp::{ CommandTypeId };
-use crate::interp::Deserializer;
-use crate::common::{ cbor_array, cbor_int, CommandDeserializer, CommandSetId };
-use crate::interp::{ InterpLibRegister, OpcodeMapping, CommandSetVerifier, PayloadFactory };
+use crate::command::{ CommandTypeId, CommandDeserializer, CommandSetId, Deserializer, InterpLibRegister, OpcodeMapping, CommandSetVerifier };
+use crate::runtime::{ PayloadFactory };
+use crate::util::cbor::{ cbor_array, cbor_int };
 
 pub struct CommandInterpretSuite {
     store: Deserializer,

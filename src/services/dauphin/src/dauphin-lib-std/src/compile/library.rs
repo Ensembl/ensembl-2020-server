@@ -16,14 +16,16 @@
 
 use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
 use dauphin_compile::model::{ CompLibRegister, Instruction, InstructionType, PreImageContext };
-use dauphin_interp::common::{ Register, InterpCommand, CommandSetId, RegisterSignature, Identifier };
+use dauphin_interp::command::{ InterpCommand, CommandSetId, Identifier };
+use dauphin_interp::types::{ RegisterSignature };
+use dauphin_interp::runtime::{ Register };
 use serde_cbor::Value as CborValue;
 use super::numops::{ library_numops_commands };
 use super::eq::{ library_eq_command };
 use super::assign::{ library_assign_commands };
 use super::print::{ PrintCommandType, FormatCommandType };
 use super::vector::{ library_vector_commands };
-use dauphin_lib_std_interp::make_std_interp;
+use crate::make_std_interp;
 
 pub fn std_id() -> CommandSetId {
     CommandSetId::new("std",(0,0),0xDB806BE64887FAA9)

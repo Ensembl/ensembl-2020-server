@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 
-use dauphin_interp::common::{ InterpCommand, Register, CommandDeserializer };
-use dauphin_interp::interp::{ InterpContext, InterpLibRegister, InterpValue };
+use dauphin_interp::command::{ InterpCommand, CommandDeserializer, InterpLibRegister };
+use dauphin_interp::runtime::{ InterpContext, InterpValue, Register };
 use serde_cbor::Value as CborValue;
 
 #[derive(Copy,Clone)]

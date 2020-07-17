@@ -15,7 +15,7 @@
  */
 
 use serde_cbor::Value as CborValue;
-use crate::interp::InterpContext;
+use crate::runtime::InterpContext;
 
 pub trait CommandDeserializer {
     fn get_opcode_len(&self) -> Result<Option<(u32,usize)>,String>;
@@ -25,3 +25,6 @@ pub trait CommandDeserializer {
 pub trait InterpCommand {
     fn execute(&self, context: &mut InterpContext) -> Result<(),String>;
 }
+
+#[derive(Debug,Clone,PartialEq,Eq,Hash)]
+pub struct CommandTypeId(pub usize);

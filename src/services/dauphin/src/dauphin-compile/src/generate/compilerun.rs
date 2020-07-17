@@ -19,8 +19,8 @@ use crate::resolver::Resolver;
 use crate::cli::Config;
 use crate::model::{ CompilerLink, DFloat, Instruction, InstructionType, PreImageContext };
 use crate::model::PreImageOutcome;
-use dauphin_interp::common::{ Register };
-use dauphin_interp::interp::{ InterpValue, numbers_to_indexes };
+use dauphin_interp::runtime::{ Register };
+use dauphin_interp::runtime::{ InterpValue, numbers_to_indexes };
 
 struct CompileRun<'a,'b> {
     context: PreImageContext<'a>,

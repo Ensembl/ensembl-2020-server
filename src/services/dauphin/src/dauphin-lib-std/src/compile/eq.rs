@@ -19,11 +19,13 @@ use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigge
 use dauphin_compile::model::{ 
     CompLibRegister, Instruction, InstructionType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial, trial_signature, trial_write
 };
-use dauphin_interp::common::{
-    cbor_make_map, cbor_map, Register, InterpCommand, VectorRegisters, MemberMode, RegisterSignature,
-    BaseType, Identifier, MemberDataFlow, FullType, ComplexPath
+use dauphin_interp::command::{ Identifier, InterpCommand };
+use dauphin_interp::types::{
+    VectorRegisters, MemberMode, RegisterSignature,
+    BaseType, MemberDataFlow, FullType, ComplexPath
 };
-use dauphin_interp::interp::{ InterpContext };
+use dauphin_interp::runtime::{ InterpContext, Register };
+use dauphin_interp::util::cbor::{ cbor_make_map, cbor_map };
 use serde_cbor::Value as CborValue;
 use super::library::std;
 

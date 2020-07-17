@@ -16,7 +16,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use dauphin_interp::common::{ Register };
+use dauphin_interp::runtime::{ Register };
 
 #[derive(Debug)]
 struct RegisterAllocatorImpl {

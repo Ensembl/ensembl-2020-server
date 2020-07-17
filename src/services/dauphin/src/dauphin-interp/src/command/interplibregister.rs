@@ -17,8 +17,8 @@
 use std::collections::HashMap;
 use std::mem::replace;
 use std::rc::Rc;
-use crate::common::{ CommandDeserializer, CommandSetId };
-use crate::interp::PayloadFactory;
+use crate::command::{ CommandDeserializer, CommandSetId };
+use crate::runtime::PayloadFactory;
 
 pub struct InterpLibRegister {
     id: CommandSetId,

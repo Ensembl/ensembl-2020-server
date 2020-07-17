@@ -86,15 +86,6 @@ version = "0.1.0"
 dependencies = [
  "dauphin_compile 0.1.0",
  "dauphin_interp 0.1.0",
- "dauphin_lib_std_interp 0.1.0",
- "serde_cbor 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "dauphin_lib_std_interp"
-version = "0.1.0"
-dependencies = [
- "dauphin_interp 0.1.0",
  "serde_cbor 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

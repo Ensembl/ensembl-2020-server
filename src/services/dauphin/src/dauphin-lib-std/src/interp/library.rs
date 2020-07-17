@@ -14,8 +14,9 @@
  *  limitations under the License.
  */
 
-use dauphin_interp::common::{ CommandSetId, InterpCommand, Register, CommandDeserializer, NoopDeserializer };
-use dauphin_interp::interp::{ InterpContext, InterpLibRegister };
+use dauphin_interp::command::{ CommandSetId, InterpCommand, CommandDeserializer, InterpLibRegister };
+use dauphin_interp::runtime::{ InterpContext, Register };
+use dauphin_interp::util::templates::NoopDeserializer;
 use serde_cbor::Value as CborValue;
 use super::eq::{ library_eq_command_interp };
 use super::numops::{ library_numops_commands_interp };

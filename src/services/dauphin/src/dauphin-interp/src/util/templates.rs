@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 
-use crate::common::{ CommandDeserializer, InterpCommand };
-use crate::interp::InterpContext;
+use crate::command::{ CommandDeserializer, InterpCommand };
+use crate::runtime::{ InterpContext };
 use serde_cbor::Value as CborValue;
 
 pub struct ErrorInterpCommand();

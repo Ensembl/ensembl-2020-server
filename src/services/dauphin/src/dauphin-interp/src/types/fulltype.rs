@@ -18,9 +18,8 @@ use std::collections::{ HashMap, HashSet };
 use std::hash::{ Hash, Hasher };
 use std::fmt;
 use super::complexpath::ComplexPath;
-use crate::common::VectorRegisters;
-use crate::common::{ cbor_array };
-use crate::common::{ MemberMode };
+use crate::types::{ MemberMode, VectorRegisters };
+use crate::util::cbor::{ cbor_array };
 use serde_cbor::Value as CborValue;
 
 #[derive(Clone,Debug,Eq)]

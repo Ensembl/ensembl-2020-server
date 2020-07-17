@@ -17,8 +17,8 @@
 use std::iter::Iterator;
 use std::ops::Index;
 use std::slice::SliceIndex;
-use crate::common::cbor_array;
-use super::FullType;
+use crate::util::cbor::cbor_array;
+use crate::types::FullType;
 use serde_cbor::Value as CborValue;
 
 #[derive(Clone,Debug,PartialEq,Eq,Hash)]

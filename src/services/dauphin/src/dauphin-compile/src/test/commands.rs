@@ -16,8 +16,8 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use dauphin_interp::common::{ CommandDeserializer, InterpCommand, Identifier };
-use dauphin_interp::interp::{ InterpContext };
+use dauphin_interp::command::{ CommandDeserializer, InterpCommand, Identifier };
+use dauphin_interp::runtime::{ InterpContext };
 use crate::model::{ Instruction };
 use crate::model::{ Command, CommandSchema, CommandTrigger, CommandType };
 use serde_cbor::Value as CborValue;

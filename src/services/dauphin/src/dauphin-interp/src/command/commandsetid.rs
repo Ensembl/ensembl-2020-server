@@ -16,7 +16,7 @@
 
 use std::fmt;
 use std::hash::{ Hash, Hasher };
-use crate::common::{ cbor_array, cbor_string, cbor_int };
+use crate::util::cbor::{ cbor_array, cbor_string, cbor_int };
 use serde_cbor::Value as CborValue;
 
 #[derive(Clone,Eq,Debug,PartialOrd,Ord)]
@@ -74,7 +74,7 @@ impl CommandSetId {
 }
 #[cfg(test)]
 mod test {
-    use crate::common::{ CommandSetId };
+    use crate::command::{ CommandSetId };
     use crate::test::cbor_cmp;
 
     #[test]

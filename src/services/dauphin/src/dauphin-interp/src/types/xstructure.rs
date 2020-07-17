@@ -17,7 +17,8 @@
 use std::cell::{ RefCell, Ref };
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::common::{ FullType, ComplexPath, VectorRegisters, Identifier };
+use crate::command::Identifier;
+use crate::types::{ FullType, ComplexPath, VectorRegisters };
 
 #[derive(Debug)]
 pub enum XStructure<T> {

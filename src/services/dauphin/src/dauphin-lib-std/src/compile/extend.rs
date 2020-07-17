@@ -16,7 +16,9 @@
 
 use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
 use dauphin_compile::model::{ Instruction, InstructionType, PreImageContext, TimeTrial };
-use dauphin_interp::common::{ Register, InterpCommand, RegisterSignature };
+use dauphin_interp::command::InterpCommand;
+use dauphin_interp::runtime::Register;
+use dauphin_interp::types::RegisterSignature;
 use dauphin_compile::util::{ vector_push_instrs, vector_append, vector_append_offsets, vector_register_copy_instrs, vector_append_lengths };
 use serde_cbor::Value as CborValue;
 use super::library::std;

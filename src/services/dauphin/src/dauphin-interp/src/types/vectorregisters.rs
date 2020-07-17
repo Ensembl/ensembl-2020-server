@@ -16,7 +16,8 @@
 
 use std::fmt;
 use serde_cbor::Value as CborValue;
-use crate::common::{ cbor_int, cbor_array, BaseType };
+use crate::types::BaseType;
+use crate::util::cbor::{ cbor_int, cbor_array };
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct VectorRegisters {

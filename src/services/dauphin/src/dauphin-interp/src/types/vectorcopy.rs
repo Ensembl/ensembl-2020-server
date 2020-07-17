@@ -15,8 +15,8 @@
  */
 
 use std::rc::Rc;
-use crate::interp::{ InterpValue };
-use crate::common::{ arbitrate_type };
+use crate::runtime::{ InterpValue };
+use crate::types::{ arbitrate_type };
 
 fn update_poly<T>(dst: &mut Vec<T>, src: &Vec<T>, filter: &[usize]) where T: Clone {
     let mut target = vec![];

@@ -122,15 +122,6 @@ version = "0.1.0"
 dependencies = [
  "dauphin_compile",
  "dauphin_interp",
- "dauphin_lib_std_interp",
- "serde_cbor",
-]
-
-[[package]]
-name = "dauphin_lib_std_interp"
-version = "0.1.0"
-dependencies = [
- "dauphin_interp",
  "serde_cbor",
 ]
 

@@ -19,7 +19,8 @@ use std::fs::read;
 use std::process::exit;
 use serde_cbor;
 use dauphin_interp::make_core_interp;
-use dauphin_interp::interp::{ CommandInterpretSuite, InterpreterLink, StandardInterpretInstance, InterpretInstance };
+use dauphin_interp::command::{ CommandInterpretSuite, InterpreterLink };
+use dauphin_interp::runtime::{ StandardInterpretInstance, InterpretInstance };
 use dauphin_lib_std::{ make_std_interp, StreamFactory };
 
 fn bomb<A,E,T>(action: T, x: Result<A,E>) -> A where T: Fn() -> String, E: Display {

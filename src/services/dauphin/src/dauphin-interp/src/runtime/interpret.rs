@@ -15,9 +15,8 @@
  */
 
 use std::slice::Iter;
-use super::interplink::InterpreterLink;
-use crate::common::{ Register, InterpCommand };
-use crate::interp::{ InterpContext };
+use crate::command::{ InterpCommand, InterpreterLink };
+use crate::runtime::{ Register, InterpContext };
 
 pub trait InterpretInstance<'a> {
     fn finish(&mut self) -> InterpContext;

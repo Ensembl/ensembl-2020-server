@@ -16,7 +16,8 @@
 
 use std::fmt;
 use std::sync::{ Arc, Mutex };
-use crate::common::{ cbor_array, cbor_string, cbor_int, Identifier };
+use crate::command::Identifier;
+use crate::util::cbor::{ cbor_array, cbor_string, cbor_int };
 use serde_cbor::Value as CborValue;
 
 lazy_static! {

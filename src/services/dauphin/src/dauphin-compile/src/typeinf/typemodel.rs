@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use super::types::MemberType;
-use dauphin_interp::common::Register;
+use dauphin_interp::runtime::Register;
 
 pub struct TypeModel {
     values: BTreeMap<Register,MemberType>

@@ -21,7 +21,7 @@ use crate::typeinf::{ ArgumentExpressionConstraint, SignatureConstraint, Signatu
 use super::lexutil::{ get_other, get_identifier };
 use super::parseexpr::{ parse_full_identifier, parse_expr };
 use super::parsestmt::{ parse_statement };
-use dauphin_interp::common::{ BaseType };
+use dauphin_interp::types::{ BaseType };
 
 pub(in super) fn parse_exprdecl(lexer: &mut Lexer, defstore: &DefStore) -> Result<Vec<ParserStatement>,ParseError> {
     lexer.get();

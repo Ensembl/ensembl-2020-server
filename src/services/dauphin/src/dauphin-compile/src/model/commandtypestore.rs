@@ -15,7 +15,7 @@
  */
 
 use crate::model::CommandType;
-use dauphin_interp::interp::CommandTypeId;
+use dauphin_interp::command::CommandTypeId;
 
 pub struct CommandTypeStore {
     commandtypes: Vec<Box<dyn CommandType>>

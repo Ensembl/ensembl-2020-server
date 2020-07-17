@@ -50,8 +50,7 @@ impl fmt::Display for Register {
 
 #[cfg(test)]
 mod test {
-    use crate::common::{ Register };
-    use crate::interp::{ InterpValue, RegisterFile };
+    use crate::runtime::{ Register, InterpValue, RegisterFile };
 
     #[test]
     fn registers_smoke() {

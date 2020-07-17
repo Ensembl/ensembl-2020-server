@@ -19,12 +19,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use dauphin_compile::cli::Config;
 use dauphin_compile::model::{ CommandCompileSuite, CompilerLink, Instruction };
-use dauphin_interp::interp::{ CommandInterpretSuite, InterpreterLink };
+use dauphin_interp::command::{ CommandInterpretSuite, InterpreterLink };
 use dauphin_interp::{ make_core_interp };
-use dauphin_lib_std_interp::{ make_std_interp };
-use dauphin_lib_std_interp::stream::{ Stream, StreamFactory };
-use dauphin_interp::interp::{ InterpContext, InterpValue };
-use dauphin_interp::common::{ Register, cbor_serialize };
+use crate::{ make_std_interp };
+use crate::stream::{ Stream, StreamFactory };
+use dauphin_interp::runtime::{ InterpContext, InterpValue, Register, StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };
+use dauphin_interp::util::cbor::{ cbor_serialize };
 use dauphin_compile::commands::{ make_core };
 use crate::make_std;
 use dauphin_compile::generate::generate;
@@ -32,7 +32,6 @@ use dauphin_compile::resolver::common_resolver;
 use dauphin_compile::lexer::Lexer;
 use dauphin_compile::parser::Parser;
 use crate::test::cbor::hexdump;
-use dauphin_interp::interp::{ StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };
 
 pub fn interpreter<'a>(interpret_linker: &'a InterpreterLink, config: &Config, name: &str) -> Result<Box<dyn InterpretInstance<'a> + 'a>,String> {
     if let Some(instrs) = interpret_linker.get_instructions(name)? {

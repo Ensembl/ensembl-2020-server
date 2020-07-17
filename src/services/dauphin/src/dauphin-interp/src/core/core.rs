@@ -15,8 +15,9 @@
  */
 
 use std::rc::Rc;
-use crate::common::{ Register, InterpCommand, CommandDeserializer, arbitrate_type, CommandSetId };
-use crate::interp::{ InterpLibRegister, InterpValue, InterpContext };
+use crate::command::{ CommandDeserializer, CommandSetId, InterpCommand, InterpLibRegister };
+use crate::runtime::{ Register, InterpValue, InterpContext };
+use crate::types::arbitrate_type;
 use serde_cbor::Value as CborValue;
 use super::consts::{ const_commands_interp };
 

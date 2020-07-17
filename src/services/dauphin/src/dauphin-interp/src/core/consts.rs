@@ -14,8 +14,9 @@
  *  limitations under the License.
  */
 
-use crate::common::{ cbor_int, cbor_string, Register, InterpCommand, CommandDeserializer };
-use crate::interp::{ InterpLibRegister, InterpValue, InterpContext };
+use crate::util::cbor::{ cbor_int, cbor_string };
+use crate::command::{ InterpLibRegister, InterpCommand, CommandDeserializer };
+use crate::runtime::{ InterpValue, InterpContext, Register };
 use serde_cbor::Value as CborValue;
 
 // XXX factor

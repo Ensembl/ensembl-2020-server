@@ -14,8 +14,9 @@
  *  limitations under the License.
  */
 
-use dauphin_interp::common::{ Register, Identifier, RegisterSignature, InterpCommand };
-use dauphin_interp::interp::{ InterpValue };
+use dauphin_interp::command::{ Identifier, InterpCommand };
+use dauphin_interp::runtime::{ InterpValue, Register };
+use dauphin_interp::types::RegisterSignature;
 use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
 use dauphin_compile::model::{ PreImageContext, Instruction, InstructionType };
 use serde_cbor::Value as CborValue;

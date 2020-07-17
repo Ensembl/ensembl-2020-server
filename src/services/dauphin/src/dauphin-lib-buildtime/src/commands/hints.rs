@@ -15,8 +15,9 @@
  */
 
 use std::collections::HashSet;
-use dauphin_interp::common::{ Register, Identifier, FullType, InterpCommand, MemberMode };
-use dauphin_interp::interp::{ InterpValue };
+use dauphin_interp::command::{ Identifier, InterpCommand };
+use dauphin_interp::runtime::{ InterpValue, Register };
+use dauphin_interp::types::{ FullType, MemberMode };
 use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
 use dauphin_compile::model::{ Instruction, InstructionType, PreImageContext };
 use serde_cbor::Value as CborValue;

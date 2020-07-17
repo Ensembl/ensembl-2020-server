@@ -14,7 +14,9 @@
  *  limitations under the License.
  */
 
-use crate::common::{ cbor_array, cbor_string };
+use std::collections::HashMap;
+use crate::command::CommandSetId;
+use crate::util::cbor::{ cbor_array, cbor_string };
 use serde_cbor::Value as CborValue;
 
 #[derive(Clone,Debug,PartialEq,Eq,Hash,PartialOrd,Ord)]
@@ -41,5 +43,27 @@ impl Identifier {
 impl std::fmt::Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f,"{}::{}",self.0,self.1)
+    }
+}
+
+pub struct CommandSetVerifier {
+    seen: HashMap<(String,u32),String>,
+}
+
+impl CommandSetVerifier {
+    pub fn new() -> CommandSetVerifier {
+        CommandSetVerifier {
+            seen: HashMap::new()
+        }
+    }
+
+    pub fn register2(&mut self, set_id: &CommandSetId) -> Result<(),String> {
+        let set_name = set_id.name().to_string();
+        let set_major = set_id.version().0;
+        if let Some(name) = self.seen.get(&(set_name.to_string(),set_major)) {
+            return Err(format!("Attempt to register multiple versions {} and {}",set_id,name));
+        }
+        self.seen.insert((set_name.to_string(),set_major),set_id.to_string());
+        Ok(())
     }
 }

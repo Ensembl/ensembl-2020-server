@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use dauphin_interp::common::{ CommandSetId };
+use dauphin_interp::command::{ CommandSetId };
 use dauphin_compile::model::CompLibRegister;
 use super::defines::DefineCommandType;
 use super::ini::LoadIniCommandType;

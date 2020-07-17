@@ -14,5 +14,26 @@
  *  limitations under the License.
  */
 
-#[derive(Debug,Clone,PartialEq,Eq,Hash)]
-pub struct CommandTypeId(pub usize);
+use crate::command::{ CommandDeserializer, CommandTypeId };
+
+pub struct Deserializer {
+    mapping: Vec<Box<dyn CommandDeserializer>>
+}
+
+impl Deserializer {
+    pub fn new() -> Deserializer {
+        Deserializer {
+            mapping: vec![]
+        }
+    }
+
+    pub fn add(&mut self, cd: Box<dyn CommandDeserializer>) -> Result<CommandTypeId,String> {
+        let pos = self.mapping.len();
+        self.mapping.push(cd);
+        Ok(CommandTypeId(pos))
+    }
+
+    pub fn get(&self, cid: &CommandTypeId) -> Result<&Box<dyn CommandDeserializer>,String> {
+        self.mapping.get(cid.0).ok_or_else(|| format!("No such command"))
+    }
+}

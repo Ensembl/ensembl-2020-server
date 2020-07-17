@@ -14,27 +14,20 @@
  *  limitations under the License.
  */
 
-use crate::common::{ CommandDeserializer };
-use crate::interp::{ CommandTypeId };
+mod command;
+mod commandsetid;
+mod deserializer;
+mod interplink;
+mod interplibregister;
+mod interpretsuite;
+mod misc;
+mod opcodemapping;
 
-pub struct Deserializer {
-    mapping: Vec<Box<dyn CommandDeserializer>>
-}
-
-impl Deserializer {
-    pub fn new() -> Deserializer {
-        Deserializer {
-            mapping: vec![]
-        }
-    }
-
-    pub fn add(&mut self, cd: Box<dyn CommandDeserializer>) -> Result<CommandTypeId,String> {
-        let pos = self.mapping.len();
-        self.mapping.push(cd);
-        Ok(CommandTypeId(pos))
-    }
-
-    pub fn get(&self, cid: &CommandTypeId) -> Result<&Box<dyn CommandDeserializer>,String> {
-        self.mapping.get(cid.0).ok_or_else(|| format!("No such command"))
-    }
-}
+pub use self::command::{ CommandDeserializer, CommandTypeId, InterpCommand };
+pub use self::commandsetid::{ CommandSetId };
+pub use self::deserializer::Deserializer;
+pub use self::interplibregister::InterpLibRegister;
+pub use self::interplink::InterpreterLink;
+pub use self::interpretsuite::CommandInterpretSuite;
+pub use self::misc::{ CommandSetVerifier, Identifier };
+pub use self::opcodemapping::OpcodeMapping;

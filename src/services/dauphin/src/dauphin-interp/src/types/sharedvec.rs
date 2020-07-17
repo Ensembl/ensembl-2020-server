@@ -16,10 +16,8 @@
 
 use std::fmt::Debug;
 use std::rc::Rc;
-use crate::interp::InterpContext;
-use crate::interp::{ InterpValue, InterpValueIndexes };
-use crate::common::{ VectorSource };
-use crate::common::{ VectorRegisters };
+use crate::runtime::{ InterpContext, InterpValue, InterpValueIndexes };
+use crate::types::{ VectorSource, VectorRegisters };
 
 #[derive(Debug)]
 pub struct SharedVec {

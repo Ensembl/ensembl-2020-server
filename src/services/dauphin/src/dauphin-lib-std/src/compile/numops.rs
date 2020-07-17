@@ -19,12 +19,12 @@ use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigge
 use dauphin_compile::model::{
     CompLibRegister, Instruction, InstructionType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial, trial_signature
 };
-use dauphin_interp::common::{
-    cbor_make_map, cbor_map, Register, MemberMode, BaseType, Identifier, MemberDataFlow
-};
-use dauphin_interp::interp::{ InterpValue, InterpContext };
+use dauphin_interp::command::Identifier;
+use dauphin_interp::types::{ MemberMode, BaseType, MemberDataFlow };
+use dauphin_interp::runtime::{ InterpValue, InterpContext, Register };
+use dauphin_interp::util::cbor::{ cbor_make_map, cbor_map };
 use serde_cbor::Value as CborValue;
-use dauphin_lib_std_interp::{ InterpBinBoolOp, InterpBinNumOp, InterpNumModOp };
+use crate::{ InterpBinBoolOp, InterpBinNumOp, InterpNumModOp };
 use super::library::std;
 
 struct BinBoolTimeTrial(InterpBinBoolOp);

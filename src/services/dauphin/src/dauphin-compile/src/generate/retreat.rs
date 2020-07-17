@@ -17,7 +17,7 @@
 use std::collections::HashSet;
 use super::gencontext::GenContext;
 use crate::model::{ InstructionType, Instruction, LexerPosition };
-use dauphin_interp::common::Register;
+use dauphin_interp::runtime::Register;
 
 struct RetreatOutput {
     pos: Option<LexerPosition>,

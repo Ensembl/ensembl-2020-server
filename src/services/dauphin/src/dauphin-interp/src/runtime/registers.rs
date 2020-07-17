@@ -18,8 +18,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::mem::replace;
 use std::rc::Rc;
-use crate::common::Register;
-use super::supercow::{ SuperCow, SuperCowCommit };
+use crate::runtime::{ Register, SuperCow, SuperCowCommit };
 use super::value::{ InterpValue, InterpValueNumbers, InterpValueIndexes, InterpValueBoolean, InterpValueStrings, InterpValueBytes };
 
 pub struct RegisterFile {

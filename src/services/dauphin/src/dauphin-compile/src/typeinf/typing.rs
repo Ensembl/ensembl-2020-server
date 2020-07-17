@@ -19,7 +19,8 @@ use std::iter::FromIterator;
 use std::collections::{ HashMap, HashSet };
 
 use super::types::{ InstructionConstraint, ExpressionType };
-use dauphin_interp::common::{ Register, BaseType };
+use dauphin_interp::runtime::{ Register };
+use dauphin_interp::types::{ BaseType };
 use super::typesinternal::{ Key, TypeConstraint };
 use super::typemodel::TypeModel;
 use super::typestore::TypeStore;

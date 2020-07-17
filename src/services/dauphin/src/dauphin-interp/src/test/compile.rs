@@ -19,19 +19,19 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use dauphin_compile::cli::Config;
 use dauphin_compile::model::{ CommandCompileSuite, CompilerLink, Instruction };
-use crate::interp::{ CommandInterpretSuite, InterpreterLink };
+use crate::command::{ CommandInterpretSuite, InterpreterLink };
 use crate::{ make_core_interp };
 use dauphin_lib_std::{ make_std_interp };
-use crate::interp::{ InterpContext, InterpValue };
+use crate::runtime::{ InterpContext, InterpValue, Register };
 use dauphin_lib_std::stream::{ StreamFactory, Stream };
-use crate::common::{ Register, cbor_serialize };
+use crate::util::cbor::{ cbor_serialize };
 use dauphin_compile::commands::{ make_core };
 use dauphin_compile::generate::generate;
 use dauphin_compile::resolver::common_resolver;
 use dauphin_compile::lexer::Lexer;
 use dauphin_compile::parser::Parser;
 use crate::test::cbor::hexdump;
-use crate::interp::{ StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };
+use crate::runtime::{ StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };
 
 pub fn interpreter<'a>(interpret_linker: &'a InterpreterLink, config: &Config, name: &str) -> Result<Box<dyn InterpretInstance<'a> + 'a>,String> {
     if let Some(instrs) = interpret_linker.get_instructions(name)? {

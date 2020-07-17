@@ -15,7 +15,8 @@
  */
 
 use std::fmt;
-use crate::common::{ cbor_int, Identifier };
+use crate::util::cbor::cbor_int;
+use crate::command::Identifier;
 use serde_cbor::Value as CborValue;
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]

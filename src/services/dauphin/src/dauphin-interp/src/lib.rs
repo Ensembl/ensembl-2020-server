@@ -18,8 +18,11 @@
 extern crate lazy_static;
 
 #[macro_use]
-pub mod common;
-pub mod interp;
+pub mod types;
+
+pub mod command;
+pub mod runtime;
+pub mod util;
 
 #[cfg(test)]
 pub mod test;

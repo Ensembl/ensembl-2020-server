@@ -14,8 +14,9 @@
  *  limitations under the License.
  */
 
-use dauphin_interp::common::{ InterpCommand, Register, CommandDeserializer, vector_update_poly, append_data };
-use dauphin_interp::interp::{ InterpContext, InterpLibRegister, InterpValue };
+use dauphin_interp::command::{ InterpCommand, CommandDeserializer, InterpLibRegister };
+use dauphin_interp::runtime::{ InterpContext, InterpValue, Register };
+use dauphin_interp::types::{ vector_update_poly, append_data };
 use serde_cbor::Value as CborValue;
 
 pub struct VectorCopyShallowInterpCommand(Register,Register,Register);

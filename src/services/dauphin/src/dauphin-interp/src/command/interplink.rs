@@ -16,10 +16,10 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::interp::{ CommandInterpretSuite };
+use crate::command::{ CommandInterpretSuite, InterpCommand };
 use serde_cbor::Value as CborValue;
-use crate::common::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string, cbor_map_iter, Register, InterpCommand };
-use crate::interp::{ InterpContext, PayloadFactory };
+use crate::util::cbor::{ cbor_int, cbor_map, cbor_array, cbor_entry, cbor_string, cbor_map_iter };
+use crate::runtime::{ InterpContext, PayloadFactory, Register };
 
 pub(super) const VERSION : u32 = 0;
 
@@ -123,7 +123,7 @@ impl InterpreterLink {
         Ok(self.get_program(name)?.instructions.as_ref())
     }
 
-    pub(super) fn new_context(&self) -> InterpContext {
+    pub(crate) fn new_context(&self) -> InterpContext {
         InterpContext::new(&self.payloads)
     }
 }

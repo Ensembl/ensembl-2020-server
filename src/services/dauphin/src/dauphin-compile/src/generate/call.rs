@@ -16,7 +16,7 @@
 
 use crate::model::{ Instruction, InstructionType };
 use super::gencontext::GenContext;
-use dauphin_interp::common::{ RegisterSignature,  MemberMode, MemberDataFlow };
+use dauphin_interp::types::{ RegisterSignature, MemberMode, MemberDataFlow };
 use crate::model::{ make_full_type };
 
 pub fn call(context: &mut GenContext) -> Result<(),String> {

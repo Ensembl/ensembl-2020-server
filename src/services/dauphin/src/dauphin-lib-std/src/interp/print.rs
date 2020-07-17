@@ -15,11 +15,10 @@
  */
 
 use std::rc::Rc;
-use dauphin_interp::common::{
-    InterpCommand, Register, CommandDeserializer, SharedVec, RegisterSignature, XStructure, RegisterVectorSource, VectorRegisters, to_xstructure,
-    cbor_array
-};
-use dauphin_interp::interp::{ InterpContext, InterpValue, InterpNatural, RegisterFile, InterpLibRegister };
+use dauphin_interp::command::{ InterpCommand, InterpLibRegister, CommandDeserializer };
+use dauphin_interp::types::{ SharedVec, RegisterSignature, XStructure, RegisterVectorSource, VectorRegisters, to_xstructure };
+use dauphin_interp::runtime::{ InterpContext, InterpValue, InterpNatural, Register, RegisterFile };
+use dauphin_interp::util::cbor::cbor_array;
 use crate::stream::Stream;
 use serde_cbor::Value as CborValue;
 

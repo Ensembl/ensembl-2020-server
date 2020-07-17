@@ -15,9 +15,7 @@
  */
 
 use std::rc::Rc;
-use crate::common::Register;
-use crate::interp::InterpContext;
-use crate::interp::InterpValue;
+use crate::runtime::{ Register, InterpContext, InterpValue };
 
 pub trait VectorSource {
     fn len(&self, context: &mut InterpContext, index: usize) -> Result<usize,String>;

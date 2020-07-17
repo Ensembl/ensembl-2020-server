@@ -16,7 +16,7 @@
 
 use std::collections::{ HashMap, BTreeMap, HashSet };
 use serde_cbor::Value as CborValue;
-use crate::common::{ CommandSetId };
+use crate::command::{ CommandSetId };
 
 #[derive(Debug)]
 pub struct OpcodeMapping {

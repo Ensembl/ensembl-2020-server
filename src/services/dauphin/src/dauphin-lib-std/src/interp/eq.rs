@@ -16,11 +16,14 @@
 
 use std::fmt::Debug;
 use std::rc::Rc;
-use dauphin_interp::common::{
-    InterpCommand, Register, CommandDeserializer, SharedVec, RegisterVectorSource, VectorRegisters,
-    cbor_array, arbitrate_type
+use dauphin_interp::command::{ CommandDeserializer, InterpCommand, InterpLibRegister };
+use dauphin_interp::runtime::{ Register };
+use dauphin_interp::types::{
+    SharedVec, RegisterVectorSource, VectorRegisters,
+    arbitrate_type
 };
-use dauphin_interp::interp::{ InterpContext, InterpLibRegister, InterpValue };
+use dauphin_interp::runtime::{ InterpContext, InterpValue };
+use dauphin_interp::util::cbor::{ cbor_array };
 use serde_cbor::Value as CborValue;
 
 fn compare_work<T>(a: &SharedVec, a_off: (usize,usize), a_data: &[T], b: &SharedVec, b_off: (usize,usize), b_data: &[T], level: usize) -> Result<bool,String>

@@ -19,8 +19,9 @@ use crate::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImag
 use crate::model::{
     CompLibRegister, Instruction, InstructionType, InstructionSuperType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial
 };
-use dauphin_interp::common::{ cbor_make_map, cbor_map, Register, CommandSetId };
-use dauphin_interp::interp::{ InterpValue, InterpContext };
+use dauphin_interp::command::CommandSetId;
+use dauphin_interp::runtime::{ InterpValue, InterpContext, Register };
+use dauphin_interp::util::cbor::{ cbor_make_map, cbor_map };
 use serde_cbor::Value as CborValue;
 use super::consts::{ const_commands };
 use dauphin_interp::{ make_core_interp };

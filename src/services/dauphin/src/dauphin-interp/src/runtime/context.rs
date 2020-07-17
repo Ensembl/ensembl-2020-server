@@ -17,7 +17,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::interp::RegisterFile;
+use crate::runtime::RegisterFile;
 
 pub trait PayloadFactory {
     fn make_payload(&self) -> Box<dyn Any>;

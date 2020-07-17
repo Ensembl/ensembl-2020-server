@@ -17,7 +17,9 @@
 use std::fmt;
 use crate::cli::Config;
 use crate::model::{ Instruction, InstructionSuperType, PreImageContext, CompilerLink };
-use dauphin_interp::common::{ cbor_array, cbor_int, Identifier, Register, InterpCommand };
+use dauphin_interp::util::cbor::{ cbor_array, cbor_int };
+use dauphin_interp::command::{ Identifier, InterpCommand };
+use dauphin_interp::runtime::Register;
 use serde_cbor::Value as CborValue;
 
 #[derive(Eq,PartialEq,Hash,Clone,Debug)]

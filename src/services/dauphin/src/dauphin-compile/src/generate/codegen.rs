@@ -19,7 +19,9 @@ use std::collections::HashMap;
 use super::gencontext::GenContext;
 use crate::model::{ Instruction, InstructionType, DFloat };
 use crate::parser::{ Expression, Statement };
-use dauphin_interp::common::{ Register, Identifier, BaseType, MemberMode };
+use dauphin_interp::command::{ Identifier };
+use dauphin_interp::runtime::{ Register };
+use dauphin_interp::types::{ BaseType, MemberMode };
 use crate::model::DefStore;
 use crate::typeinf::{ExpressionType, SignatureMemberConstraint };
 

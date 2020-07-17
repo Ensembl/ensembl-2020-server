@@ -15,10 +15,8 @@
  */
 
 use std::mem::replace;
-use crate::interp::InterpContext;
-use crate::interp::InterpValue;
-use crate::common::VectorRegisters;
-use crate::common::VectorSource;
+use crate::runtime::{ InterpContext, InterpValue };
+use crate::types::{ VectorRegisters, VectorSource };
 
 pub struct WriteVec<'a> {
     vs: &'a dyn VectorSource,

@@ -16,7 +16,7 @@
 
 use super::definitionstore::DefStore;
 use super::structenum::{ EnumDef, StructDef };
-use dauphin_interp::common::{ ComplexPath, FullType, VectorRegisters, BaseType, MemberMode };
+use dauphin_interp::types::{ ComplexPath, FullType, VectorRegisters, BaseType, MemberMode };
 use crate::typeinf::{ ContainerType, MemberType };
 
 pub struct ComplexRegisters(FullType);
@@ -85,7 +85,7 @@ mod test {
     use crate::test::{ mini_interp, xxx_test_config, make_compiler_suite, load_testdata, cbor_cmp };
     use crate::model::{ DefStore, make_full_type };
     use crate::typeinf::{ MemberType };
-    use dauphin_interp::common::{ FullType, MemberMode };
+    use dauphin_interp::types::{ FullType, MemberMode };
     use crate::model::CompilerLink;
 
     // XXX move to common test utils
