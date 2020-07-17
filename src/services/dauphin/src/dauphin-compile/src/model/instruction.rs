@@ -18,7 +18,7 @@ use std::fmt;
 
 use crate::model::{ DFloat, LexerPosition };
 use serde_cbor::Value as CborValue;
-use dauphin_interp_common::common::{ Register, RegisterSignature, Identifier, cbor_int, MemberMode, MemberDataFlow };
+use dauphin_interp::common::{ Register, RegisterSignature, Identifier, cbor_int, MemberMode, MemberDataFlow };
 
 #[derive(Clone,Copy,PartialEq,Debug,Hash,Eq)]
 pub enum InstructionSuperType {

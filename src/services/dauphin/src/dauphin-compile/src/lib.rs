@@ -15,7 +15,7 @@
  */
 
 #[macro_use]
-extern crate dauphin_interp_common;
+extern crate dauphin_interp;
 
 pub mod cli {
     pub mod config;

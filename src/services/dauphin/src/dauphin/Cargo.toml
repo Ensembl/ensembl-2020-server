@@ -11,10 +11,9 @@ regex="*"
 serde_cbor="*"
 clap="*"
 
-dauphin_interp_common = { path = "../dauphin-interp-common" }
-
-dauphin_lib_std_compile = { path = "../dauphin-lib-std-compile" }
-dauphin_lib_std_interp = { path = "../dauphin-lib-std-interp" }
-dauphin_lib_buildtime_compile = { path = "../dauphin-lib-buildtime-compile" }
-
 dauphin_compile = { path = "../dauphin-compile" }
+dauphin_interp = { path = "../dauphin-interp" }
+
+dauphin_lib_std = { path = "../dauphin-lib-std", features= ["compile"] }
+dauphin_lib_buildtime = { path = "../dauphin-lib-buildtime" }
+

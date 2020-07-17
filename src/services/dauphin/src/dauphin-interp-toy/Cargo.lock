@@ -4,13 +4,13 @@
 name = "dauphin-interp-toy"
 version = "0.1.0"
 dependencies = [
- "dauphin_interp_common",
- "dauphin_lib_std_interp",
+ "dauphin_interp",
+ "dauphin_lib_std",
  "serde_cbor",
 ]
 
 [[package]]
-name = "dauphin_interp_common"
+name = "dauphin_interp"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
@@ -18,10 +18,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "dauphin_lib_std_interp"
+name = "dauphin_lib_std"
 version = "0.1.0"
 dependencies = [
- "dauphin_interp_common",
+ "dauphin_interp",
  "serde_cbor",
 ]
 

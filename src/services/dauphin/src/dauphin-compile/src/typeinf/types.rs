@@ -15,7 +15,7 @@
  */
 
 use std::fmt;
-use dauphin_interp_common::common::{ Register, BaseType };
+use dauphin_interp::common::{ Register, BaseType };
 
 #[derive(PartialEq,Eq,Clone,PartialOrd,Ord,Hash,Debug)]
 pub enum ExpressionType {

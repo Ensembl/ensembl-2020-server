@@ -13,10 +13,10 @@ serde_cbor="*"
 crc="*"
 regex="*"
 
-dauphin_interp_common = { path = "../dauphin-interp-common" }
+dauphin_interp = { path = "../dauphin-interp" }
 
 #[profile.test]
 #opt-level = 3
 
 [dev-dependencies]
-dauphin_lib_std_interp = { path = "../dauphin-lib-std-interp" }
+dauphin_lib_std = { path = "../dauphin-lib-std" }

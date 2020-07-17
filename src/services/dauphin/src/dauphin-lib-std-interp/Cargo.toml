@@ -1,9 +1,0 @@
-[package]
-name = "dauphin_lib_std_interp"
-version = "0.1.0"
-authors = ["Dan Sheppard <dan@ebi.ac.uk>"]
-edition = "2018"
-
-[dependencies]
-dauphin_interp_common = { path = "../dauphin-interp-common" }
-serde_cbor="*"

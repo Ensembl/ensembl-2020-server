@@ -1,0 +1,16 @@
+[package]
+name = "dauphin_lib_buildtime"
+version = "0.1.0"
+authors = ["Dan Sheppard <dan@ebi.ac.uk>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dauphin_interp = { path = "../dauphin-interp" }
+dauphin_compile = { path = "../dauphin-compile" }
+serde_cbor = "*"
+rust-ini="*"
+
+[dev-dependencies]
+dauphin_lib_std = { path = "../dauphin-lib-std", features = ["compile"] }

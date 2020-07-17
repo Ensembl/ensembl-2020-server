@@ -20,7 +20,7 @@ use hex;
 use crate::model::{ InlineMode, IdentifierPattern };
 use crate::lexer::Lexer;
 use crate::typeinf::{ MemberType, SignatureConstraint };
-use dauphin_interp_common::common::Identifier;
+use dauphin_interp::common::Identifier;
 use crate::model::LexerPosition;
 
 #[derive(PartialEq,Clone)]

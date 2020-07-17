@@ -17,7 +17,7 @@
 use crate::typeinf::SignatureConstraint;
 use crate::model::{ IdentifierUse };
 use crate::parser::{ Expression, Statement };
-use dauphin_interp_common::common::Identifier;
+use dauphin_interp::common::Identifier;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
 pub enum InlineMode {

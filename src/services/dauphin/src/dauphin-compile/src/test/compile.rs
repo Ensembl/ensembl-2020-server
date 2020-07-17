@@ -19,19 +19,19 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use crate::cli::Config;
 use crate::model::{ CommandCompileSuite, CompilerLink, Instruction };
-use dauphin_interp_common::interp::{ CommandInterpretSuite, InterpreterLink };
-use dauphin_interp_common::{ make_core_interp };
-use dauphin_lib_std_interp::{ make_std_interp };
-use dauphin_interp_common::interp::{ InterpContext, InterpValue };
-use dauphin_lib_std_interp::stream::{ StreamFactory, Stream };
-use dauphin_interp_common::common::{ Register, cbor_serialize };
+use dauphin_interp::interp::{ CommandInterpretSuite, InterpreterLink };
+use dauphin_interp::{ make_core_interp };
+use dauphin_lib_std::{ make_std_interp };
+use dauphin_interp::interp::{ InterpContext, InterpValue };
+use dauphin_lib_std::stream::{ StreamFactory, Stream };
+use dauphin_interp::common::{ Register, cbor_serialize };
 use crate::commands::{ make_core };
 use crate::generate::generate;
 use crate::resolver::common_resolver;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::test::cbor::hexdump;
-use dauphin_interp_common::interp::{ StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };
+use dauphin_interp::interp::{ StandardInterpretInstance, DebugInterpretInstance, InterpretInstance };
 
 pub fn interpreter<'a>(interpret_linker: &'a InterpreterLink, config: &Config, name: &str) -> Result<Box<dyn InterpretInstance<'a> + 'a>,String> {
     if let Some(instrs) = interpret_linker.get_instructions(name)? {

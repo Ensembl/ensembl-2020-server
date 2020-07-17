@@ -16,8 +16,8 @@
 
 use std::collections::HashMap;
 use std::mem::replace;
-use dauphin_interp_common::common::{ CommandSetId };
-use dauphin_interp_common::interp::{ InterpLibRegister };
+use dauphin_interp::common::{ CommandSetId };
+use dauphin_interp::interp::{ InterpLibRegister };
 use crate::model::CommandType;
 use serde_cbor::Value as CborValue;
 use crc::crc64::checksum_iso;

@@ -22,7 +22,7 @@ use super::structenum::{ StructDef, EnumDef };
 use super::identifierstore::{ IdentifierStore, IdentifierPattern, IdentifierUse };
 use crate::lexer::Lexer;
 use crate::parser::ParseError;
-use dauphin_interp_common::common::Identifier;
+use dauphin_interp::common::Identifier;
 
 #[derive(Debug)]
 pub enum IdentifierValue {

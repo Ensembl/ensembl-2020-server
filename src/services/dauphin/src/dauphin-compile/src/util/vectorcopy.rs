@@ -15,7 +15,7 @@
  */
 
 use crate::model::{ Instruction, InstructionType, PreImageContext };
-use dauphin_interp_common::common::{ Register, VectorRegisters, Identifier, ComplexPath, RegisterSignature, FullType, MemberMode, MemberDataFlow, BaseType };
+use dauphin_interp::common::{ Register, VectorRegisters, Identifier, ComplexPath, RegisterSignature, FullType, MemberMode, MemberDataFlow, BaseType };
 use regex::Regex;
 
 pub fn do_call_flat(lib: &str, name: &str, impure: bool, spec: &str) -> Result<InstructionType,()> {

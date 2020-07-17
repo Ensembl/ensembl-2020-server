@@ -18,8 +18,8 @@ use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
 use crate::model::{ CompilerLink, Instruction };
 use serde_cbor::Value as CborValue;
-use dauphin_interp_common::common::{ InterpCommand, Register, RegisterSignature, ComplexPath, VectorRegisters, cbor_array, cbor_float, FullType, MemberMode, BaseType };
-use dauphin_interp_common::interp::{ InterpContext, InterpValue };
+use dauphin_interp::common::{ InterpCommand, Register, RegisterSignature, ComplexPath, VectorRegisters, cbor_array, cbor_float, FullType, MemberMode, BaseType };
+use dauphin_interp::interp::{ InterpContext, InterpValue };
 
 pub fn regress(input: &[(f64,f64)]) -> Result<(f64,f64),String> {
     if input.len() == 0 {

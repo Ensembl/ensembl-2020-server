@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use crate::model::{ DFloat, InstructionType, Instruction };
 use crate::typeinf::{ MemberType };
 use super::gencontext::GenContext;
-use dauphin_interp_common::common::{ Register, BaseType };
+use dauphin_interp::common::{ Register, BaseType };
 
 /* Linearization is the process of converting arbitrarily deep vectors of simple values into multivals. Although a 
  * multival is a sequence of values, as we need to support multivals of single level lists, all lists get additional

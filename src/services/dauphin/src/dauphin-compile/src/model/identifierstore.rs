@@ -16,7 +16,7 @@
 
 use std::fmt::Debug;
 use std::collections::HashMap;
-use dauphin_interp_common::common::{ Identifier };
+use dauphin_interp::common::{ Identifier };
 
 #[derive(Clone,Debug)]
 pub struct IdentifierUse(pub Identifier,pub bool);

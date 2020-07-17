@@ -21,7 +21,7 @@ use crate::model::{
     CompLibRegister, Instruction, InstructionType, InstructionSuperType, PreImageContext, DFloat, LexerPosition, CompilerLink,
     TimeTrialCommandType, TimeTrial
 };
-use dauphin_interp_common::common::{ cbor_make_map, cbor_map, Register };
+use dauphin_interp::common::{ cbor_make_map, cbor_map, Register };
 use serde_cbor::Value as CborValue;
 
 // XXX factor

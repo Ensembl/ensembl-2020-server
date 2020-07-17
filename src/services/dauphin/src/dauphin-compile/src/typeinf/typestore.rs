@@ -150,7 +150,7 @@ impl TypeStore {
 mod test {
     use super::*;
     use super::super::types::{ ExpressionType };
-    use dauphin_interp_common::common::BaseType;
+    use dauphin_interp::common::BaseType;
 
     fn x_ph(num: usize) -> ExpressionConstraint {
         ExpressionConstraint::Placeholder(Key::External(num))

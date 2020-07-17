@@ -19,8 +19,8 @@ use std::rc::Rc;
 use crate::cli::Config;
 use crate::model::{ Instruction, InstructionType, CommandCompileSuite };
 use crate::model::{ Command, CommandSchema, CommandTrigger };
-use dauphin_interp_common::interp::{ InterpContext, PayloadFactory };
-use dauphin_interp_common::common::{ CommandSetId, InterpCommand };
+use dauphin_interp::interp::{ InterpContext, PayloadFactory };
+use dauphin_interp::common::{ CommandSetId, InterpCommand };
 use serde_cbor::Value as CborValue;
 
 pub(super) const VERSION : u32 = 0;

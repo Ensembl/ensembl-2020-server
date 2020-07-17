@@ -18,7 +18,7 @@ use std::collections::HashSet;
 use std::fmt;
 
 use crate::typeinf::{ MemberType };
-use dauphin_interp_common::common::Identifier;
+use dauphin_interp::common::Identifier;
 
 pub struct StructEnumDef {
     type_: String,

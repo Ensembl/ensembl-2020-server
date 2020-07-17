@@ -19,7 +19,7 @@ use crate::model::{ Instruction, InstructionType, DFloat };
 use crate::model::{ DefStore, StructDef, EnumDef };
 use crate::typeinf::{ ContainerType, MemberType };
 use super::gencontext::GenContext;
-use dauphin_interp_common::common::{ Register, Identifier, BaseType };
+use dauphin_interp::common::{ Register, Identifier, BaseType };
 
 /* simplification is the process of converting arbitrary assemblies of structs, enums and vecs into sets of vecs of
  * simple values. To achieve this, vecs of structured types are converted to sets of vecs of simpler types.

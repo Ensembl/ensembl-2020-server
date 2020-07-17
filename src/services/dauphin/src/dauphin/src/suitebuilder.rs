@@ -16,12 +16,12 @@
 
 use dauphin_compile::cli::Config;
 use dauphin_compile::model::{ CommandCompileSuite };
-use dauphin_interp_common::interp::{ CommandInterpretSuite };
-use dauphin_lib_std_interp::make_std_interp;
-use dauphin_lib_std_compile::make_std;
-use dauphin_interp_common::make_core_interp;
+use dauphin_interp::interp::{ CommandInterpretSuite };
+use dauphin_lib_std::make_std_interp;
+use dauphin_lib_std::make_std;
+use dauphin_interp::make_core_interp;
 use dauphin_compile::commands::{ make_core };
-use dauphin_lib_buildtime_compile::{ make_buildtime };
+use dauphin_lib_buildtime::{ make_buildtime };
 
 pub fn make_compiler_suite(config: &Config) -> Result<CommandCompileSuite,String> {
     let mut suite = CommandCompileSuite::new();
@@ -50,8 +50,8 @@ mod test {
     use std::cell::RefCell;
     use std::collections::HashMap;
     use super::*;
-    use dauphin_interp_common::common::{ CommandSetId, NoopDeserializer, cbor_serialize };
-    use dauphin_interp_common::interp::{ InterpLibRegister, InterpContext };
+    use dauphin_interp::common::{ CommandSetId, NoopDeserializer, cbor_serialize };
+    use dauphin_interp::interp::{ InterpLibRegister, InterpContext };
     use dauphin_compile::model::{ CompilerLink, CompLibRegister };
     use crate::test::{ FakeDeserializer, fake_command, xxx_test_config, fake_trigger };
 

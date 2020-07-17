@@ -17,7 +17,7 @@
 use crate::model::{ Instruction, InstructionType };
 use crate::model::DefStore;
 use crate::typeinf::{ ArgumentConstraint, ArgumentExpressionConstraint, InstructionConstraint };
-use dauphin_interp_common::common::{ BaseType, MemberMode };
+use dauphin_interp::common::{ BaseType, MemberMode };
 
 fn placeholder(ref_: bool) -> ArgumentConstraint {
     if ref_ {

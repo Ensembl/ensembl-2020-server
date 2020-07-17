@@ -18,8 +18,8 @@ use std::rc::Rc;
 use crate::cli::Config;
 use std::collections::{ HashMap, BTreeMap };
 use crate::model::{ CommandTrigger, CommandType };
-use dauphin_interp_common::common::{ CommandSetId, CommandDeserializer, cbor_map_iter };
-use dauphin_interp_common::interp::{ CommandTypeId, OpcodeMapping, CommandSetVerifier, PayloadFactory };
+use dauphin_interp::common::{ CommandSetId, CommandDeserializer, cbor_map_iter };
+use dauphin_interp::interp::{ CommandTypeId, OpcodeMapping, CommandSetVerifier, PayloadFactory };
 use crate::model::{ CompilerLink, CommandTypeStore, CompLibRegister };
 use serde_cbor::Value as CborValue;
 
@@ -172,8 +172,8 @@ mod test {
     use std::cell::RefCell;
     use crate::model::{ CommandTrigger, Command, };
     use crate::model::{ Instruction, InstructionSuperType };
-    use dauphin_interp_common::common::{ CommandSetId, NoopDeserializer, Identifier };
-    use dauphin_interp_common::interp::{ InterpLibRegister, CommandInterpretSuite, InterpContext };
+    use dauphin_interp::common::{ CommandSetId, NoopDeserializer, Identifier };
+    use dauphin_interp::interp::{ InterpLibRegister, CommandInterpretSuite, InterpContext };
     use crate::model::{ CommandSchema, CommandType };
     use crate::test::{ cbor_cmp, FakeDeserializer };
     use crate::commands::{ NumberConstCommandType, ConstCommandType, BooleanConstCommandType, StringConstCommandType };

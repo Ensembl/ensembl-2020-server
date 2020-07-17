@@ -1,7 +1,0 @@
-import "lib:std";
-use "std";
-
-import "lib:buildtime";
-use "buildtime";
-
-assert(get_version(["buildtime","missing"][])==[version { major: 0, minor: 1},version { major: 0, minor: 0}][],true);

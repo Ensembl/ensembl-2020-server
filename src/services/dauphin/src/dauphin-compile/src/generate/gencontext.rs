@@ -19,7 +19,7 @@ use std::mem::swap;
 use crate::model::{ Instruction, InstructionType, RegisterAllocator };
 use crate::model::DefStore;
 use crate::typeinf::{ ExpressionType, MemberType, TypeModel, Typing, get_constraint };
-use dauphin_interp_common::common::Register;
+use dauphin_interp::common::Register;
 
 pub struct GenContext<'a> {
     defstore: &'a DefStore,

@@ -19,11 +19,11 @@ use crate::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImag
 use crate::model::{
     CompLibRegister, Instruction, InstructionType, InstructionSuperType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial
 };
-use dauphin_interp_common::common::{ cbor_make_map, cbor_map, Register, CommandSetId };
-use dauphin_interp_common::interp::{ InterpValue, InterpContext };
+use dauphin_interp::common::{ cbor_make_map, cbor_map, Register, CommandSetId };
+use dauphin_interp::interp::{ InterpValue, InterpContext };
 use serde_cbor::Value as CborValue;
 use super::consts::{ const_commands };
-use dauphin_interp_common::{ make_core_interp };
+use dauphin_interp::{ make_core_interp };
 
 struct NilTimeTrial();
 

@@ -89,10 +89,9 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "dauphin_compile",
- "dauphin_interp_common",
- "dauphin_lib_buildtime_compile",
- "dauphin_lib_std_compile",
- "dauphin_lib_std_interp",
+ "dauphin_interp",
+ "dauphin_lib_buildtime",
+ "dauphin_lib_std",
  "regex",
  "serde_cbor",
 ]
@@ -103,7 +102,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "crc",
- "dauphin_interp_common",
+ "dauphin_interp",
  "hex",
  "lazy_static",
  "owning_ref",
@@ -112,7 +111,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dauphin_interp_common"
+name = "dauphin_interp"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
@@ -120,21 +119,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "dauphin_lib_buildtime_compile"
+name = "dauphin_lib_buildtime"
 version = "0.1.0"
 dependencies = [
  "dauphin_compile",
- "dauphin_interp_common",
+ "dauphin_interp",
  "rust-ini",
  "serde_cbor",
 ]
 
 [[package]]
-name = "dauphin_lib_std_compile"
+name = "dauphin_lib_std"
 version = "0.1.0"
 dependencies = [
  "dauphin_compile",
- "dauphin_interp_common",
+ "dauphin_interp",
  "dauphin_lib_std_interp",
  "serde_cbor",
 ]
@@ -143,7 +142,7 @@ dependencies = [
 name = "dauphin_lib_std_interp"
 version = "0.1.0"
 dependencies = [
- "dauphin_interp_common",
+ "dauphin_interp",
  "serde_cbor",
 ]
 
