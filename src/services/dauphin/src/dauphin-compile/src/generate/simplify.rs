@@ -15,7 +15,8 @@
  */
 
 use std::collections::HashMap;
-use crate::model::{ Instruction, InstructionType, DFloat };
+use crate::command::{ Instruction, InstructionType };
+use crate::util::DFloat;
 use crate::model::{ DefStore, StructDef, EnumDef };
 use crate::typeinf::{ ContainerType, MemberType };
 use super::gencontext::GenContext;

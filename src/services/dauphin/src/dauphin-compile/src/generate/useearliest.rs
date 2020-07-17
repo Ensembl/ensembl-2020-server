@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use super::gencontext::GenContext;
-use crate::model::{ InstructionType };
+use crate::command::{ InstructionType };
 use dauphin_interp::runtime::Register;
 
 struct RegEquiv {

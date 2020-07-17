@@ -16,8 +16,8 @@
 
 use dauphin_interp::command::{ Identifier, InterpCommand };
 use dauphin_interp::runtime::{ InterpValue, Register };
-use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome };
-use dauphin_compile::model::{ Instruction, PreImageContext };
+use dauphin_compile::command::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, Instruction };
+use dauphin_compile::model::{ PreImageContext };
 use serde_cbor::Value as CborValue;
 
 pub struct DefineCommandType(pub bool);

@@ -16,7 +16,8 @@
 
 use std::fmt;
 
-use crate::model::{ DFloat, LexerPosition };
+use crate::util::DFloat;
+use crate::lexer::LexerPosition;
 use serde_cbor::Value as CborValue;
 use dauphin_interp::command::{ Identifier };
 use dauphin_interp::runtime::{ Register  };

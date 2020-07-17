@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+use lazy_static::lazy_static;
+
 use crate::lexer::{ Lexer, Token };
 use super::node::ParseError;
 use dauphin_interp::command::Identifier;

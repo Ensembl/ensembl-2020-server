@@ -20,7 +20,7 @@ use super::charsource::{ CharSource, LocatedCharSource };
 use super::inlinetokens::InlineTokens;
 use super::getting::LexerGetting;
 use super::token::Token;
-use crate::model::{ LexerPosition, FileContentsHandle };
+use crate::lexer::{ LexerPosition, FileContentsHandle };
 use crate::resolver::Resolver;
 
 pub struct FileLexer {
@@ -98,7 +98,7 @@ mod test {
     use std::rc::Rc;
     use crate::resolver::common_resolver;
     use crate::test::{ xxx_test_config, make_compiler_suite, load_testdata };
-    use crate::model::CompilerLink;
+    use crate::command::CompilerLink;
 
     fn add_token(out: &mut String, token: &(Token,LexerPosition)) {
         out.push_str(&format!("{:?} {}\n",token.0,token.1));

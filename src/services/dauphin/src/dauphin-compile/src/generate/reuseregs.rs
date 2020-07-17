@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use super::gencontext::GenContext;
-use crate::model::{ InstructionType, Instruction };
+use crate::command::{ InstructionType, Instruction };
 use dauphin_interp::runtime::Register;
 
 #[derive(Clone,Debug,PartialEq,Eq,Hash)]

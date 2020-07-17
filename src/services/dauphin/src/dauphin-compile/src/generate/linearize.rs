@@ -17,7 +17,8 @@
 // TODO Copy for registers
 use std::collections::BTreeMap;
 
-use crate::model::{ DFloat, InstructionType, Instruction };
+use crate::command::{ InstructionType, Instruction };
+use crate::util::DFloat;
 use crate::typeinf::{ MemberType };
 use super::gencontext::GenContext;
 use dauphin_interp::types::BaseType;
@@ -348,7 +349,7 @@ mod test {
     use crate::parser::{ Parser };
     use super::super::codegen::generate_code;
     use crate::test::{ mini_interp, xxx_test_config, make_compiler_suite };
-    use crate::model::CompilerLink;
+    use crate::command::CompilerLink;
     use super::super::dealias::remove_aliases;
 
     #[test]

@@ -18,7 +18,9 @@ mod core;
 mod file;
 mod preamble;
 mod common;
+mod resolvefile;
 mod search;
 
 pub use self::core::Resolver;
 pub use self::common::common_resolver;
+pub use self::resolvefile::ResolveFile;

@@ -15,7 +15,9 @@
  */
 
 use std::collections::{ HashMap, HashSet };
-use crate::model::{ RegisterAllocator, ResolveFile, CompilerLink };
+use crate::command::CompilerLink;
+use crate::resolver::ResolveFile;
+use crate::model::{ RegisterAllocator };
 use dauphin_interp::runtime::{ Register, InterpContext };
 use crate::cli::Config;
 

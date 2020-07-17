@@ -14,8 +14,10 @@
  *  limitations under the License.
  */
 
-use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
-use dauphin_compile::model::{ CompLibRegister, Instruction, InstructionType, PreImageContext };
+use dauphin_compile::command::{
+    Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare, CompLibRegister, Instruction, InstructionType
+};
+use dauphin_compile::model::PreImageContext;
 use dauphin_interp::command::{ InterpCommand, CommandSetId, Identifier };
 use dauphin_interp::types::{ RegisterSignature };
 use dauphin_interp::runtime::{ Register };

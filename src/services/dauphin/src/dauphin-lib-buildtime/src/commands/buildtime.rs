@@ -15,7 +15,7 @@
  */
 
 use dauphin_interp::command::{ CommandSetId };
-use dauphin_compile::model::CompLibRegister;
+use dauphin_compile::command::CompLibRegister;
 use super::defines::DefineCommandType;
 use super::ini::LoadIniCommandType;
 use super::dump::DumpSigCommandType;

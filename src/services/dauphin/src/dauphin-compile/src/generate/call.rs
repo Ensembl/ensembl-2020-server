@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use crate::model::{ Instruction, InstructionType };
+use crate::command::{ Instruction, InstructionType };
 use super::gencontext::GenContext;
 use dauphin_interp::types::{ RegisterSignature, MemberMode, MemberDataFlow };
 use crate::model::{ make_full_type };

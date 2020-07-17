@@ -14,13 +14,20 @@
  *  limitations under the License.
  */
 
+#[macro_use]
+#[allow(unused_imports)]
+use super::commontype;
+
 use std::convert::TryInto;
 use crate::cli::Config;
-use crate::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
-use crate::model::{
-    CompLibRegister, Instruction, InstructionType, InstructionSuperType, PreImageContext, DFloat, LexerPosition, CompilerLink,
+use crate::command::{ 
+    Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare, CompLibRegister, Instruction, InstructionType, 
+    InstructionSuperType, CompilerLink,
     TimeTrialCommandType, TimeTrial
 };
+use crate::lexer::LexerPosition;
+use crate::model::PreImageContext;
+use crate::util::DFloat;
 use dauphin_interp::runtime::Register;
 use dauphin_interp::util::cbor::{ cbor_make_map, cbor_map };
 use serde_cbor::Value as CborValue;

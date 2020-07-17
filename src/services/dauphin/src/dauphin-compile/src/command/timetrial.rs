@@ -16,7 +16,7 @@
 
 use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
-use crate::model::{ CompilerLink, Instruction };
+use crate::command::{ CompilerLink, Instruction };
 use serde_cbor::Value as CborValue;
 use dauphin_interp::command::{ InterpCommand };
 use dauphin_interp::runtime::{ InterpContext, InterpValue, Register };

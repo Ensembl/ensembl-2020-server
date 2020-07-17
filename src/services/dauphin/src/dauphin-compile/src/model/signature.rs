@@ -86,7 +86,7 @@ mod test {
     use crate::model::{ DefStore, make_full_type };
     use crate::typeinf::{ MemberType };
     use dauphin_interp::types::{ FullType, MemberMode };
-    use crate::model::CompilerLink;
+    use crate::command::CompilerLink;
 
     // XXX move to common test utils
     fn make_type(defstore: &DefStore, name: &str) -> MemberType {

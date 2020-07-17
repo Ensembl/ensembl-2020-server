@@ -19,9 +19,11 @@ use std::fs::write;
 use super::gencontext::GenContext;
 use super::compilerun::compile_run;
 use crate::resolver::Resolver;
-use crate::model::{ DefStore, fix_incoming_filename };
+use crate::model::{ DefStore };
 use crate::cli::Config;
-use crate::model::{ InstructionType, Instruction, LexerPosition, CompilerLink };
+use crate::command::{ InstructionType, Instruction, CompilerLink };
+use crate::lexer::LexerPosition;
+use crate::util::fix_incoming_filename;
 
 fn format_line(line: &str, time: Option<f64>) -> String {
     let time = if let Some(time) = time {

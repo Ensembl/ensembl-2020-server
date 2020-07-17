@@ -23,5 +23,5 @@ mod inlinetokens;
 mod getting;
 
 pub use self::token::Token;
-pub use self::lexer::Lexer;
+pub use self::lexer::{ Lexer, LexerPosition, FileContentsHandle };
 pub use self::charsource::{ CharSource, StringCharSource };

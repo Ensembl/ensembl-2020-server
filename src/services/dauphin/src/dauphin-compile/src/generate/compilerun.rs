@@ -17,8 +17,9 @@
 use super::gencontext::GenContext;
 use crate::resolver::Resolver;
 use crate::cli::Config;
-use crate::model::{ CompilerLink, DFloat, Instruction, InstructionType, PreImageContext };
-use crate::model::PreImageOutcome;
+use crate::command::{ CompilerLink, Instruction, InstructionType, PreImageOutcome };
+use crate::model::{ PreImageContext };
+use crate::util::DFloat;
 use dauphin_interp::runtime::{ Register };
 use dauphin_interp::runtime::{ InterpValue, numbers_to_indexes };
 

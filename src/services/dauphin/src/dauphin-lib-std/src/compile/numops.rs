@@ -15,10 +15,11 @@
  */
 
 use dauphin_compile::cli::Config;
-use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
-use dauphin_compile::model::{
-    CompLibRegister, Instruction, InstructionType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial, trial_signature
+use dauphin_compile::command::{
+    Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare, CompLibRegister, Instruction, InstructionType, 
+    CompilerLink, TimeTrialCommandType, TimeTrial, trial_signature
 };
+use dauphin_compile::model::PreImageContext;
 use dauphin_interp::command::Identifier;
 use dauphin_interp::types::{ MemberMode, BaseType, MemberDataFlow };
 use dauphin_interp::runtime::{ InterpValue, InterpContext, Register };

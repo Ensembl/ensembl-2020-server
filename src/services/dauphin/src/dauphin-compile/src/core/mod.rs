@@ -14,18 +14,13 @@
  *  limitations under the License.
  */
 
-mod definition;
- mod definitionstore;
- mod identifierstore;
- mod preimage;
- mod regalloc;
- mod signature;
- mod structenum;
- 
- pub use definition::{ InlineMode, Inline, ExprMacro, StmtMacro, FuncDecl, ProcDecl };
- pub use definitionstore::DefStore;
- pub use identifierstore::{ IdentifierPattern, IdentifierStore, IdentifierUse };
- pub use preimage::{ PreImageContext };
- pub use regalloc::RegisterAllocator;
- pub use signature::make_full_type;
- pub use structenum::{ StructDef, EnumDef };
+#[macro_use]
+mod commontype;
+
+mod consts;
+mod core;
+
+pub use self::core::make_core;
+
+#[cfg(test)]
+pub use self::consts::{ NumberConstCommandType, ConstCommandType, BooleanConstCommandType, StringConstCommandType };

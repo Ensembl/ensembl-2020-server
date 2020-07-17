@@ -14,8 +14,7 @@
  *  limitations under the License.
  */
 
-use dauphin_compile::model::{ Command, CommandSchema, CommandType, CommandTrigger };
-use dauphin_compile::model::{ Instruction, InstructionType };
+use dauphin_compile::command::{ Command, CommandSchema, CommandType, CommandTrigger, Instruction, InstructionType };
 use dauphin_interp::command::Identifier;
 use dauphin_interp::runtime::Register;
 use dauphin_interp::types::RegisterSignature;

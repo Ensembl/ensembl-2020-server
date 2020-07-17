@@ -14,32 +14,16 @@
  *  limitations under the License.
  */
 
-#[macro_use]
-extern crate dauphin_interp;
-
-pub mod cli {
-    pub mod config;
-    pub use config::Config;
-}
-
-pub mod util {
-    pub mod vectorcopy;
-    pub use vectorcopy::{ 
-        vector_append, vector_append_lengths, vector_append_offsets, vector_update_lengths, vector_update_offsets, vector_push_instrs, vector_copy,
-        vector_register_copy_instrs
-    };
-}
-
-pub mod commands;
+pub mod cli;
+pub mod command;
+pub mod core;
 pub mod generate;
 pub mod lexer;
 pub mod model;
 pub mod parser;
 pub mod resolver;
 pub mod typeinf;
+pub mod util;
 
 #[cfg(test)]
 mod test;
-
-#[macro_use]
-extern crate lazy_static;

@@ -18,10 +18,9 @@ use std::fmt;
 use hex;
 
 use crate::model::{ InlineMode, IdentifierPattern };
-use crate::lexer::Lexer;
+use crate::lexer::{ Lexer, LexerPosition };
 use crate::typeinf::{ MemberType, SignatureConstraint };
 use dauphin_interp::command::Identifier;
-use crate::model::LexerPosition;
 
 #[derive(PartialEq,Clone)]
 pub enum Expression {

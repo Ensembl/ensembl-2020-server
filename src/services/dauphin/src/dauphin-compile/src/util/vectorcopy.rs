@@ -14,7 +14,8 @@
  *  limitations under the License.
  */
 
-use crate::model::{ Instruction, InstructionType, PreImageContext };
+use crate::command::{ Instruction, InstructionType };
+use crate::model::PreImageContext;
 use dauphin_interp::command::Identifier;
 use dauphin_interp::runtime::Register;
 use dauphin_interp::types::{ VectorRegisters, ComplexPath, RegisterSignature, FullType, MemberMode, MemberDataFlow, BaseType };

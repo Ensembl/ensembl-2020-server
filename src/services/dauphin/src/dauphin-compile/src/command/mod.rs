@@ -14,15 +14,18 @@
  *  limitations under the License.
  */
 
-mod core {
-    #[macro_use]
-    pub(super) mod commontype;
-    pub(super) mod consts;
-    pub(super) mod core;
-}
+mod command;
+mod commandtypestore;
+mod compilelink;
+mod compilesuite;
+mod complibregister;
+mod instruction;
+mod timetrial;
 
-// XXX unexport
-pub use self::core::consts::{
-    ConstCommandType, NumberConstCommandType, BooleanConstCommandType, StringConstCommandType
-};
-pub use self::core::core::{ make_core };
+pub use self::command::{ CommandType, Command, CommandSchema,CommandTrigger, PreImageOutcome, PreImagePrepare };
+pub use self::commandtypestore::CommandTypeStore;
+pub use self::compilelink::CompilerLink;
+pub use self::compilesuite::CommandCompileSuite;
+pub use self::complibregister::CompLibRegister;
+pub use self::instruction::{ InstructionSuperType, InstructionType, Instruction };
+pub use self::timetrial::{ TimeTrial, TimeTrialCommandType, trial_signature, trial_write };

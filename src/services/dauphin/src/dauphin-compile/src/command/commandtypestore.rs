@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use crate::model::CommandType;
+use crate::command::CommandType;
 use dauphin_interp::command::CommandTypeId;
 
 pub struct CommandTypeStore {

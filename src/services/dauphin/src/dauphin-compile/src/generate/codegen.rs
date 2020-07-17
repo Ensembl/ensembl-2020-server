@@ -17,7 +17,8 @@
 use std::collections::HashMap;
 
 use super::gencontext::GenContext;
-use crate::model::{ Instruction, InstructionType, DFloat };
+use crate::command::{ Instruction, InstructionType };
+use crate::util::DFloat;
 use crate::parser::{ Expression, Statement };
 use dauphin_interp::command::{ Identifier };
 use dauphin_interp::runtime::{ Register };
@@ -354,7 +355,7 @@ mod test {
     use super::*;
     use crate::lexer::Lexer;
     use crate::resolver::common_resolver;
-    use crate::model::CompilerLink;
+    use crate::command::CompilerLink;
     use crate::parser::Parser;
     use crate::test::{ xxx_test_config, make_compiler_suite, load_testdata };
 

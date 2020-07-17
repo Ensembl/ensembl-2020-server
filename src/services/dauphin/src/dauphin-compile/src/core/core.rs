@@ -14,11 +14,15 @@
  *  limitations under the License.
  */
 
+#[macro_use]
+use super::commontype;
+
 use crate::cli::Config;
-use crate::model::{ Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare };
-use crate::model::{
-    CompLibRegister, Instruction, InstructionType, InstructionSuperType, PreImageContext, CompilerLink, TimeTrialCommandType, TimeTrial
+use crate::command::{
+    Command, CommandSchema, CommandType, CommandTrigger, PreImageOutcome, PreImagePrepare,
+    CompLibRegister, Instruction, InstructionType, InstructionSuperType, CompilerLink, TimeTrialCommandType, TimeTrial
 };
+use crate::model::PreImageContext;
 use dauphin_interp::command::CommandSetId;
 use dauphin_interp::runtime::{ InterpValue, InterpContext, Register };
 use dauphin_interp::util::cbor::{ cbor_make_map, cbor_map };

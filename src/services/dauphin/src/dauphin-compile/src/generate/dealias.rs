@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use dauphin_interp::runtime::{ Register };
 use super::gencontext::GenContext;
-use crate::model::{ Instruction, InstructionType };
+use crate::command::{ Instruction, InstructionType };
 
 struct Aliases(HashMap<Register,Register>);
 

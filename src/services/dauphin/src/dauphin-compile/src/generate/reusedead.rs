@@ -16,7 +16,7 @@
 
 use std::collections::{ HashSet, HashMap };
 use super::gencontext::GenContext;
-use crate::model::{ InstructionType, Instruction };
+use crate::command::{ InstructionType, Instruction };
 use dauphin_interp::runtime::Register;
 
 /* Relabel instead of copying from sources which are never reused. Recurse this until no change */

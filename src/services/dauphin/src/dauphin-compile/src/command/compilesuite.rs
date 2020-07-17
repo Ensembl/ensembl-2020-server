@@ -17,11 +17,11 @@
 use std::rc::Rc;
 use crate::cli::Config;
 use std::collections::{ HashMap, BTreeMap };
-use crate::model::{ CommandTrigger, CommandType };
+use crate::command::{ CommandTrigger, CommandType };
 use dauphin_interp::command::{ CommandSetId, CommandDeserializer, CommandTypeId, OpcodeMapping, CommandSetVerifier };
 use dauphin_interp::runtime::{ PayloadFactory };
 use dauphin_interp::util::cbor::{ cbor_map_iter };
-use crate::model::{ CompilerLink, CommandTypeStore, CompLibRegister };
+use crate::command::{ CompilerLink, CommandTypeStore, CompLibRegister };
 use serde_cbor::Value as CborValue;
 
 pub struct CommandCompileSuite {
@@ -171,14 +171,13 @@ impl CommandCompileSuite {
 mod test {
     use super::*;
     use std::cell::RefCell;
-    use crate::model::{ CommandTrigger, Command, };
-    use crate::model::{ Instruction, InstructionSuperType };
+    use crate::command::{ CommandTrigger, Command, Instruction, InstructionSuperType };
     use dauphin_interp::command::{ CommandSetId, InterpLibRegister, Identifier, CommandInterpretSuite };
     use dauphin_interp::runtime::{ InterpContext };
     use dauphin_interp::util::templates::NoopDeserializer;
-    use crate::model::{ CommandSchema, CommandType };
+    use crate::command::{ CommandSchema, CommandType };
     use crate::test::{ cbor_cmp, FakeDeserializer };
-    use crate::commands::{ NumberConstCommandType, ConstCommandType, BooleanConstCommandType, StringConstCommandType };
+    use crate::core::{ NumberConstCommandType, ConstCommandType, BooleanConstCommandType, StringConstCommandType };
 
     fn fake_trigger(name: &str) -> CommandTrigger {
         CommandTrigger::Command(Identifier::new("fake",name))

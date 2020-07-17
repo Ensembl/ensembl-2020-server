@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::fs::write;
 use std::time::{ SystemTime, Duration };
 use crate::cli::Config;
-use crate::model::{ Instruction, InstructionType, CompilerLink };
+use crate::command::{ Instruction, InstructionType, CompilerLink };
 use super::{ GenContext };
 use crate::model::DefStore;
 use crate::resolver::Resolver;

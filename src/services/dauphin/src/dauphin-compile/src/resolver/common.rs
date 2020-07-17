@@ -22,7 +22,7 @@ use super::core::{ DocumentResolver, Resolver, ResolverQuery, ResolverResult };
 use super::preamble::PREAMBLE;
 use super::file::FileResolver;
 use super::search::SearchResolver;
-use crate::model::CompilerLink;
+use crate::command::CompilerLink;
 
 pub struct DataResolver {}
 

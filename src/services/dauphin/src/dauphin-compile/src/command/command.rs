@@ -16,7 +16,8 @@
 
 use std::fmt;
 use crate::cli::Config;
-use crate::model::{ Instruction, InstructionSuperType, PreImageContext, CompilerLink };
+use crate::command::{ Instruction, InstructionSuperType, CompilerLink };
+use crate::model::PreImageContext;
 use dauphin_interp::util::cbor::{ cbor_array, cbor_int };
 use dauphin_interp::command::{ Identifier, InterpCommand };
 use dauphin_interp::runtime::Register;

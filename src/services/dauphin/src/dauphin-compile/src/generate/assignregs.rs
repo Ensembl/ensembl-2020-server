@@ -17,7 +17,7 @@
 use std::collections::{ HashMap, HashSet };
 use dauphin_interp::runtime::Register;
 use super::gencontext::GenContext;
-use crate::model::Instruction;
+use crate::command::Instruction;
 
 fn find_first_last_use(context: &mut GenContext) -> HashMap<Register,(usize,usize)> {
     /* find first and last use of every register */

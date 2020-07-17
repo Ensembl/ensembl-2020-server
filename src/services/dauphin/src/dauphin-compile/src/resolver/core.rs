@@ -16,7 +16,7 @@
 
 use std::rc::Rc;
 use crate::cli::Config;
-use crate::model::ResolveFile;
+use crate::resolver::ResolveFile;
 use std::collections::HashMap;
 use crate::lexer::CharSource;
 

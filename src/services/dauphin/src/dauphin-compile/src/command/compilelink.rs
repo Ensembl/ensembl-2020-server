@@ -17,8 +17,7 @@
 use std::collections::{ BTreeMap, HashMap };
 use std::rc::Rc;
 use crate::cli::Config;
-use crate::model::{ Instruction, InstructionType, CommandCompileSuite };
-use crate::model::{ Command, CommandSchema, CommandTrigger };
+use crate::command::{ Instruction, InstructionType, CommandCompileSuite, Command, CommandSchema, CommandTrigger };
 use dauphin_interp::runtime::{ InterpContext, PayloadFactory };
 use dauphin_interp::command::{ CommandSetId, InterpCommand };
 use serde_cbor::Value as CborValue;

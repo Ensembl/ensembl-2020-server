@@ -14,18 +14,13 @@
  *  limitations under the License.
  */
 
-mod definition;
- mod definitionstore;
- mod identifierstore;
- mod preimage;
- mod regalloc;
- mod signature;
- mod structenum;
- 
- pub use definition::{ InlineMode, Inline, ExprMacro, StmtMacro, FuncDecl, ProcDecl };
- pub use definitionstore::DefStore;
- pub use identifierstore::{ IdentifierPattern, IdentifierStore, IdentifierUse };
- pub use preimage::{ PreImageContext };
- pub use regalloc::RegisterAllocator;
- pub use signature::make_full_type;
- pub use structenum::{ StructDef, EnumDef };
+mod dfloat;
+mod fileutil;
+mod vectorcopy;
+
+pub use dfloat::DFloat;
+pub use fileutil::fix_incoming_filename;
+pub use vectorcopy::{
+    vector_push_instrs, vector_update_offsets, vector_update_lengths, vector_copy, vector_append, vector_append_offsets, vector_register_copy_instrs, 
+    vector_append_lengths
+};

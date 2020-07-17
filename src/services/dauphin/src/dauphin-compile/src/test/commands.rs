@@ -18,8 +18,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use dauphin_interp::command::{ CommandDeserializer, InterpCommand, Identifier };
 use dauphin_interp::runtime::{ InterpContext };
-use crate::model::{ Instruction };
-use crate::model::{ Command, CommandSchema, CommandTrigger, CommandType };
+use crate::command::{ Command, CommandSchema, CommandTrigger, CommandType, Instruction };
 use serde_cbor::Value as CborValue;
 
 pub struct FakeInterpCommand(Rc<RefCell<u32>>,u32);
