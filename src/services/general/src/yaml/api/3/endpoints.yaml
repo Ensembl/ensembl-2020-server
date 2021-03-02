@@ -35,7 +35,7 @@ choice:
                 PP: geneeb-feat
                 QZ: genesb-feat
 
-            escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            escherichia_coli_str_k_12_substr_mg1655_gca_000005845_GCA_000005845.2:
                 AK: gene-feat
                 LL: gene-feat-names
                 MO: trans-feat
@@ -80,7 +80,7 @@ choice:
                 PP: geneeb-pc-fwd
                 QZ: genesb-pc-fwd
 
-            escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            escherichia_coli_str_k_12_substr_mg1655_gca_000005845_GCA_000005845.2:
                 AK: gene-pc-fwd
                 LL: gene-pc-fwd-names
                 MO: trans-pc-fwd
@@ -117,7 +117,7 @@ choice:
                 PP: geneeb-pc-rev
                 QZ: genesb-pc-rev
 
-            escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            escherichia_coli_str_k_12_substr_mg1655_gca_000005845_GCA_000005845.2:
                 AK: gene-pc-rev
                 LL: gene-pc-rev-names
                 MO: trans-pc-rev
@@ -154,7 +154,7 @@ choice:
                 PP: geneeb-other-fwd
                 QZ: genesb-other-fwd
 
-            escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            escherichia_coli_str_k_12_substr_mg1655_gca_000005845_GCA_000005845.2:
                 AK: gene-other-fwd
                 LL: gene-other-fwd-names
                 MO: trans-other-fwd
@@ -191,7 +191,7 @@ choice:
                 PP: geneeb-other-rev
                 QZ: genesb-other-rev
 
-            escherichia_coli_str_k_12_substr_mg1655_GCA_000005845.2:
+            escherichia_coli_str_k_12_substr_mg1655_gca_000005845_GCA_000005845.2:
                 AK: gene-other-rev
                 LL: gene-other-rev-names
                 MO: trans-other-rev
