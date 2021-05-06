@@ -1,5 +1,5 @@
 flask==1.0.2
-Flask-Cors==3.0.7
+Flask-Cors==3.0.9
 numpy==1.16.2
 pyBigWig==0.3.13
 pybbi==0.2.0
