@@ -1,6 +1,6 @@
 flask==1.0.2
 Flask-Cors==3.0.7
-numpy==1.16.2
+numpy==1.22.0
 pyBigWig==0.3.13
 pybbi==0.2.0
 pyYAML==3.13
